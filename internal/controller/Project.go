@@ -1,40 +1,44 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
-func RegisterProjectRouters(router *gin.Engine) {
-	projectGroup := router.Group("/project") 
+func RegisterProjectRoutes(e *echo.Echo) {
+	projectGroup := e.Group("/project")
 	{
-		projectGroup.GET("/", GetAllProjects)
+		projectGroup.GET("", GetAllProjects)
 		projectGroup.GET("/id/:id", GetProjectByID)
-		projectGroup.POST("/", CreateProject)
+		projectGroup.POST("", CreateProject)
 		projectGroup.PUT("/:id", UpdateProject)
 		projectGroup.DELETE("/:id", DeleteProject)
 	}
 }
 
-func GetAllProjects(c *gin.Context) {
-    c.JSON(200, gin.H{"data": "Все проекты"})
+func GetAllProjects(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]interface{}{"data": "Все проекты"})
 }
 
- func GetProjectByID(c *gin.Context) {
+func GetProjectByID(c echo.Context) error {
 	id := c.Param("id")
-    c.JSON(200, gin.H{"id": id})
- }
-
-func CreateProject(c *gin.Context) {
-	// TODO: Реализовать создание проекта
-	c.JSON(201, gin.H{"message": "Проект создан"})
+	return c.JSON(http.StatusOK, map[string]interface{}{"id": id})
 }
 
-func UpdateProject(c *gin.Context) {
+func CreateProject(c echo.Context) error {
+	// TODO: Реализовать создание нового проекта
+	return c.JSON(http.StatusCreated, map[string]interface{}{"message": "Проект создан"})
+}
+
+func UpdateProject(c echo.Context) error {
 	// TODO: Реализовать обновление проекта
-	c.JSON(200, gin.H{"message": "Проект обновлен"})
+	id := c.Param("id")
+	return c.JSON(http.StatusOK, map[string]interface{}{"message": "Проект с ID " + id + " обновлен"})
 }
 
-func DeleteProject(c *gin.Context) {
+func DeleteProject(c echo.Context) error {
 	// TODO: Реализовать удаление проекта
-	c.JSON(200, gin.H{"message": "Проект удален"})
+	id := c.Param("id")
+	return c.JSON(http.StatusOK, map[string]interface{}{"message": "Проект с ID " + id + " удален"})
 }
