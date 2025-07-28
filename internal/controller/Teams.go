@@ -5,13 +5,13 @@ import (
 )
 
 func RegisterTeamRoutes(router *gin.Engine) {
-	teamGroup := router.Group("/teams")
+	teamGroup := router.Group("/team")
 	{
-		teamGroup.GET("/", GetTeams)
+		teamGroup.GET("/all", GetTeams)
 		teamGroup.GET(":id", GetTeamByID)
 		teamGroup.POST("/", CreateTeam)
-		teamGroup.PUT(":id", UpdateTeam)
-		teamGroup.DELETE(":id", DeleteTeam)
+		teamGroup.PATCH(":id", UpdateTeam)
+		teamGroup.DELETE(":id", DeleteTeam) // Только для admin, добавить проверку роли
 	}
 }
 
@@ -36,6 +36,6 @@ func UpdateTeam(c *gin.Context) {
 }
 
 func DeleteTeam(c *gin.Context) {
-	// TODO: Реализовать удаление команды
+	// TODO: Реализовать удаление команды (только для admin)
 	c.JSON(200, gin.H{"message": "Команда удалена"})
 }
