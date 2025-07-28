@@ -1,13 +1,15 @@
 package controller
 
 import (
-	"github.com/gin-gonic/gin"
+	"net/http"
+
+	"github.com/labstack/echo/v4"
 )
 
-func RegisterTaskRouters(router *gin.Engine) {
-	taskGroup := router.Group("/task") 
+func RegisterTaskRoutes(e *echo.Echo) {
+	taskGroup := e.Group("/task")
 	{
-		taskGroup.GET("/", GetAllTasks)
+		taskGroup.GET("", GetAllTasks)
 		taskGroup.GET("/id/:id", GetTaskByID)
 		taskGroup.GET("/board/:boardID", GetTasksByBoardID)
 		taskGroup.GET("/project/:projectID", GetTasksByProjectID)
@@ -15,31 +17,27 @@ func RegisterTaskRouters(router *gin.Engine) {
 	}
 }
 
-func GetAllTasks(c *gin.Context) {
-    c.JSON(200, gin.H{"data": "Все задачи"})
+func GetAllTasks(c echo.Context) error {
+	return c.JSON(http.StatusOK, map[string]string{"data": "Все задачи"})
 }
 
- func GetTaskByID(c *gin.Context) {
+func GetTaskByID(c echo.Context) error {
 	id := c.Param("id")
-    c.JSON(200, gin.H{"id": id})
+	return c.JSON(http.StatusOK, map[string]string{"id": id})
 }
 
- func GetTasksByBoardID(c *gin.Context) {
+func GetTasksByBoardID(c echo.Context) error {
 	boardID := c.Param("boardID")
-    c.JSON(200, gin.H{"boardID": boardID})
+	return c.JSON(http.StatusOK, map[string]string{"boardID": boardID})
 }
 
- func GetTasksByProjectID(c *gin.Context) {
-	projectID:= c.Param("projectID")
-    c.JSON(200, gin.H{"projectID": projectID})
+func GetTasksByProjectID(c echo.Context) error {
+	projectID := c.Param("projectID")
+	return c.JSON(http.StatusOK, map[string]string{"projectID": projectID})
 }
 
- func GetTasksByFilter(c *gin.Context) {
-	filter := c.Param("filter")
-    c.JSON(200, gin.H{"filter": filter})
-	
+func GetTasksByFilter(c echo.Context) error {
+	// В Echo параметры query string получают через QueryParam()
+	filter := c.QueryParam("filter")
+	return c.JSON(http.StatusOK, map[string]string{"filter": filter})
 }
-
-
-
-
