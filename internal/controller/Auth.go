@@ -3,27 +3,24 @@ package controller
 import (
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func RegisterAuthRoutes(router *gin.Engine) {
-	authGroup := router.Group("/auth")
-	{
-		authGroup.POST("/login", Login)
-		authGroup.POST("/logout", Logout)
-		authGroup.POST("/register", Register)
-		authGroup.GET("/me", Me)
-		authGroup.POST("/oauth", OAuth)
-		authGroup.POST("/totp", TOTP)
-	}
+func RegisterAuthRoutes(e *echo.Echo) {
+	authGroup := e.Group("/auth")
+	authGroup.POST("/login", Login)
+	authGroup.POST("/logout", Logout)
+	authGroup.POST("/register", Register)
+	authGroup.GET("/me", Me)
+	authGroup.POST("/oauth", OAuth)
+	authGroup.POST("/totp", TOTP)
 }
 
-func Login(c *gin.Context) {
+func Login(c echo.Context) error {
 	var req request.LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	resp := response.AuthResponse{
 		UserID:    "user-id",
@@ -31,14 +28,13 @@ func Login(c *gin.Context) {
 		Token:     "jwt-token",
 		ExpiresAt: "2025-12-31T23:59:59Z",
 	}
-	c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, resp)
 }
 
-func OAuth(c *gin.Context) {
+func OAuth(c echo.Context) error {
 	var req request.OAuthRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	resp := response.AuthResponse{
 		UserID:    "user-id",
@@ -46,14 +42,13 @@ func OAuth(c *gin.Context) {
 		Token:     "oauth-token",
 		ExpiresAt: "2025-12-31T23:59:59Z",
 	}
-	c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, resp)
 }
 
-func TOTP(c *gin.Context) {
+func TOTP(c echo.Context) error {
 	var req request.TOTPRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	resp := response.AuthResponse{
 		UserID:    "user-id",
@@ -61,19 +56,18 @@ func TOTP(c *gin.Context) {
 		Token:     "totp-token",
 		ExpiresAt: "2025-12-31T23:59:59Z",
 	}
-	c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, resp)
 }
 
-func Logout(c *gin.Context) {
+func Logout(c echo.Context) error {
 	// TODO: Реализовать логику выхода (инвалидация токена/сессии)
-	c.JSON(http.StatusOK, gin.H{"message": "Выход выполнен"})
+	return c.JSON(http.StatusOK, map[string]string{"message": "Выход выполнен"})
 }
 
-func Register(c *gin.Context) {
+func Register(c echo.Context) error {
 	var req request.RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	resp := response.AuthResponse{
 		UserID:    "new-user-id",
@@ -81,19 +75,10 @@ func Register(c *gin.Context) {
 		Token:     "jwt-token",
 		ExpiresAt: "2025-12-31T23:59:59Z",
 	}
-	c.JSON(http.StatusCreated, resp)
+	return c.JSON(http.StatusOK, resp)
 }
 
-func Me(c *gin.Context) {
-	// TODO: Получить информацию о текущем пользователе из контекста/сессии
-	resp := response.UserInfoResponse{
-		UserID:     "user-id",
-		Email:      "user@example.com",
-		FirstName:  "Иван",
-		LastName:   "Иванов",
-		Profession: "Backend",
-		IsActive:   true,
-		Roles:      []string{"admin", "employee"},
-	}
-	c.JSON(http.StatusOK, resp)
+func Me(c echo.Context) error {
+	// TODO: Реализовать получение информации о текущем пользователе
+	return c.JSON(http.StatusOK, map[string]string{"message": "Информация о пользователе"})
 }
