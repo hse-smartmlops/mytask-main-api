@@ -23,7 +23,7 @@ func Login(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
 	resp := response.AuthResponse{
-		UserID:    "user-id",
+		UserID:    "example-user-id",
 		Email:     req.Email,
 		Token:     "jwt-token",
 		ExpiresAt: "2025-12-31T23:59:59Z",
@@ -61,7 +61,23 @@ func TOTP(c echo.Context) error {
 
 func Logout(c echo.Context) error {
 	// TODO: Реализовать логику выхода (инвалидация токена/сессии)
-	return c.JSON(http.StatusOK, map[string]string{"message": "Выход выполнен"})
+	// Пример реализации:
+
+	// Получение токена из заголовков
+	token := c.Request().Header.Get("Authorization")
+	if token == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Token is required"})
+	}
+
+	// Инвалидация токена (здесь должна быть логика для удаления токена из хранилища или базы данных)
+	// Например, вызов сервиса для удаления сессии пользователя
+	// err := authService.InvalidateToken(token)
+	// if err != nil {
+	// 	return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to logout"})
+	// }
+
+	// Возврат успешного ответа
+	return c.JSON(http.StatusOK, map[string]string{"message": "Logout successful"})
 }
 
 func Register(c echo.Context) error {

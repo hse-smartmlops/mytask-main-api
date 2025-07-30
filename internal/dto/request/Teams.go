@@ -17,10 +17,3 @@ type TeamUpdateRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
 }
-
-// DTO для удаления команды
-// DELETE /team/:id
-
-type DeleteTeamRequest struct {
-	ID string `json:"id" binding:"required"`
-}
