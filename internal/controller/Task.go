@@ -28,13 +28,12 @@ func RegisterTaskRoutes(e *echo.Echo) {
 // @Description Возвращает список всех задач (заглушка)
 // @Tags Tasks
 // @Produce json
-// @Success 200 {object} response.TaskListResponse
+// @Success 200 {object} response.TaskList
 // @Router /tasks [get]
 func GetAllTasks(c echo.Context) error {
-	// Заглушка с примером данных
-	return c.JSON(http.StatusOK, response.TaskListResponse{
-		Tasks: []response.TaskResponse{
-			createSampleTask("1", "Пример задачи", "todo"),
+	return c.JSON(http.StatusOK, response.TaskList{
+		Tasks: []response.TaskShort{
+			createSampleTaskShort("1", "Пример задачи", "todo"),
 		},
 		TotalCount: 1,
 		Page:       1,
@@ -48,12 +47,12 @@ func GetAllTasks(c echo.Context) error {
 // @Tags Tasks
 // @Param id path string true "ID задачи"
 // @Produce json
-// @Success 200 {object} response.TaskResponse
+// @Success 200 {object} response.TaskDetail
 // @Failure 404 {object} response.ErrorResponse
 // @Router /tasks/{id} [get]
 func GetTaskByID(c echo.Context) error {
 	id := c.Param("id")
-	return c.JSON(http.StatusOK, createSampleTask(id, "Пример задачи", "todo"))
+	return c.JSON(http.StatusOK, createSampleTaskDetail(id, "Пример задачи", "todo"))
 }
 
 // GetTasksByBoardID godoc
@@ -62,13 +61,13 @@ func GetTaskByID(c echo.Context) error {
 // @Tags Tasks
 // @Param boardId path string true "ID доски"
 // @Produce json
-// @Success 200 {object} response.TaskListResponse
+// @Success 200 {object} response.TaskList
 // @Router /tasks/board/{boardId} [get]
 func GetTasksByBoardID(c echo.Context) error {
 	boardID := c.Param("boardId")
-	return c.JSON(http.StatusOK, response.TaskListResponse{
-		Tasks: []response.TaskResponse{
-			createSampleTask("1", "Задача для доски "+boardID, "todo"),
+	return c.JSON(http.StatusOK, response.TaskList{
+		Tasks: []response.TaskShort{
+			createSampleTaskShort("1", "Задача для доски "+boardID, "todo"),
 		},
 	})
 }
@@ -79,13 +78,13 @@ func GetTasksByBoardID(c echo.Context) error {
 // @Tags Tasks
 // @Param projectId path string true "ID проекта"
 // @Produce json
-// @Success 200 {object} response.TaskListResponse
+// @Success 200 {object} response.TaskList
 // @Router /tasks/project/{projectId} [get]
 func GetTasksByProjectID(c echo.Context) error {
 	projectID := c.Param("projectId")
-	return c.JSON(http.StatusOK, response.TaskListResponse{
-		Tasks: []response.TaskResponse{
-			createSampleTask("1", "Задача для проекта "+projectID, "todo"),
+	return c.JSON(http.StatusOK, response.TaskList{
+		Tasks: []response.TaskShort{
+			createSampleTaskShort("1", "Задача для проекта "+projectID, "todo"),
 		},
 	})
 }
@@ -98,7 +97,7 @@ func GetTasksByProjectID(c echo.Context) error {
 // @Param status query string false "Статус задачи"
 // @Param priority query int false "Приоритет задачи"
 // @Produce json
-// @Success 200 {object} response.TaskListResponse
+// @Success 200 {object} response.TaskList
 // @Router /tasks/filter [get]
 func GetTasksByFilter(c echo.Context) error {
 	filter := new(request.TaskFilter)
@@ -106,8 +105,7 @@ func GetTasksByFilter(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid filter parameters"})
 	}
 
-	// Заглушка с применением фильтров
-	task := createSampleTask("1", "Отфильтрованная задача", "todo")
+	task := createSampleTaskShort("1", "Отфильтрованная задача", "todo")
 	if filter.Status != nil {
 		task.Status = *filter.Status
 	}
@@ -115,8 +113,8 @@ func GetTasksByFilter(c echo.Context) error {
 		task.Priority = *filter.Priority
 	}
 
-	return c.JSON(http.StatusOK, response.TaskListResponse{
-		Tasks: []response.TaskResponse{task},
+	return c.JSON(http.StatusOK, response.TaskList{
+		Tasks: []response.TaskShort{task},
 	})
 }
 
@@ -127,7 +125,7 @@ func GetTasksByFilter(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param input body request.CreateTask true "Данные задачи"
-// @Success 201 {object} response.TaskCreateResponse
+// @Success 201 {object} response.TaskOperation
 // @Failure 400 {object} response.ErrorResponse
 // @Router /tasks [post]
 func CreateTask(c echo.Context) error {
@@ -136,9 +134,7 @@ func CreateTask(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request data"})
 	}
 
-	// Валидация должна быть здесь (пропущена для краткости)
-
-	return c.JSON(http.StatusCreated, response.TaskCreateResponse{
+	return c.JSON(http.StatusCreated, response.TaskOperation{
 		ID:      "generated-id",
 		Message: "Task will be created after DB integration",
 	})
@@ -152,7 +148,7 @@ func CreateTask(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID задачи"
 // @Param input body request.UpdateTask true "Обновляемые данные"
-// @Success 200 {object} response.TaskUpdateResponse
+// @Success 200 {object} response.TaskOperation
 // @Failure 400 {object} response.ErrorResponse
 // @Failure 404 {object} response.ErrorResponse
 // @Router /tasks/{id} [put]
@@ -164,7 +160,7 @@ func UpdateTask(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid request data"})
 	}
 
-	return c.JSON(http.StatusOK, response.TaskUpdateResponse{
+	return c.JSON(http.StatusOK, response.TaskOperation{
 		ID:      id,
 		Message: "Task will be updated after DB integration",
 	})
@@ -176,21 +172,32 @@ func UpdateTask(c echo.Context) error {
 // @Tags Tasks
 // @Param id path string true "ID задачи"
 // @Produce json
-// @Success 200 {object} response.TaskDeleteResponse
+// @Success 200 {object} response.TaskOperation
 // @Failure 404 {object} response.ErrorResponse
 // @Router /tasks/{id} [delete]
 func DeleteTask(c echo.Context) error {
 	id := c.Param("id")
-	return c.JSON(http.StatusOK, response.TaskDeleteResponse{
+	return c.JSON(http.StatusOK, response.TaskOperation{
 		ID:      id,
 		Message: "Task will be deleted after DB integration",
 	})
 }
 
-// Вспомогательная функция для создания тестовых данных
-func createSampleTask(id, name, status string) response.TaskResponse {
+// Вспомогательные функции для создания тестовых данных
+func createSampleTaskShort(id, name, status string) response.TaskShort {
+	return response.TaskShort{
+		ID:        id,
+		ProjectID: "project-1",
+		Name:      name,
+		Status:    status,
+		Priority:  5,
+		StartDate: time.Now(),
+	}
+}
+
+func createSampleTaskDetail(id, name, status string) response.TaskDetail {
 	now := time.Now()
-	return response.TaskResponse{
+	return response.TaskDetail{
 		ID:          id,
 		ProjectID:   "project-1",
 		Name:        name,
@@ -201,11 +208,10 @@ func createSampleTask(id, name, status string) response.TaskResponse {
 			ID:        "user-1",
 			FirstName: "Иван",
 			LastName:  "Иванов",
-			Email:     "ivan@example.com",
 		},
 		StartDate:  now,
 		CreatedAt:  now,
 		UpdatedAt:  now,
-		TimeSpent:  0,
+		TimeSpent:  "0",
 	}
 }
