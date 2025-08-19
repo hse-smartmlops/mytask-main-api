@@ -1,5 +1,7 @@
 package response
 
+import "time"
+
 // Для GET /team/all
 
 type TeamsListResponse struct {
@@ -12,6 +14,7 @@ type TeamResponse struct {
 	ID          string               `json:"id"`
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
+	UpdatedAt   time.Time            `json:"updated_at"`
 	Members     []TeamMemberResponse `json:"members"`
 }
 
@@ -27,7 +30,19 @@ type TeamMemberResponse struct {
 
 // Для DELETE /team/:id (если нужен ответ)
 
-type TeamDeleteResponse struct {
+type TeamUniversalResponse struct {
 	ID      string `json:"id"`
 	Message string `json:"message"`
+}
+
+type TeamUniversalUserResponse struct {
+	TeamID  string `json:"team_id"`
+	UserID  string `json:"user_id"`
+	Message string `json:"message"`
+}
+
+type TeamUniversalProjectResponse struct {
+	TeamID    string `json:"team_id"`
+	ProjectID string `json:"project_id"`
+	Message   string `json:"message"`
 }

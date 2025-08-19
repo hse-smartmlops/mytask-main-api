@@ -1,0 +1,22 @@
+package response
+
+import "time"
+
+type GetAllRolesResponse struct {
+	Roles      []GetRoleResponse
+	TotalCount int64 `json:"total_count"`
+	Page       int   `json:"page"`
+	PageSize   int   `json:"page_size"`
+}
+
+type GetRoleResponse struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type RoleUniversalReport struct {
+	ID      string `json:"id"`
+	Message string `json:"message"`
+}

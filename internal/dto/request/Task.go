@@ -2,29 +2,30 @@ package request
 
 import "time"
 
-type CreateTask struct {
+type TaskCreateRequest struct {
 	ProjectID     string     `json:"project_id" validate:"required,uuid4"`
-	BoardID       *string    `json:"board_id" validate:"omitempty,uuid4"`
 	Name          string     `json:"name" validate:"required,min=3,max=100"`
 	Description   string     `json:"description" validate:"max=500"`
-	Status        string     `json:"status" validate:"required,oneof=todo in_progress done"`
-	Priority      int        `json:"priority" validate:"required,min=1,max=10"`
+	Status        *string    `json:"status" validate:"required,oneof=todo in_progress done"`
+	Priority      *int16     `json:"priority" validate:"required,min=1,max=10"`
+	CreatorID     string     `json:"creator_id" validate:"required,uuid4"`
 	AssignedTo    *string    `json:"assigned_to" validate:"omitempty,uuid4"`
 	Deadline      *time.Time `json:"deadline"`
-	StartDate     time.Time  `json:"start_date" validate:"required"`
+	StartDate     *time.Time `json:"start_date" validate:"required"`
 	GitlabIssueID *int       `json:"gitlab_issue_id"`
+	Category      *int8      `json:"community"`
 }
 
-type UpdateTask struct {
+type TaskUpdateRequest struct {
 	Name          *string    `json:"name" validate:"omitempty,min=3,max=100"`
 	Description   *string    `json:"description" validate:"omitempty,max=500"`
 	Status        *string    `json:"status" validate:"omitempty,oneof=todo in_progress done"`
-	Priority      *int       `json:"priority" validate:"omitempty,min=1,max=10"`
+	Priority      *int16     `json:"priority" validate:"omitempty,min=1,max=10"`
 	AssignedTo    *string    `json:"assigned_to" validate:"omitempty,uuid4"`
 	Deadline      *time.Time `json:"deadline"`
 	StartDate     *time.Time `json:"start_date"`
 	GitlabIssueID *int       `json:"gitlab_issue_id"`
-	BoardID       *string    `json:"board_id" validate:"omitempty,uuid4"`
+	Community     *bool      `json:"community"`
 }
 
 type TaskFilter struct {
@@ -38,4 +39,9 @@ type TaskFilter struct {
 	DeadlineTo   *time.Time `json:"deadline_to" form:"deadline_to"`
 	Page         *int       `json:"page" form:"page" validate:"omitempty,min=1"`
 	PageSize     *int       `json:"page_size" form:"page_size" validate:"omitempty,min=5,max=100"`
+}
+
+type TaskListRequest struct {
+	Page     int `json:"page"`
+	PageSize int `json:"page_size"`
 }
