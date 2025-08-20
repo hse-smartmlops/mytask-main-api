@@ -13,6 +13,9 @@ type ProblemUniversalResponse struct {
 }
 
 type ProblemsByUserId struct {
-	UserID   string            `json:"user_id"`
-	Problems []ProblemResponse `json:"problems"`
+	UserID     string            `json:"user_id"`
+	Problems   []ProblemResponse `json:"problems"`
+	TotalCount int64             `json:"total_count"`
+	Page       int               `json:"page"`
+	PageSize   int               `json:"page_size"`
 }

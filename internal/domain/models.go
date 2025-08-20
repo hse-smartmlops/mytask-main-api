@@ -199,8 +199,7 @@ type ForumMessage struct {
 	ID          *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	ProblemID   *uuid.UUID `gorm:"type:uuid;index"`
 	Problem     Problem    `gorm:"constraint:OnDelete:CASCADE;"`
-	Message     *string    `gorm:"type:text"`
-	Attachments *string    `gorm:"type:json"`
+	Description *[]string  `gorm:"type:varchar(255)[]"`
 	CreatorID   *uuid.UUID `gorm:"type:uuid;index"`
 	User        User       `gorm:"constraint:OnDelete:CASCADE;"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
