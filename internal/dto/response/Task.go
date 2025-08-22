@@ -5,7 +5,7 @@ import (
 )
 
 // Полная информация о задаче (для GetTaskByID)
-type GetTaskByIDResponce struct {
+type GetTaskByIDResponse struct {
 	ID            string    `json:"id"`
 	ProjectID     string    `json:"project_id"`
 	Name          string    `json:"name"`
@@ -35,7 +35,7 @@ type TaskShort struct {
 }
 
 // Ответ для списка задач с пагинацией
-type TaskListResponce struct {
+type TaskListResponse struct {
 	Tasks      []TaskShort `json:"tasks"`
 	TotalCount int64       `json:"total_count"`
 	Page       int         `json:"page,omitempty"`
@@ -43,7 +43,7 @@ type TaskListResponce struct {
 }
 
 // Универсальный ответ для операций
-type TaskUniversaResponce struct {
+type TaskUniversaResponse struct {
 	ID      string `json:"id"`
 	Message string `json:"message"`
 }

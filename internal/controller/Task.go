@@ -5,11 +5,12 @@ import (
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"errors"
-	"github.com/google/uuid"
-	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/labstack/echo/v4"
 )
@@ -28,12 +29,17 @@ func RegisterTaskRoutes(e *echo.Echo) {
 }
 
 // GetAllTasks godoc
-// @Summary Получение списка задач
-// @Description Возвращает список всех задач (заглушка)
+// @Summary Получение списка всех задач
+// @Description Получает список всех задач с учетом пагинации, исключая удаленные
 // @Tags Tasks
+// @Accept json
 // @Produce json
-// @Success 200 {object} response.TaskList
-// @Router /tasks [get]
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
+// @Router /task [get]
 func GetAllTasks(c echo.Context) error {
 	var req request.TaskListRequest
 	if err := c.Bind(&req); err != nil {
@@ -73,7 +79,7 @@ func GetAllTasks(c echo.Context) error {
 		})
 	}
 
-	taskList := response.TaskListResponce{
+	taskList := response.TaskListResponse{
 		Page:       page,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
@@ -136,13 +142,16 @@ func GetAllTasks(c echo.Context) error {
 
 // GetTaskByID godoc
 // @Summary Получение задачи по ID
-// @Description Возвращает задачу по ID (заглушка)
+// @Description Получает данные задачи по её уникальному идентификатору
 // @Tags Tasks
-// @Param id path string true "ID задачи"
+// @Accept json
 // @Produce json
-// @Success 200 {object} response.TaskDetail
-// @Failure 404 {object} response.ErrorResponse
-// @Router /tasks/{id} [get]
+// @Param id path string true "ID задачи"
+// @Success 200 {object} response.GetTaskByIDResponse "Задача успешно получена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор задачи"
+// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении задачи"
+// @Router /task/{id} [get]
 func GetTaskByID(c echo.Context) error {
 	id := c.Param("id")
 	taskId, err := uuid.Parse(id)
@@ -298,7 +307,7 @@ func GetTaskByID(c echo.Context) error {
 	if task.Category != nil {
 		category = *task.Category
 	}
-	taskResponse := response.GetTaskByIDResponce{
+	taskResponse := response.GetTaskByIDResponse{
 		ID:            Id,
 		ProjectID:     projectId,
 		Name:          name,
@@ -318,13 +327,16 @@ func GetTaskByID(c echo.Context) error {
 }
 
 // GetTasksByProjectID godoc
-// @Summary Получение задач по проекту
-// @Description Возвращает задачи для указанного проекта (заглушка)
+// @Summary Получение задач по ID проекта
+// @Description Получает список задач, связанных с указанным проектом
 // @Tags Tasks
-// @Param projectId path string true "ID проекта"
+// @Accept json
 // @Produce json
-// @Success 200 {object} response.TaskList
-// @Router /tasks/project/{projectId} [get]
+// @Param projectId path string true "ID проекта"
+// @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
+// @Router /task/project/{projectId} [get]
 func GetTasksByProjectID(c echo.Context) error {
 	// Получаем projectID из параметров URL
 	projectIDParam := c.Param("projectId")
@@ -370,7 +382,7 @@ func GetTasksByProjectID(c echo.Context) error {
 		})
 	}
 
-	taskList := response.TaskListResponce{
+	taskList := response.TaskListResponse{
 		Page:       page,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
@@ -436,15 +448,23 @@ func GetTasksByProjectID(c echo.Context) error {
 }
 
 // GetTasksByFilter godoc
-// @Summary Фильтрация задач
-// @Description Возвращает отфильтрованный список задач (заглушка)
+// @Summary Получение задач по фильтру
+// @Description Получает список задач, соответствующих указанным фильтрам
 // @Tags Tasks
-// @Param project_id query string false "ID проекта"
+// @Accept json
+// @Produce json
 // @Param status query string false "Статус задачи"
 // @Param priority query int false "Приоритет задачи"
-// @Produce json
-// @Success 200 {object} response.TaskList
-// @Router /tasks/filter [get]
+// @Param assignedTo query string false "ID исполнителя"
+// @Param createdBy query string false "ID создателя"
+// @Param startDate query string false "Дата начала (YYYY-MM-DD)"
+// @Param deadline query string false "Дедлайн (YYYY-MM-DD)"
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
+// @Router /task/filter [get]
 func GetTasksByFilter(c echo.Context) error {
 	filter := new(request.TaskFilter)
 	if err := c.Bind(filter); err != nil {
@@ -454,15 +474,17 @@ func GetTasksByFilter(c echo.Context) error {
 }
 
 // CreateTask godoc
-// @Summary Создание задачи
-// @Description Создает новую задачу (заглушка)
+// @Summary Создание новой задачи
+// @Description Создает новую задачу с указанными параметрами
 // @Tags Tasks
 // @Accept json
 // @Produce json
-// @Param input body request.CreateTask true "Данные задачи"
-// @Success 201 {object} response.TaskOperation
-// @Failure 400 {object} response.ErrorResponse
-// @Router /tasks [post]
+// @Param task body request.TaskCreateRequest true "Данные для создания задачи"
+// @Success 201 {object} response.TaskUniversaResponse "Задача успешно создана"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
+// @Failure 404 {object} map[string]string "Исполнитель или поручитель не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании задачи"
+// @Router /task [post]
 func CreateTask(c echo.Context) error {
 	var req request.TaskCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -588,7 +610,7 @@ func CreateTask(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{})
 	}
 
-	createResp := response.TaskUniversaResponce{
+	createResp := response.TaskUniversaResponse{
 		ID:      task.ID.String(),
 		Message: "Задача создана",
 	}
@@ -598,16 +620,17 @@ func CreateTask(c echo.Context) error {
 
 // UpdateTask godoc
 // @Summary Обновление задачи
-// @Description Обновляет существующую задачу (заглушка)
+// @Description Обновляет данные задачи по её ID
 // @Tags Tasks
 // @Accept json
 // @Produce json
 // @Param id path string true "ID задачи"
-// @Param input body request.UpdateTask true "Обновляемые данные"
-// @Success 200 {object} response.TaskOperation
-// @Failure 400 {object} response.ErrorResponse
-// @Failure 404 {object} response.ErrorResponse
-// @Router /tasks/{id} [put]
+// @Param task body request.TaskUpdateRequest true "Данные для обновления задачи"
+// @Success 200 {object} response.TaskUniversaResponse "Задача успешно обновлена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении задачи"
+// @Router /task/{id} [put]
 func UpdateTask(c echo.Context) error {
 	id := c.Param("id")
 	taskID, err := uuid.Parse(id)
@@ -674,7 +697,7 @@ func UpdateTask(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
 	}
 
-	return c.JSON(http.StatusOK, response.TaskUniversaResponce{
+	return c.JSON(http.StatusOK, response.TaskUniversaResponse{
 		ID:      taskID.String(),
 		Message: "Задача изменена",
 	})
@@ -682,13 +705,15 @@ func UpdateTask(c echo.Context) error {
 
 // DeleteTask godoc
 // @Summary Удаление задачи
-// @Description Удаляет задачу по ID (заглушка)
+// @Description Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)
 // @Tags Tasks
-// @Param id path string true "ID задачи"
+// @Accept json
 // @Produce json
-// @Success 200 {object} response.TaskOperation
-// @Failure 404 {object} response.ErrorResponse
-// @Router /tasks/{id} [delete]
+// @Param id path string true "ID задачи"
+// @Success 200 {object} response.TaskUniversaResponse "Задача успешно удалена"
+// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении задачи"
+// @Router /task/{id} [delete]
 func DeleteTask(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
@@ -715,7 +740,7 @@ func DeleteTask(c echo.Context) error {
 		})
 	}
 
-	return c.JSON(http.StatusOK, response.TaskUniversaResponce{
+	return c.JSON(http.StatusOK, response.TaskUniversaResponse{
 		ID:      id,
 		Message: "Задача удалена",
 	})

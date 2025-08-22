@@ -5,12 +5,13 @@ import (
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"errors"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 func RegisterBoardRoutes(e *echo.Echo) {
@@ -25,6 +26,18 @@ func RegisterBoardRoutes(e *echo.Echo) {
 	}
 }
 
+// GetAllBoards godoc
+// @Summary Получение списка всех досок
+// @Description Получает список всех досок с учетом пагинации, исключая удаленные
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.BoardListResponse "Список досок успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
+// @Router /boards [get]
 func GetAllBoards(c echo.Context) error {
 	var req request.BoardListRequest
 	if err := c.Bind(&req); err != nil {
@@ -112,6 +125,18 @@ func GetAllBoards(c echo.Context) error {
 	return c.JSON(http.StatusOK, boardList)
 }
 
+// GetBoardById godoc
+// @Summary Получение доски по ID
+// @Description Получает данные доски по её уникальному идентификатору
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Param id path string true "ID доски"
+// @Success 200 {object} response.BoardResponse "Доска успешно получена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор"
+// @Failure 404 {object} map[string]string "Доска не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении доски"
+// @Router /boards/{id} [get]
 func GetBoardById(c echo.Context) error {
 	id := c.Param("id")
 	boardId, err := uuid.Parse(id)
@@ -180,6 +205,18 @@ func GetBoardById(c echo.Context) error {
 	return c.JSON(http.StatusOK, boardResponse)
 }
 
+// GetBoardByProjectId godoc
+// @Summary Получение досок по ID проекта
+// @Description Получает список досок, связанных с указанным проектом
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Param projectId path string true "ID проекта"
+// @Success 200 {object} response.BoardForProjectResponse "Список досок успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
+// @Failure 404 {object} map[string]string "Доска не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
+// @Router /boards/project/{projectId} [get]
 func GetBoardByProjectId(c echo.Context) error {
 	projectID := c.Param("projectId")
 	projectId, err := uuid.Parse(projectID)
@@ -250,6 +287,17 @@ func GetBoardByProjectId(c echo.Context) error {
 	return c.JSON(http.StatusOK, projectResponse)
 }
 
+// CreateBoard godoc
+// @Summary Создание новой доски
+// @Description Создает новую доску с указанными параметрами
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Param board body request.BoardCreateRequest true "Данные для создания доски"
+// @Success 201 {object} response.BoardUniversalResponse "Доска успешно создана"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор проекта"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании доски"
+// @Router /boards [post]
 func CreateBoard(c echo.Context) error {
 	var req request.BoardCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -296,6 +344,18 @@ func CreateBoard(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
+// UpdateBoard godoc
+// @Summary Обновление доски
+// @Description Обновляет данные доски по её ID
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Param id path string true "ID доски"
+// @Param board body request.BoardUpdateRequest true "Данные для обновления доски"
+// @Success 200 {object} response.BoardUniversalResponse "Доска успешно обновлена"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или нет полей для обновления"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении доски"
+// @Router /boards/{id} [patch]
 func UpdateBoard(c echo.Context) error {
 	id := c.Param("id")
 	var req request.BoardUpdateRequest
@@ -333,6 +393,17 @@ func UpdateBoard(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateReponse)
 }
 
+// DeleteBoard godoc
+// @Summary Удаление доски
+// @Description Логическое удаление доски по ID (поле deleted = true)
+// @Tags boards
+// @Accept json
+// @Produce json
+// @Param id path string true "ID доски"
+// @Success 200 {object} response.BoardUniversalResponse "Доска успешно удалена"
+// @Failure 404 {object} map[string]string "Доска не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении доски"
+// @Router /boards/{id} [delete]
 func DeleteBoard(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})

@@ -26,6 +26,18 @@ func RegisterForumMessagesRoutes(e *echo.Echo){
 	}
 }
 
+// GetAllForumMessages godoc
+// @Summary Получение списка всех сообщений форума
+// @Description Получает список всех сообщений форума с учетом пагинации, исключая удаленные
+// @Tags ForumMessages
+// @Accept json
+// @Produce json
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.ForumMessageListResponse "Список сообщений форума успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
+// @Router /forum-messages [get]
 func GetAllForumMessages(c echo.Context) error {
 	var req request.ForumMessageListRequest
 	if err := c.Bind(&req); err != nil {
@@ -110,6 +122,19 @@ func GetAllForumMessages(c echo.Context) error {
 	return c.JSON(http.StatusOK, forumMessageList)
 }
 
+// GetForumMessagesByProblemId godoc
+// @Summary Получение сообщений форума по ID проблемы
+// @Description Получает список сообщений форума, связанных с указанной проблемой, с учетом пагинации
+// @Tags ForumMessages
+// @Accept json
+// @Produce json
+// @Param id path string true "ID проблемы"
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.ForumMessageListByProblemIdResponse "Список сообщений форума успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
+// @Router /forum-messages/problem/{id} [get]
 func GetForumMessagesByProblemId(c echo.Context) error{
 	id := c.Param("id")
 	problemID, err := uuid.Parse(id)
@@ -204,6 +229,18 @@ func GetForumMessagesByProblemId(c echo.Context) error{
 	return c.JSON(http.StatusOK, forumMessageList)
 }
 
+// GetForumMessageById godoc
+// @Summary Получение сообщения форума по ID
+// @Description Получает данные сообщения форума по его уникальному идентификатору
+// @Tags ForumMessages
+// @Accept json
+// @Produce json
+// @Param id path string true "ID сообщения форума"
+// @Success 200 {object} response.ForumMessageResponse "Сообщение форума успешно получено"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор сообщения"
+// @Failure 404 {object} map[string]string "Сообщение форума не найдено"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщения форума"
+// @Router /forum-messages/{id} [get]
 func GetForumMessageById(c echo.Context) error {
 	id := c.Param("id")
 	messageID, err := uuid.Parse(id)
@@ -266,6 +303,17 @@ func GetForumMessageById(c echo.Context) error {
 	return c.JSON(http.StatusOK, forumMessageResponse)
 }
 
+// CreateForumMessage godoc
+// @Summary Создание нового сообщения форума
+// @Description Создает новое сообщение форума с указанными параметрами
+// @Tags ForumMessages
+// @Accept json
+// @Produce json
+// @Param forumMessage body request.CreateForumMessageRequest true "Данные для создания сообщения форума"
+// @Success 201 {object} response.ForumMessageUniversalResponse "Сообщение форума успешно создано"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании сообщения форума"
+// @Router /forum-messages [post]
 func CreateForumMessage(c echo.Context) error{
 	var req request.CreateForumMessageRequest
 	if err := c.Bind(&req); err != nil {
@@ -319,6 +367,18 @@ func CreateForumMessage(c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
+// UpdateForumMessage godoc
+// @Summary Обновление сообщения форума
+// @Description Обновляет данные сообщения форума по его ID
+// @Tags ForumMessages
+// @Accept json
+// @Produce json
+// @Param id path string true "ID сообщения форума"
+// @Param forumMessage body request.UpdateForumMessageRequest true "Данные для обновления сообщения форума"
+// @Success 200 {object} response.ForumMessageUniversalResponse "Сообщение форума успешно обновлено"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении сообщения форума"
+// @Router /forum-messages/{id} [patch]
 func UpdateForumMessage(c echo.Context) error{
 	id := c.Param("id")
 	messageID, err := uuid.Parse(id)
@@ -387,6 +447,17 @@ func UpdateForumMessage(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
+// DeleteForumMessage godoc
+// @Summary Удаление сообщения форума
+// @Description Логическое удаление сообщения форума по ID (поле deleted = true)
+// @Tags ForumMessages
+// @Accept json
+// @Produce json
+// @Param id path string true "ID сообщения форума"
+// @Success 200 {object} response.ForumMessageUniversalResponse "Сообщение форума успешно удалено"
+// @Failure 404 {object} map[string]string "Сообщение форума не найдено"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении сообщения форума"
+// @Router /forum-messages/{id} [delete]
 func DeleteForumMessage(c echo.Context) error{
 	id := c.Param("id")
 	updateData := make(map[string]interface{})

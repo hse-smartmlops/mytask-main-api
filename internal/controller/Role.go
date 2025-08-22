@@ -5,12 +5,13 @@ import (
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"errors"
-	"github.com/google/uuid"
-	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
+	"gorm.io/gorm"
 )
 
 func RegisterRoleRoutes(e *echo.Echo) {
@@ -24,6 +25,18 @@ func RegisterRoleRoutes(e *echo.Echo) {
 	}
 }
 
+// GetAllRoles godoc
+// @Summary Получение списка всех ролей
+// @Description Получает список всех ролей с учетом пагинации, исключая удаленные
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.GetAllRolesResponse "Список ролей успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении ролей"
+// @Router /role [get]
 func GetAllRoles(c echo.Context) error {
 	var req request.GetAllRolesRequest
 	if err := c.Bind(&req); err != nil {
@@ -93,6 +106,18 @@ func GetAllRoles(c echo.Context) error {
 	return c.JSON(http.StatusOK, roleList)
 }
 
+// GetRoleById godoc
+// @Summary Получение роли по ID
+// @Description Получает данные роли по её уникальному идентификатору
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Param id path string true "ID роли"
+// @Success 200 {object} response.GetRoleResponse "Роль успешно получена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор роли"
+// @Failure 404 {object} map[string]string "Роль не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении роли"
+// @Router /role/{id} [get]
 func GetRoleById(c echo.Context) error {
 	id := c.Param("id")
 	roleId, err := uuid.Parse(id)
@@ -144,6 +169,17 @@ func GetRoleById(c echo.Context) error {
 	return c.JSON(http.StatusOK, roleResponse)
 }
 
+// CreateRole godoc
+// @Summary Создание новой роли
+// @Description Создает новую роль с указанными параметрами
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Param role body request.RoleCreateRequest true "Данные для создания роли"
+// @Success 201 {object} response.RoleUniversalReport "Роль успешно создана"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании роли"
+// @Router /role [post]
 func CreateRole(c echo.Context) error {
 	var req request.RoleCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -177,6 +213,18 @@ func CreateRole(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
+// UpdateRole godoc
+// @Summary Обновление роли
+// @Description Обновляет данные роли по её ID
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Param id path string true "ID роли"
+// @Param role body request.RoleUpdateRequest true "Данные для обновления роли"
+// @Success 200 {object} response.RoleUniversalReport "Роль успешно обновлена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении роли"
+// @Router /role/{id} [patch]
 func UpdateRole(c echo.Context) error {
 	id := c.Param("id")
 	roleId, err := uuid.Parse(id)
@@ -224,6 +272,17 @@ func UpdateRole(c echo.Context) error {
 	return c.JSON(http.StatusCreated, updateResponse)
 }
 
+// DeleteRole godoc
+// @Summary Удаление роли
+// @Description Логическое удаление роли по ID, включая связанные данные (поле deleted = true)
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Param id path string true "ID роли"
+// @Success 200 {object} response.ProjectUniversalResponse "Роль успешно удалена"
+// @Failure 404 {object} map[string]string "Роль не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
+// @Router /role/{id} [delete]
 func DeleteRole(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})

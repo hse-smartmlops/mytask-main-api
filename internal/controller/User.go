@@ -26,6 +26,18 @@ func RegisterUserRoutes(e *echo.Echo) {
 	userGroup.POST("/role", AddUserToTeam)
 }
 
+// GetAllUsers godoc
+// @Summary Получение списка всех пользователей
+// @Description Получает список всех пользователей с учетом пагинации, исключая удаленных
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.GetAllUsersResponse "Список пользователей успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователей"
+// @Router /user [get]
 func GetAllUsers(c echo.Context) error {
 	var req request.GetAllUsersRequest
 	if err := c.Bind(&req); err != nil {
@@ -139,6 +151,18 @@ func GetAllUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, userList)
 }
 
+// GetUserById godoc
+// @Summary Получение пользователя по ID
+// @Description Получает данные пользователя по его уникальному идентификатору
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Success 200 {object} response.GetUserResponse "Пользователь успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор пользователя"
+// @Failure 404 {object} map[string]string "Пользователь не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователя"
+// @Router /user/{id} [get]
 func GetUserById(c echo.Context) error {
 	id := c.Param("id")
 	userId, err := uuid.Parse(id)
@@ -229,6 +253,17 @@ func GetUserById(c echo.Context) error {
 	return c.JSON(http.StatusOK, getUserResponse)
 }
 
+// CreateUser godoc
+// @Summary Создание нового пользователя
+// @Description Создает нового пользователя с указанными параметрами
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user body request.UserCreateRequest true "Данные для создания пользователя"
+// @Success 201 {object} response.UserUniversalResponse "Пользователь успешно создан"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании пользователя"
+// @Router /user [post]
 func CreateUser(c echo.Context) error {
 	var req request.UserCreateRequest
 	err := c.Bind(&req)
@@ -282,6 +317,18 @@ func CreateUser(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
+// UpdateUser godoc
+// @Summary Обновление пользователя
+// @Description Обновляет данные пользователя по его ID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Param user body request.UpdateUserRequest true "Данные для обновления пользователя"
+// @Success 200 {object} response.UserUniversalResponse "Пользователь успешно обновлен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении пользователя"
+// @Router /user/{id} [post]
 func UpdateUser(c echo.Context) error {
 	id := c.Param("id")
 	userId, err := uuid.Parse(id)
@@ -357,6 +404,17 @@ func UpdateUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
+// DeleteUser godoc
+// @Summary Удаление пользователя
+// @Description Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Success 200 {object} response.UserUniversalResponse "Пользователь успешно удален"
+// @Failure 404 {object} map[string]string "Пользователь не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
+// @Router /user/{id} [delete]
 func DeleteUser(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
@@ -555,6 +613,17 @@ func DeleteUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, deleteResponse)
 }
 
+// AddUserRole godoc
+// @Summary Добавление роли пользователю
+// @Description Добавляет роль указанному пользователю
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param addRole body request.AddRoleUserRequest true "Данные для добавления роли пользователю"
+// @Success 200 {object} response.AddRoleUserResponse "Роль успешно добавлена"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
+// @Failure 500 {object} map[string]string "Ошибка сервера при добавлении роли"
+// @Router /user/role [post]
 func AddUserRole(c echo.Context) error {
 	var req request.AddRoleUserRequest
 	if err := c.Bind(&req); err != nil {
@@ -615,6 +684,18 @@ func AddUserRole(c echo.Context) error {
 	return c.JSON(http.StatusOK, addResponse)
 }
 
+// RemoveUserRole godoc
+// @Summary Удаление роли у пользователя
+// @Description Удаляет роль у указанного пользователя
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param removeRole body request.RemoveRoleUserRequest true "Данные для удаления роли у пользователя"
+// @Success 200 {object} response.RemoveRoleUserResponse "Роль успешно удалена"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
+// @Failure 404 {object} map[string]string "Ничего не удалено"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
+// @Router /user/role [delete]
 func RemoveUserRole(c echo.Context) error {
 	var req request.RemoveRoleUserRequest
 	if err := c.Bind(&req); err != nil {

@@ -24,12 +24,25 @@ func RegisterReportRoutes(e *echo.Echo) {
 		reportGroup.POST("", CreateReport)
 		reportGroup.PUT("/:id", UpdateReport)
 		reportGroup.DELETE("/:id", DeleteReport)
-		reportGroup.PATCH("/help-request/:id", updateHelpRequest)
-		reportGroup.PATCH("/completed-work/:id", updateCompletedWork)
-		reportGroup.PATCH("/tomorrow-plans/:id", updateTomorrowPlans)
+		reportGroup.PATCH("/help-request/:id", UpdateHelpRequest)
+		reportGroup.PATCH("/completed-work/:id", UpdateCompletedWork)
+		reportGroup.PATCH("/tomorrow-plans/:id", UpdateTomorrowPlans)
 	}
 }
 
+// GetAllReports godoc
+// @Summary Получение списка всех отчетов
+// @Description Получает список всех отчетов с учетом пагинации, исключая удаленные
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.ReportListResponse "Список отчетов успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
+// @Router /report [get]
 func GetAllReports(c echo.Context) error {
 	var req request.ReportListRequest
 	if err := c.Bind(&req); err != nil {
@@ -313,6 +326,18 @@ func GetAllReports(c echo.Context) error {
 	return c.JSON(http.StatusOK, reportList)
 }
 
+// GetReport godoc
+// @Summary Получение отчета по ID
+// @Description Получает данные отчета по его уникальному идентификатору
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID отчета"
+// @Success 200 {object} response.ReportResponse "Отчет успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор отчета"
+// @Failure 404 {object} map[string]string "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении отчета"
+// @Router /report/{id} [get]
 func GetReport(c echo.Context) error {
 	id := c.Param("id")
 	reportId, err := uuid.Parse(id)
@@ -576,6 +601,18 @@ func GetReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// GetReportsByTaskId godoc
+// @Summary Получение отчетов по ID задачи
+// @Description Получает список отчетов, связанных с указанной задачей
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID задачи"
+// @Success 200 {object} response.ReportListByTaskId "Список отчетов успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор задачи"
+// @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
+// @Router /report/task/{id} [get]
 func GetReportsByTaskId(c echo.Context) error {
 	taskId := c.Param("id")
 	var reports []models.DailyReport
@@ -828,6 +865,18 @@ func GetReportsByTaskId(c echo.Context) error {
 	return c.JSON(http.StatusOK, reportList)
 }
 
+// GetReportsByProjectId godoc
+// @Summary Получение отчетов по ID проекта
+// @Description Получает список отчетов, связанных с задачами указанного проекта
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID проекта"
+// @Success 200 {object} response.ReportListByProjectId "Список отчетов успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
+// @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
+// @Router /report/project/{id} [get]
 func GetReportsByProjectId(c echo.Context) error {
 	projectId := c.Param("id")
 
@@ -1098,6 +1147,17 @@ func GetReportsByProjectId(c echo.Context) error {
 	return c.JSON(http.StatusOK, reportList)
 }
 
+// CreateReport godoc
+// @Summary Создание нового отчета
+// @Description Создает новый отчет с указанными параметрами, включая выполненную работу, планы на завтра, проблемы и запрос на помощь
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param report body request.ReportCreateRequest true "Данные для создания отчета"
+// @Success 201 {object} response.ReportUniversalResponse "Отчет успешно создан"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании отчета"
+// @Router /report [post]
 func CreateReport(c echo.Context) error {
 	var req request.ReportCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -1255,6 +1315,18 @@ func CreateReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
+// UpdateReport godoc
+// @Summary Обновление отчета
+// @Description Обновляет данные отчета по его ID
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID отчета"
+// @Param report body request.ReportUpdateRequest true "Данные для обновления отчета"
+// @Success 200 {object} response.ReportUniversalResponse "Отчет успешно обновлен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор отчета или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении отчета"
+// @Router /report/{id} [put]
 func UpdateReport(c echo.Context) error {
 	id := c.Param("id")
 	reportId, err := uuid.Parse(id)
@@ -1297,6 +1369,17 @@ func UpdateReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
+// DeleteReport godoc
+// @Summary Удаление отчета
+// @Description Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID отчета"
+// @Success 200 {object} response.ReportUniversalResponse "Отчет успешно удален"
+// @Failure 404 {object} map[string]string "Отчет не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении отчета"
+// @Router /report/{id} [delete]
 func DeleteReport(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
@@ -1376,7 +1459,19 @@ func DeleteReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-func updateHelpRequest(c echo.Context) error{
+// UpdateHelpRequest godoc
+// @Summary Обновление запроса на помощь
+// @Description Обновляет данные запроса на помощь по его ID
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID запроса на помощь"
+// @Param helpRequest body request.HelpRequestUpdateRequest true "Данные для обновления запроса на помощь"
+// @Success 200 {object} response.ReportUniversalResponse "Запрос на помощь успешно обновлен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении запроса на помощь"
+// @Router /report/help-request/{id} [patch]
+func UpdateHelpRequest(c echo.Context) error{
 	id := c.Param("id")
 	helpRequestId, err := uuid.Parse(id)
 	if err != nil {
@@ -1425,7 +1520,19 @@ func updateHelpRequest(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-func updateCompletedWork(c echo.Context) error{
+// UpdateCompletedWork godoc
+// @Summary Обновление выполненной работы
+// @Description Обновляет данные выполненной работы по ее ID
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID выполненной работы"
+// @Param completedWork body request.CompletedWorkUpdateRequest true "Данные для обновления выполненной работы"
+// @Success 200 {object} response.ReportUniversalResponse "Выполненная работа успешно обновлена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении выполненной работы"
+// @Router /report/completed-work/{id} [patch]
+func UpdateCompletedWork(c echo.Context) error{
 	id := c.Param("id")
 	completedWorkId, err := uuid.Parse(id)
 	if err != nil{
@@ -1471,7 +1578,19 @@ func updateCompletedWork(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-func updateTomorrowPlans(c echo.Context) error{
+// updateTomorrowPlans godoc
+// @Summary Обновление планов на завтра
+// @Description Обновляет данные планов на завтра по их ID
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID планов на завтра"
+// @Param tomorrowPlans body request.TomorrowPlansUpdateRequest true "Данные для обновления планов на завтра"
+// @Success 200 {object} response.ReportUniversalResponse "Планы на завтра успешно обновлены"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении планов на завтра"
+// @Router /report/tomorrow-plans/{id} [patch]
+func UpdateTomorrowPlans(c echo.Context) error{
 	id := c.Param("id")
 	tomorrowPlansId, err := uuid.Parse(id)
 	if err != nil{

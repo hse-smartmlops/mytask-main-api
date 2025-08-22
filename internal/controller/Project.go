@@ -28,11 +28,16 @@ func RegisterProjectRoutes(e *echo.Echo) {
 
 // GetAllProjects godoc
 // @Summary Получение списка всех проектов
-// @Description Возвращает список всех проектов
+// @Description Получает список всех проектов с учетом пагинации, исключая удаленные
 // @Tags Projects
+// @Accept json
 // @Produce json
-// @Success 200 {object} map[string]string
-// @Router /projects [get]
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.ProjectListResponse "Список проектов успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
+// @Router /project [get]
 func GetAllProjects(c echo.Context) error {
 	var req request.ProjectListRequest
 	if err := c.Bind(&req); err != nil {
@@ -135,15 +140,17 @@ func GetAllProjects(c echo.Context) error {
 }
 
 // GetProjectByID godoc
-// @Summary      Получение проекта по ID
-// @Description  Возвращает проект по его идентификатору
-// @Tags         Projects
-// @Param        id path string true "Project ID"
-// @Produce      json
-// @Success      200 {object} response.ProjectResponse
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string "Проект не найден"
-// @Router       /projects/{id} [get]
+// @Summary Получение проекта по ID
+// @Description Получает данные проекта по его уникальному идентификатору
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param id path string true "ID проекта"
+// @Success 200 {object} response.ProjectResponse "Проект успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
+// @Failure 404 {object} map[string]string "Проект не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении проекта"
+// @Router /project/{id} [get]
 func GetProjectByID(c echo.Context) error {
 	id := c.Param("id")
 	projectId, err := uuid.Parse(id)
@@ -222,16 +229,16 @@ func GetProjectByID(c echo.Context) error {
 }
 
 // CreateProject godoc
-// @Summary Создание проекта
-// @Description Создает новый проект
+// @Summary Создание нового проекта
+// @Description Создает новый проект с указанными параметрами
 // @Tags Projects
 // @Accept json
 // @Produce json
-// @Param project body request.CreateProjectRequest true "Данные проекта"
-// @Success 201 {object} map[string]string
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /projects [post]
+// @Param project body request.CreateProjectRequest true "Данные для создания проекта"
+// @Success 201 {object} response.ProjectUniversalResponse "Проект успешно создан"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании проекта"
+// @Router /project [post]
 func CreateProject(c echo.Context) error {
 	var req request.CreateProjectRequest
 	if err := c.Bind(&req); err != nil {
@@ -274,16 +281,16 @@ func CreateProject(c echo.Context) error {
 
 // UpdateProject godoc
 // @Summary Обновление проекта
-// @Description Обновляет существующий проект
+// @Description Обновляет данные проекта по его ID
 // @Tags Projects
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проекта"
-// @Param updates body object true "Новые данные"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]string
-// @Failure 404 {object} map[string]string
-// @Router /projects/{id} [put]
+// @Param project body request.UpdateProjectRequest true "Данные для обновления проекта"
+// @Success 200 {object} response.ProjectUniversalResponse "Проект успешно обновлен"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проекта"
+// @Router /project/{id} [patch]
 func UpdateProject(c echo.Context) error {
 	// Парсинг ID проекта
 	id := c.Param("id")
@@ -353,13 +360,15 @@ func UpdateProject(c echo.Context) error {
 
 // DeleteProject godoc
 // @Summary Удаление проекта
-// @Description Удаляет проект по ID
+// @Description Логическое удаление проекта по ID, включая связанные данные (поле deleted = true)
 // @Tags Projects
-// @Param id path string true "ID проекта"
+// @Accept json
 // @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Failure 404 {object} map[string]string
-// @Router /projects/{id} [delete]
+// @Param id path string true "ID проекта"
+// @Success 200 {object} response.ProjectUniversalResponse "Проект успешно удален"
+// @Failure 404 {object} map[string]string "Проект не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта"
+// @Router /project/{id} [delete]
 func DeleteProject(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})

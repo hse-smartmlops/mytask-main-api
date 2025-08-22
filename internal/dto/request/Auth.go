@@ -23,13 +23,19 @@ type RegisterRequest struct {
 // POST /auth/totp
 
 type TOTPRequest struct {
-	Code string `json:"code" binding:"required"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	TOTP     string `json:"totp"`
 }
 
 // DTO для запроса на OAuth
 // POST /auth/oauth
 
 type OAuthRequest struct {
-	Provider string `json:"provider" binding:"required"`
-	Code     string `json:"code" binding:"required"`
+	Code        string `json:"code"`
+	RedirectURI string `json:"redirect_uri"`
+}
+
+type RefreshRequest struct {
+    RefreshToken string `json:"refresh_token" validate:"required"`
 }

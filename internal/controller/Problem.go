@@ -26,6 +26,18 @@ func RegisterProblemRoutes(e *echo.Echo){
 	}
 }
 
+// GetAllProblems godoc
+// @Summary Получение списка всех проблем
+// @Description Получает список всех проблем с учетом пагинации, исключая удаленные
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.ProblemListResponse "Список проблем успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
+// @Router /problem [get]
 func GetAllProblems(c echo.Context) error{
 	var req request.ProblemsListRequest
 	if err := c.Bind(&req); err != nil {
@@ -110,6 +122,19 @@ func GetAllProblems(c echo.Context) error{
 	return c.JSON(http.StatusOK, problemList)
 }
 
+// GetProblemsByUserId godoc
+// @Summary Получение проблем по ID пользователя
+// @Description Получает список проблем, созданных указанным пользователем, с учетом пагинации
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
+// @Success 200 {object} response.ProblemsByUserId "Список проблем успешно получен"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
+// @Router /problem/user/{id} [get]
 func GetProblemsByUserId(c echo.Context) error{
 	id := c.Param("id")
 	var req request.ProblemListByUserId
@@ -196,6 +221,18 @@ func GetProblemsByUserId(c echo.Context) error{
 	return c.JSON(http.StatusOK, problemList)
 }
 
+// GetProblemByID godoc
+// @Summary Получение проблемы по ID
+// @Description Получает данные проблемы по её уникальному идентификатору
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param id path string true "ID проблемы"
+// @Success 200 {object} response.ProblemResponse "Проблема успешно получена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы"
+// @Failure 404 {object} map[string]string "Проблема не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении проблемы"
+// @Router /problem/{id} [get]
 func GetProblemByID(c echo.Context) error{
 	id := c.Param("id")
 	problemId, err := uuid.Parse(id)
@@ -260,6 +297,17 @@ func GetProblemByID(c echo.Context) error{
 	return c.JSON(http.StatusOK, problemResponse)
 }
 
+// CreateProblem godoc
+// @Summary Создание новой проблемы
+// @Description Создает новую проблему с указанными параметрами
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param problem body request.ProblemCreateRequest true "Данные для создания проблемы"
+// @Success 201 {object} response.ProblemUniversalResponse "Проблема успешно создана"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор пользователя"
+// @Failure 500 {object} map[string]string "Ошибка сервера при создании проблемы"
+// @Router /problem [post]
 func CreateProblem(c echo.Context) error{
 	var req request.ProblemCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -305,6 +353,18 @@ func CreateProblem(c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
+// UpdateProblem godoc
+// @Summary Обновление проблемы
+// @Description Обновляет данные проблемы по её ID
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param id path string true "ID проблемы"
+// @Param problem body request.ProblemUpdateRequest true "Данные для обновления проблемы"
+// @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно обновлена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проблемы"
+// @Router /problem/{id} [put]
 func UpdateProblem(c echo.Context) error{
 	id := c.Param("id")
 	problemId, err := uuid.Parse(id)
@@ -351,6 +411,17 @@ func UpdateProblem(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateReponse)
 }
 
+// DeleteProblem godoc
+// @Summary Удаление проблемы
+// @Description Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param id path string true "ID проблемы"
+// @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно удалена"
+// @Failure 404 {object} map[string]string "Проблема не найдена"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении проблемы"
+// @Router /problem/{id} [delete]
 func DeleteProblem(c echo.Context) error{
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
