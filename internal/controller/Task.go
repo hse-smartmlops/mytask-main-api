@@ -682,7 +682,6 @@ func DeleteTask(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	updateData["updated_at"] = time.Now()
 	result := dbConn.Session(&gorm.Session{}).Model(models.Task{}).Where("id = ?", id).Updates(updateData)
 	if result.Error != nil {
 		log.Printf("DB error (delete task): %v", result.Error)

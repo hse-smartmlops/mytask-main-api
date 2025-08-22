@@ -400,7 +400,6 @@ func DeleteTeam(c echo.Context) error {
 	teamIDParam := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	updateData["updated_at"] = time.Now()
 	result := dbConn.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
 	if result.Error != nil {
 		log.Printf("DB error (delete team): %v", result.Error)
@@ -536,7 +535,6 @@ func DeleteUserFromTeam(c echo.Context) error {
 
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	updateData["updated_at"] = time.Now()
 	result := dbConn.Session(&gorm.Session{}).Model(models.TeamMember{}).Where("user_id = ? AND team_id = ?", user.ID, team.ID).Updates(updateData)
 	if result.Error != nil {
 		log.Printf("DB error (delete team member): %v", result.Error)
