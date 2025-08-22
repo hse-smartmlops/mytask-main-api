@@ -398,13 +398,8 @@ func GetReport(c echo.Context) error {
 	}
 
 	var helpReq models.HelpRequest
-	result = dbConn.Session(&gorm.Session{}).Where("report_id = ? AND deleted = ?", reportId, false).First(&helpReq)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Запрос на помощь не найден",
-			})
-		}
+	result = dbConn.Session(&gorm.Session{}).Where("report_id = ? AND deleted = ?", report.ID, false).First(&helpReq)
+	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		log.Printf("DB error (find help request by id): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении запроса на помощь из базы данных",
@@ -642,12 +637,7 @@ func GetReportsByTaskId(c echo.Context) error {
 
 		var helpReq models.HelpRequest
 		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? AND deleted = ?", report.ID, false).First(&helpReq)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Запрос на помощь не найден",
-				})
-			}
+		if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			log.Printf("DB error (find help request by id): %v", result.Error)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении запроса на помощь из базы данных",
