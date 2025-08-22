@@ -22,7 +22,7 @@ type ReportCreateRequest struct {
 	Status       *string          `json:"status"`
 	CompleteWork *[]ProjectReport `json:"complete_work"`
 	PlanTomorrow *[]ProjectReport `json:"plan_tomorrow"`
-	Problems     *[]Problem       `json:"problems"`
+	Problems     *[]Problem      `json:"problems"`
 	Help         *HelpRequest     `json:"help"`
 }
 
@@ -63,5 +63,4 @@ type Problem struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 	Name        string    `json:"name"`
 }
-
 

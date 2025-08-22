@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -1179,15 +1178,6 @@ func CreateReport(c echo.Context) error {
 
 	if req.Problems != nil {
 		for _, problem := range *req.Problems {
-			tempUUID := uuid.New()
-
-			var description pq.StringArray
-			if problem.Description != nil{
-				description = pq.StringArray(problem.Description)
-			}else{
-				description = pq.StringArray{}
-			}
-
 			problemId, err := uuid.Parse(problem.ID)
 			if err != nil {
 				log.Printf("ParseProblemId error: %v", err)
@@ -1196,26 +1186,9 @@ func CreateReport(c echo.Context) error {
 				})
 			}
 
-
-			curProblem := models.Problem{
-				ID:          problemId,
-				Description: description,
-				CreatorID:   &userId,
-				CreatedAt:   &now,
-				Deleted: &del,
-			}
-
-			result = dbConn.Session(&gorm.Session{}).Create(&curProblem)
-			if result.Error != nil {
-				log.Printf("DB error (create report): %v", result.Error)
-				return c.JSON(http.StatusInternalServerError, map[string]string{
-					"error": "Ошибка при создании проблемы",
-				})
-			}
-
 			reportProblem := models.ReportProblem{
 				ReportID:  newUUID,
-				ProblemID: tempUUID,
+				ProblemID: problemId,
 				Deleted: &del,
 			}
 
