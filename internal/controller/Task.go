@@ -86,11 +86,9 @@ func GetAllTasks(c echo.Context) error {
 	}
 
 	for _, task := range tasks {
-		var id string
-		id = task.ID.String()
+		var id string = task.ID.String()
 
-		var projectId string
-		projectId = task.ProjectID.String()
+		var projectId string = task.ProjectID.String()
 
 		var name string
 		if task.Name != nil {
@@ -194,8 +192,7 @@ func GetTaskByID(c echo.Context) error {
 	var creatorInfo response.UserShort
 	if creator.Deleted != nil {
 		if *creator.Deleted {
-			var creatorID string
-			creatorID = creator.ID.String()
+			var creatorID string = creator.ID.String()
 
 			var creatorFirstName string
 			if creator.FirstName != nil {
@@ -223,8 +220,7 @@ func GetTaskByID(c echo.Context) error {
 	var assignerInfo response.UserShort
 	if assigner.Deleted != nil {
 		if *assigner.Deleted {
-			var assignerID string
-			assignerID = assigner.ID.String()
+			var assignerID = assigner.ID.String()
 
 			var assignerFirstName string
 			if assigner.FirstName != nil {
@@ -245,11 +241,9 @@ func GetTaskByID(c echo.Context) error {
 		updatedAt = *task.UpdatedAt
 	}
 
-	var Id string
-	Id = task.ID.String()
+	var Id string = task.ID.String()
 
-	var projectId string
-	projectId = task.ProjectID.String()
+	var projectId string = task.ProjectID.String()
 
 	var name string
 	if task.Name != nil {
@@ -379,11 +373,9 @@ func GetTasksByProjectID(c echo.Context) error {
 	for _, task := range tasks {
 		if task.Deleted != nil {
 			if !*task.Deleted {
-				var id string
-				id = task.ID.String()
+				var id string = task.ID.String()
 
-				var projectId string
-				projectId = task.ProjectID.String()
+				var projectId string = task.ProjectID.String()
 
 				var name string
 				if task.Name != nil {
@@ -529,8 +521,7 @@ func CreateTask(c echo.Context) error {
 		})
 	}
 
-	var assignedTo *uuid.UUID
-	assignedTo = &assigner.ID
+	var assignedTo *uuid.UUID = &assigner.ID
 
 	var creator models.User
 	result = dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
@@ -546,8 +537,7 @@ func CreateTask(c echo.Context) error {
 		})
 	}
 
-	var creatorID *uuid.UUID
-	creatorID = &creator.ID
+	var creatorID *uuid.UUID = &creator.ID
 
 
 	temp1, err := uuid.Parse(req.ProjectID)

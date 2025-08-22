@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -89,8 +90,7 @@ func GetAllReports(c echo.Context) error {
 	}
 
 	for _, report := range reports {
-		var userId string
-		userId = report.UserID.String()
+		var userId string = report.UserID.String()
 
 		var reportDate time.Time
 		if report.ReportDate != nil {
@@ -161,8 +161,7 @@ func GetAllReports(c echo.Context) error {
 			})
 		}
 
-		var hrId string
-		hrId = helpReq.ID.String()
+		var hrId string = helpReq.ID.String()
 
 		var helperId string
 		if helpReq.HelperID != nil {
@@ -196,8 +195,7 @@ func GetAllReports(c echo.Context) error {
 
 		var complWork []response.WorkItem
 		for _, workItem := range completedWork {
-			var iD string
-			iD = workItem.ID.String()
+			var iD string = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -225,8 +223,7 @@ func GetAllReports(c echo.Context) error {
 
 		var tomorrowPlans []response.WorkItem
 		for _, workItem := range tomorrowPlan {
-			var iD string
-			iD = workItem.ID.String()
+			var iD string = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -269,10 +266,7 @@ func GetAllReports(c echo.Context) error {
 			if problem.Name != nil {
 				name = *problem.Name
 			}
-			var description []string
-			if problem.Description != nil {
-				description = *problem.Description
-			}
+			var description []string = []string(problem.Description)
 			var creatorId string
 			if problem.CreatorID != nil {
 				creatorId = problem.CreatorID.String()
@@ -352,8 +346,7 @@ func GetReport(c echo.Context) error {
 		})
 	}
 
-	var userId string
-	userId = report.UserID.String()
+	var userId string = report.UserID.String()
 
 	var reportDate time.Time
 	if report.ReportDate != nil {
@@ -424,8 +417,7 @@ func GetReport(c echo.Context) error {
 		})
 	}
 
-	var hrId string
-	hrId = helpReq.ID.String()
+	var hrId string = helpReq.ID.String()
 
 	var helperId string
 	if helpReq.HelperID != nil {
@@ -459,8 +451,7 @@ func GetReport(c echo.Context) error {
 
 	var complWork []response.WorkItem
 	for _, workItem := range completedWork {
-		var iD string
-		iD = workItem.ID.String()
+		var iD string = workItem.ID.String()
 
 		var desc string
 		if workItem.Description != nil {
@@ -488,8 +479,7 @@ func GetReport(c echo.Context) error {
 
 	var tomorrowPlans []response.WorkItem
 	for _, workItem := range tomorrowPlan {
-		var iD string
-		iD = workItem.ID.String()
+		var iD string = workItem.ID.String()
 
 		var desc string
 		if workItem.Description != nil {
@@ -532,10 +522,7 @@ func GetReport(c echo.Context) error {
 		if problem.Name != nil {
 			name = *problem.Name
 		}
-		var description []string
-		if problem.Description != nil {
-			description = *problem.Description
-		}
+		var description []string = []string(problem.Description)
 		var creatorId string
 		if problem.CreatorID != nil {
 			creatorId = problem.CreatorID.String()
@@ -602,8 +589,7 @@ func GetReportsByTaskId(c echo.Context) error {
 	}
 
 	for _, report := range reports {
-		var userId string
-		userId = report.UserID.String()
+		var userId string = report.UserID.String()
 
 		var reportDate time.Time
 		if report.ReportDate != nil {
@@ -674,8 +660,7 @@ func GetReportsByTaskId(c echo.Context) error {
 			})
 		}
 
-		var hrId string
-		hrId = helpReq.ID.String()
+		var hrId string = helpReq.ID.String()
 
 		var helperId string
 		if helpReq.HelperID != nil {
@@ -709,8 +694,7 @@ func GetReportsByTaskId(c echo.Context) error {
 
 		var complWork []response.WorkItem
 		for _, workItem := range completedWork {
-			var iD string
-			iD = workItem.ID.String()
+			var iD string = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -738,8 +722,7 @@ func GetReportsByTaskId(c echo.Context) error {
 
 		var tomorrowPlans []response.WorkItem
 		for _, workItem := range tomorrowPlan {
-			var iD string
-			iD = workItem.ID.String()
+			var iD string = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -782,10 +765,7 @@ func GetReportsByTaskId(c echo.Context) error {
 			if problem.Name != nil {
 				name = *problem.Name
 			}
-			var description []string
-			if problem.Description != nil {
-				description = *problem.Description
-			}
+			var description []string = []string(problem.Description)
 			var creatorId string
 			if problem.CreatorID != nil {
 				creatorId = problem.CreatorID.String()
@@ -872,8 +852,7 @@ func GetReportsByProjectId(c echo.Context) error {
 	}
 
 	for _, report := range reports {
-		var userId string
-		userId = report.UserID.String()
+		var userId string = report.UserID.String()
 
 		var reportDate time.Time
 		if report.ReportDate != nil {
@@ -944,8 +923,7 @@ func GetReportsByProjectId(c echo.Context) error {
 			})
 		}
 
-		var hrId string
-		hrId = helpReq.ID.String()
+		var hrId string = helpReq.ID.String()
 
 		var helperId string
 		if helpReq.HelperID != nil {
@@ -979,8 +957,7 @@ func GetReportsByProjectId(c echo.Context) error {
 
 		var complWork []response.WorkItem
 		for _, workItem := range completedWork {
-			var iD string
-			iD = workItem.ID.String()
+			var iD string = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -1008,8 +985,7 @@ func GetReportsByProjectId(c echo.Context) error {
 
 		var tomorrowPlans []response.WorkItem
 		for _, workItem := range tomorrowPlan {
-			var iD string
-			iD = workItem.ID.String()
+			var iD string = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -1052,10 +1028,7 @@ func GetReportsByProjectId(c echo.Context) error {
 			if problem.Name != nil {
 				name = *problem.Name
 			}
-			var description []string
-			if problem.Description != nil {
-				description = *problem.Description
-			}
+			var description []string = []string(problem.Description)
 			var creatorId string
 			if problem.CreatorID != nil {
 				creatorId = problem.CreatorID.String()
@@ -1208,9 +1181,16 @@ func CreateReport(c echo.Context) error {
 		for _, problem := range *req.Problems {
 			tempUUID := uuid.New()
 
+			var description pq.StringArray
+			if problem.Description != nil{
+				description = pq.StringArray(problem.Description)
+			}else{
+				description = pq.StringArray{}
+			}
+
 			curProblem := models.Problem{
 				ID:          tempUUID,
-				Description: &problem.Description,
+				Description: description,
 				CreatorID:   &userId,
 				CreatedAt:   &now,
 				Deleted: &del,

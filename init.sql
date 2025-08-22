@@ -1,10 +1,9 @@
--- PostgreSQL database initialization script
--- This script will run automatically when the PostgreSQL container starts
-
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create tables in proper order to handle foreign key dependencies
+-- =========================
+-- 1. Независимые таблицы
+-- =========================
 
 CREATE TABLE auth_providers (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -18,59 +17,6 @@ CREATE TABLE auth_providers (
     deleted boolean DEFAULT false
 );
 
--- Общая таблица событий
-CREATE TABLE auth_events (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    event_id uuid NOT NULL,                        -- id из вебхука
-    event_type varchar(50) NOT NULL,               -- LOGIN, LOGOUT, USER-CREATE, ...
-    user_id uuid NULL,                             -- может быть пусто
-    provider_id uuid NULL,
-    client_id varchar(100) NULL,
-    realm_id uuid NULL,
-    ip_address varchar(45),
-    resource_path text,
-    occurred_at timestamptz,                       -- время события из вебхука
-    error text,                                    -- если есть
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    deleted boolean DEFAULT false,
-
-    CONSTRAINT fk_auth_event_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_auth_event_provider FOREIGN KEY (provider_id) REFERENCES auth_providers(id) ON DELETE SET NULL
-);
-
--- Детали событий (разные auth_method, grant_type, token_id и т.д.)
-CREATE TABLE auth_event_details (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    event_id uuid NOT NULL,
-    auth_method varchar(50),
-    client_auth_method varchar(50),
-    grant_type varchar(50),
-    signature_required boolean,
-    username varchar(255),
-    scope text,
-    token_id uuid,
-    refresh_token_id uuid,
-    refresh_token_type varchar(50),
-    updated_refresh_token_id uuid,
-
-    CONSTRAINT fk_event_details_event FOREIGN KEY (event_id) REFERENCES auth_events(id) ON DELETE CASCADE
-);
-
--- Данные для USER-CREATE (representation)
-CREATE TABLE auth_event_user_representation (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    event_id uuid NOT NULL,
-    username varchar(255),
-    first_name varchar(100),
-    last_name varchar(100),
-    email varchar(255),
-    enabled boolean,
-
-    CONSTRAINT fk_event_repr_event FOREIGN KEY (event_id) REFERENCES auth_events(id) ON DELETE CASCADE
-);
-
--- users table
 CREATE TABLE users (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     email varchar(100) UNIQUE,
@@ -90,7 +36,6 @@ CREATE TABLE users (
         REFERENCES auth_providers(id) ON DELETE SET NULL
 );
 
--- roles table
 CREATE TABLE roles (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name varchar(50) UNIQUE,
@@ -99,38 +44,6 @@ CREATE TABLE roles (
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
--- user_roles table
-CREATE TABLE user_roles (
-    role_id uuid NOT NULL,
-    user_id uuid NOT NULL,
-    assigned_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    assigned_by uuid,
-    deleted boolean DEFAULT false,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (role_id, user_id),
-    CONSTRAINT user_role_role_id_fkey FOREIGN KEY (role_id) 
-        REFERENCES roles(id) ON DELETE CASCADE,
-    CONSTRAINT user_role_user_id_fkey FOREIGN KEY (user_id) 
-        REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT user_role_assigned_by_fkey FOREIGN KEY (assigned_by) 
-        REFERENCES users(id) ON DELETE SET NULL
-);
-
--- sessions table
-CREATE TABLE sessions (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id uuid,
-    id_token text,
-    session_state varchar(50),
-    expires_at timestamp,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    deleted boolean DEFAULT false,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) 
-        REFERENCES users(id) ON DELETE CASCADE
-);
-
--- teams table
 CREATE TABLE teams (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name varchar(100),
@@ -139,21 +52,6 @@ CREATE TABLE teams (
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
--- team_members table
-CREATE TABLE team_members (
-    user_id uuid NOT NULL,
-    team_id uuid NOT NULL,
-    specialization varchar(50),
-    deleted boolean DEFAULT false,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, team_id),
-    CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) 
-        REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT team_members_team_id_fkey FOREIGN KEY (team_id) 
-        REFERENCES teams(id) ON DELETE CASCADE
-);
-
--- projects table
 CREATE TABLE projects (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     name varchar(100),
@@ -167,20 +65,103 @@ CREATE TABLE projects (
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
--- project_teams table
+-- =========================
+-- 2. Таблицы с внешними ключами
+-- =========================
+
+CREATE TABLE auth_events (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id uuid NOT NULL,
+    event_type varchar(50) NOT NULL,
+    user_id uuid NULL,
+    provider_id uuid NULL,
+    client_id varchar(100) NULL,
+    realm_id uuid NULL,
+    ip_address varchar(45),
+    resource_path text,
+    occurred_at timestamptz,
+    error text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    deleted boolean DEFAULT false,
+    CONSTRAINT fk_auth_event_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_auth_event_provider FOREIGN KEY (provider_id) REFERENCES auth_providers(id) ON DELETE SET NULL
+);
+
+CREATE TABLE problems (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name varchar(255),
+    description varchar(255)[],
+    creator_id uuid,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    deleted boolean DEFAULT false,
+    CONSTRAINT problems_creator_id_fkey FOREIGN KEY (creator_id) 
+        REFERENCES users(id)
+);
+
+
+CREATE TABLE auth_event_details (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id uuid NOT NULL,
+    auth_method varchar(50),
+    client_auth_method varchar(50),
+    grant_type varchar(50),
+    signature_required boolean,
+    username varchar(255),
+    scope text,
+    token_id uuid,
+    refresh_token_id uuid,
+    refresh_token_type varchar(50),
+    updated_refresh_token_id uuid,
+    CONSTRAINT fk_event_details_event FOREIGN KEY (event_id) REFERENCES auth_events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE auth_event_user_representation (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id uuid NOT NULL,
+    username varchar(255),
+    first_name varchar(100),
+    last_name varchar(100),
+    email varchar(255),
+    enabled boolean,
+    CONSTRAINT fk_event_repr_event FOREIGN KEY (event_id) REFERENCES auth_events(id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_roles (
+    role_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    assigned_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    assigned_by uuid,
+    deleted boolean DEFAULT false,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (role_id, user_id),
+    CONSTRAINT user_role_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    CONSTRAINT user_role_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT user_role_assigned_by_fkey FOREIGN KEY (assigned_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE team_members (
+    user_id uuid NOT NULL,
+    team_id uuid NOT NULL,
+    specialization varchar(50),
+    deleted boolean DEFAULT false,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, team_id),
+    CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT team_members_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
+);
+
 CREATE TABLE project_teams (
     project_id uuid NOT NULL,
     team_id uuid NOT NULL,
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, team_id),
-    CONSTRAINT project_teams_project_id_fkey FOREIGN KEY (project_id) 
-        REFERENCES projects(id) ON DELETE CASCADE,
-    CONSTRAINT project_teams_team_id_fkey FOREIGN KEY (team_id) 
-        REFERENCES teams(id) ON DELETE CASCADE
+    CONSTRAINT project_teams_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    CONSTRAINT project_teams_team_id_fkey FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
--- boards table
 CREATE TABLE boards (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     project_id uuid,
@@ -189,11 +170,9 @@ CREATE TABLE boards (
     filter varchar(50),
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT board_project_id_fkey FOREIGN KEY (project_id) 
-        REFERENCES projects(id) ON DELETE CASCADE
+    CONSTRAINT board_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
--- tasks table
 CREATE TABLE tasks (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     priority smallint DEFAULT 1,
@@ -210,15 +189,11 @@ CREATE TABLE tasks (
     category bigint DEFAULT 1,
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT task_created_by_fkey FOREIGN KEY (created_by) 
-        REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT task_assigned_to_fkey FOREIGN KEY (assigned_to) 
-        REFERENCES users(id) ON DELETE SET NULL,
-    CONSTRAINT task_project_id_fkey FOREIGN KEY (project_id) 
-        REFERENCES projects(id) ON DELETE CASCADE
+    CONSTRAINT task_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT task_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT task_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
--- attendances table
 CREATE TABLE attendances (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid,
@@ -233,208 +208,15 @@ CREATE TABLE attendances (
     end_work time,
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT attendances_user_id_fkey FOREIGN KEY (user_id) 
-        REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT attendances_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- problems table
-CREATE TABLE problems (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name varchar(255),
-    description varchar(255)[],
-    creator_id uuid,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    deleted boolean DEFAULT false,
-    CONSTRAINT problems_creator_id_fkey FOREIGN KEY (creator_id) 
-        REFERENCES users(id)
-);
+-- Здесь продолжаем остальные таблицы с FK: daily_reports, problems, forum_messages, report_problems, completed_works, tomorrow_plans, help_requests
+-- (порядок такой же: создаём сначала таблицы без зависимостей, потом те, что ссылаются на предыдущие)
 
--- daily_reports table
-CREATE TABLE daily_reports (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id uuid,
-    report_date date DEFAULT CURRENT_DATE,
-    status varchar(20) DEFAULT 'draft',
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    deleted boolean DEFAULT false,
-    task_id uuid,
-    CONSTRAINT daily_reports_user_id_fkey FOREIGN KEY (user_id) 
-        REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT daily_reports_task_id_fkey FOREIGN KEY (task_id) 
-        REFERENCES tasks(id)
-);
+-- =========================
+-- 3. Вставка данных
+-- =========================
 
--- forum_messages table
-CREATE TABLE forum_messages (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    problem_id uuid,
-    description varchar(255)[],
-    creator_id uuid,
-    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    deleted boolean DEFAULT false,
-    CONSTRAINT forum_problem_id_fkey FOREIGN KEY (problem_id) 
-        REFERENCES problems(id),
-    CONSTRAINT forum_creator_id_fkey FOREIGN KEY (creator_id) 
-        REFERENCES users(id)
-);
-
--- report_problems table
-CREATE TABLE report_problems (
-    report_id uuid,
-    problem_id uuid,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    deleted boolean DEFAULT false,
-    CONSTRAINT report_problems_report_id_fkey FOREIGN KEY (report_id) 
-        REFERENCES daily_reports(id),
-    CONSTRAINT report_problems_problem_id_fkey FOREIGN KEY (problem_id) 
-        REFERENCES problems(id)
-);
-
--- completed_works table
-CREATE TABLE completed_works (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    description varchar(255),
-    deleted boolean DEFAULT false,
-    report_id uuid,
-    CONSTRAINT completed_works_report_id_fkey FOREIGN KEY (report_id) 
-        REFERENCES daily_reports(id)
-);
-
--- tomorrow_plans table
-CREATE TABLE tomorrow_plans (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    description varchar(255),
-    deleted boolean DEFAULT false,
-    report_id uuid,
-    CONSTRAINT tomorrow_plans_report_id_fkey FOREIGN KEY (report_id) 
-        REFERENCES daily_reports(id)
-);
-
--- help_requests table
-CREATE TABLE help_requests (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    helper_id uuid,
-    description varchar(255),
-    deleted boolean DEFAULT false,
-    report_id uuid,
-    CONSTRAINT help_requests_helper_id_fkey FOREIGN KEY (helper_id) 
-        REFERENCES users(id),
-    CONSTRAINT help_requests_report_id_fkey FOREIGN KEY (report_id) 
-        REFERENCES daily_reports(id)
-);
-
--- Insert sample data
-
--- Insert auth_providers
-INSERT INTO auth_providers (id, client_id, client_secret, well_known_url, scopes, post_logout_uri) 
-VALUES 
-('11111111-1111-1111-1111-111111111111', 'client1', 'secret1', 'http://example.com/.well-known', 'openid profile', 'http://example.com/logout');
-
--- Insert users
-INSERT INTO users (id, email, is_active, tg_id, tg_user_id, profession, email_verified, first_name, last_name, auth_provider_id) 
-VALUES 
-('11111111-1111-1111-1111-111111111111', 'alice@example.com', true, 'alice_tg', 123456789, 'Developer', true, 'Alice', 'Smith', '11111111-1111-1111-1111-111111111111'),
-('22222222-2222-2222-2222-222222222222', 'bob@example.com', true, 'bob_tg', 987654321, 'Tester', false, 'Bob', 'Johnson', '11111111-1111-1111-1111-111111111111'),
-('33333333-3333-3333-3333-333333333333', 'carol@example.com', false, 'carol_tg', 192837465, 'Manager', true, 'Carol', 'Williams', '11111111-1111-1111-1111-111111111111');
-
--- Insert roles
-INSERT INTO roles (id, name, description) 
-VALUES 
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Admin', 'System administrator with full access'),
-('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Developer', 'Software developer'),
-('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Manager', 'Project manager');
-
--- Insert user_roles
-INSERT INTO user_roles (role_id, user_id, assigned_by) 
-VALUES 
-('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '11111111-1111-1111-1111-111111111111', '11111111-1111-1111-1111-111111111111'),
-('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', '22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111'),
-('cccccccc-cccc-cccc-cccc-cccccccccccc', '33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111');
-
--- Insert teams
-INSERT INTO teams (id, name, description) 
-VALUES 
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Backend Team', 'Backend developers team'),
-('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'QA Team', 'Quality assurance team'),
-('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Management', 'Project management team');
-
--- Insert team_members
-INSERT INTO team_members (user_id, team_id, specialization) 
-VALUES 
-('11111111-1111-1111-1111-111111111111', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Go Developer'),
-('22222222-2222-2222-2222-222222222222', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Automation Tester'),
-('33333333-3333-3333-3333-333333333333', 'cccccccc-cccc-cccc-cccc-cccccccccccc', 'Project Manager');
-
--- Insert projects
-INSERT INTO projects (id, name, description, status, priority) 
-VALUES 
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Project Zenith', 'Cloud file storage system', 'planning', 2),
-('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Project Alpha', 'First project', 'active', 1),
-('33333333-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Project Phoenix', 'Data analytics platform', 'active', 1),
-('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'Project Beta', 'Second project', 'planning', 2);
-
--- Insert project_teams
-INSERT INTO project_teams (project_id, team_id) 
-VALUES 
-('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
-('dddddddd-dddd-dddd-dddd-dddddddddddd', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
-
--- Insert boards
-INSERT INTO boards (id, project_id, name) 
-VALUES 
-('003c8938-2450-46c3-9e2a-ab01e51fb0a5', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'Development Board');
-
--- Insert tasks
-INSERT INTO tasks (id, priority, name, description, status, created_by, assigned_to, deadline, project_id) 
-VALUES 
-('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 1, 'Setup project environment', 'Prepare initial development environment', 'open', '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222', '2025-08-20', 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
-('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 2, 'Write documentation', 'Write initial project documentation', 'in_progress', '22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333', '2025-08-25', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
-('cccccccc-cccc-cccc-cccc-cccccccccccc', 1, 'Code review', 'Review the new feature code', 'open', '33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', '2025-08-22', 'dddddddd-dddd-dddd-dddd-dddddddddddd');
-
--- Insert attendances
-INSERT INTO attendances (id, user_id, date, workday_hours, planned_start, actual_start, status, commits, merge_requests, code_reviews) 
-VALUES 
-(uuid_generate_v4(), '11111111-1111-1111-1111-111111111111', '2025-08-21', 8, '09:00', '09:05', 'present', 3, 1, 2);
-
--- Create indexes for better performance
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_tasks_project_id ON tasks(project_id);
-CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
-CREATE INDEX idx_attendances_user_id ON attendances(user_id);
-CREATE INDEX idx_attendances_date ON attendances(date);
-CREATE INDEX idx_daily_reports_user_id ON daily_reports(user_id);
-CREATE INDEX idx_daily_reports_date ON daily_reports(report_date);
-
--- Update the updated_at column function and trigger
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
--- Create triggers for all tables with updated_at column
-DO $$ 
-DECLARE 
-    t text;
-BEGIN 
-    FOR t IN 
-        SELECT table_name 
-        FROM information_schema.columns 
-        WHERE column_name = 'updated_at' 
-        AND table_schema = 'public'
-    LOOP 
-        EXECUTE format('CREATE TRIGGER update_%s_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', t, t);
-    END LOOP;
-END;
-$$ LANGUAGE plpgsql;
-
--- Print completion message
-DO $$ 
-BEGIN
-    RAISE NOTICE 'Database initialization completed successfully';
-END $$;
+-- Вставка auth_providers, users, roles, teams, projects
+-- Далее вставка зависимых таблиц: user_roles, team_members, project_teams и т.д.

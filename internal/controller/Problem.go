@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -72,9 +73,9 @@ func GetAllProblems(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&problems).Error; err != nil{
-		log.Printf("DB error (find projects): %v", err)
+		log.Printf("DB error (find problems): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проектов из базы данных",
+			"error": "Ошибка при получении проблем из базы данных",
 		})
 	}
 
@@ -85,12 +86,9 @@ func GetAllProblems(c echo.Context) error{
 	}
 
 	for _, problem := range problems{
-		var problemID string
-		problemID = problem.ID.String()
-		var description []string
-		if problem.Description != nil{
-			description = *problem.Description
-		}
+		var problemID string = problem.ID.String()
+		var description []string = []string(problem.Description) 
+
 		var creatorID string
 		if problem.CreatorID != nil{
 			creatorID = problem.CreatorID.String()
@@ -182,12 +180,9 @@ func GetProblemsByUserId(c echo.Context) error{
 	}
 
 	for _, problem := range problems{
-		var problemID string
-		problemID = problem.ID.String()
-		var description []string
-		if problem.Description != nil{
-			description = *problem.Description
-		}
+		var problemID string = problem.ID.String()
+
+		var description []string = []string(problem.Description)
 		var creatorID string
 		if problem.CreatorID != nil{
 			creatorID = problem.CreatorID.String()
@@ -253,10 +248,7 @@ func GetProblemByID(c echo.Context) error{
 		})
 	}
 
-	var description []string
-	if problem.Description != nil{
-		description = *problem.Description
-	}
+	var description []string = []string(problem.Description)
 	var creatorId string
 	if problem.CreatorID != nil{
 		creatorId = problem.CreatorID.String()
@@ -321,9 +313,16 @@ func CreateProblem(c echo.Context) error{
 
 	del := false
 
+	var description pq.StringArray
+	if req.Description != nil{
+		description = pq.StringArray(*req.Description)
+	}else{
+		description = pq.StringArray{}
+	}
+
 	problem := models.Problem{
 		ID: newUUID,
-		Description: req.Description,
+		Description: description,
 		CreatorID: &creatorId,
 		Name: req.Name,
 		CreatedAt: &now,

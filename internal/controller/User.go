@@ -86,8 +86,7 @@ func GetAllUsers(c echo.Context) error {
 	}
 
 	for _, user := range users {
-		var userId string
-		userId = user.ID.String()
+		var userId string = user.ID.String()
 		var email string
 		if user.Email != nil {
 			email = *user.Email

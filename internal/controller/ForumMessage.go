@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/lib/pq"
 	"gorm.io/gorm"
 )
 
@@ -86,14 +87,9 @@ func GetAllForumMessages(c echo.Context) error {
 	}
 
 	for _, message := range forumMessages {
-		var messageId string
-		messageId = message.ID.String()
-		var problemId string
-		problemId = message.ProblemID.String()
-		var description []string
-		if message.Description != nil {
-			description = *message.Description
-		}
+		var messageId = message.ID.String()
+		var problemId = message.ProblemID.String()
+		var description []string = []string(message.Description)
 		var creatorId string
 		if message.CreatorID != nil {
 			creatorId = message.CreatorID.String()
@@ -189,14 +185,10 @@ func GetForumMessagesByProblemId(c echo.Context) error{
 	}
 
 	for _, message := range forumMessages {
-		var messageId string
-		messageId = message.ID.String()
-		var problemId string
-		problemId = message.ProblemID.String()
-		var description []string
-		if message.Description != nil {
-			description = *message.Description
-		}
+		var messageId = message.ID.String()
+		var problemId = message.ProblemID.String()
+		var description []string = []string(message.Description)
+
 		var creatorId string
 		if message.CreatorID != nil {
 			creatorId = message.CreatorID.String()
@@ -256,12 +248,8 @@ func GetForumMessageById(c echo.Context) error {
 		})
 	}
 	
-	var problemId string
-	problemId = forumMessage.ProblemID.String()
-	var description []string
-	if forumMessage.Description != nil{
-		description = *forumMessage.Description
-	}
+	var problemId = forumMessage.ProblemID.String()
+	var description []string = []string(forumMessage.Description)
 	var creatorId string
 	if forumMessage.CreatorID != nil{
 		creatorId = forumMessage.CreatorID.String()
@@ -329,10 +317,17 @@ func CreateForumMessage(c echo.Context) error{
 
 	del := false
 
+	var description pq.StringArray
+	if req.Description != nil{
+		description = pq.StringArray(*req.Description)
+	}else{
+		description = pq.StringArray{}
+	}
+
 	forumMessage := models.ForumMessage{
 		ID: newUUID,
 		ProblemID: problemId,
-		Description: req.Description,
+		Description: description,
 		CreatorID: &creatorId,
 		CreatedAt: &now,	
 		Deleted: &del,

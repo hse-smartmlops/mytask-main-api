@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // ===== Auth =====
@@ -240,7 +241,7 @@ type DailyReport struct {
 
 type Problem struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	Description *[]string  `gorm:"type:varchar(255)[]"`
+	Description pq.StringArray  `gorm:"type:varchar(255)[]"`
 	CreatorID   *uuid.UUID `gorm:"type:uuid;index"`
 	Name        *string    `gorm:"type:varchar(255)"`
 
@@ -256,7 +257,7 @@ type ForumMessage struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	ProblemID   uuid.UUID  `gorm:"type:uuid;index"`
 	Problem     *Problem   `gorm:"foreignKey:ProblemID;constraint:OnDelete:CASCADE;"`
-	Description *[]string  `gorm:"type:varchar(255)[]"`
+	Description pq.StringArray  `gorm:"type:varchar(255)[]"`
 	CreatorID   *uuid.UUID `gorm:"type:uuid;index"`
 	User        *User      `gorm:"foreignKey:CreatorID;references:ID;constraint:OnDelete:CASCADE;"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
