@@ -8,14 +8,66 @@ import (
 
 type AuthProvider struct {
 	ID            *uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ClientID      *string    `gorm:"size:100"`
+	ClientID      *string    `gorm:"size:100;uniqueIndex"`
 	ClientSecret  *string    `gorm:"size:100"`
 	WellKnownURL  *string    `gorm:"size:255"`
 	Scopes        *string    `gorm:"type:text"`
 	PostLogoutURI *string    `gorm:"size:255"`
+	Deleted       *bool      `gorm:"type:boolean"`
 	CreatedAt     *time.Time
 	UpdatedAt     *time.Time
-	Deleted       *bool `gorm:"type:boolean"`
+
+	Events *[]AuthEvent `gorm:"foreignKey:ProviderID"`
+}
+
+type AuthEvent struct {
+	ID          *uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	EventID     *uuid.UUID  `gorm:"type:uuid;not null"` // ID из вебхука
+	EventType   *string     `gorm:"size:50;not null"`
+	UserID      *uuid.UUID  `gorm:"type:uuid"`
+	ProviderID  *uuid.UUID  `gorm:"type:uuid"`
+	ClientID    *string     `gorm:"size:100"`
+	RealmID     *uuid.UUID  `gorm:"type:uuid"`
+	IPAddress   *string     `gorm:"size:45"`
+	ResourcePath *string    `gorm:"type:text"`
+	OccurredAt  *time.Time  // время события из вебхука
+	Error       *string     `gorm:"type:text"`
+	Deleted     *bool       `gorm:"type:boolean"`
+	CreatedAt   *time.Time
+	UpdatedAt   *time.Time
+
+	Provider        *AuthProvider              `gorm:"foreignKey:ProviderID"`
+	Details         *[]AuthEventDetail          `gorm:"foreignKey:EventID"`
+	Representation  *[]AuthEventUserRepresentation `gorm:"foreignKey:EventID"`
+}
+
+type AuthEventDetail struct {
+	ID                *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	EventID           *uuid.UUID `gorm:"type:uuid;not null"`
+	AuthMethod        *string    `gorm:"size:50"`
+	ClientAuthMethod  *string    `gorm:"size:50"`
+	GrantType         *string    `gorm:"size:50"`
+	SignatureRequired *bool
+	Username          *string    `gorm:"size:255"`
+	Scope             *string    `gorm:"type:text"`
+	TokenID           *uuid.UUID `gorm:"type:uuid"`
+	RefreshTokenID    *uuid.UUID `gorm:"type:uuid"`
+	RefreshTokenType  *string    `gorm:"size:50"`
+	UpdatedRefreshTokenID *uuid.UUID `gorm:"type:uuid"`
+
+	Event *AuthEvent `gorm:"foreignKey:EventID"`
+}
+
+type AuthEventUserRepresentation struct {
+	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	EventID   *uuid.UUID `gorm:"type:uuid;not null"`
+	Username  *string    `gorm:"size:255"`
+	FirstName *string    `gorm:"size:100"`
+	LastName  *string    `gorm:"size:100"`
+	Email     *string    `gorm:"size:255"`
+	Enabled   *bool
+
+	Event *AuthEvent `gorm:"foreignKey:EventID"`
 }
 
 type User struct {
@@ -32,7 +84,7 @@ type User struct {
 	LastLogin      *time.Time
 	AuthProviderID *uuid.UUID    `gorm:"type:uuid"`
 	AuthProvider   *AuthProvider `gorm:"foreignKey:AuthProviderID;constraint:OnDelete:SET NULL;"`
-	Roles          []Role        `gorm:"many2many:user_role;joinForeignKey:UserID;JoinReferences:RoleID"`
+	Roles          *[]Role        `gorm:"many2many:user_role;joinForeignKey:UserID;JoinReferences:RoleID"`
 	Deleted        *bool         `gorm:"type:boolean"`
 	UpdatedAt      *time.Time
 }
@@ -41,7 +93,7 @@ type Role struct {
 	ID          *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name        *string    `gorm:"size:50"`
 	Description *string    `gorm:"size:200"`
-	Users       []User     `gorm:"many2many:user_role;joinForeignKey:RoleID;JoinReferences:UserID"`
+	Users       *[]User     `gorm:"many2many:user_role;joinForeignKey:RoleID;JoinReferences:UserID"`
 	Deleted     *bool      `gorm:"type:boolean"`
 	UpdatedAt   *time.Time
 }
@@ -67,17 +119,6 @@ type Session struct {
 	Deleted      *bool `gorm:"type:boolean"`
 }
 
-type AuthEvent struct {
-	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID    *uuid.UUID `gorm:"type:uuid;index"`
-	User      *User      `gorm:"constraint:OnDelete:CASCADE;"`
-	EventType *string    `gorm:"size:30"`
-	Provider  *string    `gorm:"size:30"`
-	IPAddress *string    `gorm:"size:45"`
-	Deleted   *bool      `gorm:"type:boolean"`
-	UpdatedAt *time.Time
-}
-
 type Project struct {
 	ID              *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name            *string    `gorm:"size:100"`
@@ -87,9 +128,9 @@ type Project struct {
 	GitlabProjectID *int
 	GitlabURL       *string `gorm:"size:255"`
 	Priority        *int16
-	Boards          []Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
-	Tasks           []Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
-	ProjectTeams    []ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	Boards          *[]Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	Tasks           *[]Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	ProjectTeams    *[]ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Deleted         *bool         `gorm:"type:boolean"`
 	UpdatedAt       *time.Time
 }
@@ -128,8 +169,8 @@ type Team struct {
 	ID           *uuid.UUID    `gorm:"type:uuid;primaryKey" json:"id"`
 	Name         *string       `gorm:"size:100" json:"name"`
 	Description  *string       `gorm:"type:text" json:"description"`
-	TeamMembers  []TeamMember  `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
-	ProjectTeams []ProjectTeam `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
+	TeamMembers  *[]TeamMember  `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
+	ProjectTeams *[]ProjectTeam `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
 	Deleted      *bool         `gorm:"type:boolean"`
 	UpdatedAt    *time.Time
 }
@@ -138,8 +179,8 @@ type TeamMember struct {
 	UserID         *uuid.UUID `gorm:"type:uuid;primaryKey;index"`
 	TeamID         *uuid.UUID `gorm:"type:uuid;primaryKey;index"`
 	Specialization *string    `gorm:"size:50"`
-	User           User       `gorm:"constraint:OnDelete:CASCADE;foreignKey:UserID;references:ID"`
-	Team           Team       `gorm:"constraint:OnDelete:CASCADE;foreignKey:TeamID;references:ID"`
+	User           *User       `gorm:"constraint:OnDelete:CASCADE;foreignKey:UserID;references:ID"`
+	Team           *Team       `gorm:"constraint:OnDelete:CASCADE;foreignKey:TeamID;references:ID"`
 	Deleted        *bool      `gorm:"type:boolean"`
 	UpdatedAt      *time.Time
 }
@@ -147,8 +188,8 @@ type TeamMember struct {
 type ProjectTeam struct {
 	ProjectID *uuid.UUID `gorm:"type:uuid;primaryKey;index"`
 	TeamID    *uuid.UUID `gorm:"type:uuid;primaryKey;index"`
-	Project   Project    `gorm:"constraint:OnDelete:CASCADE;foreignKey:ProjectID;references:ID"`
-	Team      Team       `gorm:"constraint:OnDelete:CASCADE;foreignKey:TeamID;references:ID"`
+	Project   *Project    `gorm:"constraint:OnDelete:CASCADE;foreignKey:ProjectID;references:ID"`
+	Team      *Team       `gorm:"constraint:OnDelete:CASCADE;foreignKey:TeamID;references:ID"`
 	Deleted   *bool      `gorm:"type:boolean"`
 	UpdatedAt *time.Time
 }
@@ -156,7 +197,7 @@ type ProjectTeam struct {
 type Attendance struct {
 	ID            *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID        *uuid.UUID `gorm:"type:uuid;index"`
-	User          User       `gorm:"constraint:OnDelete:CASCADE;"`
+	User          *User       `gorm:"constraint:OnDelete:CASCADE;"`
 	Date          *time.Time `gorm:"type:date"`
 	WorkdayHours  *int16
 	PlannedStart  *time.Time `gorm:"type:time"`
@@ -173,9 +214,9 @@ type Attendance struct {
 type DailyReport struct {
 	ID         *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID     *uuid.UUID `gorm:"type:uuid;index"`
-	User       User       `gorm:"constraint:OnDelete:CASCADE;"`
+	User       *User       `gorm:"constraint:OnDelete:CASCADE;"`
 	TaskID     *uuid.UUID `gorm:"type:uuid;index"`
-	Task       Task       `gorm:"foreignKey:TaskID;references:ID;"`
+	Task       *Task       `gorm:"foreignKey:TaskID;references:ID;"`
 	ReportDate *time.Time `gorm:"type:date"`
 	Status     *string    `gorm:"size:20"`
 	CreatedAt  *time.Time `gorm:"type:date"`
@@ -188,20 +229,20 @@ type Problem struct {
 	Description *[]string  `gorm:"type:varchar(255)[]"`
 	CreatorID   *uuid.UUID `gorm:"type:uuid;index"`
 	Name        *string     `gorm:"type:varchar(255)"`
-	User        User       `gorm:"constraint:OnDelete:CASCADE;"`
+	User        *User       `gorm:"constraint:OnDelete:CASCADE;"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	Deleted     *bool      `gorm:"type:boolean"`
-	Forum       []ForumMessage    `gorm:"foreignKey:ProblemID"`
+	Forum       *[]ForumMessage    `gorm:"foreignKey:ProblemID"`
 }
 
 type ForumMessage struct {
 	ID          *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	ProblemID   *uuid.UUID `gorm:"type:uuid;index"`
-	Problem     Problem    `gorm:"constraint:OnDelete:CASCADE;"`
+	Problem     *Problem    `gorm:"constraint:OnDelete:CASCADE;"`
 	Description *[]string  `gorm:"type:varchar(255)[]"`
 	CreatorID   *uuid.UUID `gorm:"type:uuid;index"`
-	User        User       `gorm:"constraint:OnDelete:CASCADE;"`
+	User        *User       `gorm:"constraint:OnDelete:CASCADE;"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	Deleted     *bool      `gorm:"type:boolean"`
@@ -212,8 +253,8 @@ type ReportProblem struct {
 	ProblemID *uuid.UUID  `gorm:"type:uuid;primaryKey;column:problems_id"`
 	UpdatedAt *time.Time  `gorm:"type:timestamp"`
 	Deleted   *bool       `gorm:"type:boolean;default:false"`
-	Report    DailyReport `gorm:"foreignKey:ReportID;constraint:OnDelete:CASCADE;"`
-	Problem   Problem     `gorm:"foreignKey:ProblemID;constraint:OnDelete:CASCADE;"`
+	Report    *DailyReport `gorm:"foreignKey:ReportID;constraint:OnDelete:CASCADE;"`
+	Problem   *Problem     `gorm:"foreignKey:ProblemID;constraint:OnDelete:CASCADE;"`
 }
 
 type HelpRequest struct {
@@ -221,9 +262,9 @@ type HelpRequest struct {
 	HelperID    *uuid.UUID  `gorm:"type:uuid"`
 	Description *string     `gorm:"type:varchar(255)"`
 	Deleted     *bool       `gorm:"default:false"`
-	Helper      User        `gorm:"foreignKey:HelperID;references:ID"`
+	Helper      *User        `gorm:"foreignKey:HelperID;references:ID"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
-	Report      DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 }
 
 type CompletedWork struct {
@@ -231,7 +272,7 @@ type CompletedWork struct {
 	Description *string     `gorm:"type:text"`
 	Deleted     *bool       `gorm:"default:false"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
-	Report      DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 }
 
 type TomorrowPlans struct {
@@ -239,5 +280,5 @@ type TomorrowPlans struct {
 	Description *string     `gorm:"type:text"`
 	Deleted     *bool       `gorm:"default:false"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
-	Report      DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 }

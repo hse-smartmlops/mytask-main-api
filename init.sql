@@ -6,10 +6,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create tables in proper order to handle foreign key dependencies
 
--- auth_providers table
 CREATE TABLE auth_providers (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    client_id varchar(100),
+    client_id varchar(100) UNIQUE NOT NULL,
     client_secret varchar(100),
     well_known_url varchar(255),
     scopes text,
@@ -17,6 +16,58 @@ CREATE TABLE auth_providers (
     created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     deleted boolean DEFAULT false
+);
+
+-- Общая таблица событий
+CREATE TABLE auth_events (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id uuid NOT NULL,                        -- id из вебхука
+    event_type varchar(50) NOT NULL,               -- LOGIN, LOGOUT, USER-CREATE, ...
+    user_id uuid NULL,                             -- может быть пусто
+    provider_id uuid NULL,
+    client_id varchar(100) NULL,
+    realm_id uuid NULL,
+    ip_address varchar(45),
+    resource_path text,
+    occurred_at timestamptz,                       -- время события из вебхука
+    error text,                                    -- если есть
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    deleted boolean DEFAULT false,
+
+    CONSTRAINT fk_auth_event_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_auth_event_provider FOREIGN KEY (provider_id) REFERENCES auth_providers(id) ON DELETE SET NULL
+);
+
+-- Детали событий (разные auth_method, grant_type, token_id и т.д.)
+CREATE TABLE auth_event_details (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id uuid NOT NULL,
+    auth_method varchar(50),
+    client_auth_method varchar(50),
+    grant_type varchar(50),
+    signature_required boolean,
+    username varchar(255),
+    scope text,
+    token_id uuid,
+    refresh_token_id uuid,
+    refresh_token_type varchar(50),
+    updated_refresh_token_id uuid,
+
+    CONSTRAINT fk_event_details_event FOREIGN KEY (event_id) REFERENCES auth_events(id) ON DELETE CASCADE
+);
+
+-- Данные для USER-CREATE (representation)
+CREATE TABLE auth_event_user_representation (
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id uuid NOT NULL,
+    username varchar(255),
+    first_name varchar(100),
+    last_name varchar(100),
+    email varchar(255),
+    enabled boolean,
+
+    CONSTRAINT fk_event_repr_event FOREIGN KEY (event_id) REFERENCES auth_events(id) ON DELETE CASCADE
 );
 
 -- users table
@@ -76,19 +127,6 @@ CREATE TABLE sessions (
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) 
-        REFERENCES users(id) ON DELETE CASCADE
-);
-
--- auth_events table
-CREATE TABLE auth_events (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id uuid,
-    event_type varchar(30),
-    provider varchar(30),
-    ip_address varchar(45),
-    deleted boolean DEFAULT false,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT auth_events_user_id_fkey FOREIGN KEY (user_id) 
         REFERENCES users(id) ON DELETE CASCADE
 );
 
