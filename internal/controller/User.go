@@ -175,7 +175,7 @@ func GetUserById(c echo.Context) error {
 	}
 
 	var user models.User
-	result := dbConn.Session(&gorm.Session{}).Where("id = ?", userId).First(&user, "id = ?", user)
+	result := dbConn.Session(&gorm.Session{}).Where("id = ?", userId).First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
