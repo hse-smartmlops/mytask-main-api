@@ -1316,7 +1316,7 @@ func DeleteReport(c echo.Context) error {
 		})
 	}	
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("report_id = ?").Updates(updateData)
+	result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("report_id = ?", id).Updates(updateData)
 	if result.Error != nil {
 		log.Printf("DB error (delete report): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -1324,7 +1324,7 @@ func DeleteReport(c echo.Context) error {
 		})
 	}
 	
-	result = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("report_id = ?").Updates(updateData)
+	result = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("report_id = ?", id).Updates(updateData)
 	if result.Error != nil {
 		log.Printf("DB error (delete report): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -1332,7 +1332,7 @@ func DeleteReport(c echo.Context) error {
 		})
 	}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("report_id = ?").Updates(updateData)
+	result = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("report_id = ?", id).Updates(updateData)
 	if result.Error != nil {
 		log.Printf("DB error (delete report): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
