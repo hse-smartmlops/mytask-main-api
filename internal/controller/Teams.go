@@ -19,7 +19,7 @@ func RegisterTeamRoutes(e *echo.Echo) {
 	teamGroup := e.Group("/team")
 	teamGroup.GET("/all", GetTeams)
 	teamGroup.GET("/:id", GetTeamByID)
-	teamGroup.POST("/", CreateTeam)
+	teamGroup.POST("", CreateTeam)
 	teamGroup.PATCH("/:id", UpdateTeam)
 	teamGroup.DELETE("/:id", DeleteTeam) // Только для admin, добавить проверку роли
 	teamGroup.POST("/user", AddUserToTeam)
