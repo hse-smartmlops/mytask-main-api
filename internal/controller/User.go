@@ -23,7 +23,8 @@ func RegisterUserRoutes(e *echo.Echo) {
 	userGroup.POST("", CreateUser)
 	userGroup.POST("/:id", UpdateUser)
 	userGroup.DELETE("/:id", DeleteUser)
-	userGroup.POST("/role", AddUserToTeam)
+	userGroup.POST("/role", AddUserRole)
+	userGroup.DELETE("/role", RemoveUserRole)
 }
 
 // GetAllUsers godoc
