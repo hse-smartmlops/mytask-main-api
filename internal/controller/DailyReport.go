@@ -1188,8 +1188,17 @@ func CreateReport(c echo.Context) error {
 				description = pq.StringArray{}
 			}
 
+			problemId, err := uuid.Parse(problem.ID)
+			if err != nil {
+				log.Printf("ParseProblemId error: %v", err)
+				return c.JSON(http.StatusBadRequest, map[string]string{
+					"error": "Ошибка при парсинге problemId",
+				})
+			}
+
+
 			curProblem := models.Problem{
-				ID:          tempUUID,
+				ID:          problemId,
 				Description: description,
 				CreatorID:   &userId,
 				CreatedAt:   &now,

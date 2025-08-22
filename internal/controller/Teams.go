@@ -170,7 +170,7 @@ func GetTeamByID(c echo.Context) error {
 	}
 
 	if team.Deleted != nil {
-		if !*team.Deleted {
+		if *team.Deleted {
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"message": "Команда не найдена",
 			})

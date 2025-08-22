@@ -267,7 +267,7 @@ type ForumMessage struct {
 
 type ReportProblem struct {
 	ReportID  uuid.UUID   `gorm:"type:uuid;primaryKey;column:report_id"`
-	ProblemID uuid.UUID   `gorm:"type:uuid;primaryKey;column:problems_id"`
+	ProblemID uuid.UUID   `gorm:"type:uuid;primaryKey;column:problem_id"`
 	UpdatedAt *time.Time  `gorm:"type:timestamp"`
 	Deleted   *bool       `gorm:"type:boolean;default:false"`
 	Report    *DailyReport `gorm:"foreignKey:ReportID;constraint:OnDelete:CASCADE;"`
