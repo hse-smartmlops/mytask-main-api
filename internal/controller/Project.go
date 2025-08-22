@@ -252,6 +252,8 @@ func CreateProject(c echo.Context) error {
 
 	now := time.Now()
 
+	del := false
+
 	project := models.Project{
 		ID:              &newUUID,
 		Name:            req.Name,
@@ -261,6 +263,7 @@ func CreateProject(c echo.Context) error {
 		GitlabProjectID: req.Gitlab_project_id,
 		GitlabURL:       req.Gitlab_url,
 		Priority:        req.Priority,
+		Deleted: &del,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Create(&project)

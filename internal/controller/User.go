@@ -286,6 +286,8 @@ func CreateUser(c echo.Context) error {
 		})
 	}
 
+	del := false
+
 	user := models.User{
 		ID:             &newUUID,
 		Email:          req.Email,
@@ -300,6 +302,7 @@ func CreateUser(c echo.Context) error {
 		LastName:       req.LastName,
 		LastLogin:      req.LastLogin,
 		AuthProviderID: &authProviderId,
+		Deleted: &del,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Create(&user)
@@ -663,9 +666,12 @@ func AddUserRole(c echo.Context) error {
 		})
 	}
 
+	del := false
+
 	userRole := models.UserRole{
 		UserID: user.ID,
 		RoleID: role.ID,
+		Deleted: &del,
 	}
 
 	if err := dbConn.Session(&gorm.Session{}).Create(&userRole).Error; err != nil {

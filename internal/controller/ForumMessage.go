@@ -343,12 +343,15 @@ func CreateForumMessage(c echo.Context) error{
 		})
 	}
 
+	del := false
+
 	forumMessage := models.ForumMessage{
 		ID: &newUUID,
 		ProblemID: &problemId,
 		Description: req.Description,
 		CreatorID: &creatorId,
 		CreatedAt: &now,	
+		Deleted: &del,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Create(&forumMessage)

@@ -321,12 +321,15 @@ func CreateBoard(c echo.Context) error {
 		}
 	}
 
+	del := false
+
 	board := models.Board{
 		ID:          &newUUID,
 		Name:        req.Name,
 		Description: req.Description,
 		ProjectID:   projectId,
 		Filter:      req.Filter,
+		Deleted: 		&del,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Create(&board)

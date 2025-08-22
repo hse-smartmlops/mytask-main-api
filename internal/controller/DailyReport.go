@@ -1189,6 +1189,8 @@ func CreateReport(c echo.Context) error {
 		})
 	}
 
+	del := false
+
 	report := models.DailyReport{
 		ID:         &newUUID,
 		UserID:     &userId,
@@ -1196,6 +1198,7 @@ func CreateReport(c echo.Context) error {
 		TaskID:     &taskId,
 		ReportDate: req.ReportDate,
 		CreatedAt:  &now,
+		Deleted: &del,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Create(&report)
@@ -1210,10 +1213,12 @@ func CreateReport(c echo.Context) error {
 		for _, completedWorks := range *req.CompleteWork {
 			tempUUID := uuid.New()
 
+		
 			complWork := models.CompletedWork{
 				ID:          &tempUUID,
 				Description: &completedWorks.Description,
 				ReportID:    &newUUID,
+				Deleted: &del,
 			}
 
 			result = dbConn.Session(&gorm.Session{}).Create(&complWork)
@@ -1234,6 +1239,7 @@ func CreateReport(c echo.Context) error {
 				ID:          &tempUUID,
 				Description: &tomorrowPlan.Description,
 				ReportID:    &newUUID,
+				Deleted: &del,
 			}
 
 			result = dbConn.Session(&gorm.Session{}).Create(&tomPlan)
@@ -1255,6 +1261,7 @@ func CreateReport(c echo.Context) error {
 				Description: &problem.Description,
 				CreatorID:   &userId,
 				CreatedAt:   &now,
+				Deleted: &del,
 			}
 
 			result = dbConn.Session(&gorm.Session{}).Create(&curProblem)
@@ -1268,6 +1275,7 @@ func CreateReport(c echo.Context) error {
 			reportProblem := models.ReportProblem{
 				ReportID:  &newUUID,
 				ProblemID: &tempUUID,
+				Deleted: &del,
 			}
 
 			result = dbConn.Session(&gorm.Session{}).Create(&reportProblem)
@@ -1296,6 +1304,7 @@ func CreateReport(c echo.Context) error {
 			HelperID:    &helperId,
 			Description: &req.Help.Description,
 			ReportID:    &newUUID,
+			Deleted: &del,
 		}
 
 		result = dbConn.Session(&gorm.Session{}).Create(&help)

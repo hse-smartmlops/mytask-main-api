@@ -329,12 +329,15 @@ func CreateProblem(c echo.Context) error{
 		})
 	}
 
+	del := false
+
 	problem := models.Problem{
 		ID: &newUUID,
 		Description: req.Description,
 		CreatorID: &creatorId,
 		Name: req.Name,
 		CreatedAt: &now,
+		Deleted: &del,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Create(&problem)

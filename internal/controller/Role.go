@@ -191,10 +191,13 @@ func CreateRole(c echo.Context) error {
 
 	newUUID := uuid.New()
 
+	del := false
+
 	role := models.Role{
 		ID:          &newUUID,
 		Name:        req.Name,
 		Description: req.Description,
+		Deleted: &del,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Create(&role)

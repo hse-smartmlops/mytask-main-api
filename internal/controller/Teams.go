@@ -300,7 +300,9 @@ func CreateTeam(c echo.Context) error {
 		description = &req.Description
 	}
 
-	team := models.Team{ID: &newUUID, Name: name, Description: description}
+	del := false
+
+	team := models.Team{ID: &newUUID, Name: name, Description: description, Deleted: &del}
 	result := dbConn.Session(&gorm.Session{}).Create(&team)
 	if result.Error != nil {
 		log.Printf("DB error (create team): %v", result.Error)
@@ -492,10 +494,13 @@ func AddUserToTeam(c echo.Context) error {
 		})
 	}
 
+	del := false
+
 	teamMember := models.TeamMember{
 		UserID:         user.ID,
 		TeamID:         team.ID,
 		Specialization: user.Profession,
+		Deleted: &del,
 	}
 	if err := dbConn.Session(&gorm.Session{}).Create(&teamMember).Error; err != nil {
 		log.Printf("DB error (create team member): %v", err)
@@ -634,9 +639,12 @@ func AddProjectToTeam(c echo.Context) error {
 		})
 	}
 
+	del := false
+
 	projectTeam := models.ProjectTeam{
 		ProjectID: project.ID,
 		TeamID:    team.ID,
+		Deleted: &del,
 	}
 
 	if err := dbConn.Session(&gorm.Session{}).Create(&projectTeam).Error; err != nil {

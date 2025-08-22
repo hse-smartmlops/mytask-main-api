@@ -589,6 +589,8 @@ func CreateTask(c echo.Context) error {
 		category = req.Category
 	}
 
+	del := false
+
 	task := models.Task{
 		ID:            &newUUID,
 		Priority:      priority,
@@ -602,6 +604,7 @@ func CreateTask(c echo.Context) error {
 		GitlabIssueID: gitLabIssueID,
 		ProjectID:     projectId,
 		Category:      category,
+		Deleted: &del,
 	}
 
 	result = dbConn.Session(&gorm.Session{}).Create(&task)

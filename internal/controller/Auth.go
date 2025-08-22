@@ -244,7 +244,7 @@ func TOTP(c echo.Context) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param Authorization header string true "Токен авторизации"
+// @Param Authorization header string true "Refresh token"
 // @Success 200 {object} map[string]string "Успешный выход из системы"
 // @Failure 400 {object} map[string]string "Отсутствует токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при выходе"
@@ -315,7 +315,7 @@ func Register(c echo.Context) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param Authorization header string true "Токен авторизации"
+// @Param Authorization header string true "Access token"
 // @Success 200 {object} response.UserInfo "Информация о пользователе"
 // @Failure 401 {object} map[string]string "Отсутствует или неверный токен"
 // @Router /auth/me [get]
@@ -351,7 +351,7 @@ func Me(c echo.Context) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param body body request.RefreshRequest true "Refresh токен"
+// @Param body body request.RefreshRequest true "Refresh token"
 // @Success 200 {object} response.RefreshResponse "Новые токены и время жизни"
 // @Failure 400 {object} map[string]string "Неверный формат запроса"
 // @Failure 401 {object} map[string]string "Неверный или истёкший refresh_token"
@@ -394,7 +394,7 @@ func RefreshToken(c echo.Context) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param Authorization header string true "Bearer токен, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+// @Param Authorization header string true "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 // @Success 200 {object} response.TokenValidationResponse "Токен валиден"
 // @Failure 401 {object} response.TokenValidationResponse "Невалидный или отсутствующий токен"
 // @Router /auth/validate [get]
