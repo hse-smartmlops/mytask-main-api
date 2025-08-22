@@ -1255,7 +1255,7 @@ func UpdateReport(c echo.Context) error {
 
 	updateData := make(map[string]interface{})
 	if req.UserId != nil{
-		updateData["user_id "] = *req.UserId
+		updateData["user_id"] = *req.UserId
 	}
 	if req.ReportDate != nil{
 		updateData["report_date"] = *req.ReportDate
@@ -1292,7 +1292,6 @@ func DeleteReport(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	updateData["updated_at"] = time.Now()
 	result := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Where("id = ?", id).Updates(updateData)
 	if result.Error != nil {
 		log.Printf("DB error (delete report): %v", result.Error)
