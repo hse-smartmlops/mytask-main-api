@@ -175,12 +175,6 @@ func GetProjectByID(c echo.Context) error {
 		})
 	}
 
-	if project.ID == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Проект не найден",
-		})
-	}
-
 	var description string
 	if project.Description != nil {
 		description = *project.Description
@@ -255,7 +249,7 @@ func CreateProject(c echo.Context) error {
 	del := false
 
 	project := models.Project{
-		ID:              &newUUID,
+		ID:              newUUID,
 		Name:            req.Name,
 		Description:     req.Description,
 		CreatedAt:       &now,

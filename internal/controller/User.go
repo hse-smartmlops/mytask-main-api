@@ -87,9 +87,7 @@ func GetAllUsers(c echo.Context) error {
 
 	for _, user := range users {
 		var userId string
-		if user.ID != nil {
-			userId = user.ID.String()
-		}
+		userId = user.ID.String()
 		var email string
 		if user.Email != nil {
 			email = *user.Email
@@ -185,12 +183,6 @@ func GetUserById(c echo.Context) error {
 		log.Printf("DB error (find user by id): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении пользователя из базы данных",
-		})
-	}
-
-	if user.ID == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Пользователь не найден",
 		})
 	}
 	var email string
@@ -290,7 +282,7 @@ func CreateUser(c echo.Context) error {
 	del := false
 
 	user := models.User{
-		ID:             &newUUID,
+		ID:             newUUID,
 		Email:          req.Email,
 		IsActive:       req.IsActive,
 		CreatedAt:      &now,
@@ -446,14 +438,12 @@ func DeleteUser(c echo.Context) error {
 		})
 	}
 
-	if task.ID != nil {
-		result = dbConn.Session(&gorm.Session{}).Model(&models.HelpRequest{}).Where("task_id = ?", task.ID).Updates(updateData)
-		if result.Error != nil {
-			log.Printf("DB error (delete help request): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при удалении запроса на помощь",
-			})
-		}
+	result = dbConn.Session(&gorm.Session{}).Model(&models.HelpRequest{}).Where("task_id = ?", task.ID).Updates(updateData)
+	if result.Error != nil {
+		log.Printf("DB error (delete help request): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении запроса на помощь",
+		})
 	}
 
 	result = dbConn.Session(&gorm.Session{}).Model(&models.Task{}).Where("created_by = ? OR assigned_to = ?", id, id).Updates(updateData)
@@ -473,14 +463,12 @@ func DeleteUser(c echo.Context) error {
 		})
 	}
 
-	if dailyReport.ID != nil {
-		result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("report_id = ?", dailyReport.ID).Updates(updateData)
-		if result.Error != nil {
-			log.Printf("DB error (delete help request): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при удалении запроса на помощь",
-			})
-		}
+	result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("report_id = ?", dailyReport.ID).Updates(updateData)
+	if result.Error != nil {
+		log.Printf("DB error (delete help request): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении запроса на помощь",
+		})
 	}
 
 	result = dbConn.Session(&gorm.Session{}).Model(&models.DailyReport{}).Where("user_id = ?", id).Updates(updateData)
@@ -556,41 +544,39 @@ func DeleteUser(c echo.Context) error {
 		})
 	}
 
-	if problem.ID != nil {
-		result = dbConn.Session(&gorm.Session{}).Model(&models.ForumMessage{}).Where("problem_id = ?", problem.ID).Updates(updateData)
+	result = dbConn.Session(&gorm.Session{}).Model(&models.ForumMessage{}).Where("problem_id = ?", problem.ID).Updates(updateData)
+	if result.Error != nil {
+		log.Printf("DB error (update forum): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении форумов данного пользователя",
+		})
+	}
+
+	var reportProblems []models.ReportProblem
+	result = dbConn.Session(&gorm.Session{}).Model(&models.ReportProblem{}).Where("problem_id = ?", problem.ID).Find(&reportProblems)
+	if result.Error != nil {
+		log.Printf("DB error (get report-problem): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при получении связей отчет-проблема данного пользователя",
+		})
+	}
+
+	for _, reportProblem := range reportProblems{
+		result = dbConn.Session(&gorm.Session{}).Model(&models.Problem{}).Where("id = ?", reportProblem.ProblemID).Updates(updateData)
 		if result.Error != nil {
-			log.Printf("DB error (update forum): %v", result.Error)
+			log.Printf("DB error (delete user): %v", result.Error)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при удалении форумов данного пользователя",
+				"error": "Ошибка при удалении проблем данного пользователя",
 			})
 		}
+	}
 
-		var reportProblems []models.ReportProblem
-		result = dbConn.Session(&gorm.Session{}).Model(&models.ReportProblem{}).Where("problem_id = ?", problem.ID).Find(&reportProblems)
-		if result.Error != nil {
-			log.Printf("DB error (get report-problem): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении связей отчет-проблема данного пользователя",
-			})
-		}
-
-		for _, reportProblem := range reportProblems{
-			result = dbConn.Session(&gorm.Session{}).Model(&models.Problem{}).Where("id = ?", reportProblem.ProblemID).Updates(updateData)
-			if result.Error != nil {
-				log.Printf("DB error (delete user): %v", result.Error)
-				return c.JSON(http.StatusInternalServerError, map[string]string{
-					"error": "Ошибка при удалении проблем данного пользователя",
-				})
-			}
-		}
-
-		result = dbConn.Session(&gorm.Session{}).Model(&models.ReportProblem{}).Where("problem_id = ?", problem.ID).Updates(updateData)
-		if result.Error != nil {
-			log.Printf("DB error (delete report-problem): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при удалении связей отчет-проблема данного пользователя",
-			})
-		}
+	result = dbConn.Session(&gorm.Session{}).Model(&models.ReportProblem{}).Where("problem_id = ?", problem.ID).Updates(updateData)
+	if result.Error != nil {
+		log.Printf("DB error (delete report-problem): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении связей отчет-проблема данного пользователя",
+		})
 	}
 
 	result = dbConn.Session(&gorm.Session{}).Model(&models.Problem{}).Where("creator_id = ?", id).Updates(updateData)
@@ -646,24 +632,12 @@ func AddUserRole(c echo.Context) error {
 		})
 	}
 
-	if user.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такого пользователя",
-		})
-	}
-
 	var role models.Role
 	result = dbConn.Session(&gorm.Session{}).Select("id").Where("id = ? AND deleted = ?", req.RoleId, false).First(&role)
 	if result.Error != nil {
 		log.Printf("DB error (select role): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении данных роли",
-		})
-	}
-
-	if role.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такой роли",
 		})
 	}
 
@@ -721,24 +695,12 @@ func RemoveUserRole(c echo.Context) error {
 		})
 	}
 
-	if user.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такого пользователя",
-		})
-	}
-
 	var role models.Role
 	result = dbConn.Session(&gorm.Session{}).Select("id").Where("id = ? AND deleted = ?", req.RoleId, false).First(&role)
 	if result.Error != nil {
 		log.Printf("DB error (select role): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении данных роли",
-		})
-	}
-
-	if role.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такой роли",
 		})
 	}
 

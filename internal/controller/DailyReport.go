@@ -90,9 +90,7 @@ func GetAllReports(c echo.Context) error {
 
 	for _, report := range reports {
 		var userId string
-		if report.UserID != nil {
-			userId = report.UserID.String()
-		}
+		userId = report.UserID.String()
 
 		var reportDate time.Time
 		if report.ReportDate != nil {
@@ -164,9 +162,7 @@ func GetAllReports(c echo.Context) error {
 		}
 
 		var hrId string
-		if helpReq.ID != nil {
-			hrId = helpReq.ID.String()
-		}
+		hrId = helpReq.ID.String()
 
 		var helperId string
 		if helpReq.HelperID != nil {
@@ -201,9 +197,7 @@ func GetAllReports(c echo.Context) error {
 		var complWork []response.WorkItem
 		for _, workItem := range completedWork {
 			var iD string
-			if workItem.ID != nil {
-				iD = workItem.ID.String()
-			}
+			iD = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -232,9 +226,7 @@ func GetAllReports(c echo.Context) error {
 		var tomorrowPlans []response.WorkItem
 		for _, workItem := range tomorrowPlan {
 			var iD string
-			if workItem.ID != nil {
-				iD = workItem.ID.String()
-			}
+			iD = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -259,9 +251,7 @@ func GetAllReports(c echo.Context) error {
 
 		var problemsId []uuid.UUID
 		for _, reportProblem := range reportProblems {
-			if reportProblem.ReportID != nil {
-				problemsId = append(problemsId, *reportProblem.ReportID)
-			}
+			problemsId = append(problemsId, reportProblem.ReportID)
 		}
 
 		var problems []models.Problem
@@ -362,16 +352,8 @@ func GetReport(c echo.Context) error {
 		})
 	}
 
-	if report.ID == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Отчет не найден",
-		})
-	}
-
 	var userId string
-	if report.UserID != nil {
-		userId = report.UserID.String()
-	}
+	userId = report.UserID.String()
 
 	var reportDate time.Time
 	if report.ReportDate != nil {
@@ -443,9 +425,7 @@ func GetReport(c echo.Context) error {
 	}
 
 	var hrId string
-	if helpReq.ID != nil {
-		hrId = helpReq.ID.String()
-	}
+	hrId = helpReq.ID.String()
 
 	var helperId string
 	if helpReq.HelperID != nil {
@@ -480,9 +460,7 @@ func GetReport(c echo.Context) error {
 	var complWork []response.WorkItem
 	for _, workItem := range completedWork {
 		var iD string
-		if workItem.ID != nil {
-			iD = workItem.ID.String()
-		}
+		iD = workItem.ID.String()
 
 		var desc string
 		if workItem.Description != nil {
@@ -511,9 +489,7 @@ func GetReport(c echo.Context) error {
 	var tomorrowPlans []response.WorkItem
 	for _, workItem := range tomorrowPlan {
 		var iD string
-		if workItem.ID != nil {
-			iD = workItem.ID.String()
-		}
+		iD = workItem.ID.String()
 
 		var desc string
 		if workItem.Description != nil {
@@ -538,9 +514,7 @@ func GetReport(c echo.Context) error {
 
 	var problemsId []uuid.UUID
 	for _, reportProblem := range reportProblems {
-		if reportProblem.ReportID != nil {
-			problemsId = append(problemsId, *reportProblem.ReportID)
-		}
+		problemsId = append(problemsId, reportProblem.ReportID)
 	}
 
 	var problems []models.Problem
@@ -629,9 +603,7 @@ func GetReportsByTaskId(c echo.Context) error {
 
 	for _, report := range reports {
 		var userId string
-		if report.UserID != nil {
-			userId = report.UserID.String()
-		}
+		userId = report.UserID.String()
 
 		var reportDate time.Time
 		if report.ReportDate != nil {
@@ -703,9 +675,7 @@ func GetReportsByTaskId(c echo.Context) error {
 		}
 
 		var hrId string
-		if helpReq.ID != nil {
-			hrId = helpReq.ID.String()
-		}
+		hrId = helpReq.ID.String()
 
 		var helperId string
 		if helpReq.HelperID != nil {
@@ -740,9 +710,7 @@ func GetReportsByTaskId(c echo.Context) error {
 		var complWork []response.WorkItem
 		for _, workItem := range completedWork {
 			var iD string
-			if workItem.ID != nil {
-				iD = workItem.ID.String()
-			}
+			iD = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -771,9 +739,7 @@ func GetReportsByTaskId(c echo.Context) error {
 		var tomorrowPlans []response.WorkItem
 		for _, workItem := range tomorrowPlan {
 			var iD string
-			if workItem.ID != nil {
-				iD = workItem.ID.String()
-			}
+			iD = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -798,9 +764,7 @@ func GetReportsByTaskId(c echo.Context) error {
 
 		var problemsId []uuid.UUID
 		for _, reportProblem := range reportProblems {
-			if reportProblem.ReportID != nil {
-				problemsId = append(problemsId, *reportProblem.ReportID)
-			}
+			problemsId = append(problemsId, reportProblem.ReportID)
 		}
 
 		var problems []models.Problem
@@ -891,9 +855,7 @@ func GetReportsByProjectId(c echo.Context) error {
 
 	var tasksId []uuid.UUID
 	for _, taskItem := range task {
-		if taskItem.ID != nil {
-			tasksId = append(tasksId, *taskItem.ID)
-		}
+		tasksId = append(tasksId, taskItem.ID)
 	}
 
 	var reports []models.DailyReport
@@ -911,9 +873,7 @@ func GetReportsByProjectId(c echo.Context) error {
 
 	for _, report := range reports {
 		var userId string
-		if report.UserID != nil {
-			userId = report.UserID.String()
-		}
+		userId = report.UserID.String()
 
 		var reportDate time.Time
 		if report.ReportDate != nil {
@@ -985,9 +945,7 @@ func GetReportsByProjectId(c echo.Context) error {
 		}
 
 		var hrId string
-		if helpReq.ID != nil {
-			hrId = helpReq.ID.String()
-		}
+		hrId = helpReq.ID.String()
 
 		var helperId string
 		if helpReq.HelperID != nil {
@@ -1022,9 +980,7 @@ func GetReportsByProjectId(c echo.Context) error {
 		var complWork []response.WorkItem
 		for _, workItem := range completedWork {
 			var iD string
-			if workItem.ID != nil {
-				iD = workItem.ID.String()
-			}
+			iD = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -1053,9 +1009,7 @@ func GetReportsByProjectId(c echo.Context) error {
 		var tomorrowPlans []response.WorkItem
 		for _, workItem := range tomorrowPlan {
 			var iD string
-			if workItem.ID != nil {
-				iD = workItem.ID.String()
-			}
+			iD = workItem.ID.String()
 
 			var desc string
 			if workItem.Description != nil {
@@ -1080,9 +1034,7 @@ func GetReportsByProjectId(c echo.Context) error {
 
 		var problemsId []uuid.UUID
 		for _, reportProblem := range reportProblems {
-			if reportProblem.ReportID != nil {
-				problemsId = append(problemsId, *reportProblem.ReportID)
-			}
+			problemsId = append(problemsId, reportProblem.ReportID)
 		}
 
 		var problems []models.Problem
@@ -1192,8 +1144,8 @@ func CreateReport(c echo.Context) error {
 	del := false
 
 	report := models.DailyReport{
-		ID:         &newUUID,
-		UserID:     &userId,
+		ID:         newUUID,
+		UserID:     userId,
 		Status:     req.Status,
 		TaskID:     &taskId,
 		ReportDate: req.ReportDate,
@@ -1215,7 +1167,7 @@ func CreateReport(c echo.Context) error {
 
 		
 			complWork := models.CompletedWork{
-				ID:          &tempUUID,
+				ID:          tempUUID,
 				Description: &completedWorks.Description,
 				ReportID:    &newUUID,
 				Deleted: &del,
@@ -1236,7 +1188,7 @@ func CreateReport(c echo.Context) error {
 			tempUUID := uuid.New()
 
 			tomPlan := models.TomorrowPlans{
-				ID:          &tempUUID,
+				ID:          tempUUID,
 				Description: &tomorrowPlan.Description,
 				ReportID:    &newUUID,
 				Deleted: &del,
@@ -1257,7 +1209,7 @@ func CreateReport(c echo.Context) error {
 			tempUUID := uuid.New()
 
 			curProblem := models.Problem{
-				ID:          &tempUUID,
+				ID:          tempUUID,
 				Description: &problem.Description,
 				CreatorID:   &userId,
 				CreatedAt:   &now,
@@ -1273,8 +1225,8 @@ func CreateReport(c echo.Context) error {
 			}
 
 			reportProblem := models.ReportProblem{
-				ReportID:  &newUUID,
-				ProblemID: &tempUUID,
+				ReportID:  newUUID,
+				ProblemID: tempUUID,
 				Deleted: &del,
 			}
 
@@ -1300,7 +1252,7 @@ func CreateReport(c echo.Context) error {
 		}
 
 		help := models.HelpRequest{
-			ID:          &tempUUID,
+			ID:          tempUUID,
 			HelperID:    &helperId,
 			Description: &req.Help.Description,
 			ReportID:    &newUUID,
@@ -1441,7 +1393,7 @@ func DeleteReport(c echo.Context) error {
 
 	var problemsId []uuid.UUID
 	for _, reportProblem := range reportProblems{
-		problemsId = append(problemsId, *reportProblem.ProblemID)
+		problemsId = append(problemsId, reportProblem.ProblemID)
 	}
 
 	result = dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id in (?)", problemsId).Updates(updateData)

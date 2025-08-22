@@ -141,13 +141,6 @@ func GetRoleById(c echo.Context) error {
 			"error": "Ошибка при получении роли из базы данных",
 		})
 	}
-
-	if role.ID == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Роль не найдена",
-		})
-	}
-
 	var name string
 	if role.Name != nil {
 		name = *role.Name
@@ -194,7 +187,7 @@ func CreateRole(c echo.Context) error {
 	del := false
 
 	role := models.Role{
-		ID:          &newUUID,
+		ID:          newUUID,
 		Name:        req.Name,
 		Description: req.Description,
 		Deleted: &del,

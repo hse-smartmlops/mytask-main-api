@@ -77,7 +77,7 @@ func GetTeams(c echo.Context) error {
 			updatedAt = *team.UpdatedAt
 		}
 
-		teamInfo[*team.ID] = response.TeamResponse{
+		teamInfo[team.ID] = response.TeamResponse{
 			ID:          team.ID.String(),
 			Name:        name,
 			Description: description,
@@ -95,36 +95,34 @@ func GetTeams(c echo.Context) error {
 			return c.JSON(http.StatusInternalServerError, err)
 		}
 
-		if member.ID != nil {
-			profession := ""
-			if member.Profession != nil {
-				profession = *member.Profession
-			}
-
-			var memberFirstName string
-			if member.FirstName != nil {
-				memberFirstName = *member.FirstName
-			}
-
-			var memberLastName string
-			if member.LastName != nil {
-				memberLastName = *member.LastName
-			}
-
-			var memberEmail string
-			if member.Email != nil {
-				memberEmail = *member.Email
-			}
-
-			teamAndMembers[*tm.TeamID] = append(teamAndMembers[*tm.TeamID],
-				response.TeamMemberResponse{
-					UserID:         member.ID.String(),
-					Specialization: profession,
-					FirstName:      memberFirstName,
-					LastName:       memberLastName,
-					Email:          memberEmail,
-				})
+		profession := ""
+		if member.Profession != nil {
+			profession = *member.Profession
 		}
+
+		var memberFirstName string
+		if member.FirstName != nil {
+			memberFirstName = *member.FirstName
+		}
+
+		var memberLastName string
+		if member.LastName != nil {
+			memberLastName = *member.LastName
+		}
+
+		var memberEmail string
+		if member.Email != nil {
+			memberEmail = *member.Email
+		}
+
+		teamAndMembers[tm.TeamID] = append(teamAndMembers[tm.TeamID],
+			response.TeamMemberResponse{
+				UserID:         member.ID.String(),
+				Specialization: profession,
+				FirstName:      memberFirstName,
+				LastName:       memberLastName,
+				Email:          memberEmail,
+			})
 	}
 
 	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0)}
@@ -191,7 +189,7 @@ func GetTeamByID(c echo.Context) error {
 	// Получаем пользователей одним запросом
 	userIDs := make([]uuid.UUID, 0, len(teamMembers))
 	for _, tm := range teamMembers {
-		userIDs = append(userIDs, *tm.UserID)
+		userIDs = append(userIDs, tm.UserID)
 	}
 
 	var members []models.User
@@ -207,13 +205,13 @@ func GetTeamByID(c echo.Context) error {
 	// Преобразуем в map для быстрого доступа
 	memberMap := make(map[uuid.UUID]models.User, len(members))
 	for _, m := range members {
-		memberMap[*m.ID] = m
+		memberMap[m.ID] = m
 	}
 
 	// Формируем список участников ответа
 	membersResp := make([]response.TeamMemberResponse, 0, len(teamMembers))
 	for _, tm := range teamMembers {
-		member := memberMap[*tm.UserID]
+		member := memberMap[tm.UserID]
 		profession := ""
 		if member.Profession != nil {
 			profession = *member.Profession
@@ -302,7 +300,7 @@ func CreateTeam(c echo.Context) error {
 
 	del := false
 
-	team := models.Team{ID: &newUUID, Name: name, Description: description, Deleted: &del}
+	team := models.Team{ID: newUUID, Name: name, Description: description, Deleted: &del}
 	result := dbConn.Session(&gorm.Session{}).Create(&team)
 	if result.Error != nil {
 		log.Printf("DB error (create team): %v", result.Error)
@@ -366,12 +364,6 @@ func UpdateTeam(c echo.Context) error {
 	if err := dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", teamIDParam, false).First(&team).Error; err != nil {
 		log.Printf("Team not found: %v", err)
 		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Команда не найдена",
-		})
-	}
-
-	if team.ID != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Команда не найдена",
 		})
 	}
@@ -474,23 +466,11 @@ func AddUserToTeam(c echo.Context) error {
 		})
 	}
 
-	if user.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такого пользователя",
-		})
-	}
-
 	var team models.Team
 	if err := dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", req.TeamID, false).First(&team).Error; err != nil {
 		log.Printf("DB error (select team): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении команды",
-		})
-	}
-
-	if team.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такой команды",
 		})
 	}
 
@@ -547,22 +527,10 @@ func DeleteUserFromTeam(c echo.Context) error {
 		})
 	}
 
-	if team.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такой команды",
-		})
-	}
-
 	var user models.User
 	if err := dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", req.UserID, false).First(&user).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении пользователя",
-		})
-	}
-
-	if user.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такого пользователя",
 		})
 	}
 
@@ -619,23 +587,11 @@ func AddProjectToTeam(c echo.Context) error {
 		})
 	}
 
-	if team.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такой команды",
-		})
-	}
-
 	var project models.Project
 	if err := dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", req.ProjectID, false).First(&project).Error; err != nil {
 		log.Printf("DB error (select project): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении проекта",
-		})
-	}
-
-	if project.ID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет такого проекта",
 		})
 	}
 

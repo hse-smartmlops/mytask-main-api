@@ -87,14 +87,10 @@ func GetAllTasks(c echo.Context) error {
 
 	for _, task := range tasks {
 		var id string
-		if task.ID != nil {
-			id = task.ID.String()
-		}
+		id = task.ID.String()
 
 		var projectId string
-		if task.ID != nil {
-			projectId = task.ProjectID.String()
-		}
+		projectId = task.ProjectID.String()
 
 		var name string
 		if task.Name != nil {
@@ -199,9 +195,7 @@ func GetTaskByID(c echo.Context) error {
 	if creator.Deleted != nil {
 		if *creator.Deleted {
 			var creatorID string
-			if creator.ID != nil {
-				creatorID = creator.ID.String()
-			}
+			creatorID = creator.ID.String()
 
 			var creatorFirstName string
 			if creator.FirstName != nil {
@@ -230,9 +224,7 @@ func GetTaskByID(c echo.Context) error {
 	if assigner.Deleted != nil {
 		if *assigner.Deleted {
 			var assignerID string
-			if assigner.ID != nil {
-				assignerID = assigner.ID.String()
-			}
+			assignerID = assigner.ID.String()
 
 			var assignerFirstName string
 			if assigner.FirstName != nil {
@@ -254,14 +246,10 @@ func GetTaskByID(c echo.Context) error {
 	}
 
 	var Id string
-	if task.ID != nil {
-		Id = task.ID.String()
-	}
+	Id = task.ID.String()
 
 	var projectId string
-	if task.ID != nil {
-		projectId = task.ProjectID.String()
-	}
+	projectId = task.ProjectID.String()
 
 	var name string
 	if task.Name != nil {
@@ -392,14 +380,10 @@ func GetTasksByProjectID(c echo.Context) error {
 		if task.Deleted != nil {
 			if !*task.Deleted {
 				var id string
-				if task.ID != nil {
-					id = task.ID.String()
-				}
+				id = task.ID.String()
 
 				var projectId string
-				if task.ID != nil {
-					projectId = task.ProjectID.String()
-				}
+				projectId = task.ProjectID.String()
 
 				var name string
 				if task.Name != nil {
@@ -546,13 +530,7 @@ func CreateTask(c echo.Context) error {
 	}
 
 	var assignedTo *uuid.UUID
-	if assigner.ID != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "Данный поручитель удален",
-		})
-	} else {
-		assignedTo = assigner.ID
-	}
+	assignedTo = &assigner.ID
 
 	var creator models.User
 	result = dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
@@ -569,20 +547,13 @@ func CreateTask(c echo.Context) error {
 	}
 
 	var creatorID *uuid.UUID
-	if creator.ID != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "Данный поручитель удален",
-		})
-	} else {
-		creatorID = creator.ID
-	}
+	creatorID = &creator.ID
 
-	var projectId *uuid.UUID
+
 	temp1, err := uuid.Parse(req.ProjectID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{})
 	}
-	projectId = &temp1
 
 	var category *int8
 	if req.Category != nil {
@@ -592,7 +563,7 @@ func CreateTask(c echo.Context) error {
 	del := false
 
 	task := models.Task{
-		ID:            &newUUID,
+		ID:            newUUID,
 		Priority:      priority,
 		Name:          name,
 		Description:   description,
@@ -602,7 +573,7 @@ func CreateTask(c echo.Context) error {
 		Deadline:      deadline,
 		StartDate:     startDate,
 		GitlabIssueID: gitLabIssueID,
-		ProjectID:     projectId,
+		ProjectID:     temp1,
 		Category:      category,
 		Deleted: &del,
 	}

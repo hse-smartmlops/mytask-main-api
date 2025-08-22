@@ -87,13 +87,9 @@ func GetAllForumMessages(c echo.Context) error {
 
 	for _, message := range forumMessages {
 		var messageId string
-		if message.ID != nil{
-			messageId = message.ID.String()
-		}
+		messageId = message.ID.String()
 		var problemId string
-		if message.ProblemID != nil{
-			problemId = message.ProblemID.String()
-		}
+		problemId = message.ProblemID.String()
 		var description []string
 		if message.Description != nil {
 			description = *message.Description
@@ -194,13 +190,9 @@ func GetForumMessagesByProblemId(c echo.Context) error{
 
 	for _, message := range forumMessages {
 		var messageId string
-		if message.ID != nil{
-			messageId = message.ID.String()
-		}
+		messageId = message.ID.String()
 		var problemId string
-		if message.ProblemID != nil{
-			problemId = message.ProblemID.String()
-		}
+		problemId = message.ProblemID.String()
 		var description []string
 		if message.Description != nil {
 			description = *message.Description
@@ -263,17 +255,9 @@ func GetForumMessageById(c echo.Context) error {
 			"error": "Ошибка при получении сообщения форума из базы данных",
 		})
 	}
-
-	if forumMessage.ID == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Сообщение не найдено",
-		})
-	}
 	
 	var problemId string
-	if forumMessage.ProblemID == nil{
-		problemId = forumMessage.ProblemID.String()
-	}
+	problemId = forumMessage.ProblemID.String()
 	var description []string
 	if forumMessage.Description != nil{
 		description = *forumMessage.Description
@@ -346,8 +330,8 @@ func CreateForumMessage(c echo.Context) error{
 	del := false
 
 	forumMessage := models.ForumMessage{
-		ID: &newUUID,
-		ProblemID: &problemId,
+		ID: newUUID,
+		ProblemID: problemId,
 		Description: req.Description,
 		CreatorID: &creatorId,
 		CreatedAt: &now,	

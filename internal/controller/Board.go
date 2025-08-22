@@ -85,14 +85,9 @@ func GetAllBoards(c echo.Context) error {
 	for _, board := range boards {
 		if board.Deleted != nil {
 			if !*board.Deleted {
-				var id string
-				if board.ID != nil {
-					id = board.ID.String()
-				}
-				var projectId string
-				if board.ProjectID != nil {
-					projectId = board.ProjectID.String()
-				}
+				var id string = board.ID.String()
+				var projectId string = board.ProjectID.String()
+
 				var name string
 				if board.Name != nil {
 					name = *board.Name
@@ -169,11 +164,6 @@ func GetBoardById(c echo.Context) error {
 		}
 	}
 
-	var projectId string
-	if board.ProjectID != nil {
-		projectId = board.ProjectID.String()
-	}
-
 	var name string
 	if board.Name != nil {
 		name = *board.Name
@@ -196,7 +186,7 @@ func GetBoardById(c echo.Context) error {
 
 	boardResponse := response.BoardResponse{
 		Id:          id,
-		ProjectId:   projectId,
+		ProjectId:   board.ProjectID.String(),
 		Name:        name,
 		Description: description,
 		Filter:      filter,
@@ -309,10 +299,10 @@ func CreateBoard(c echo.Context) error {
 
 	newUUID := uuid.New()
 
-	var projectId *uuid.UUID
+	var projectId uuid.UUID
 	if req.ProjectID != nil {
 		projectID, err := uuid.Parse(*req.ProjectID)
-		projectId = &projectID
+		projectId = projectID
 		if err != nil {
 			log.Printf("UUID parse error: %v", err)
 			return c.JSON(http.StatusBadRequest, map[string]string{
@@ -324,7 +314,7 @@ func CreateBoard(c echo.Context) error {
 	del := false
 
 	board := models.Board{
-		ID:          &newUUID,
+		ID:          newUUID,
 		Name:        req.Name,
 		Description: req.Description,
 		ProjectID:   projectId,

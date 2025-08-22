@@ -86,9 +86,7 @@ func GetAllProblems(c echo.Context) error{
 
 	for _, problem := range problems{
 		var problemID string
-		if problem.ID != nil{
-			problemID = problem.ID.String()
-		}
+		problemID = problem.ID.String()
 		var description []string
 		if problem.Description != nil{
 			description = *problem.Description
@@ -185,9 +183,7 @@ func GetProblemsByUserId(c echo.Context) error{
 
 	for _, problem := range problems{
 		var problemID string
-		if problem.ID != nil{
-			problemID = problem.ID.String()
-		}
+		problemID = problem.ID.String()
 		var description []string
 		if problem.Description != nil{
 			description = *problem.Description
@@ -254,12 +250,6 @@ func GetProblemByID(c echo.Context) error{
 		log.Printf("DB error (find problem by id): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении проблемы из базы данных",
-		})
-	}
-
-	if problem.ID == nil{
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Проблема не найдена",
 		})
 	}
 
@@ -332,7 +322,7 @@ func CreateProblem(c echo.Context) error{
 	del := false
 
 	problem := models.Problem{
-		ID: &newUUID,
+		ID: newUUID,
 		Description: req.Description,
 		CreatorID: &creatorId,
 		Name: req.Name,
