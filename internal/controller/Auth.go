@@ -254,7 +254,7 @@ func Logout(c echo.Context) error {
 	if auth == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing token"})
 	}
-
+	log.Print(auth)
 	ctx := context.Background()
 	err := keycloakClient.Logout(ctx, clientID, clientSecret, realm, auth)
 	if err != nil {

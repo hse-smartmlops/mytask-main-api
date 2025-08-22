@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -13,6 +14,7 @@ import (
 var DB_conn *gorm.DB = getDBConnection()
 
 func getDBConnection() *gorm.DB {
+	time.Sleep(5 * time.Second)
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatal("Error loading .env file")
