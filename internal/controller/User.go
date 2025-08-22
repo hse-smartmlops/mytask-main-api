@@ -728,7 +728,7 @@ func RemoveUserRole(c echo.Context) error {
 	}
 
 	var role models.Role
-	result = dbConn.Session(&gorm.Session{}).Select("id, profession").Where("id = ? AND deleted = ?", req.RoleId, false).First(&role)
+	result = dbConn.Session(&gorm.Session{}).Select("id").Where("id = ? AND deleted = ?", req.RoleId, false).First(&role)
 	if result.Error != nil {
 		log.Printf("DB error (select role): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
