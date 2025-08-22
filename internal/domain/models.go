@@ -17,7 +17,7 @@ type AuthProvider struct {
 	CreatedAt     *time.Time
 	UpdatedAt     *time.Time
 
-	Events *[]AuthEvent `gorm:"foreignKey:ProviderID"`
+	Events []AuthEvent `gorm:"foreignKey:ProviderID"`
 }
 
 type AuthEvent struct {
@@ -37,8 +37,8 @@ type AuthEvent struct {
 	UpdatedAt   *time.Time
 
 	Provider        *AuthProvider              `gorm:"foreignKey:ProviderID"`
-	Details         *[]AuthEventDetail          `gorm:"foreignKey:EventID"`
-	Representation  *[]AuthEventUserRepresentation `gorm:"foreignKey:EventID"`
+	Details         []AuthEventDetail          `gorm:"foreignKey:EventID"`
+	Representation  []AuthEventUserRepresentation `gorm:"foreignKey:EventID"`
 }
 
 type AuthEventDetail struct {
@@ -84,7 +84,7 @@ type User struct {
 	LastLogin      *time.Time
 	AuthProviderID *uuid.UUID    `gorm:"type:uuid"`
 	AuthProvider   *AuthProvider `gorm:"foreignKey:AuthProviderID;constraint:OnDelete:SET NULL;"`
-	Roles          *[]Role        `gorm:"many2many:user_role;joinForeignKey:UserID;JoinReferences:RoleID"`
+	Roles          []Role        `gorm:"many2many:user_role;joinForeignKey:UserID;JoinReferences:RoleID"`
 	Deleted        *bool         `gorm:"type:boolean"`
 	UpdatedAt      *time.Time
 }
@@ -93,7 +93,7 @@ type Role struct {
 	ID          *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name        *string    `gorm:"size:50"`
 	Description *string    `gorm:"size:200"`
-	Users       *[]User     `gorm:"many2many:user_role;joinForeignKey:RoleID;JoinReferences:UserID"`
+	Users       []User     `gorm:"many2many:user_role;joinForeignKey:RoleID;JoinReferences:UserID"`
 	Deleted     *bool      `gorm:"type:boolean"`
 	UpdatedAt   *time.Time
 }
@@ -128,9 +128,9 @@ type Project struct {
 	GitlabProjectID *int
 	GitlabURL       *string `gorm:"size:255"`
 	Priority        *int16
-	Boards          *[]Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
-	Tasks           *[]Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
-	ProjectTeams    *[]ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	Boards          []Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	Tasks           []Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	ProjectTeams    []ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Deleted         *bool         `gorm:"type:boolean"`
 	UpdatedAt       *time.Time
 }
@@ -169,8 +169,8 @@ type Team struct {
 	ID           *uuid.UUID    `gorm:"type:uuid;primaryKey" json:"id"`
 	Name         *string       `gorm:"size:100" json:"name"`
 	Description  *string       `gorm:"type:text" json:"description"`
-	TeamMembers  *[]TeamMember  `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
-	ProjectTeams *[]ProjectTeam `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
+	TeamMembers  []TeamMember  `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
+	ProjectTeams []ProjectTeam `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
 	Deleted      *bool         `gorm:"type:boolean"`
 	UpdatedAt    *time.Time
 }
@@ -233,7 +233,7 @@ type Problem struct {
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	Deleted     *bool      `gorm:"type:boolean"`
-	Forum       *[]ForumMessage    `gorm:"foreignKey:ProblemID"`
+	Forum       []ForumMessage    `gorm:"foreignKey:ProblemID"`
 }
 
 type ForumMessage struct {
