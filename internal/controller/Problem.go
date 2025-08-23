@@ -392,7 +392,7 @@ func UpdateProblem(c echo.Context) error{
 
 	updateData := make(map[string]interface{})
 	if req.Description != nil{
-		updateData["description"] = *req.Description
+		updateData["description"] = pq.StringArray(*req.Description)
 	}
 
 	if len(updateData) == 0{
@@ -412,7 +412,7 @@ func UpdateProblem(c echo.Context) error{
 
 	updateReponse := response.ProblemUniversalResponse{
 		ID: id,
-		Message: "Проблема успешно создана",
+		Message: "Проблема успешно обновлена",
 	}
 
 	return c.JSON(http.StatusOK, updateReponse)

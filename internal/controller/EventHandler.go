@@ -100,7 +100,31 @@ func KeycloakEventHandler(c echo.Context) error {
             authEvent.Details = []models.AuthEventDetail{detail}
         }
 
-    case "USER-CREATE", "USER-ACTION":
+    case "USER-CREATE":
+        // репрезентация пользователя
+        if reprRaw, ok := payload["representation"].(map[string]interface{}); ok {
+            userRepr := models.AuthEventUserRepresentation{
+                EventID: authEvent.ID,
+            }
+            if v, ok := reprRaw["username"].(string); ok {
+                userRepr.Username = &v
+            }
+            if v, ok := reprRaw["firstName"].(string); ok {
+                userRepr.FirstName = &v
+            }
+            if v, ok := reprRaw["lastName"].(string); ok {
+                userRepr.LastName = &v
+            }
+            if v, ok := reprRaw["email"].(string); ok {
+                userRepr.Email = &v
+            }
+            if v, ok := reprRaw["enabled"].(bool); ok {
+                userRepr.Enabled = &v
+            }
+            authEvent.Representation = []models.AuthEventUserRepresentation{userRepr}
+        }
+
+    case "USER-ACTION":
         // репрезентация пользователя
         if reprRaw, ok := payload["representation"].(map[string]interface{}); ok {
             userRepr := models.AuthEventUserRepresentation{

@@ -1170,11 +1170,11 @@ func CreateReport(c echo.Context) error {
 		}
 	}
 
-	if req.Problems != nil {
-		for _, problem := range *req.Problems {
-			problemId, err := uuid.Parse(problem.ID)
-			if err != nil {
-				log.Printf("ParseProblemId error: %v", err)
+	if req.ProblemsIds != nil {
+		for _, problemId := range *req.ProblemsIds {
+			problemID, err := uuid.Parse(problemId)
+			if err != nil{
+				log.Printf("Parse ProblemId error: %v", err)
 				return c.JSON(http.StatusBadRequest, map[string]string{
 					"error": "Ошибка при парсинге problemId",
 				})
@@ -1182,7 +1182,7 @@ func CreateReport(c echo.Context) error {
 
 			reportProblem := models.ReportProblem{
 				ReportID:  newUUID,
-				ProblemID: problemId,
+				ProblemID: problemID,
 				Deleted: &del,
 			}
 
@@ -1269,6 +1269,9 @@ func UpdateReport(c echo.Context) error {
 	if req.ReportDate != nil{
 		updateData["report_date"] = *req.ReportDate
 	}
+	if req.Status != nil{
+		updateData["status"] = *req.Status
+		}
 	updateData["updated_at"] = time.Now()
 
 	if err = dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Where("id = ?", reportId).Updates(updateData).Error ;err != nil{
@@ -1280,7 +1283,7 @@ func UpdateReport(c echo.Context) error {
 
 	updateResponse := response.ReportUniversalResponse{
 		ID: id,
-		Message: "Проект успешно изменен",
+		Message: "Отчет успешно изменен",
 	}
 
 	return c.JSON(http.StatusOK, updateResponse)
@@ -1339,7 +1342,7 @@ func DeleteReport(c echo.Context) error {
 	}
 
 	var reportProblems []models.ReportProblem
-	if err := dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", id, false).Find(&reportProblems); err != nil{
+	if err := dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", id, false).Find(&reportProblems).Error; err != nil{
 		log.Printf("DB error (get report-problem): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении связи отчет-проблема",
@@ -1419,9 +1422,7 @@ func UpdateHelpRequest(c echo.Context) error{
 		})
 	}
 
-	updateData["created_at"] = time.Now()
-
-	if err = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("id = ?", helpRequestId).Error; err != nil{
+	if err = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("id = ?", helpRequestId).Updates(updateData).Error; err != nil{
 		log.Printf("DB error (update help request): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении запроса на помощь",
@@ -1430,7 +1431,7 @@ func UpdateHelpRequest(c echo.Context) error{
 
 	updateResponse := response.ReportUniversalResponse{
 		ID:      id,
-		Message: "Проект с ID " + id + " обновлен",
+		Message: "Запрос на помощь с ID " + id + " обновлен",
 	}
 
 	return c.JSON(http.StatusOK, updateResponse)
@@ -1477,9 +1478,7 @@ func UpdateCompletedWork(c echo.Context) error{
 		})
 	}
 
-	updateData["updated_at"] = time.Now()
-
-	if err = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("id = ?", completedWorkId).Error; err != nil{
+	if err = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("id = ?", completedWorkId).Updates(updateData).Error; err != nil{
 		log.Printf("DB error (update completedWork): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении проделанной работы",
@@ -1535,9 +1534,7 @@ func UpdateTomorrowPlans(c echo.Context) error{
 		})
 	}
 
-	updateData["updated_at"] = time.Now()
-
-	if err = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("id = ?", tomorrowPlansId).Error; err != nil{
+	if err = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("id = ?", tomorrowPlansId).Updates(updateData).Error; err != nil{
 		log.Printf("DB error (update completedWork): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении планов на завтра",
@@ -1546,7 +1543,7 @@ func UpdateTomorrowPlans(c echo.Context) error{
 
 	updateResponse := response.ReportUniversalResponse{
 		ID:      id,
-		Message: "Выполненная работа успешно обновлена",
+		Message: "План на завтра успешно обновлен",
 	}
 
 	return c.JSON(http.StatusOK, updateResponse)

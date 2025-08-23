@@ -103,23 +103,6 @@ definitions:
       redirect_uri:
         type: string
     type: object
-  request.Problem:
-    properties:
-      created_at:
-        type: string
-      creator_id:
-        type: string
-      description:
-        items:
-          type: string
-        type: array
-      id:
-        type: string
-      name:
-        type: string
-      updated_at:
-        type: string
-    type: object
   request.ProblemCreateRequest:
     properties:
       creator_id:
@@ -187,9 +170,9 @@ definitions:
         items:
           $ref: '#/definitions/request.ProjectReport'
         type: array
-      problems:
+      problemsIds:
         items:
-          $ref: '#/definitions/request.Problem'
+          type: string
         type: array
       report_date:
         type: string
@@ -203,6 +186,8 @@ definitions:
   request.ReportUpdateRequest:
     properties:
       report_date:
+        type: string
+      status:
         type: string
       user_id:
         type: string
@@ -1458,6 +1443,44 @@ paths:
       summary: Обновление доски
       tags:
       - boards
+  /boards/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех досок с учетом пагинации, исключая удаленные.
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список досок успешно получен
+          schema:
+            $ref: '#/definitions/response.BoardListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении досок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех досок
+      tags:
+      - boards
   /boards/project/{projectId}:
     get:
       consumes:
@@ -1679,7 +1702,7 @@ paths:
       summary: Получение списка всех сообщений форума
       tags:
       - ForumMessages
-  /forum-messages/problem/{id}:
+  /forum-messages/problem/{id}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -1691,15 +1714,15 @@ paths:
         name: id
         required: true
         type: string
-      - default: 1
-        description: Номер страницы
-        in: query
+      - description: Номер страницы
+        in: path
         name: page
+        required: true
         type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
         type: integer
       produces:
       - application/json
@@ -2957,7 +2980,7 @@ paths:
       summary: Получение задач по фильтру
       tags:
       - Tasks
-  /task/project/{projectId}:
+  /task/project/{projectId}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -2968,6 +2991,16 @@ paths:
         name: projectId
         required: true
         type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
       - application/json
       responses:

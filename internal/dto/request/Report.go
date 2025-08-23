@@ -22,13 +22,14 @@ type ReportCreateRequest struct {
 	Status       *string          `json:"status"`
 	CompleteWork *[]ProjectReport `json:"complete_work"`
 	PlanTomorrow *[]ProjectReport `json:"plan_tomorrow"`
-	Problems     *[]Problem      `json:"problems"`
+	ProblemsIds  *[]string     `json:"problemsIds"`
 	Help         *HelpRequest     `json:"help"`
 }
 
 type ReportUpdateRequest struct {
 	UserId     *string    `json:"user_id"`
 	ReportDate *time.Time `json:"report_date"`
+	Status       *string          `json:"status"`
 }
 
 type HelpRequestUpdateRequest struct{

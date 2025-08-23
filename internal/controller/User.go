@@ -325,6 +325,51 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
+func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error{
+	now := time.Now()
+
+	authProviderId, err := uuid.Parse(*req.AuthProviderId)
+	if err != nil {
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор провайдера авторизации",
+		})
+	}
+
+	del := false
+
+	user := models.User{
+		ID:             id,
+		Email:          req.Email,
+		IsActive:       req.IsActive,
+		CreatedAt:      &now,
+		UpdatedAt:      &now,
+		TgID:           req.TgId,
+		TgUserID:       req.TgUserId,
+		Profession:     req.Profession,
+		EmailVerified:  req.EmailVerified,
+		FirstName:      req.FirstName,
+		LastName:       req.LastName,
+		LastLogin:      req.LastLogin,
+		AuthProviderID: &authProviderId,
+		Deleted: &del,
+	}
+
+	result := dbConn.Session(&gorm.Session{}).Create(&user)
+	if result.Error != nil {
+		log.Printf("DB error (create user): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при создании пользователя",
+		})
+	}
+
+	createResponse := response.UserUniversalResponse{
+		ID:      id.String(),
+		Message: "Пользователь успешно создан",
+	}
+	return c.JSON(http.StatusCreated, createResponse)
+}
+
 // UpdateUser godoc
 // @Summary Обновление пользователя
 // @Description Обновляет данные пользователя по его ID

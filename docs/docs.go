@@ -514,6 +514,63 @@ const docTemplate = `{
                 }
             }
         },
+        "/boards/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех досок с учетом пагинации, исключая удаленные.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "boards"
+                ],
+                "summary": "Получение списка всех досок",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список досок успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.BoardListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении досок",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/boards/project/{projectId}": {
             "get": {
                 "description": "Получает список досок, связанных с указанным проектом",
@@ -846,7 +903,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/forum-messages/problem/{id}": {
+        "/forum-messages/problem/{id}/{page}/{pagesize}": {
             "get": {
                 "description": "Получает список сообщений форума, связанных с указанной проблемой, с учетом пагинации",
                 "consumes": [
@@ -869,17 +926,17 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
-                        "in": "query"
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "type": "integer",
-                        "default": 10,
                         "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2745,7 +2802,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/task/project/{projectId}": {
+        "/task/project/{projectId}/{page}/{pagesize}": {
             "get": {
                 "description": "Получает список задач, связанных с указанным проектом",
                 "consumes": [
@@ -2763,6 +2820,20 @@ const docTemplate = `{
                         "type": "string",
                         "description": "ID проекта",
                         "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
                         "in": "path",
                         "required": true
                     }
@@ -3978,32 +4049,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.Problem": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "creator_id": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
         "request.ProblemCreateRequest": {
             "type": "object",
             "properties": {
@@ -4106,10 +4151,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/request.ProjectReport"
                     }
                 },
-                "problems": {
+                "problemsIds": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.Problem"
+                        "type": "string"
                     }
                 },
                 "report_date": {
@@ -4130,6 +4175,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "report_date": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "user_id": {
