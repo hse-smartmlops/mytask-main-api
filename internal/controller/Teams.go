@@ -41,7 +41,7 @@ var dbConn *gorm.DB = db.DB_conn
 // @Router /team/all [get]
 func GetTeams(c echo.Context) error {
 	var teams []models.Team
-	result := dbConn.Session(&gorm.Session{}).Find(&teams)
+	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).Find(&teams)
 	if result.Error != nil {
 		log.Printf("DB error (find teams): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -50,7 +50,7 @@ func GetTeams(c echo.Context) error {
 	}
 
 	var teamMembers []models.TeamMember
-	resultTM := dbConn.Session(&gorm.Session{}).Find(&teamMembers).Where("deleted = ?", false)
+	resultTM := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).Find(&teamMembers)
 	if resultTM.Error != nil {
 		log.Printf("DB error (find team members): %v", resultTM.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -59,7 +59,7 @@ func GetTeams(c echo.Context) error {
 	}
 
 	teamAndMembers := make(map[uuid.UUID][]response.TeamMemberResponse, len(teams))
-	teamInfo := make(map[uuid.UUID]response.TeamResponse, len(teams))
+	teamInfo := make(map[uuid.UUID]response.TeamResponse, 0)
 
 	for _, team := range teams {
 		var name string
@@ -126,12 +126,14 @@ func GetTeams(c echo.Context) error {
 	}
 
 	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0)}
-	for k, v := range teamAndMembers {
+
+
+	for id, info := range teamInfo {
 		teamListResponse.Teams = append(teamListResponse.Teams, response.TeamResponse{
-			ID:          k.String(),
-			Name:        teamInfo[k].Name,
-			Description: teamInfo[k].Description,
-			Members:     v,
+			ID:          id.String(),
+			Name:        info.Name,
+			Description: info.Description,
+			Members:     teamAndMembers[id],
 		})
 	}
 

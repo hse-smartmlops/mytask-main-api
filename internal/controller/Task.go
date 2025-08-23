@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,7 +19,7 @@ import (
 func RegisterTaskRoutes(e *echo.Echo) {
 	taskGroup := e.Group("/task")
 	{
-		taskGroup.GET("", GetAllTasks)
+		taskGroup.GET("/all/:page/:pagesize", GetAllTasks)
 		taskGroup.GET("/:id", GetTaskByID)
 		taskGroup.GET("/project/:projectId", GetTasksByProjectID)
 		taskGroup.GET("/filter", GetTasksByFilter)
@@ -34,26 +35,34 @@ func RegisterTaskRoutes(e *echo.Echo) {
 // @Tags Tasks
 // @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы" default(1)
-// @Param pageSize query int false "Размер страницы" default(10)
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
-// @Router /task [get]
+// @Router /task/all/{page}/{pagesize} [get]
 func GetAllTasks(c echo.Context) error {
-	var req request.TaskListRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
+			"error": "Ошибка при парсинге страницы",
 		})
 	}
-
-	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-	pageSize := req.PageSize
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
 	if pageSize <= 0 {
 		pageSize = 10
 	}
@@ -345,7 +354,7 @@ func GetTasksByProjectID(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err = dbConn.Session(&gorm.Session{}).Where("project_id = ? AND deleted = ?", projectUUID).
+	if err = dbConn.Session(&gorm.Session{}).Where("project_id = ? AND deleted = ?", projectUUID, false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
@@ -630,8 +639,8 @@ func UpdateTask(c echo.Context) error {
 	if req.GitlabIssueID != nil {
 		updates["gitlab_issue_id"] = *req.GitlabIssueID
 	}
-	if req.Community != nil {
-		updates["community"] = *req.Community
+	if req.Category != nil {
+		updates["category"] = *req.Category
 	}
 	if req.AssignedTo != nil {
 		if *req.AssignedTo == "" {
@@ -692,14 +701,6 @@ func DeleteTask(c echo.Context) error {
 	if result.RowsAffected == 0 {
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"message": "Ничего не удалено",
-		})
-	}
-
-	result = dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Where("task_id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete report: %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении отчета",
 		})
 	}
 

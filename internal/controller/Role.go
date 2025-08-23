@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,7 +18,7 @@ import (
 func RegisterRoleRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/role")
 	{
-		projectGroup.GET("", GetAllRoles)
+		projectGroup.GET("/all/:page/:pagesize", GetAllRoles)
 		projectGroup.GET("/:id", GetRoleById)
 		projectGroup.POST("", CreateRole)
 		projectGroup.PATCH("/:id", UpdateRole)
@@ -31,27 +32,34 @@ func RegisterRoleRoutes(e *echo.Echo) {
 // @Tags Roles
 // @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы" default(1)
-// @Param pageSize query int false "Размер страницы" default(10)
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
 // @Success 200 {object} response.GetAllRolesResponse "Список ролей успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении ролей"
-// @Router /role [get]
+// @Router /role/all/{page}/{pagesize} [get]
 func GetAllRoles(c echo.Context) error {
-	var req request.GetAllRolesRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
+			"error": "Ошибка при парсинге страницы",
 		})
 	}
-
-	// Значения по умолчанию
-	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-	pageSize := req.PageSize
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
 	if pageSize <= 0 {
 		pageSize = 10
 	}
@@ -253,7 +261,7 @@ func UpdateRole(c echo.Context) error {
 	}
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.Project{}).Where("id = ?", roleId).Updates(updateData).Error; err != nil {
+	if err = dbConn.Session(&gorm.Session{}).Model(models.Role{}).Where("id = ?", roleId).Updates(updateData).Error; err != nil {
 		log.Printf("DB error (update role): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении роль",

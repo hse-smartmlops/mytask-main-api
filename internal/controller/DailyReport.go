@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,7 +18,7 @@ import (
 func RegisterReportRoutes(e *echo.Echo) {
 	reportGroup := e.Group("/report")
 	{
-		reportGroup.GET("", GetAllReports)
+		reportGroup.GET("/all/:page/:pagesize", GetAllReports)
 		reportGroup.GET("/:id", GetReport)
 		reportGroup.GET("/task/:id", GetReportsByTaskId)
 		reportGroup.GET("/project/:id", GetReportsByProjectId)
@@ -36,27 +37,35 @@ func RegisterReportRoutes(e *echo.Echo) {
 // @Tags Reports
 // @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы" default(1)
-// @Param pageSize query int false "Размер страницы" default(10)
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
 // @Success 200 {object} response.ReportListResponse "Список отчетов успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
-// @Router /report [get]
+// @Router /report/all/{page}/{pagesize} [get]
 func GetAllReports(c echo.Context) error {
-	var req request.ReportListRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
+			"error": "Ошибка при парсинге страницы",
 		})
 	}
-
-	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-	pageSize := req.PageSize
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
 	if pageSize <= 0 {
 		pageSize = 10
 	}

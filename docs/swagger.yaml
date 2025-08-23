@@ -234,7 +234,7 @@ definitions:
     properties:
       assigned_to:
         type: string
-      community:
+      category:
         type: integer
       creator_id:
         type: string
@@ -275,7 +275,7 @@ definitions:
     properties:
       assigned_to:
         type: string
-      community:
+      category:
         type: boolean
       deadline:
         type: string
@@ -388,8 +388,6 @@ definitions:
       email_verified:
         type: boolean
       first_name:
-        type: string
-      id:
         type: string
       is_active:
         type: boolean
@@ -1096,7 +1094,7 @@ paths:
       - application/json
       description: Выполняет выход пользователя из системы, завершая сессию в Keycloak
       parameters:
-      - description: Токен авторизации
+      - description: Refresh token
         in: header
         name: Authorization
         required: true
@@ -1131,7 +1129,7 @@ paths:
       - application/json
       description: Возвращает информацию о пользователе на основе переданного токена
       parameters:
-      - description: Токен авторизации
+      - description: Access token
         in: header
         name: Authorization
         required: true
@@ -1193,7 +1191,7 @@ paths:
       description: Получение нового access_token и refresh_token на основе существующего
         refresh_token
       parameters:
-      - description: Refresh токен
+      - description: Refresh token
         in: body
         name: body
         required: true
@@ -1298,7 +1296,7 @@ paths:
       - application/json
       description: Проверяет валидность токена через Keycloak
       parameters:
-      - description: 'Bearer токен, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
         in: header
         name: Authorization
         required: true
@@ -1318,43 +1316,6 @@ paths:
       tags:
       - Auth
   /boards:
-    get:
-      consumes:
-      - application/json
-      description: Получает список всех досок с учетом пагинации, исключая удаленные
-      parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список досок успешно получен
-          schema:
-            $ref: '#/definitions/response.BoardListResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении досок
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение списка всех досок
-      tags:
-      - boards
     post:
       consumes:
       - application/json
@@ -1537,44 +1498,6 @@ paths:
       tags:
       - boards
   /forum-messages:
-    get:
-      consumes:
-      - application/json
-      description: Получает список всех сообщений форума с учетом пагинации, исключая
-        удаленные
-      parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список сообщений форума успешно получен
-          schema:
-            $ref: '#/definitions/response.ForumMessageListResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении сообщений форума
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение списка всех сообщений форума
-      tags:
-      - ForumMessages
     post:
       consumes:
       - application/json
@@ -1717,6 +1640,45 @@ paths:
       summary: Обновление сообщения форума
       tags:
       - ForumMessages
+  /forum-messages/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех сообщений форума с учетом пагинации, исключая
+        удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список сообщений форума успешно получен
+          schema:
+            $ref: '#/definitions/response.ForumMessageListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении сообщений форума
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех сообщений форума
+      tags:
+      - ForumMessages
   /forum-messages/problem/{id}:
     get:
       consumes:
@@ -1762,43 +1724,6 @@ paths:
       tags:
       - ForumMessages
   /problem:
-    get:
-      consumes:
-      - application/json
-      description: Получает список всех проблем с учетом пагинации, исключая удаленные
-      parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список проблем успешно получен
-          schema:
-            $ref: '#/definitions/response.ProblemListResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении проблем
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение списка всех проблем
-      tags:
-      - Problems
     post:
       consumes:
       - application/json
@@ -1942,7 +1867,45 @@ paths:
       summary: Обновление проблемы
       tags:
       - Problems
-  /problem/user/{id}:
+  /problem/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех проблем с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список проблем успешно получен
+          schema:
+            $ref: '#/definitions/response.ProblemListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проблем
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех проблем
+      tags:
+      - Problems
+  /problem/user/{id}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -1954,15 +1917,15 @@ paths:
         name: id
         required: true
         type: string
-      - default: 1
-        description: Номер страницы
-        in: query
+      - description: Номер страницы
+        in: path
         name: page
+        required: true
         type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
         type: integer
       produces:
       - application/json
@@ -1987,43 +1950,6 @@ paths:
       tags:
       - Problems
   /project:
-    get:
-      consumes:
-      - application/json
-      description: Получает список всех проектов с учетом пагинации, исключая удаленные
-      parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список проектов успешно получен
-          schema:
-            $ref: '#/definitions/response.ProjectListResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении проектов
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение списка всех проектов
-      tags:
-      - Projects
     post:
       consumes:
       - application/json
@@ -2167,51 +2093,45 @@ paths:
       summary: Обновление проекта
       tags:
       - Projects
-  /report:
+  /project/all/{page}/{pagesize}:
     get:
       consumes:
       - application/json
-      description: Получает список всех отчетов с учетом пагинации, исключая удаленные
+      description: Получает список всех проектов с учетом пагинации, исключая удаленные
       parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
+      - description: Номер страницы
+        in: path
         name: page
+        required: true
         type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: Список отчетов успешно получен
+          description: Список проектов успешно получен
           schema:
-            $ref: '#/definitions/response.ReportListResponse'
+            $ref: '#/definitions/response.ProjectListResponse'
         "400":
           description: Ошибка в запросе
           schema:
             additionalProperties:
               type: string
             type: object
-        "404":
-          description: Пользователь, запрос на помощь, выполненная работа или план
-            на завтра не найдены
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "500":
-          description: Ошибка сервера при получении отчетов
+          description: Ошибка сервера при получении проектов
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Получение списка всех отчетов
+      summary: Получение списка всех проектов
       tags:
-      - Reports
+      - Projects
+  /report:
     post:
       consumes:
       - application/json
@@ -2355,6 +2275,51 @@ paths:
               type: string
             type: object
       summary: Обновление отчета
+      tags:
+      - Reports
+  /report/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех отчетов с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список отчетов успешно получен
+          schema:
+            $ref: '#/definitions/response.ReportListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь, запрос на помощь, выполненная работа или план
+            на завтра не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении отчетов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех отчетов
       tags:
       - Reports
   /report/completed-work/{id}:
@@ -2555,43 +2520,6 @@ paths:
       tags:
       - Reports
   /role:
-    get:
-      consumes:
-      - application/json
-      description: Получает список всех ролей с учетом пагинации, исключая удаленные
-      parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список ролей успешно получен
-          schema:
-            $ref: '#/definitions/response.GetAllRolesResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении ролей
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение списка всех ролей
-      tags:
-      - Roles
     post:
       consumes:
       - application/json
@@ -2735,29 +2663,29 @@ paths:
       summary: Обновление роли
       tags:
       - Roles
-  /task:
+  /role/all/{page}/{pagesize}:
     get:
       consumes:
       - application/json
-      description: Получает список всех задач с учетом пагинации, исключая удаленные
+      description: Получает список всех ролей с учетом пагинации, исключая удаленные
       parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
+      - description: Номер страницы
+        in: path
         name: page
+        required: true
         type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: Список задач успешно получен
+          description: Список ролей успешно получен
           schema:
-            $ref: '#/definitions/response.TaskListResponse'
+            $ref: '#/definitions/response.GetAllRolesResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2765,14 +2693,15 @@ paths:
               type: string
             type: object
         "500":
-          description: Ошибка сервера при получении задач
+          description: Ошибка сервера при получении ролей
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Получение списка всех задач
+      summary: Получение списка всех ролей
       tags:
-      - Tasks
+      - Roles
+  /task:
     post:
       consumes:
       - application/json
@@ -2926,6 +2855,44 @@ paths:
               type: string
             type: object
       summary: Обновление задачи
+      tags:
+      - Tasks
+  /task/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех задач с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач успешно получен
+          schema:
+            $ref: '#/definitions/response.TaskListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех задач
       tags:
       - Tasks
   /task/filter:
@@ -3335,44 +3302,6 @@ paths:
       tags:
       - Teams
   /user:
-    get:
-      consumes:
-      - application/json
-      description: Получает список всех пользователей с учетом пагинации, исключая
-        удаленных
-      parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список пользователей успешно получен
-          schema:
-            $ref: '#/definitions/response.GetAllUsersResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении пользователей
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение списка всех пользователей
-      tags:
-      - Users
     post:
       consumes:
       - application/json
@@ -3514,6 +3443,45 @@ paths:
               type: string
             type: object
       summary: Обновление пользователя
+      tags:
+      - Users
+  /user/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех пользователей с учетом пагинации, исключая
+        удаленных
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список пользователей успешно получен
+          schema:
+            $ref: '#/definitions/response.GetAllUsersResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении пользователей
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех пользователей
       tags:
       - Users
   /user/role:

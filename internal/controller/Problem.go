@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,9 +19,9 @@ import (
 func RegisterProblemRoutes(e *echo.Echo){
 	problemGroup := e.Group("/problem")
 	{
-		problemGroup.GET("", GetAllProblems)
+		problemGroup.GET("/all/:page/:pagesize", GetAllProblems)
 		problemGroup.GET("/:id", GetProblemByID)
-		problemGroup.GET("/user/:id", GetProblemsByUserId)
+		problemGroup.GET("/user/:id/:page/:pagesize", GetProblemsByUserId)
 		problemGroup.POST("", CreateProblem)
 		problemGroup.PUT("/:id", UpdateProblem)
 		problemGroup.DELETE("/:id", DeleteProblem)
@@ -33,27 +34,34 @@ func RegisterProblemRoutes(e *echo.Echo){
 // @Tags Problems
 // @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы" default(1)
-// @Param pageSize query int false "Размер страницы" default(10)
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
 // @Success 200 {object} response.ProblemListResponse "Список проблем успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
-// @Router /problem [get]
+// @Router /problem/all/{page}/{pagesize} [get]
 func GetAllProblems(c echo.Context) error{
-	var req request.ProblemsListRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
+			"error": "Ошибка при парсинге страницы",
 		})
 	}
- 
-	// Значения по умолчанию
-	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-	pageSize := req.PageSize
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
 	if pageSize <= 0 {
 		pageSize = 10
 	}
@@ -125,28 +133,35 @@ func GetAllProblems(c echo.Context) error{
 // @Accept json
 // @Produce json
 // @Param id path string true "ID пользователя"
-// @Param page query int false "Номер страницы" default(1)
-// @Param pageSize query int false "Размер страницы" default(10)
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
 // @Success 200 {object} response.ProblemsByUserId "Список проблем успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
-// @Router /problem/user/{id} [get]
+// @Router /problem/user/{id}/{page}/{pagesize} [get]
 func GetProblemsByUserId(c echo.Context) error{
 	id := c.Param("id")
-	var req request.ProblemListByUserId
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
+			"error": "Ошибка при парсинге страницы",
 		})
 	}
- 
-	// Значения по умолчанию
-	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-	pageSize := req.PageSize
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
 	if pageSize <= 0 {
 		pageSize = 10
 	}

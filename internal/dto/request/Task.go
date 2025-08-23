@@ -13,7 +13,7 @@ type TaskCreateRequest struct {
 	Deadline      *time.Time `json:"deadline"`
 	StartDate     *time.Time `json:"start_date" validate:"required"`
 	GitlabIssueID *int       `json:"gitlab_issue_id"`
-	Category      *int8      `json:"community"`
+	Category      *int8      `json:"category"`
 }
 
 type TaskUpdateRequest struct {
@@ -25,7 +25,7 @@ type TaskUpdateRequest struct {
 	Deadline      *time.Time `json:"deadline"`
 	StartDate     *time.Time `json:"start_date"`
 	GitlabIssueID *int       `json:"gitlab_issue_id"`
-	Community     *bool      `json:"community"`
+	Category     *bool      `json:"category"`
 }
 
 type TaskFilter struct {

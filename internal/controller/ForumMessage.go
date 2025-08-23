@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,7 +19,7 @@ import (
 func RegisterForumMessagesRoutes(e *echo.Echo){
 	forumMessageGroup := e.Group("/forum-messages")
 	{
-		forumMessageGroup.GET("", GetAllForumMessages)
+		forumMessageGroup.GET("/all/:page/:pagesize", GetAllForumMessages)
 		forumMessageGroup.GET("/problem/:id", GetForumMessagesByProblemId)
 		forumMessageGroup.GET("/:id", GetForumMessageById)
 		forumMessageGroup.POST("", CreateForumMessage)
@@ -33,27 +34,34 @@ func RegisterForumMessagesRoutes(e *echo.Echo){
 // @Tags ForumMessages
 // @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы" default(1)
-// @Param pageSize query int false "Размер страницы" default(10)
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
 // @Success 200 {object} response.ForumMessageListResponse "Список сообщений форума успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
-// @Router /forum-messages [get]
+// @Router /forum-messages/all/{page}/{pagesize} [get]
 func GetAllForumMessages(c echo.Context) error {
-	var req request.ForumMessageListRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
+			"error": "Ошибка при парсинге страницы",
 		})
 	}
-
-	// Значения по умолчанию
-	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-	pageSize := req.PageSize
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
 	if pageSize <= 0 {
 		pageSize = 10
 	}

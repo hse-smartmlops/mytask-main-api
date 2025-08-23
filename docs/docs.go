@@ -135,7 +135,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Токен авторизации",
+                        "description": "Refresh token",
                         "name": "Authorization",
                         "in": "header",
                         "required": true
@@ -188,7 +188,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Токен авторизации",
+                        "description": "Access token",
                         "name": "Authorization",
                         "in": "header",
                         "required": true
@@ -280,7 +280,7 @@ const docTemplate = `{
                 "summary": "Обновление access токена",
                 "parameters": [
                     {
-                        "description": "Refresh токен",
+                        "description": "Refresh token",
                         "name": "body",
                         "in": "body",
                         "required": true,
@@ -440,7 +440,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bearer токен, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+                        "description": "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
                         "name": "Authorization",
                         "in": "header",
                         "required": true
@@ -463,61 +463,6 @@ const docTemplate = `{
             }
         },
         "/boards": {
-            "get": {
-                "description": "Получает список всех досок с учетом пагинации, исключая удаленные",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "boards"
-                ],
-                "summary": "Получение списка всех досок",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список досок успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.BoardListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении досок",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает новую доску с указанными параметрами",
                 "consumes": [
@@ -793,61 +738,6 @@ const docTemplate = `{
             }
         },
         "/forum-messages": {
-            "get": {
-                "description": "Получает список всех сообщений форума с учетом пагинации, исключая удаленные",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "ForumMessages"
-                ],
-                "summary": "Получение списка всех сообщений форума",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список сообщений форума успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.ForumMessageListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении сообщений форума",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает новое сообщение форума с указанными параметрами",
                 "consumes": [
@@ -889,6 +779,63 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при создании сообщения форума",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/forum-messages/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех сообщений форума с учетом пагинации, исключая удаленные",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ForumMessages"
+                ],
+                "summary": "Получение списка всех сообщений форума",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список сообщений форума успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.ForumMessageListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении сообщений форума",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1128,61 +1075,6 @@ const docTemplate = `{
             }
         },
         "/problem": {
-            "get": {
-                "description": "Получает список всех проблем с учетом пагинации, исключая удаленные",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Problems"
-                ],
-                "summary": "Получение списка всех проблем",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список проблем успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.ProblemListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении проблем",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает новую проблему с указанными параметрами",
                 "consumes": [
@@ -1234,7 +1126,64 @@ const docTemplate = `{
                 }
             }
         },
-        "/problem/user/{id}": {
+        "/problem/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех проблем с учетом пагинации, исключая удаленные",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Получение списка всех проблем",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список проблем успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProblemListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении проблем",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/problem/user/{id}/{page}/{pagesize}": {
             "get": {
                 "description": "Получает список проблем, созданных указанным пользователем, с учетом пагинации",
                 "consumes": [
@@ -1257,17 +1206,17 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
-                        "in": "query"
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "type": "integer",
-                        "default": 10,
                         "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -1463,61 +1412,6 @@ const docTemplate = `{
             }
         },
         "/project": {
-            "get": {
-                "description": "Получает список всех проектов с учетом пагинации, исключая удаленные",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Projects"
-                ],
-                "summary": "Получение списка всех проектов",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список проектов успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.ProjectListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении проектов",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает новый проект с указанными параметрами",
                 "consumes": [
@@ -1559,6 +1453,63 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при создании проекта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/project/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех проектов с учетом пагинации, исключая удаленные",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Получение списка всех проектов",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список проектов успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProjectListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении проектов",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1734,70 +1685,6 @@ const docTemplate = `{
             }
         },
         "/report": {
-            "get": {
-                "description": "Получает список всех отчетов с учетом пагинации, исключая удаленные",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Reports"
-                ],
-                "summary": "Получение списка всех отчетов",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список отчетов успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.ReportListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении отчетов",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает новый отчет с указанными параметрами, включая выполненную работу, планы на завтра, проблемы и запрос на помощь",
                 "consumes": [
@@ -1839,6 +1726,72 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при создании отчета",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/report/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех отчетов с учетом пагинации, исключая удаленные",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Получение списка всех отчетов",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список отчетов успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.ReportListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении отчетов",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2309,61 +2262,6 @@ const docTemplate = `{
             }
         },
         "/role": {
-            "get": {
-                "description": "Получает список всех ролей с учетом пагинации, исключая удаленные",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Roles"
-                ],
-                "summary": "Получение списка всех ролей",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список ролей успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.GetAllRolesResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении ролей",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает новую роль с указанными параметрами",
                 "consumes": [
@@ -2405,6 +2303,63 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при создании роли",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/role/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех ролей с учетом пагинации, исключая удаленные",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Получение списка всех ролей",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список ролей успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.GetAllRolesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении ролей",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2580,61 +2535,6 @@ const docTemplate = `{
             }
         },
         "/task": {
-            "get": {
-                "description": "Получает список всех задач с учетом пагинации, исключая удаленные",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tasks"
-                ],
-                "summary": "Получение списка всех задач",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список задач успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.TaskListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении задач",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает новую задачу с указанными параметрами",
                 "consumes": [
@@ -2685,6 +2585,63 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при создании задачи",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/task/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех задач с учетом пагинации, исключая удаленные",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Получение списка всех задач",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список задач успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.TaskListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении задач",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3482,61 +3439,6 @@ const docTemplate = `{
             }
         },
         "/user": {
-            "get": {
-                "description": "Получает список всех пользователей с учетом пагинации, исключая удаленных",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Получение списка всех пользователей",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список пользователей успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.GetAllUsersResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении пользователей",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "post": {
                 "description": "Создает нового пользователя с указанными параметрами",
                 "consumes": [
@@ -3578,6 +3480,63 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при создании пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/all/{page}/{pagesize}": {
+            "get": {
+                "description": "Получает список всех пользователей с учетом пагинации, исключая удаленных",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Получение списка всех пользователей",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список пользователей успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.GetAllUsersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении пользователей",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4228,7 +4187,7 @@ const docTemplate = `{
                 "assigned_to": {
                     "type": "string"
                 },
-                "community": {
+                "category": {
                     "type": "integer"
                 },
                 "creator_id": {
@@ -4276,7 +4235,7 @@ const docTemplate = `{
                 "assigned_to": {
                     "type": "string"
                 },
-                "community": {
+                "category": {
                     "type": "boolean"
                 },
                 "deadline": {
@@ -4446,9 +4405,6 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "first_name": {
-                    "type": "string"
-                },
-                "id": {
                     "type": "string"
                 },
                 "is_active": {
