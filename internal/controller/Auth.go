@@ -58,6 +58,7 @@ func ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, er
 	data := url.Values{}
 	data.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
 	data.Set("subject_token", subjectToken)
+	data.Set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token") // <-- REQUIRED
 	data.Set("client_id", clientID)       // backend client
 	data.Set("client_secret", clientSecret)
 
