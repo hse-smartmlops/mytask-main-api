@@ -315,7 +315,7 @@ func Register(c echo.Context) error {
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param Authorization header string true "Access token"
+// @Param Authorization header string true "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
 // @Success 200 {object} response.UserInfo "Информация о пользователе"
 // @Failure 401 {object} map[string]string "Отсутствует или неверный токен"
 // @Router /auth/me [get]

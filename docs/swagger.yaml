@@ -998,7 +998,6 @@ definitions:
       id:
         type: string
     type: object
-host: localhost:8081
 info:
   contact: {}
   description: API для Emplacc.
@@ -1114,7 +1113,7 @@ paths:
       - application/json
       description: Возвращает информацию о пользователе на основе переданного токена
       parameters:
-      - description: Access token
+      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
         in: header
         name: Authorization
         required: true

@@ -6,7 +6,6 @@
         "contact": {},
         "version": "1.0"
     },
-    "host": "localhost:8081",
     "basePath": "/",
     "paths": {
         "/auth/admin_login": {
@@ -182,7 +181,7 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Access token",
+                        "description": "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
                         "name": "Authorization",
                         "in": "header",
                         "required": true

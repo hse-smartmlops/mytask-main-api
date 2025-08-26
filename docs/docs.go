@@ -188,7 +188,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Access token",
+                        "description": "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
                         "name": "Authorization",
                         "in": "header",
                         "required": true
@@ -5424,7 +5424,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8081",
+	Host:             "",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Emplacc API",
