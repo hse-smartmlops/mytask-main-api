@@ -1,0 +1,3622 @@
+basePath: /
+definitions:
+  request.AddRoleUserRequest:
+    properties:
+      role_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.BoardCreateRequest:
+    properties:
+      description:
+        type: string
+      filter:
+        type: string
+      name:
+        type: string
+      project_id:
+        type: string
+    type: object
+  request.BoardUpdateRequest:
+    properties:
+      description:
+        type: string
+      filter:
+        type: string
+      name:
+        type: string
+    type: object
+  request.CompletedWorkUpdateRequest:
+    properties:
+      description:
+        type: string
+    type: object
+  request.CreateForumMessageRequest:
+    properties:
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        maxItems: 255
+        type: array
+      problem_id:
+        type: string
+    required:
+    - creator_id
+    - description
+    - problem_id
+    type: object
+  request.CreateProjectRequest:
+    properties:
+      description:
+        maxLength: 500
+        type: string
+      gitlab_project_id:
+        type: integer
+      gitlab_url:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      priority:
+        type: integer
+      status:
+        type: string
+    required:
+    - gitlab_project_id
+    - gitlab_url
+    - name
+    - priority
+    - status
+    type: object
+  request.HelpRequest:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+    type: object
+  request.HelpRequestUpdateRequest:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+    type: object
+  request.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  request.OAuthRequest:
+    properties:
+      code:
+        type: string
+      redirect_uri:
+        type: string
+    type: object
+  request.ProblemCreateRequest:
+    properties:
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    type: object
+  request.ProblemUpdateRequest:
+    properties:
+      description:
+        items:
+          type: string
+        type: array
+    type: object
+  request.ProjectReport:
+    properties:
+      description:
+        type: string
+    type: object
+  request.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  request.RegisterRequest:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      password:
+        type: string
+      profession:
+        type: string
+    required:
+    - email
+    - first_name
+    - last_name
+    - password
+    type: object
+  request.RemoveRoleUserRequest:
+    properties:
+      role_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.ReportCreateRequest:
+    properties:
+      complete_work:
+        items:
+          $ref: '#/definitions/request.ProjectReport'
+        type: array
+      help:
+        $ref: '#/definitions/request.HelpRequest'
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/request.ProjectReport'
+        type: array
+      problemsIds:
+        items:
+          type: string
+        type: array
+      report_date:
+        type: string
+      status:
+        type: string
+      task_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.ReportUpdateRequest:
+    properties:
+      report_date:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.RoleCreateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.RoleUpdateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.TOTPRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      totp:
+        type: string
+    type: object
+  request.TaskCreateRequest:
+    properties:
+      assigned_to:
+        type: string
+      category:
+        type: integer
+      creator_id:
+        type: string
+      deadline:
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      gitlab_issue_id:
+        type: integer
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      priority:
+        maximum: 10
+        minimum: 1
+        type: integer
+      project_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        enum:
+        - todo
+        - in_progress
+        - done
+        type: string
+    required:
+    - creator_id
+    - name
+    - priority
+    - project_id
+    - start_date
+    - status
+    type: object
+  request.TaskUpdateRequest:
+    properties:
+      assigned_to:
+        type: string
+      category:
+        type: boolean
+      deadline:
+        type: string
+      description:
+        maxLength: 500
+        type: string
+      gitlab_issue_id:
+        type: integer
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      priority:
+        maximum: 10
+        minimum: 1
+        type: integer
+      start_date:
+        type: string
+      status:
+        enum:
+        - todo
+        - in_progress
+        - done
+        type: string
+    type: object
+  request.TeamAddProjectRequest:
+    properties:
+      project_id:
+        type: string
+      team_id:
+        type: string
+    type: object
+  request.TeamAddUserRequest:
+    properties:
+      team_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.TeamCreateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  request.TeamDeleteProjectRequest:
+    properties:
+      project_id:
+        type: string
+      team_id:
+        type: string
+    type: object
+  request.TeamDeleteUserRequest:
+    properties:
+      team_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.TeamUpdateRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.TomorrowPlansUpdateRequest:
+    properties:
+      description:
+        type: string
+    type: object
+  request.UpdateForumMessageRequest:
+    properties:
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        maxItems: 255
+        type: array
+      problem_id:
+        type: string
+    type: object
+  request.UpdateProjectRequest:
+    properties:
+      description:
+        type: string
+      gitlab_project_id:
+        type: integer
+      gitlab_url:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      status:
+        type: string
+    type: object
+  request.UpdateUserRequest:
+    properties:
+      auth_provider_id:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      first_name:
+        type: string
+      is_active:
+        type: boolean
+      last_login:
+        type: string
+      last_name:
+        type: string
+      profession:
+        type: string
+      tg_id:
+        type: string
+      tg_user_id:
+        type: integer
+    type: object
+  request.UserCreateRequest:
+    properties:
+      auth_provider_id:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      first_name:
+        type: string
+      is_active:
+        type: boolean
+      last_login:
+        type: string
+      last_name:
+        type: string
+      profession:
+        type: string
+      tg_id:
+        type: string
+      tg_user_id:
+        type: integer
+    type: object
+  response.AddRoleUserResponse:
+    properties:
+      message:
+        type: string
+      role_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  response.AuthResponse:
+    properties:
+      access_token:
+        type: string
+      email:
+        type: string
+      expires_at:
+        type: string
+      expires_in:
+        description: время жизни access token (секунды)
+        type: integer
+      refresh_exp:
+        description: время жизни refresh token (секунды)
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        description: обычно "Bearer"
+        type: string
+      userId:
+        type: string
+    type: object
+  response.BoardForProjectResponse:
+    properties:
+      board:
+        items:
+          $ref: '#/definitions/response.BoardResponse'
+        type: array
+      project_id:
+        type: string
+    type: object
+  response.BoardListResponse:
+    properties:
+      boards:
+        items:
+          $ref: '#/definitions/response.BoardResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  response.BoardResponse:
+    properties:
+      descroption:
+        type: string
+      filter:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      project_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.BoardUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.ForumMessageListByProblemIdResponse:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/response.ForumMessageResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      problem_id:
+        type: string
+      total_count:
+        type: integer
+    type: object
+  response.ForumMessageListResponse:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/response.ForumMessageResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+    type: object
+  response.ForumMessageResponse:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      desctription:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      problem_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.ForumMessageUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.GetAllRolesResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      roles:
+        items:
+          $ref: '#/definitions/response.GetRoleResponse'
+        type: array
+      total_count:
+        type: integer
+    type: object
+  response.GetAllUsersResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+      users:
+        items:
+          $ref: '#/definitions/response.GetUserResponse'
+        type: array
+    type: object
+  response.GetRoleResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.GetTaskByIDResponse:
+    properties:
+      assigned_to:
+        allOf:
+        - $ref: '#/definitions/response.UserShort'
+        description: Связь с users
+      community:
+        type: integer
+      created_by:
+        allOf:
+        - $ref: '#/definitions/response.UserShort'
+        description: Связь с users
+      deadline:
+        description: DATE в БД
+        type: string
+      description:
+        type: string
+      gitlab_issue_id:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      project_id:
+        type: string
+      start_date:
+        description: DATE в БД
+        type: string
+      status:
+        type: string
+      time_spent:
+        description: INTERVAL в БД
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.GetUserResponse:
+    properties:
+      auth_provider_id:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      first_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_login:
+        type: string
+      last_name:
+        type: string
+      profession:
+        type: string
+      tg_id:
+        type: string
+      tg_user_id:
+        type: integer
+    type: object
+  response.HelpRequestItem:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+      id:
+        type: string
+    type: object
+  response.ProblemListResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      problems:
+        items:
+          $ref: '#/definitions/response.ProblemResponse'
+        type: array
+      total_count:
+        type: integer
+    type: object
+  response.ProblemResponse:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.ProblemUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.ProblemsByUserId:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      problems:
+        items:
+          $ref: '#/definitions/response.ProblemResponse'
+        type: array
+      total_count:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  response.ProjectListResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      projects:
+        items:
+          $ref: '#/definitions/response.ProjectResponse'
+        type: array
+      total_count:
+        type: integer
+    type: object
+  response.ProjectResponse:
+    properties:
+      created_at:
+        type: string
+      descroption:
+        type: string
+      gitlab_project_id:
+        type: string
+      gitlab_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.ProjectUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.RefreshResponse:
+    properties:
+      access_token:
+        type: string
+      expires_at:
+        type: string
+      expires_in:
+        type: integer
+      refresh_exp:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  response.RemoveRoleUserResponse:
+    properties:
+      message:
+        type: string
+      role_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  response.ReportListByProjectId:
+    properties:
+      project_id:
+        type: string
+      reports:
+        items:
+          $ref: '#/definitions/response.ReportResponse'
+        type: array
+    type: object
+  response.ReportListByTaskId:
+    properties:
+      reports:
+        items:
+          $ref: '#/definitions/response.ReportResponse'
+        type: array
+      task_id:
+        type: string
+    type: object
+  response.ReportListResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      reports:
+        items:
+          $ref: '#/definitions/response.ReportResponse'
+        type: array
+      total_count:
+        type: integer
+    type: object
+  response.ReportResponse:
+    properties:
+      completed_work:
+        items:
+          $ref: '#/definitions/response.WorkItem'
+        type: array
+      created_at:
+        type: string
+      help_request:
+        $ref: '#/definitions/response.HelpRequestItem'
+      id:
+        type: string
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/response.WorkItem'
+        type: array
+      problem:
+        items:
+          $ref: '#/definitions/response.ProblemResponse'
+        type: array
+      report_date:
+        type: string
+      status:
+        type: string
+      task_id:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      user_info:
+        $ref: '#/definitions/response.UserShort'
+    type: object
+  response.ReportUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.RoleUniversalReport:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.TaskListResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      tasks:
+        items:
+          $ref: '#/definitions/response.TaskShort'
+        type: array
+      total_count:
+        type: integer
+    type: object
+  response.TaskShort:
+    properties:
+      deadline:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      project_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.TaskUniversaResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.TeamMemberResponse:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      specialization:
+        type: string
+      user_id:
+        type: string
+    type: object
+  response.TeamResponse:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      members:
+        items:
+          $ref: '#/definitions/response.TeamMemberResponse'
+        type: array
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.TeamUniversalProjectResponse:
+    properties:
+      message:
+        type: string
+      project_id:
+        type: string
+      team_id:
+        type: string
+    type: object
+  response.TeamUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.TeamUniversalUserResponse:
+    properties:
+      message:
+        type: string
+      team_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  response.TeamsListResponse:
+    properties:
+      teams:
+        items:
+          $ref: '#/definitions/response.TeamResponse'
+        type: array
+    type: object
+  response.TokenValidationResponse:
+    properties:
+      message:
+        description: '"Token is valid" или описание ошибки'
+        type: string
+    type: object
+  response.UserInfo:
+    description: Структура с информацией о пользователе из Keycloak
+    properties:
+      email:
+        description: Email пользователя
+        type: string
+      email_verified:
+        description: Подтверждён ли email
+        type: boolean
+      family_name:
+        description: Фамилия
+        type: string
+      given_name:
+        description: Имя
+        type: string
+      name:
+        description: Полное имя пользователя
+        type: string
+      preferred_username:
+        description: Имя пользователя (логин)
+        type: string
+      sub:
+        description: ID пользователя
+        type: string
+    type: object
+  response.UserShort:
+    properties:
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+    type: object
+  response.UserUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.WorkItem:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: API для Emplacc.
+  title: Emplacc API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Аутентифицирует пользователя по email и паролю через Keycloak
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная аутентификация
+          schema:
+            $ref: '#/definitions/response.AuthResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неверные учетные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Аутентификация пользователя
+      tags:
+      - Auth
+  /auth/login-test:
+    post:
+      consumes:
+      - application/json
+      description: Аутентифицирует пользователя по email и паролю через Keycloak
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная аутентификация
+          schema:
+            $ref: '#/definitions/response.AuthResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неверные учетные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Аутентификация пользователя
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Выполняет выход пользователя из системы, завершая сессию в Keycloak
+      parameters:
+      - description: Refresh token
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный выход из системы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Отсутствует токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при выходе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Выход из системы
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает информацию о пользователе на основе переданного токена
+      parameters:
+      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о пользователе
+          schema:
+            $ref: '#/definitions/response.UserInfo'
+        "401":
+          description: Отсутствует или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение информации о текущем пользователе
+      tags:
+      - Auth
+  /auth/oauth:
+    post:
+      consumes:
+      - application/json
+      description: Выполняет аутентификацию с использованием OAuth кода авторизации
+      parameters:
+      - description: Данные для OAuth аутентификации
+        in: body
+        name: oauth
+        required: true
+        schema:
+          $ref: '#/definitions/request.OAuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная OAuth аутентификация
+          schema:
+            $ref: '#/definitions/response.AuthResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Ошибка OAuth аутентификации
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Аутентификация через OAuth
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Получение нового access_token и refresh_token на основе существующего
+        refresh_token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Новые токены и время жизни
+          schema:
+            $ref: '#/definitions/response.RefreshResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неверный или истёкший refresh_token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление access токена
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя в Keycloak с указанным email
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: register
+        required: true
+        schema:
+          $ref: '#/definitions/request.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно зарегистрирован
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Регистрация нового пользователя
+      tags:
+      - Auth
+  /auth/totp:
+    post:
+      consumes:
+      - application/json
+      description: Выполняет аутентификацию с использованием email, пароля и TOTP
+        кода
+      parameters:
+      - description: Данные для TOTP аутентификации
+        in: body
+        name: totp
+        required: true
+        schema:
+          $ref: '#/definitions/request.TOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная TOTP аутентификация
+          schema:
+            $ref: '#/definitions/response.AuthResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неверные учетные данные или TOTP код
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Аутентификация с двухфакторной аутентификацией
+      tags:
+      - Auth
+  /auth/validate:
+    get:
+      consumes:
+      - application/json
+      description: Проверяет валидность токена через Keycloak
+      parameters:
+      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Токен валиден
+          schema:
+            $ref: '#/definitions/response.TokenValidationResponse'
+        "401":
+          description: Невалидный или отсутствующий токен
+          schema:
+            $ref: '#/definitions/response.TokenValidationResponse'
+      summary: Проверка access_token
+      tags:
+      - Auth
+  /auth/validate-test:
+    get:
+      consumes:
+      - application/json
+      description: Проверяет валидность токена через Keycloak
+      parameters:
+      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Токен валиден
+          schema:
+            $ref: '#/definitions/response.TokenValidationResponse'
+        "401":
+          description: Невалидный или отсутствующий токен
+          schema:
+            $ref: '#/definitions/response.TokenValidationResponse'
+      summary: Проверка access_token
+      tags:
+      - Auth
+  /boards:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую доску с указанными параметрами
+      parameters:
+      - description: Данные для создания доски
+        in: body
+        name: board
+        required: true
+        schema:
+          $ref: '#/definitions/request.BoardCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Доска успешно создана
+          schema:
+            $ref: '#/definitions/response.BoardUniversalResponse'
+        "400":
+          description: Ошибка в запросе или некорректный идентификатор проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание новой доски
+      tags:
+      - boards
+  /boards/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление доски по ID (поле deleted = true)
+      parameters:
+      - description: ID доски
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Доска успешно удалена
+          schema:
+            $ref: '#/definitions/response.BoardUniversalResponse'
+        "404":
+          description: Доска не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление доски
+      tags:
+      - boards
+    get:
+      consumes:
+      - application/json
+      description: Получает данные доски по её уникальному идентификатору
+      parameters:
+      - description: ID доски
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Доска успешно получена
+          schema:
+            $ref: '#/definitions/response.BoardResponse'
+        "400":
+          description: Некорректный идентификатор
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Доска не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение доски по ID
+      tags:
+      - boards
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные доски по её ID
+      parameters:
+      - description: ID доски
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления доски
+        in: body
+        name: board
+        required: true
+        schema:
+          $ref: '#/definitions/request.BoardUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Доска успешно обновлена
+          schema:
+            $ref: '#/definitions/response.BoardUniversalResponse'
+        "400":
+          description: Ошибка в запросе или нет полей для обновления
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление доски
+      tags:
+      - boards
+  /boards/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех досок с учетом пагинации, исключая удаленные.
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список досок успешно получен
+          schema:
+            $ref: '#/definitions/response.BoardListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении досок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех досок
+      tags:
+      - boards
+  /boards/project/{projectId}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список досок, связанных с указанным проектом
+      parameters:
+      - description: ID проекта
+        in: path
+        name: projectId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список досок успешно получен
+          schema:
+            $ref: '#/definitions/response.BoardForProjectResponse'
+        "400":
+          description: Некорректный идентификатор проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Доска не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении досок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение досок по ID проекта
+      tags:
+      - boards
+  /forum-messages:
+    post:
+      consumes:
+      - application/json
+      description: Создает новое сообщение форума с указанными параметрами
+      parameters:
+      - description: Данные для создания сообщения форума
+        in: body
+        name: forumMessage
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateForumMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Сообщение форума успешно создано
+          schema:
+            $ref: '#/definitions/response.ForumMessageUniversalResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании сообщения форума
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание нового сообщения форума
+      tags:
+      - ForumMessages
+  /forum-messages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление сообщения форума по ID (поле deleted = true)
+      parameters:
+      - description: ID сообщения форума
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение форума успешно удалено
+          schema:
+            $ref: '#/definitions/response.ForumMessageUniversalResponse'
+        "404":
+          description: Сообщение форума не найдено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении сообщения форума
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление сообщения форума
+      tags:
+      - ForumMessages
+    get:
+      consumes:
+      - application/json
+      description: Получает данные сообщения форума по его уникальному идентификатору
+      parameters:
+      - description: ID сообщения форума
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение форума успешно получено
+          schema:
+            $ref: '#/definitions/response.ForumMessageResponse'
+        "400":
+          description: Некорректный идентификатор сообщения
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Сообщение форума не найдено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении сообщения форума
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение сообщения форума по ID
+      tags:
+      - ForumMessages
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные сообщения форума по его ID
+      parameters:
+      - description: ID сообщения форума
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления сообщения форума
+        in: body
+        name: forumMessage
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateForumMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение форума успешно обновлено
+          schema:
+            $ref: '#/definitions/response.ForumMessageUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении сообщения форума
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление сообщения форума
+      tags:
+      - ForumMessages
+  /forum-messages/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех сообщений форума с учетом пагинации, исключая
+        удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список сообщений форума успешно получен
+          schema:
+            $ref: '#/definitions/response.ForumMessageListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении сообщений форума
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех сообщений форума
+      tags:
+      - ForumMessages
+  /forum-messages/problem/{id}/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список сообщений форума, связанных с указанной проблемой,
+        с учетом пагинации
+      parameters:
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список сообщений форума успешно получен
+          schema:
+            $ref: '#/definitions/response.ForumMessageListByProblemIdResponse'
+        "400":
+          description: Некорректный идентификатор проблемы или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении сообщений форума
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение сообщений форума по ID проблемы
+      tags:
+      - ForumMessages
+  /problem:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую проблему с указанными параметрами
+      parameters:
+      - description: Данные для создания проблемы
+        in: body
+        name: problem
+        required: true
+        schema:
+          $ref: '#/definitions/request.ProblemCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Проблема успешно создана
+          schema:
+            $ref: '#/definitions/response.ProblemUniversalResponse'
+        "400":
+          description: Ошибка в запросе или некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании проблемы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание новой проблемы
+      tags:
+      - Problems
+  /problem/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление проблемы по ID, включая связанные данные (поле
+        deleted = true)
+      parameters:
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проблема успешно удалена
+          schema:
+            $ref: '#/definitions/response.ProblemUniversalResponse'
+        "404":
+          description: Проблема не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении проблемы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление проблемы
+      tags:
+      - Problems
+    get:
+      consumes:
+      - application/json
+      description: Получает данные проблемы по её уникальному идентификатору
+      parameters:
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проблема успешно получена
+          schema:
+            $ref: '#/definitions/response.ProblemResponse'
+        "400":
+          description: Некорректный идентификатор проблемы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Проблема не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проблемы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение проблемы по ID
+      tags:
+      - Problems
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные проблемы по её ID
+      parameters:
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления проблемы
+        in: body
+        name: problem
+        required: true
+        schema:
+          $ref: '#/definitions/request.ProblemUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проблема успешно обновлена
+          schema:
+            $ref: '#/definitions/response.ProblemUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении проблемы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление проблемы
+      tags:
+      - Problems
+  /problem/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех проблем с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список проблем успешно получен
+          schema:
+            $ref: '#/definitions/response.ProblemListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проблем
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех проблем
+      tags:
+      - Problems
+  /problem/user/{id}/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список проблем, созданных указанным пользователем, с учетом
+        пагинации
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список проблем успешно получен
+          schema:
+            $ref: '#/definitions/response.ProblemsByUserId'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проблем
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение проблем по ID пользователя
+      tags:
+      - Problems
+  /project:
+    post:
+      consumes:
+      - application/json
+      description: Создает новый проект с указанными параметрами
+      parameters:
+      - description: Данные для создания проекта
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Проект успешно создан
+          schema:
+            $ref: '#/definitions/response.ProjectUniversalResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание нового проекта
+      tags:
+      - Projects
+  /project/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление проекта по ID, включая связанные данные (поле
+        deleted = true)
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проект успешно удален
+          schema:
+            $ref: '#/definitions/response.ProjectUniversalResponse'
+        "404":
+          description: Проект не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление проекта
+      tags:
+      - Projects
+    get:
+      consumes:
+      - application/json
+      description: Получает данные проекта по его уникальному идентификатору
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проект успешно получен
+          schema:
+            $ref: '#/definitions/response.ProjectResponse'
+        "400":
+          description: Некорректный идентификатор проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Проект не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение проекта по ID
+      tags:
+      - Projects
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные проекта по его ID
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления проекта
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проект успешно обновлен
+          schema:
+            $ref: '#/definitions/response.ProjectUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление проекта
+      tags:
+      - Projects
+  /project/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех проектов с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список проектов успешно получен
+          schema:
+            $ref: '#/definitions/response.ProjectListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проектов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех проектов
+      tags:
+      - Projects
+  /report:
+    post:
+      consumes:
+      - application/json
+      description: Создает новый отчет с указанными параметрами, включая выполненную
+        работу, планы на завтра, проблемы и запрос на помощь
+      parameters:
+      - description: Данные для создания отчета
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Отчет успешно создан
+          schema:
+            $ref: '#/definitions/response.ReportUniversalResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании отчета
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание нового отчета
+      tags:
+      - Reports
+  /report/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление отчета по ID, включая связанные данные (поле
+        deleted = true)
+      parameters:
+      - description: ID отчета
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Отчет успешно удален
+          schema:
+            $ref: '#/definitions/response.ReportUniversalResponse'
+        "404":
+          description: Отчет не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении отчета
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление отчета
+      tags:
+      - Reports
+    get:
+      consumes:
+      - application/json
+      description: Получает данные отчета по его уникальному идентификатору
+      parameters:
+      - description: ID отчета
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Отчет успешно получен
+          schema:
+            $ref: '#/definitions/response.ReportResponse'
+        "400":
+          description: Некорректный идентификатор отчета
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Отчет, пользователь, запрос на помощь, выполненная работа или
+            план на завтра не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении отчета
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение отчета по ID
+      tags:
+      - Reports
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные отчета по его ID
+      parameters:
+      - description: ID отчета
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления отчета
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Отчет успешно обновлен
+          schema:
+            $ref: '#/definitions/response.ReportUniversalResponse'
+        "400":
+          description: Некорректный идентификатор отчета или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении отчета
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление отчета
+      tags:
+      - Reports
+  /report/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех отчетов с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список отчетов успешно получен
+          schema:
+            $ref: '#/definitions/response.ReportListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь, запрос на помощь, выполненная работа или план
+            на завтра не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении отчетов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех отчетов
+      tags:
+      - Reports
+  /report/completed-work/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные выполненной работы по ее ID
+      parameters:
+      - description: ID выполненной работы
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления выполненной работы
+        in: body
+        name: completedWork
+        required: true
+        schema:
+          $ref: '#/definitions/request.CompletedWorkUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Выполненная работа успешно обновлена
+          schema:
+            $ref: '#/definitions/response.ReportUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении выполненной работы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление выполненной работы
+      tags:
+      - Reports
+  /report/help-request/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные запроса на помощь по его ID
+      parameters:
+      - description: ID запроса на помощь
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления запроса на помощь
+        in: body
+        name: helpRequest
+        required: true
+        schema:
+          $ref: '#/definitions/request.HelpRequestUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Запрос на помощь успешно обновлен
+          schema:
+            $ref: '#/definitions/response.ReportUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении запроса на помощь
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление запроса на помощь
+      tags:
+      - Reports
+  /report/project/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список отчетов, связанных с задачами указанного проекта
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список отчетов успешно получен
+          schema:
+            $ref: '#/definitions/response.ReportListByProjectId'
+        "400":
+          description: Некорректный идентификатор проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь, запрос на помощь, выполненная работа или план
+            на завтра не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении отчетов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение отчетов по ID проекта
+      tags:
+      - Reports
+  /report/task/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список отчетов, связанных с указанной задачей
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список отчетов успешно получен
+          schema:
+            $ref: '#/definitions/response.ReportListByTaskId'
+        "400":
+          description: Некорректный идентификатор задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь, запрос на помощь, выполненная работа или план
+            на завтра не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении отчетов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение отчетов по ID задачи
+      tags:
+      - Reports
+  /report/tomorrow-plans/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные планов на завтра по их ID
+      parameters:
+      - description: ID планов на завтра
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления планов на завтра
+        in: body
+        name: tomorrowPlans
+        required: true
+        schema:
+          $ref: '#/definitions/request.TomorrowPlansUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Планы на завтра успешно обновлены
+          schema:
+            $ref: '#/definitions/response.ReportUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении планов на завтра
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление планов на завтра
+      tags:
+      - Reports
+  /role:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую роль с указанными параметрами
+      parameters:
+      - description: Данные для создания роли
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/request.RoleCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Роль успешно создана
+          schema:
+            $ref: '#/definitions/response.RoleUniversalReport'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание новой роли
+      tags:
+      - Roles
+  /role/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление роли по ID, включая связанные данные (поле
+        deleted = true)
+      parameters:
+      - description: ID роли
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль успешно удалена
+          schema:
+            $ref: '#/definitions/response.ProjectUniversalResponse'
+        "404":
+          description: Роль не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление роли
+      tags:
+      - Roles
+    get:
+      consumes:
+      - application/json
+      description: Получает данные роли по её уникальному идентификатору
+      parameters:
+      - description: ID роли
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль успешно получена
+          schema:
+            $ref: '#/definitions/response.GetRoleResponse'
+        "400":
+          description: Некорректный идентификатор роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Роль не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение роли по ID
+      tags:
+      - Roles
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные роли по её ID
+      parameters:
+      - description: ID роли
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления роли
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/request.RoleUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль успешно обновлена
+          schema:
+            $ref: '#/definitions/response.RoleUniversalReport'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление роли
+      tags:
+      - Roles
+  /role/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех ролей с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список ролей успешно получен
+          schema:
+            $ref: '#/definitions/response.GetAllRolesResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении ролей
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех ролей
+      tags:
+      - Roles
+  /task:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую задачу с указанными параметрами
+      parameters:
+      - description: Данные для создания задачи
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/request.TaskCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Задача успешно создана
+          schema:
+            $ref: '#/definitions/response.TaskUniversaResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Исполнитель или поручитель не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание новой задачи
+      tags:
+      - Tasks
+  /task/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление задачи по ID, включая связанные отчеты (поле
+        deleted = true)
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Задача успешно удалена
+          schema:
+            $ref: '#/definitions/response.TaskUniversaResponse'
+        "404":
+          description: Задача не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление задачи
+      tags:
+      - Tasks
+    get:
+      consumes:
+      - application/json
+      description: Получает данные задачи по её уникальному идентификатору
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Задача успешно получена
+          schema:
+            $ref: '#/definitions/response.GetTaskByIDResponse'
+        "400":
+          description: Некорректный идентификатор задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Задача не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение задачи по ID
+      tags:
+      - Tasks
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные задачи по её ID
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления задачи
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/request.TaskUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Задача успешно обновлена
+          schema:
+            $ref: '#/definitions/response.TaskUniversaResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Задача не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление задачи
+      tags:
+      - Tasks
+  /task/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех задач с учетом пагинации, исключая удаленные
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач успешно получен
+          schema:
+            $ref: '#/definitions/response.TaskListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех задач
+      tags:
+      - Tasks
+  /task/filter:
+    get:
+      consumes:
+      - application/json
+      description: Получает список задач, соответствующих указанным фильтрам
+      parameters:
+      - description: Статус задачи
+        in: query
+        name: status
+        type: string
+      - description: Приоритет задачи
+        in: query
+        name: priority
+        type: integer
+      - description: ID исполнителя
+        in: query
+        name: assignedTo
+        type: string
+      - description: ID создателя
+        in: query
+        name: createdBy
+        type: string
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: startDate
+        type: string
+      - description: Дедлайн (YYYY-MM-DD)
+        in: query
+        name: deadline
+        type: string
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Размер страницы
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач успешно получен
+          schema:
+            $ref: '#/definitions/response.TaskListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение задач по фильтру
+      tags:
+      - Tasks
+  /task/project/{projectId}/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список задач, связанных с указанным проектом
+      parameters:
+      - description: ID проекта
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач успешно получен
+          schema:
+            $ref: '#/definitions/response.TaskListResponse'
+        "400":
+          description: Некорректный идентификатор проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение задач по ID проекта
+      tags:
+      - Tasks
+  /team:
+    post:
+      consumes:
+      - application/json
+      description: Создает новую команду с указанными параметрами
+      parameters:
+      - description: Данные для создания команды
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Команда успешно создана
+          schema:
+            $ref: '#/definitions/response.TeamUniversalResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании команды
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание новой команды
+      tags:
+      - Teams
+  /team/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление команды по ID (поле deleted = true)
+      parameters:
+      - description: ID команды
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Команда успешно удалена
+          schema:
+            $ref: '#/definitions/response.TeamUniversalResponse'
+        "404":
+          description: Команда не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении команды
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление команды
+      tags:
+      - Teams
+    get:
+      consumes:
+      - application/json
+      description: Получает данные команды по её уникальному идентификатору, включая
+        участников
+      parameters:
+      - description: ID команды
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Команда успешно получена
+          schema:
+            $ref: '#/definitions/response.TeamResponse'
+        "400":
+          description: Некорректный идентификатор команды
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Команда не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении команды
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение команды по ID
+      tags:
+      - Teams
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет данные команды по её ID
+      parameters:
+      - description: ID команды
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления команды
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Команда успешно обновлена
+          schema:
+            $ref: '#/definitions/response.TeamUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении команды
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление команды
+      tags:
+      - Teams
+  /team/all:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех команд с их участниками
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список команд успешно получен
+          schema:
+            $ref: '#/definitions/response.TeamsListResponse'
+        "500":
+          description: Ошибка сервера при получении команд
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех команд
+      tags:
+      - Teams
+  /team/project:
+    delete:
+      consumes:
+      - application/json
+      description: Логически удаляет привязку проекта к команде (поле deleted = true)
+      parameters:
+      - description: Данные для удаления проекта из команды
+        in: body
+        name: deleteProject
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamDeleteProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проект успешно отвязан от команды
+          schema:
+            $ref: '#/definitions/response.TeamUniversalProjectResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Ничего не удалено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении проекта из команды
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление проекта из команды
+      tags:
+      - Teams
+    post:
+      consumes:
+      - application/json
+      description: Привязывает проект к указанной команде
+      parameters:
+      - description: Данные для добавления проекта в команду
+        in: body
+        name: addProject
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamAddProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Проект успешно привязан к команде
+          schema:
+            $ref: '#/definitions/response.TeamUniversalProjectResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при добавлении проекта в команду
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Добавление проекта в команду
+      tags:
+      - Teams
+  /team/user:
+    delete:
+      consumes:
+      - application/json
+      description: Логически удаляет пользователя из команды (поле deleted = true)
+      parameters:
+      - description: Данные для удаления пользователя из команды
+        in: body
+        name: deleteUser
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamDeleteUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно удален из команды
+          schema:
+            $ref: '#/definitions/response.TeamUniversalUserResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Ничего не удалено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении пользователя из команды
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление пользователя из команды
+      tags:
+      - Teams
+    post:
+      consumes:
+      - application/json
+      description: Добавляет пользователя в указанную команду
+      parameters:
+      - description: Данные для добавления пользователя в команду
+        in: body
+        name: addUser
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamAddUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно добавлен в команду
+          schema:
+            $ref: '#/definitions/response.TeamUniversalUserResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при добавлении пользователя в команду
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Добавление пользователя в команду
+      tags:
+      - Teams
+  /user:
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя с указанными параметрами
+      parameters:
+      - description: Данные для создания пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.UserCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно создан
+          schema:
+            $ref: '#/definitions/response.UserUniversalResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание нового пользователя
+      tags:
+      - Users
+  /user/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление пользователя по ID, включая связанные данные
+        (поле deleted = true)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно удален
+          schema:
+            $ref: '#/definitions/response.UserUniversalResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление пользователя
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Получает данные пользователя по его уникальному идентификатору
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно получен
+          schema:
+            $ref: '#/definitions/response.GetUserResponse'
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение пользователя по ID
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Обновляет данные пользователя по его ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно обновлен
+          schema:
+            $ref: '#/definitions/response.UserUniversalResponse'
+        "400":
+          description: Некорректный идентификатор или ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление пользователя
+      tags:
+      - Users
+  /user/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех пользователей с учетом пагинации, исключая
+        удаленных
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список пользователей успешно получен
+          schema:
+            $ref: '#/definitions/response.GetAllUsersResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении пользователей
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение списка всех пользователей
+      tags:
+      - Users
+  /user/role:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет роль у указанного пользователя
+      parameters:
+      - description: Данные для удаления роли у пользователя
+        in: body
+        name: removeRole
+        required: true
+        schema:
+          $ref: '#/definitions/request.RemoveRoleUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль успешно удалена
+          schema:
+            $ref: '#/definitions/response.RemoveRoleUserResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Ничего не удалено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление роли у пользователя
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Добавляет роль указанному пользователю
+      parameters:
+      - description: Данные для добавления роли пользователю
+        in: body
+        name: addRole
+        required: true
+        schema:
+          $ref: '#/definitions/request.AddRoleUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль успешно добавлена
+          schema:
+            $ref: '#/definitions/response.AddRoleUserResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при добавлении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Добавление роли пользователю
+      tags:
+      - Users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
