@@ -1,7 +1,7 @@
 // @title Emplacc API
 // @version 1.0
 // @description API для Emplacc.
-// @host localhost:8081
+// (host не задаём умышленно, чтобы Swagger использовал текущий origin)
 // @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header
@@ -10,7 +10,7 @@
 package main
 
 import (
-	_ "emplacc-api/docs"
+	docs "emplacc-api/docs"
 	"emplacc-api/internal/controller"
 	"log"
 	"net/http"
@@ -38,6 +38,9 @@ func main() {
     AllowCredentials: true,
 	}))
 
+	// Swagger: не хардкодим host, оставляем пустым, чтобы UI брал текущий адрес запроса
+	docs.SwaggerInfo.Host = ""
+
 	// Регистрируем маршруты
 	controller.RegisterAuthRoutes(e)
 	controller.RegisterTeamRoutes(e)
@@ -52,6 +55,10 @@ func main() {
 	controller.RegisterWebhookRoutes(e)
 
 	// Swagger UI
+	// Редиректим с /swagger на /swagger/index.html, чтобы работало без явного указания файла
+	e.GET("/swagger", func(c echo.Context) error {
+		return c.Redirect(http.StatusTemporaryRedirect, "/swagger/index.html")
+	})
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	// Если клиент посылает preflight OPTIONS запрос для вебхука

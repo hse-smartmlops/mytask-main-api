@@ -326,7 +326,13 @@ func Me(c echo.Context) error {
 	}
 
 	ctx := context.Background()
-	userInfo, err := keycloakClient.GetUserInfo(ctx, auth, realm)
+	// Support both formats: "Bearer <token>" and raw token
+	token := auth
+	if strings.HasPrefix(strings.ToLower(token), "bearer ") {
+		token = strings.TrimSpace(token[len("Bearer "):])
+	}
+
+	userInfo, err := keycloakClient.GetUserInfo(ctx, token, realm)
 	if err != nil {
 		log.Printf("Me error: %v", err)
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token"})
