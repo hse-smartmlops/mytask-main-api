@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth/admin_login": {
+        "/auth/login": {
             "post": {
                 "description": "Аутентифицирует пользователя по email и паролю через Keycloak",
                 "consumes": [
@@ -27,7 +27,7 @@ const docTemplate = `{
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Аутентификация admin",
+                "summary": "Аутентификация пользователя",
                 "parameters": [
                     {
                         "description": "Данные для входа",
@@ -67,7 +67,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login": {
+        "/auth/login-test": {
             "post": {
                 "description": "Аутентифицирует пользователя по email и паролю через Keycloak",
                 "consumes": [
@@ -425,6 +425,44 @@ const docTemplate = `{
             }
         },
         "/auth/validate": {
+            "get": {
+                "description": "Проверяет валидность токена через Keycloak",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Проверка access_token",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Токен валиден",
+                        "schema": {
+                            "$ref": "#/definitions/response.TokenValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Невалидный или отсутствующий токен",
+                        "schema": {
+                            "$ref": "#/definitions/response.TokenValidationResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/validate-test": {
             "get": {
                 "description": "Проверяет валидность токена через Keycloak",
                 "consumes": [
@@ -5424,7 +5462,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-    Host:             "",
+	Host:             "",
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Emplacc API",

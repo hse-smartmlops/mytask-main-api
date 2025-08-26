@@ -44,9 +44,9 @@ definitions:
       problem_id:
         type: string
     required:
-      - creator_id
-      - description
-      - problem_id
+    - creator_id
+    - description
+    - problem_id
     type: object
   request.CreateProjectRequest:
     properties:
@@ -66,11 +66,11 @@ definitions:
       status:
         type: string
     required:
-      - gitlab_project_id
-      - gitlab_url
-      - name
-      - priority
-      - status
+    - gitlab_project_id
+    - gitlab_url
+    - name
+    - priority
+    - status
     type: object
   request.HelpRequest:
     properties:
@@ -93,8 +93,8 @@ definitions:
       password:
         type: string
     required:
-      - email
-      - password
+    - email
+    - password
     type: object
   request.OAuthRequest:
     properties:
@@ -131,7 +131,7 @@ definitions:
       refresh_token:
         type: string
     required:
-      - refresh_token
+    - refresh_token
     type: object
   request.RegisterRequest:
     properties:
@@ -146,10 +146,10 @@ definitions:
       profession:
         type: string
     required:
-      - email
-      - first_name
-      - last_name
-      - password
+    - email
+    - first_name
+    - last_name
+    - password
     type: object
   request.RemoveRoleUserRequest:
     properties:
@@ -162,13 +162,13 @@ definitions:
     properties:
       complete_work:
         items:
-          $ref: "#/definitions/request.ProjectReport"
+          $ref: '#/definitions/request.ProjectReport'
         type: array
       help:
-        $ref: "#/definitions/request.HelpRequest"
+        $ref: '#/definitions/request.HelpRequest'
       plan_tomorrow:
         items:
-          $ref: "#/definitions/request.ProjectReport"
+          $ref: '#/definitions/request.ProjectReport'
         type: array
       problemsIds:
         items:
@@ -244,17 +244,17 @@ definitions:
         type: string
       status:
         enum:
-          - todo
-          - in_progress
-          - done
+        - todo
+        - in_progress
+        - done
         type: string
     required:
-      - creator_id
-      - name
-      - priority
-      - project_id
-      - start_date
-      - status
+    - creator_id
+    - name
+    - priority
+    - project_id
+    - start_date
+    - status
     type: object
   request.TaskUpdateRequest:
     properties:
@@ -281,9 +281,9 @@ definitions:
         type: string
       status:
         enum:
-          - todo
-          - in_progress
-          - done
+        - todo
+        - in_progress
+        - done
         type: string
     type: object
   request.TeamAddProjectRequest:
@@ -307,7 +307,7 @@ definitions:
       name:
         type: string
     required:
-      - name
+    - name
     type: object
   request.TeamDeleteProjectRequest:
     properties:
@@ -447,7 +447,7 @@ definitions:
     properties:
       board:
         items:
-          $ref: "#/definitions/response.BoardResponse"
+          $ref: '#/definitions/response.BoardResponse'
         type: array
       project_id:
         type: string
@@ -456,7 +456,7 @@ definitions:
     properties:
       boards:
         items:
-          $ref: "#/definitions/response.BoardResponse"
+          $ref: '#/definitions/response.BoardResponse'
         type: array
       page:
         type: integer
@@ -491,7 +491,7 @@ definitions:
     properties:
       messages:
         items:
-          $ref: "#/definitions/response.ForumMessageResponse"
+          $ref: '#/definitions/response.ForumMessageResponse'
         type: array
       page:
         type: integer
@@ -506,7 +506,7 @@ definitions:
     properties:
       messages:
         items:
-          $ref: "#/definitions/response.ForumMessageResponse"
+          $ref: '#/definitions/response.ForumMessageResponse'
         type: array
       page:
         type: integer
@@ -547,7 +547,7 @@ definitions:
         type: integer
       roles:
         items:
-          $ref: "#/definitions/response.GetRoleResponse"
+          $ref: '#/definitions/response.GetRoleResponse'
         type: array
       total_count:
         type: integer
@@ -562,7 +562,7 @@ definitions:
         type: integer
       users:
         items:
-          $ref: "#/definitions/response.GetUserResponse"
+          $ref: '#/definitions/response.GetUserResponse'
         type: array
     type: object
   response.GetRoleResponse:
@@ -580,13 +580,13 @@ definitions:
     properties:
       assigned_to:
         allOf:
-          - $ref: "#/definitions/response.UserShort"
+        - $ref: '#/definitions/response.UserShort'
         description: Связь с users
       community:
         type: integer
       created_by:
         allOf:
-          - $ref: "#/definitions/response.UserShort"
+        - $ref: '#/definitions/response.UserShort'
         description: Связь с users
       deadline:
         description: DATE в БД
@@ -658,7 +658,7 @@ definitions:
         type: integer
       problems:
         items:
-          $ref: "#/definitions/response.ProblemResponse"
+          $ref: '#/definitions/response.ProblemResponse'
         type: array
       total_count:
         type: integer
@@ -695,7 +695,7 @@ definitions:
         type: integer
       problems:
         items:
-          $ref: "#/definitions/response.ProblemResponse"
+          $ref: '#/definitions/response.ProblemResponse'
         type: array
       total_count:
         type: integer
@@ -710,7 +710,7 @@ definitions:
         type: integer
       projects:
         items:
-          $ref: "#/definitions/response.ProjectResponse"
+          $ref: '#/definitions/response.ProjectResponse'
         type: array
       total_count:
         type: integer
@@ -773,14 +773,14 @@ definitions:
         type: string
       reports:
         items:
-          $ref: "#/definitions/response.ReportResponse"
+          $ref: '#/definitions/response.ReportResponse'
         type: array
     type: object
   response.ReportListByTaskId:
     properties:
       reports:
         items:
-          $ref: "#/definitions/response.ReportResponse"
+          $ref: '#/definitions/response.ReportResponse'
         type: array
       task_id:
         type: string
@@ -793,7 +793,7 @@ definitions:
         type: integer
       reports:
         items:
-          $ref: "#/definitions/response.ReportResponse"
+          $ref: '#/definitions/response.ReportResponse'
         type: array
       total_count:
         type: integer
@@ -802,21 +802,21 @@ definitions:
     properties:
       completed_work:
         items:
-          $ref: "#/definitions/response.WorkItem"
+          $ref: '#/definitions/response.WorkItem'
         type: array
       created_at:
         type: string
       help_request:
-        $ref: "#/definitions/response.HelpRequestItem"
+        $ref: '#/definitions/response.HelpRequestItem'
       id:
         type: string
       plan_tomorrow:
         items:
-          $ref: "#/definitions/response.WorkItem"
+          $ref: '#/definitions/response.WorkItem'
         type: array
       problem:
         items:
-          $ref: "#/definitions/response.ProblemResponse"
+          $ref: '#/definitions/response.ProblemResponse'
         type: array
       report_date:
         type: string
@@ -829,7 +829,7 @@ definitions:
       user_id:
         type: string
       user_info:
-        $ref: "#/definitions/response.UserShort"
+        $ref: '#/definitions/response.UserShort'
     type: object
   response.ReportUniversalResponse:
     properties:
@@ -853,7 +853,7 @@ definitions:
         type: integer
       tasks:
         items:
-          $ref: "#/definitions/response.TaskShort"
+          $ref: '#/definitions/response.TaskShort'
         type: array
       total_count:
         type: integer
@@ -905,7 +905,7 @@ definitions:
         type: string
       members:
         items:
-          $ref: "#/definitions/response.TeamMemberResponse"
+          $ref: '#/definitions/response.TeamMemberResponse'
         type: array
       name:
         type: string
@@ -941,7 +941,7 @@ definitions:
     properties:
       teams:
         items:
-          $ref: "#/definitions/response.TeamResponse"
+          $ref: '#/definitions/response.TeamResponse'
         type: array
     type: object
   response.TokenValidationResponse:
@@ -1004,59 +1004,25 @@ info:
   title: Emplacc API
   version: "1.0"
 paths:
-  /auth/admin_login:
-    post:
-      consumes:
-        - application/json
-      description: Аутентифицирует пользователя по email и паролю через Keycloak
-      parameters:
-        - description: Данные для входа
-          in: body
-          name: login
-          required: true
-          schema:
-            $ref: "#/definitions/request.LoginRequest"
-      produces:
-        - application/json
-      responses:
-        "200":
-          description: Успешная аутентификация
-          schema:
-            $ref: "#/definitions/response.AuthResponse"
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Неверные учетные данные
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация admin
-      tags:
-        - Auth
   /auth/login:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Аутентифицирует пользователя по email и паролю через Keycloak
       parameters:
-        - description: Данные для входа
-          in: body
-          name: login
-          required: true
-          schema:
-            $ref: "#/definitions/request.LoginRequest"
+      - description: Данные для входа
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Успешная аутентификация
           schema:
-            $ref: "#/definitions/response.AuthResponse"
+            $ref: '#/definitions/response.AuthResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -1071,20 +1037,54 @@ paths:
             type: object
       summary: Аутентификация пользователя
       tags:
-        - Auth
+      - Auth
+  /auth/login-test:
+    post:
+      consumes:
+      - application/json
+      description: Аутентифицирует пользователя по email и паролю через Keycloak
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/request.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная аутентификация
+          schema:
+            $ref: '#/definitions/response.AuthResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Неверные учетные данные
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Аутентификация пользователя
+      tags:
+      - Auth
   /auth/logout:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Выполняет выход пользователя из системы, завершая сессию в Keycloak
       parameters:
-        - description: Refresh token
-          in: header
-          name: Authorization
-          required: true
-          type: string
+      - description: Refresh token
+        in: header
+        name: Authorization
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Успешный выход из системы
@@ -1106,11 +1106,11 @@ paths:
             type: object
       summary: Выход из системы
       tags:
-        - Auth
+      - Auth
   /auth/me:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Возвращает информацию о пользователе на основе переданного токена
       parameters:
       - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
@@ -1119,12 +1119,12 @@ paths:
         required: true
         type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Информация о пользователе
           schema:
-            $ref: "#/definitions/response.UserInfo"
+            $ref: '#/definitions/response.UserInfo'
         "401":
           description: Отсутствует или неверный токен
           schema:
@@ -1133,26 +1133,26 @@ paths:
             type: object
       summary: Получение информации о текущем пользователе
       tags:
-        - Auth
+      - Auth
   /auth/oauth:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Выполняет аутентификацию с использованием OAuth кода авторизации
       parameters:
-        - description: Данные для OAuth аутентификации
-          in: body
-          name: oauth
-          required: true
-          schema:
-            $ref: "#/definitions/request.OAuthRequest"
+      - description: Данные для OAuth аутентификации
+        in: body
+        name: oauth
+        required: true
+        schema:
+          $ref: '#/definitions/request.OAuthRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Успешная OAuth аутентификация
           schema:
-            $ref: "#/definitions/response.AuthResponse"
+            $ref: '#/definitions/response.AuthResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -1167,28 +1167,27 @@ paths:
             type: object
       summary: Аутентификация через OAuth
       tags:
-        - Auth
+      - Auth
   /auth/refresh:
     post:
       consumes:
-        - application/json
-      description:
-        Получение нового access_token и refresh_token на основе существующего
+      - application/json
+      description: Получение нового access_token и refresh_token на основе существующего
         refresh_token
       parameters:
-        - description: Refresh token
-          in: body
-          name: body
-          required: true
-          schema:
-            $ref: "#/definitions/request.RefreshRequest"
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.RefreshRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Новые токены и время жизни
           schema:
-            $ref: "#/definitions/response.RefreshResponse"
+            $ref: '#/definitions/response.RefreshResponse'
         "400":
           description: Неверный формат запроса
           schema:
@@ -1203,21 +1202,21 @@ paths:
             type: object
       summary: Обновление access токена
       tags:
-        - Auth
+      - Auth
   /auth/register:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает нового пользователя в Keycloak с указанным email
       parameters:
-        - description: Данные для регистрации
-          in: body
-          name: register
-          required: true
-          schema:
-            $ref: "#/definitions/request.RegisterRequest"
+      - description: Данные для регистрации
+        in: body
+        name: register
+        required: true
+        schema:
+          $ref: '#/definitions/request.RegisterRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Пользователь успешно зарегистрирован
@@ -1239,28 +1238,27 @@ paths:
             type: object
       summary: Регистрация нового пользователя
       tags:
-        - Auth
+      - Auth
   /auth/totp:
     post:
       consumes:
-        - application/json
-      description:
-        Выполняет аутентификацию с использованием email, пароля и TOTP
+      - application/json
+      description: Выполняет аутентификацию с использованием email, пароля и TOTP
         кода
       parameters:
-        - description: Данные для TOTP аутентификации
-          in: body
-          name: totp
-          required: true
-          schema:
-            $ref: "#/definitions/request.TOTPRequest"
+      - description: Данные для TOTP аутентификации
+        in: body
+        name: totp
+        required: true
+        schema:
+          $ref: '#/definitions/request.TOTPRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Успешная TOTP аутентификация
           schema:
-            $ref: "#/definitions/response.AuthResponse"
+            $ref: '#/definitions/response.AuthResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -1275,51 +1273,76 @@ paths:
             type: object
       summary: Аутентификация с двухфакторной аутентификацией
       tags:
-        - Auth
+      - Auth
   /auth/validate:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Проверяет валидность токена через Keycloak
       parameters:
-        - description: "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-          in: header
-          name: Authorization
-          required: true
-          type: string
+      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+        in: header
+        name: Authorization
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Токен валиден
           schema:
-            $ref: "#/definitions/response.TokenValidationResponse"
+            $ref: '#/definitions/response.TokenValidationResponse'
         "401":
           description: Невалидный или отсутствующий токен
           schema:
-            $ref: "#/definitions/response.TokenValidationResponse"
+            $ref: '#/definitions/response.TokenValidationResponse'
       summary: Проверка access_token
       tags:
-        - Auth
+      - Auth
+  /auth/validate-test:
+    get:
+      consumes:
+      - application/json
+      description: Проверяет валидность токена через Keycloak
+      parameters:
+      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Токен валиден
+          schema:
+            $ref: '#/definitions/response.TokenValidationResponse'
+        "401":
+          description: Невалидный или отсутствующий токен
+          schema:
+            $ref: '#/definitions/response.TokenValidationResponse'
+      summary: Проверка access_token
+      tags:
+      - Auth
   /boards:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает новую доску с указанными параметрами
       parameters:
-        - description: Данные для создания доски
-          in: body
-          name: board
-          required: true
-          schema:
-            $ref: "#/definitions/request.BoardCreateRequest"
+      - description: Данные для создания доски
+        in: body
+        name: board
+        required: true
+        schema:
+          $ref: '#/definitions/request.BoardCreateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Доска успешно создана
           schema:
-            $ref: "#/definitions/response.BoardUniversalResponse"
+            $ref: '#/definitions/response.BoardUniversalResponse'
         "400":
           description: Ошибка в запросе или некорректный идентификатор проекта
           schema:
@@ -1334,25 +1357,25 @@ paths:
             type: object
       summary: Создание новой доски
       tags:
-        - boards
+      - boards
   /boards/{id}:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Логическое удаление доски по ID (поле deleted = true)
       parameters:
-        - description: ID доски
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID доски
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Доска успешно удалена
           schema:
-            $ref: "#/definitions/response.BoardUniversalResponse"
+            $ref: '#/definitions/response.BoardUniversalResponse'
         "404":
           description: Доска не найдена
           schema:
@@ -1367,24 +1390,24 @@ paths:
             type: object
       summary: Удаление доски
       tags:
-        - boards
+      - boards
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные доски по её уникальному идентификатору
       parameters:
-        - description: ID доски
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID доски
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Доска успешно получена
           schema:
-            $ref: "#/definitions/response.BoardResponse"
+            $ref: '#/definitions/response.BoardResponse'
         "400":
           description: Некорректный идентификатор
           schema:
@@ -1405,30 +1428,30 @@ paths:
             type: object
       summary: Получение доски по ID
       tags:
-        - boards
+      - boards
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные доски по её ID
       parameters:
-        - description: ID доски
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления доски
-          in: body
-          name: board
-          required: true
-          schema:
-            $ref: "#/definitions/request.BoardUpdateRequest"
+      - description: ID доски
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления доски
+        in: body
+        name: board
+        required: true
+        schema:
+          $ref: '#/definitions/request.BoardUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Доска успешно обновлена
           schema:
-            $ref: "#/definitions/response.BoardUniversalResponse"
+            $ref: '#/definitions/response.BoardUniversalResponse'
         "400":
           description: Ошибка в запросе или нет полей для обновления
           schema:
@@ -1443,30 +1466,30 @@ paths:
             type: object
       summary: Обновление доски
       tags:
-        - boards
+      - boards
   /boards/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список всех досок с учетом пагинации, исключая удаленные.
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список досок успешно получен
           schema:
-            $ref: "#/definitions/response.BoardListResponse"
+            $ref: '#/definitions/response.BoardListResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -1481,25 +1504,25 @@ paths:
             type: object
       summary: Получение списка всех досок
       tags:
-        - boards
+      - boards
   /boards/project/{projectId}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список досок, связанных с указанным проектом
       parameters:
-        - description: ID проекта
-          in: path
-          name: projectId
-          required: true
-          type: string
+      - description: ID проекта
+        in: path
+        name: projectId
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список досок успешно получен
           schema:
-            $ref: "#/definitions/response.BoardForProjectResponse"
+            $ref: '#/definitions/response.BoardForProjectResponse'
         "400":
           description: Некорректный идентификатор проекта
           schema:
@@ -1520,26 +1543,26 @@ paths:
             type: object
       summary: Получение досок по ID проекта
       tags:
-        - boards
+      - boards
   /forum-messages:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает новое сообщение форума с указанными параметрами
       parameters:
-        - description: Данные для создания сообщения форума
-          in: body
-          name: forumMessage
-          required: true
-          schema:
-            $ref: "#/definitions/request.CreateForumMessageRequest"
+      - description: Данные для создания сообщения форума
+        in: body
+        name: forumMessage
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateForumMessageRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Сообщение форума успешно создано
           schema:
-            $ref: "#/definitions/response.ForumMessageUniversalResponse"
+            $ref: '#/definitions/response.ForumMessageUniversalResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -1554,25 +1577,25 @@ paths:
             type: object
       summary: Создание нового сообщения форума
       tags:
-        - ForumMessages
+      - ForumMessages
   /forum-messages/{id}:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Логическое удаление сообщения форума по ID (поле deleted = true)
       parameters:
-        - description: ID сообщения форума
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID сообщения форума
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Сообщение форума успешно удалено
           schema:
-            $ref: "#/definitions/response.ForumMessageUniversalResponse"
+            $ref: '#/definitions/response.ForumMessageUniversalResponse'
         "404":
           description: Сообщение форума не найдено
           schema:
@@ -1587,24 +1610,24 @@ paths:
             type: object
       summary: Удаление сообщения форума
       tags:
-        - ForumMessages
+      - ForumMessages
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные сообщения форума по его уникальному идентификатору
       parameters:
-        - description: ID сообщения форума
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID сообщения форума
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Сообщение форума успешно получено
           schema:
-            $ref: "#/definitions/response.ForumMessageResponse"
+            $ref: '#/definitions/response.ForumMessageResponse'
         "400":
           description: Некорректный идентификатор сообщения
           schema:
@@ -1625,30 +1648,30 @@ paths:
             type: object
       summary: Получение сообщения форума по ID
       tags:
-        - ForumMessages
+      - ForumMessages
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные сообщения форума по его ID
       parameters:
-        - description: ID сообщения форума
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления сообщения форума
-          in: body
-          name: forumMessage
-          required: true
-          schema:
-            $ref: "#/definitions/request.UpdateForumMessageRequest"
+      - description: ID сообщения форума
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления сообщения форума
+        in: body
+        name: forumMessage
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateForumMessageRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Сообщение форума успешно обновлено
           schema:
-            $ref: "#/definitions/response.ForumMessageUniversalResponse"
+            $ref: '#/definitions/response.ForumMessageUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -1663,32 +1686,31 @@ paths:
             type: object
       summary: Обновление сообщения форума
       tags:
-        - ForumMessages
+      - ForumMessages
   /forum-messages/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
-      description:
-        Получает список всех сообщений форума с учетом пагинации, исключая
+      - application/json
+      description: Получает список всех сообщений форума с учетом пагинации, исключая
         удаленные
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список сообщений форума успешно получен
           schema:
-            $ref: "#/definitions/response.ForumMessageListResponse"
+            $ref: '#/definitions/response.ForumMessageListResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -1703,37 +1725,36 @@ paths:
             type: object
       summary: Получение списка всех сообщений форума
       tags:
-        - ForumMessages
+      - ForumMessages
   /forum-messages/problem/{id}/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
-      description:
-        Получает список сообщений форума, связанных с указанной проблемой,
+      - application/json
+      description: Получает список сообщений форума, связанных с указанной проблемой,
         с учетом пагинации
       parameters:
-        - description: ID проблемы
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список сообщений форума успешно получен
           schema:
-            $ref: "#/definitions/response.ForumMessageListByProblemIdResponse"
+            $ref: '#/definitions/response.ForumMessageListByProblemIdResponse'
         "400":
           description: Некорректный идентификатор проблемы или ошибка в запросе
           schema:
@@ -1748,26 +1769,26 @@ paths:
             type: object
       summary: Получение сообщений форума по ID проблемы
       tags:
-        - ForumMessages
+      - ForumMessages
   /problem:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает новую проблему с указанными параметрами
       parameters:
-        - description: Данные для создания проблемы
-          in: body
-          name: problem
-          required: true
-          schema:
-            $ref: "#/definitions/request.ProblemCreateRequest"
+      - description: Данные для создания проблемы
+        in: body
+        name: problem
+        required: true
+        schema:
+          $ref: '#/definitions/request.ProblemCreateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Проблема успешно создана
           schema:
-            $ref: "#/definitions/response.ProblemUniversalResponse"
+            $ref: '#/definitions/response.ProblemUniversalResponse'
         "400":
           description: Ошибка в запросе или некорректный идентификатор пользователя
           schema:
@@ -1782,27 +1803,26 @@ paths:
             type: object
       summary: Создание новой проблемы
       tags:
-        - Problems
+      - Problems
   /problem/{id}:
     delete:
       consumes:
-        - application/json
-      description:
-        Логическое удаление проблемы по ID, включая связанные данные (поле
+      - application/json
+      description: Логическое удаление проблемы по ID, включая связанные данные (поле
         deleted = true)
       parameters:
-        - description: ID проблемы
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проблема успешно удалена
           schema:
-            $ref: "#/definitions/response.ProblemUniversalResponse"
+            $ref: '#/definitions/response.ProblemUniversalResponse'
         "404":
           description: Проблема не найдена
           schema:
@@ -1817,24 +1837,24 @@ paths:
             type: object
       summary: Удаление проблемы
       tags:
-        - Problems
+      - Problems
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные проблемы по её уникальному идентификатору
       parameters:
-        - description: ID проблемы
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проблема успешно получена
           schema:
-            $ref: "#/definitions/response.ProblemResponse"
+            $ref: '#/definitions/response.ProblemResponse'
         "400":
           description: Некорректный идентификатор проблемы
           schema:
@@ -1855,30 +1875,30 @@ paths:
             type: object
       summary: Получение проблемы по ID
       tags:
-        - Problems
+      - Problems
     put:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные проблемы по её ID
       parameters:
-        - description: ID проблемы
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления проблемы
-          in: body
-          name: problem
-          required: true
-          schema:
-            $ref: "#/definitions/request.ProblemUpdateRequest"
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления проблемы
+        in: body
+        name: problem
+        required: true
+        schema:
+          $ref: '#/definitions/request.ProblemUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проблема успешно обновлена
           schema:
-            $ref: "#/definitions/response.ProblemUniversalResponse"
+            $ref: '#/definitions/response.ProblemUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -1893,30 +1913,30 @@ paths:
             type: object
       summary: Обновление проблемы
       tags:
-        - Problems
+      - Problems
   /problem/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список всех проблем с учетом пагинации, исключая удаленные
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список проблем успешно получен
           schema:
-            $ref: "#/definitions/response.ProblemListResponse"
+            $ref: '#/definitions/response.ProblemListResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -1931,37 +1951,36 @@ paths:
             type: object
       summary: Получение списка всех проблем
       tags:
-        - Problems
+      - Problems
   /problem/user/{id}/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
-      description:
-        Получает список проблем, созданных указанным пользователем, с учетом
+      - application/json
+      description: Получает список проблем, созданных указанным пользователем, с учетом
         пагинации
       parameters:
-        - description: ID пользователя
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список проблем успешно получен
           schema:
-            $ref: "#/definitions/response.ProblemsByUserId"
+            $ref: '#/definitions/response.ProblemsByUserId'
         "400":
           description: Ошибка в запросе
           schema:
@@ -1976,26 +1995,26 @@ paths:
             type: object
       summary: Получение проблем по ID пользователя
       tags:
-        - Problems
+      - Problems
   /project:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает новый проект с указанными параметрами
       parameters:
-        - description: Данные для создания проекта
-          in: body
-          name: project
-          required: true
-          schema:
-            $ref: "#/definitions/request.CreateProjectRequest"
+      - description: Данные для создания проекта
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateProjectRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Проект успешно создан
           schema:
-            $ref: "#/definitions/response.ProjectUniversalResponse"
+            $ref: '#/definitions/response.ProjectUniversalResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2010,27 +2029,26 @@ paths:
             type: object
       summary: Создание нового проекта
       tags:
-        - Projects
+      - Projects
   /project/{id}:
     delete:
       consumes:
-        - application/json
-      description:
-        Логическое удаление проекта по ID, включая связанные данные (поле
+      - application/json
+      description: Логическое удаление проекта по ID, включая связанные данные (поле
         deleted = true)
       parameters:
-        - description: ID проекта
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проект успешно удален
           schema:
-            $ref: "#/definitions/response.ProjectUniversalResponse"
+            $ref: '#/definitions/response.ProjectUniversalResponse'
         "404":
           description: Проект не найден
           schema:
@@ -2045,24 +2063,24 @@ paths:
             type: object
       summary: Удаление проекта
       tags:
-        - Projects
+      - Projects
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные проекта по его уникальному идентификатору
       parameters:
-        - description: ID проекта
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проект успешно получен
           schema:
-            $ref: "#/definitions/response.ProjectResponse"
+            $ref: '#/definitions/response.ProjectResponse'
         "400":
           description: Некорректный идентификатор проекта
           schema:
@@ -2083,30 +2101,30 @@ paths:
             type: object
       summary: Получение проекта по ID
       tags:
-        - Projects
+      - Projects
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные проекта по его ID
       parameters:
-        - description: ID проекта
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления проекта
-          in: body
-          name: project
-          required: true
-          schema:
-            $ref: "#/definitions/request.UpdateProjectRequest"
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления проекта
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateProjectRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проект успешно обновлен
           schema:
-            $ref: "#/definitions/response.ProjectUniversalResponse"
+            $ref: '#/definitions/response.ProjectUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -2121,30 +2139,30 @@ paths:
             type: object
       summary: Обновление проекта
       tags:
-        - Projects
+      - Projects
   /project/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список всех проектов с учетом пагинации, исключая удаленные
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список проектов успешно получен
           schema:
-            $ref: "#/definitions/response.ProjectListResponse"
+            $ref: '#/definitions/response.ProjectListResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2159,28 +2177,27 @@ paths:
             type: object
       summary: Получение списка всех проектов
       tags:
-        - Projects
+      - Projects
   /report:
     post:
       consumes:
-        - application/json
-      description:
-        Создает новый отчет с указанными параметрами, включая выполненную
+      - application/json
+      description: Создает новый отчет с указанными параметрами, включая выполненную
         работу, планы на завтра, проблемы и запрос на помощь
       parameters:
-        - description: Данные для создания отчета
-          in: body
-          name: report
-          required: true
-          schema:
-            $ref: "#/definitions/request.ReportCreateRequest"
+      - description: Данные для создания отчета
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportCreateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Отчет успешно создан
           schema:
-            $ref: "#/definitions/response.ReportUniversalResponse"
+            $ref: '#/definitions/response.ReportUniversalResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -2195,27 +2212,26 @@ paths:
             type: object
       summary: Создание нового отчета
       tags:
-        - Reports
+      - Reports
   /report/{id}:
     delete:
       consumes:
-        - application/json
-      description:
-        Логическое удаление отчета по ID, включая связанные данные (поле
+      - application/json
+      description: Логическое удаление отчета по ID, включая связанные данные (поле
         deleted = true)
       parameters:
-        - description: ID отчета
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID отчета
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Отчет успешно удален
           schema:
-            $ref: "#/definitions/response.ReportUniversalResponse"
+            $ref: '#/definitions/response.ReportUniversalResponse'
         "404":
           description: Отчет не найден
           schema:
@@ -2230,24 +2246,24 @@ paths:
             type: object
       summary: Удаление отчета
       tags:
-        - Reports
+      - Reports
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные отчета по его уникальному идентификатору
       parameters:
-        - description: ID отчета
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID отчета
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Отчет успешно получен
           schema:
-            $ref: "#/definitions/response.ReportResponse"
+            $ref: '#/definitions/response.ReportResponse'
         "400":
           description: Некорректный идентификатор отчета
           schema:
@@ -2255,8 +2271,7 @@ paths:
               type: string
             type: object
         "404":
-          description:
-            Отчет, пользователь, запрос на помощь, выполненная работа или
+          description: Отчет, пользователь, запрос на помощь, выполненная работа или
             план на завтра не найдены
           schema:
             additionalProperties:
@@ -2270,30 +2285,30 @@ paths:
             type: object
       summary: Получение отчета по ID
       tags:
-        - Reports
+      - Reports
     put:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные отчета по его ID
       parameters:
-        - description: ID отчета
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления отчета
-          in: body
-          name: report
-          required: true
-          schema:
-            $ref: "#/definitions/request.ReportUpdateRequest"
+      - description: ID отчета
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления отчета
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Отчет успешно обновлен
           schema:
-            $ref: "#/definitions/response.ReportUniversalResponse"
+            $ref: '#/definitions/response.ReportUniversalResponse'
         "400":
           description: Некорректный идентификатор отчета или ошибка в запросе
           schema:
@@ -2308,30 +2323,30 @@ paths:
             type: object
       summary: Обновление отчета
       tags:
-        - Reports
+      - Reports
   /report/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список всех отчетов с учетом пагинации, исключая удаленные
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список отчетов успешно получен
           schema:
-            $ref: "#/definitions/response.ReportListResponse"
+            $ref: '#/definitions/response.ReportListResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2339,8 +2354,7 @@ paths:
               type: string
             type: object
         "404":
-          description:
-            Пользователь, запрос на помощь, выполненная работа или план
+          description: Пользователь, запрос на помощь, выполненная работа или план
             на завтра не найдены
           schema:
             additionalProperties:
@@ -2354,31 +2368,31 @@ paths:
             type: object
       summary: Получение списка всех отчетов
       tags:
-        - Reports
+      - Reports
   /report/completed-work/{id}:
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные выполненной работы по ее ID
       parameters:
-        - description: ID выполненной работы
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления выполненной работы
-          in: body
-          name: completedWork
-          required: true
-          schema:
-            $ref: "#/definitions/request.CompletedWorkUpdateRequest"
+      - description: ID выполненной работы
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления выполненной работы
+        in: body
+        name: completedWork
+        required: true
+        schema:
+          $ref: '#/definitions/request.CompletedWorkUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Выполненная работа успешно обновлена
           schema:
-            $ref: "#/definitions/response.ReportUniversalResponse"
+            $ref: '#/definitions/response.ReportUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -2393,31 +2407,31 @@ paths:
             type: object
       summary: Обновление выполненной работы
       tags:
-        - Reports
+      - Reports
   /report/help-request/{id}:
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные запроса на помощь по его ID
       parameters:
-        - description: ID запроса на помощь
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления запроса на помощь
-          in: body
-          name: helpRequest
-          required: true
-          schema:
-            $ref: "#/definitions/request.HelpRequestUpdateRequest"
+      - description: ID запроса на помощь
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления запроса на помощь
+        in: body
+        name: helpRequest
+        required: true
+        schema:
+          $ref: '#/definitions/request.HelpRequestUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Запрос на помощь успешно обновлен
           schema:
-            $ref: "#/definitions/response.ReportUniversalResponse"
+            $ref: '#/definitions/response.ReportUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -2432,25 +2446,25 @@ paths:
             type: object
       summary: Обновление запроса на помощь
       tags:
-        - Reports
+      - Reports
   /report/project/{id}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список отчетов, связанных с задачами указанного проекта
       parameters:
-        - description: ID проекта
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список отчетов успешно получен
           schema:
-            $ref: "#/definitions/response.ReportListByProjectId"
+            $ref: '#/definitions/response.ReportListByProjectId'
         "400":
           description: Некорректный идентификатор проекта
           schema:
@@ -2458,8 +2472,7 @@ paths:
               type: string
             type: object
         "404":
-          description:
-            Пользователь, запрос на помощь, выполненная работа или план
+          description: Пользователь, запрос на помощь, выполненная работа или план
             на завтра не найдены
           schema:
             additionalProperties:
@@ -2473,25 +2486,25 @@ paths:
             type: object
       summary: Получение отчетов по ID проекта
       tags:
-        - Reports
+      - Reports
   /report/task/{id}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список отчетов, связанных с указанной задачей
       parameters:
-        - description: ID задачи
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список отчетов успешно получен
           schema:
-            $ref: "#/definitions/response.ReportListByTaskId"
+            $ref: '#/definitions/response.ReportListByTaskId'
         "400":
           description: Некорректный идентификатор задачи
           schema:
@@ -2499,8 +2512,7 @@ paths:
               type: string
             type: object
         "404":
-          description:
-            Пользователь, запрос на помощь, выполненная работа или план
+          description: Пользователь, запрос на помощь, выполненная работа или план
             на завтра не найдены
           schema:
             additionalProperties:
@@ -2514,31 +2526,31 @@ paths:
             type: object
       summary: Получение отчетов по ID задачи
       tags:
-        - Reports
+      - Reports
   /report/tomorrow-plans/{id}:
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные планов на завтра по их ID
       parameters:
-        - description: ID планов на завтра
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления планов на завтра
-          in: body
-          name: tomorrowPlans
-          required: true
-          schema:
-            $ref: "#/definitions/request.TomorrowPlansUpdateRequest"
+      - description: ID планов на завтра
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления планов на завтра
+        in: body
+        name: tomorrowPlans
+        required: true
+        schema:
+          $ref: '#/definitions/request.TomorrowPlansUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Планы на завтра успешно обновлены
           schema:
-            $ref: "#/definitions/response.ReportUniversalResponse"
+            $ref: '#/definitions/response.ReportUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -2553,26 +2565,26 @@ paths:
             type: object
       summary: Обновление планов на завтра
       tags:
-        - Reports
+      - Reports
   /role:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает новую роль с указанными параметрами
       parameters:
-        - description: Данные для создания роли
-          in: body
-          name: role
-          required: true
-          schema:
-            $ref: "#/definitions/request.RoleCreateRequest"
+      - description: Данные для создания роли
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/request.RoleCreateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Роль успешно создана
           schema:
-            $ref: "#/definitions/response.RoleUniversalReport"
+            $ref: '#/definitions/response.RoleUniversalReport'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2587,27 +2599,26 @@ paths:
             type: object
       summary: Создание новой роли
       tags:
-        - Roles
+      - Roles
   /role/{id}:
     delete:
       consumes:
-        - application/json
-      description:
-        Логическое удаление роли по ID, включая связанные данные (поле
+      - application/json
+      description: Логическое удаление роли по ID, включая связанные данные (поле
         deleted = true)
       parameters:
-        - description: ID роли
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID роли
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Роль успешно удалена
           schema:
-            $ref: "#/definitions/response.ProjectUniversalResponse"
+            $ref: '#/definitions/response.ProjectUniversalResponse'
         "404":
           description: Роль не найдена
           schema:
@@ -2622,24 +2633,24 @@ paths:
             type: object
       summary: Удаление роли
       tags:
-        - Roles
+      - Roles
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные роли по её уникальному идентификатору
       parameters:
-        - description: ID роли
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID роли
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Роль успешно получена
           schema:
-            $ref: "#/definitions/response.GetRoleResponse"
+            $ref: '#/definitions/response.GetRoleResponse'
         "400":
           description: Некорректный идентификатор роли
           schema:
@@ -2660,30 +2671,30 @@ paths:
             type: object
       summary: Получение роли по ID
       tags:
-        - Roles
+      - Roles
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные роли по её ID
       parameters:
-        - description: ID роли
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления роли
-          in: body
-          name: role
-          required: true
-          schema:
-            $ref: "#/definitions/request.RoleUpdateRequest"
+      - description: ID роли
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления роли
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/request.RoleUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Роль успешно обновлена
           schema:
-            $ref: "#/definitions/response.RoleUniversalReport"
+            $ref: '#/definitions/response.RoleUniversalReport'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -2698,30 +2709,30 @@ paths:
             type: object
       summary: Обновление роли
       tags:
-        - Roles
+      - Roles
   /role/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список всех ролей с учетом пагинации, исключая удаленные
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список ролей успешно получен
           schema:
-            $ref: "#/definitions/response.GetAllRolesResponse"
+            $ref: '#/definitions/response.GetAllRolesResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2736,26 +2747,26 @@ paths:
             type: object
       summary: Получение списка всех ролей
       tags:
-        - Roles
+      - Roles
   /task:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает новую задачу с указанными параметрами
       parameters:
-        - description: Данные для создания задачи
-          in: body
-          name: task
-          required: true
-          schema:
-            $ref: "#/definitions/request.TaskCreateRequest"
+      - description: Данные для создания задачи
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/request.TaskCreateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Задача успешно создана
           schema:
-            $ref: "#/definitions/response.TaskUniversaResponse"
+            $ref: '#/definitions/response.TaskUniversaResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -2776,27 +2787,26 @@ paths:
             type: object
       summary: Создание новой задачи
       tags:
-        - Tasks
+      - Tasks
   /task/{id}:
     delete:
       consumes:
-        - application/json
-      description:
-        Логическое удаление задачи по ID, включая связанные отчеты (поле
+      - application/json
+      description: Логическое удаление задачи по ID, включая связанные отчеты (поле
         deleted = true)
       parameters:
-        - description: ID задачи
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Задача успешно удалена
           schema:
-            $ref: "#/definitions/response.TaskUniversaResponse"
+            $ref: '#/definitions/response.TaskUniversaResponse'
         "404":
           description: Задача не найдена
           schema:
@@ -2811,24 +2821,24 @@ paths:
             type: object
       summary: Удаление задачи
       tags:
-        - Tasks
+      - Tasks
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные задачи по её уникальному идентификатору
       parameters:
-        - description: ID задачи
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Задача успешно получена
           schema:
-            $ref: "#/definitions/response.GetTaskByIDResponse"
+            $ref: '#/definitions/response.GetTaskByIDResponse'
         "400":
           description: Некорректный идентификатор задачи
           schema:
@@ -2849,30 +2859,30 @@ paths:
             type: object
       summary: Получение задачи по ID
       tags:
-        - Tasks
+      - Tasks
     put:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные задачи по её ID
       parameters:
-        - description: ID задачи
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления задачи
-          in: body
-          name: task
-          required: true
-          schema:
-            $ref: "#/definitions/request.TaskUpdateRequest"
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления задачи
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/request.TaskUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Задача успешно обновлена
           schema:
-            $ref: "#/definitions/response.TaskUniversaResponse"
+            $ref: '#/definitions/response.TaskUniversaResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -2893,30 +2903,30 @@ paths:
             type: object
       summary: Обновление задачи
       tags:
-        - Tasks
+      - Tasks
   /task/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список всех задач с учетом пагинации, исключая удаленные
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список задач успешно получен
           schema:
-            $ref: "#/definitions/response.TaskListResponse"
+            $ref: '#/definitions/response.TaskListResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2931,54 +2941,54 @@ paths:
             type: object
       summary: Получение списка всех задач
       tags:
-        - Tasks
+      - Tasks
   /task/filter:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список задач, соответствующих указанным фильтрам
       parameters:
-        - description: Статус задачи
-          in: query
-          name: status
-          type: string
-        - description: Приоритет задачи
-          in: query
-          name: priority
-          type: integer
-        - description: ID исполнителя
-          in: query
-          name: assignedTo
-          type: string
-        - description: ID создателя
-          in: query
-          name: createdBy
-          type: string
-        - description: Дата начала (YYYY-MM-DD)
-          in: query
-          name: startDate
-          type: string
-        - description: Дедлайн (YYYY-MM-DD)
-          in: query
-          name: deadline
-          type: string
-        - default: 1
-          description: Номер страницы
-          in: query
-          name: page
-          type: integer
-        - default: 10
-          description: Размер страницы
-          in: query
-          name: pageSize
-          type: integer
+      - description: Статус задачи
+        in: query
+        name: status
+        type: string
+      - description: Приоритет задачи
+        in: query
+        name: priority
+        type: integer
+      - description: ID исполнителя
+        in: query
+        name: assignedTo
+        type: string
+      - description: ID создателя
+        in: query
+        name: createdBy
+        type: string
+      - description: Дата начала (YYYY-MM-DD)
+        in: query
+        name: startDate
+        type: string
+      - description: Дедлайн (YYYY-MM-DD)
+        in: query
+        name: deadline
+        type: string
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: Размер страницы
+        in: query
+        name: pageSize
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список задач успешно получен
           schema:
-            $ref: "#/definitions/response.TaskListResponse"
+            $ref: '#/definitions/response.TaskListResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -2993,35 +3003,35 @@ paths:
             type: object
       summary: Получение задач по фильтру
       tags:
-        - Tasks
+      - Tasks
   /task/project/{projectId}/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список задач, связанных с указанным проектом
       parameters:
-        - description: ID проекта
-          in: path
-          name: projectId
-          required: true
-          type: string
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: ID проекта
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список задач успешно получен
           schema:
-            $ref: "#/definitions/response.TaskListResponse"
+            $ref: '#/definitions/response.TaskListResponse'
         "400":
           description: Некорректный идентификатор проекта
           schema:
@@ -3036,26 +3046,26 @@ paths:
             type: object
       summary: Получение задач по ID проекта
       tags:
-        - Tasks
+      - Tasks
   /team:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает новую команду с указанными параметрами
       parameters:
-        - description: Данные для создания команды
-          in: body
-          name: team
-          required: true
-          schema:
-            $ref: "#/definitions/request.TeamCreateRequest"
+      - description: Данные для создания команды
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamCreateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Команда успешно создана
           schema:
-            $ref: "#/definitions/response.TeamUniversalResponse"
+            $ref: '#/definitions/response.TeamUniversalResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -3070,25 +3080,25 @@ paths:
             type: object
       summary: Создание новой команды
       tags:
-        - Teams
+      - Teams
   /team/{id}:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Логическое удаление команды по ID (поле deleted = true)
       parameters:
-        - description: ID команды
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID команды
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Команда успешно удалена
           schema:
-            $ref: "#/definitions/response.TeamUniversalResponse"
+            $ref: '#/definitions/response.TeamUniversalResponse'
         "404":
           description: Команда не найдена
           schema:
@@ -3103,26 +3113,25 @@ paths:
             type: object
       summary: Удаление команды
       tags:
-        - Teams
+      - Teams
     get:
       consumes:
-        - application/json
-      description:
-        Получает данные команды по её уникальному идентификатору, включая
+      - application/json
+      description: Получает данные команды по её уникальному идентификатору, включая
         участников
       parameters:
-        - description: ID команды
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID команды
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Команда успешно получена
           schema:
-            $ref: "#/definitions/response.TeamResponse"
+            $ref: '#/definitions/response.TeamResponse'
         "400":
           description: Некорректный идентификатор команды
           schema:
@@ -3143,30 +3152,30 @@ paths:
             type: object
       summary: Получение команды по ID
       tags:
-        - Teams
+      - Teams
     patch:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные команды по её ID
       parameters:
-        - description: ID команды
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления команды
-          in: body
-          name: team
-          required: true
-          schema:
-            $ref: "#/definitions/request.TeamUpdateRequest"
+      - description: ID команды
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления команды
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamUpdateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Команда успешно обновлена
           schema:
-            $ref: "#/definitions/response.TeamUniversalResponse"
+            $ref: '#/definitions/response.TeamUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -3181,19 +3190,19 @@ paths:
             type: object
       summary: Обновление команды
       tags:
-        - Teams
+      - Teams
   /team/all:
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает список всех команд с их участниками
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список команд успешно получен
           schema:
-            $ref: "#/definitions/response.TeamsListResponse"
+            $ref: '#/definitions/response.TeamsListResponse'
         "500":
           description: Ошибка сервера при получении команд
           schema:
@@ -3202,26 +3211,26 @@ paths:
             type: object
       summary: Получение списка всех команд
       tags:
-        - Teams
+      - Teams
   /team/project:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Логически удаляет привязку проекта к команде (поле deleted = true)
       parameters:
-        - description: Данные для удаления проекта из команды
-          in: body
-          name: deleteProject
-          required: true
-          schema:
-            $ref: "#/definitions/request.TeamDeleteProjectRequest"
+      - description: Данные для удаления проекта из команды
+        in: body
+        name: deleteProject
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamDeleteProjectRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проект успешно отвязан от команды
           schema:
-            $ref: "#/definitions/response.TeamUniversalProjectResponse"
+            $ref: '#/definitions/response.TeamUniversalProjectResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -3242,25 +3251,25 @@ paths:
             type: object
       summary: Удаление проекта из команды
       tags:
-        - Teams
+      - Teams
     post:
       consumes:
-        - application/json
+      - application/json
       description: Привязывает проект к указанной команде
       parameters:
-        - description: Данные для добавления проекта в команду
-          in: body
-          name: addProject
-          required: true
-          schema:
-            $ref: "#/definitions/request.TeamAddProjectRequest"
+      - description: Данные для добавления проекта в команду
+        in: body
+        name: addProject
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamAddProjectRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Проект успешно привязан к команде
           schema:
-            $ref: "#/definitions/response.TeamUniversalProjectResponse"
+            $ref: '#/definitions/response.TeamUniversalProjectResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -3275,26 +3284,26 @@ paths:
             type: object
       summary: Добавление проекта в команду
       tags:
-        - Teams
+      - Teams
   /team/user:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Логически удаляет пользователя из команды (поле deleted = true)
       parameters:
-        - description: Данные для удаления пользователя из команды
-          in: body
-          name: deleteUser
-          required: true
-          schema:
-            $ref: "#/definitions/request.TeamDeleteUserRequest"
+      - description: Данные для удаления пользователя из команды
+        in: body
+        name: deleteUser
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamDeleteUserRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Пользователь успешно удален из команды
           schema:
-            $ref: "#/definitions/response.TeamUniversalUserResponse"
+            $ref: '#/definitions/response.TeamUniversalUserResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -3315,25 +3324,25 @@ paths:
             type: object
       summary: Удаление пользователя из команды
       tags:
-        - Teams
+      - Teams
     post:
       consumes:
-        - application/json
+      - application/json
       description: Добавляет пользователя в указанную команду
       parameters:
-        - description: Данные для добавления пользователя в команду
-          in: body
-          name: addUser
-          required: true
-          schema:
-            $ref: "#/definitions/request.TeamAddUserRequest"
+      - description: Данные для добавления пользователя в команду
+        in: body
+        name: addUser
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamAddUserRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Пользователь успешно добавлен в команду
           schema:
-            $ref: "#/definitions/response.TeamUniversalUserResponse"
+            $ref: '#/definitions/response.TeamUniversalUserResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -3348,26 +3357,26 @@ paths:
             type: object
       summary: Добавление пользователя в команду
       tags:
-        - Teams
+      - Teams
   /user:
     post:
       consumes:
-        - application/json
+      - application/json
       description: Создает нового пользователя с указанными параметрами
       parameters:
-        - description: Данные для создания пользователя
-          in: body
-          name: user
-          required: true
-          schema:
-            $ref: "#/definitions/request.UserCreateRequest"
+      - description: Данные для создания пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.UserCreateRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "201":
           description: Пользователь успешно создан
           schema:
-            $ref: "#/definitions/response.UserUniversalResponse"
+            $ref: '#/definitions/response.UserUniversalResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -3382,27 +3391,26 @@ paths:
             type: object
       summary: Создание нового пользователя
       tags:
-        - Users
+      - Users
   /user/{id}:
     delete:
       consumes:
-        - application/json
-      description:
-        Логическое удаление пользователя по ID, включая связанные данные
+      - application/json
+      description: Логическое удаление пользователя по ID, включая связанные данные
         (поле deleted = true)
       parameters:
-        - description: ID пользователя
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Пользователь успешно удален
           schema:
-            $ref: "#/definitions/response.UserUniversalResponse"
+            $ref: '#/definitions/response.UserUniversalResponse'
         "404":
           description: Пользователь не найден
           schema:
@@ -3417,24 +3425,24 @@ paths:
             type: object
       summary: Удаление пользователя
       tags:
-        - Users
+      - Users
     get:
       consumes:
-        - application/json
+      - application/json
       description: Получает данные пользователя по его уникальному идентификатору
       parameters:
-        - description: ID пользователя
-          in: path
-          name: id
-          required: true
-          type: string
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Пользователь успешно получен
           schema:
-            $ref: "#/definitions/response.GetUserResponse"
+            $ref: '#/definitions/response.GetUserResponse'
         "400":
           description: Некорректный идентификатор пользователя
           schema:
@@ -3455,30 +3463,30 @@ paths:
             type: object
       summary: Получение пользователя по ID
       tags:
-        - Users
+      - Users
     post:
       consumes:
-        - application/json
+      - application/json
       description: Обновляет данные пользователя по его ID
       parameters:
-        - description: ID пользователя
-          in: path
-          name: id
-          required: true
-          type: string
-        - description: Данные для обновления пользователя
-          in: body
-          name: user
-          required: true
-          schema:
-            $ref: "#/definitions/request.UpdateUserRequest"
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateUserRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Пользователь успешно обновлен
           schema:
-            $ref: "#/definitions/response.UserUniversalResponse"
+            $ref: '#/definitions/response.UserUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -3493,32 +3501,31 @@ paths:
             type: object
       summary: Обновление пользователя
       tags:
-        - Users
+      - Users
   /user/all/{page}/{pagesize}:
     get:
       consumes:
-        - application/json
-      description:
-        Получает список всех пользователей с учетом пагинации, исключая
+      - application/json
+      description: Получает список всех пользователей с учетом пагинации, исключая
         удаленных
       parameters:
-        - description: Номер страницы
-          in: path
-          name: page
-          required: true
-          type: integer
-        - description: Размер страницы
-          in: path
-          name: pagesize
-          required: true
-          type: integer
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Список пользователей успешно получен
           schema:
-            $ref: "#/definitions/response.GetAllUsersResponse"
+            $ref: '#/definitions/response.GetAllUsersResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -3533,26 +3540,26 @@ paths:
             type: object
       summary: Получение списка всех пользователей
       tags:
-        - Users
+      - Users
   /user/role:
     delete:
       consumes:
-        - application/json
+      - application/json
       description: Удаляет роль у указанного пользователя
       parameters:
-        - description: Данные для удаления роли у пользователя
-          in: body
-          name: removeRole
-          required: true
-          schema:
-            $ref: "#/definitions/request.RemoveRoleUserRequest"
+      - description: Данные для удаления роли у пользователя
+        in: body
+        name: removeRole
+        required: true
+        schema:
+          $ref: '#/definitions/request.RemoveRoleUserRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Роль успешно удалена
           schema:
-            $ref: "#/definitions/response.RemoveRoleUserResponse"
+            $ref: '#/definitions/response.RemoveRoleUserResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -3573,25 +3580,25 @@ paths:
             type: object
       summary: Удаление роли у пользователя
       tags:
-        - Users
+      - Users
     post:
       consumes:
-        - application/json
+      - application/json
       description: Добавляет роль указанному пользователю
       parameters:
-        - description: Данные для добавления роли пользователю
-          in: body
-          name: addRole
-          required: true
-          schema:
-            $ref: "#/definitions/request.AddRoleUserRequest"
+      - description: Данные для добавления роли пользователю
+        in: body
+        name: addRole
+        required: true
+        schema:
+          $ref: '#/definitions/request.AddRoleUserRequest'
       produces:
-        - application/json
+      - application/json
       responses:
         "200":
           description: Роль успешно добавлена
           schema:
-            $ref: "#/definitions/response.AddRoleUserResponse"
+            $ref: '#/definitions/response.AddRoleUserResponse'
         "400":
           description: Ошибка в запросе или некорректные идентификаторы
           schema:
@@ -3606,7 +3613,7 @@ paths:
             type: object
       summary: Добавление роли пользователю
       tags:
-        - Users
+      - Users
 securityDefinitions:
   BearerAuth:
     in: header

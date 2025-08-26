@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 )
 
 func RegisterWebhookRoutes(e *echo.Echo) {
@@ -155,10 +154,10 @@ func KeycloakEventHandler(c echo.Context) error {
     }
 
     // Сохраняем в БД
-    if err := dbConn.Session(&gorm.Session{}).Create(&authEvent).Error; err != nil {
+    /*if err := dbConn.Session(&gorm.Session{}).Create(&authEvent).Error; err != nil {
         log.Printf("DB error: %v", err)
         return c.JSON(http.StatusInternalServerError, map[string]string{"error": "DB error"})
-    }
+    }*/
 
     log.Printf("Event %s saved: type=%s user=%v", authEvent.ID, eventType, userID)
     return c.JSON(http.StatusOK, map[string]string{"status": "received"})
