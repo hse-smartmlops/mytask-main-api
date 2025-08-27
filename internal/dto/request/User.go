@@ -13,7 +13,6 @@ type UserCreateRequest struct {
 	FirstName      *string    `json:"first_name"`
 	LastName       *string    `json:"last_name"`
 	LastLogin      *time.Time `json:"last_login"`
-	AuthProviderId *string    `json:"auth_provider_id"`
 }
 
 type UpdateUserRequest struct {
@@ -27,7 +26,6 @@ type UpdateUserRequest struct {
 	FirstName      *string    `json:"first_name"`
 	LastName       *string    `json:"last_name"`
 	LastLogin      *time.Time `json:"last_login"`
-	AuthProviderId *string    `json:"auth_provider_id"`
 }
 
 type GetAllUsersRequest struct {
@@ -38,6 +36,7 @@ type GetAllUsersRequest struct {
 type AddRoleUserRequest struct {
 	RoleId string `json:"role_id"`
 	UserId string `json:"user_id"`
+	AssignerId string `json:"assigner_id"`
 }
 
 type RemoveRoleUserRequest struct {

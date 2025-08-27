@@ -201,12 +201,15 @@ func CreateRole(c echo.Context) error {
 		Deleted: &del,
 	}
 
-	result := dbConn.Session(&gorm.Session{}).Create(&role)
-	if result.Error != nil {
-		log.Printf("DB error (create role): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании роли",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&role); res.Error != nil {
+			log.Printf("DB error (create role): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (create role): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании роли"})
 	}
 
 	createResponse := response.RoleUniversalReport{
@@ -261,11 +264,15 @@ func UpdateRole(c echo.Context) error {
 	}
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.Role{}).Where("id = ?", roleId).Updates(updateData).Error; err != nil {
-		log.Printf("DB error (update role): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении роль",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Model(models.Role{}).Where("id = ?", roleId).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (update role): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (update role): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении роль"})
 	}
 
 	updateResponse := response.RoleUniversalReport{
@@ -291,25 +298,28 @@ func DeleteRole(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	result := dbConn.Session(&gorm.Session{}).Model(models.Role{}).Where("id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete role): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении роли",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
-	}
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.Role{}).Where("id = ?", id).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete role): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
 
-	result = dbConn.Session(&gorm.Session{}).Model(&models.UserRole{}).Where("role_id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete user): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении связи пользователь-роль данной роли",
-		})
+		if res = tx.Model(&models.UserRole{}).Where("role_id = ?", id).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete user roles): %v", res.Error)
+			return res.Error
+		}
+
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete role): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении роли"})
 	}
 
 	delResponse := response.ProjectUniversalResponse{ID: id, Message: "Роль с ID " + id + " удалена"}

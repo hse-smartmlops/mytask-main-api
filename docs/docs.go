@@ -67,58 +67,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login-test": {
-            "post": {
-                "description": "Аутентифицирует пользователя по email и паролю через Keycloak",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Аутентификация пользователя",
-                "parameters": [
-                    {
-                        "description": "Данные для входа",
-                        "name": "login",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Успешная аутентификация",
-                        "schema": {
-                            "$ref": "#/definitions/response.AuthResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Неверные учетные данные",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/auth/logout": {
             "post": {
                 "description": "Выполняет выход пользователя из системы, завершая сессию в Keycloak",
@@ -462,44 +410,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/validate-test": {
-            "get": {
-                "description": "Проверяет валидность токена через Keycloak",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Проверка access_token",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Токен валиден",
-                        "schema": {
-                            "$ref": "#/definitions/response.TokenValidationResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Невалидный или отсутствующий токен",
-                        "schema": {
-                            "$ref": "#/definitions/response.TokenValidationResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/boards": {
             "post": {
                 "description": "Создает новую доску с указанными параметрами",
@@ -542,63 +452,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при создании доски",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/boards/all/{page}/{pagesize}": {
-            "get": {
-                "description": "Получает список всех досок с учетом пагинации, исключая удаленные.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "boards"
-                ],
-                "summary": "Получение списка всех досок",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Размер страницы",
-                        "name": "pagesize",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список досок успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.BoardListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении досок",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -941,7 +794,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/forum-messages/problem/{id}/{page}/{pagesize}": {
+        "/forum-messages/problem/{id}": {
             "get": {
                 "description": "Получает список сообщений форума, связанных с указанной проблемой, с учетом пагинации",
                 "consumes": [
@@ -964,17 +817,17 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
-                        "in": "path",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 10,
                         "description": "Размер страницы",
-                        "name": "pagesize",
-                        "in": "path",
-                        "required": true
+                        "name": "pageSize",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1400,7 +1253,55 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "delete": {
+                "description": "Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Удаление проблемы",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID проблемы",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Проблема успешно удалена",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProblemUniversalResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Проблема не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении проблемы",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
                 "description": "Обновляет данные проблемы по её ID",
                 "consumes": [
                     "application/json"
@@ -1448,54 +1349,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении проблемы",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Problems"
-                ],
-                "summary": "Удаление проблемы",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID проблемы",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Проблема успешно удалена",
-                        "schema": {
-                            "$ref": "#/definitions/response.ProblemUniversalResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Проблема не найдена",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при удалении проблемы",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2250,7 +2103,55 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "delete": {
+                "description": "Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Удаление отчета",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID отчета",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Отчет успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/response.ReportUniversalResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Отчет не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении отчета",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
                 "description": "Обновляет данные отчета по его ID",
                 "consumes": [
                     "application/json"
@@ -2298,54 +2199,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении отчета",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Reports"
-                ],
-                "summary": "Удаление отчета",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID отчета",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Отчет успешно удален",
-                        "schema": {
-                            "$ref": "#/definitions/response.ReportUniversalResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Отчет не найден",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при удалении отчета",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2840,7 +2693,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/task/project/{projectId}/{page}/{pagesize}": {
+        "/task/project/{projectId}": {
             "get": {
                 "description": "Получает список задач, связанных с указанным проектом",
                 "consumes": [
@@ -2858,20 +2711,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "ID проекта",
                         "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Размер страницы",
-                        "name": "pagesize",
                         "in": "path",
                         "required": true
                     }
@@ -2962,7 +2801,55 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "delete": {
+                "description": "Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Удаление задачи",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID задачи",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Задача успешно удалена",
+                        "schema": {
+                            "$ref": "#/definitions/response.TaskUniversaResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Задача не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении задачи",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
                 "description": "Обновляет данные задачи по её ID",
                 "consumes": [
                     "application/json"
@@ -3019,54 +2906,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении задачи",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tasks"
-                ],
-                "summary": "Удаление задачи",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID задачи",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Задача успешно удалена",
-                        "schema": {
-                            "$ref": "#/definitions/response.TaskUniversaResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Задача не найдена",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при удалении задачи",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3936,6 +3775,9 @@ const docTemplate = `{
         "request.AddRoleUserRequest": {
             "type": "object",
             "properties": {
+                "assigner_id": {
+                    "type": "string"
+                },
                 "role_id": {
                     "type": "string"
                 },
@@ -4087,6 +3929,32 @@ const docTemplate = `{
                 }
             }
         },
+        "request.Problem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "creator_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "request.ProblemCreateRequest": {
             "type": "object",
             "properties": {
@@ -4189,10 +4057,10 @@ const docTemplate = `{
                         "$ref": "#/definitions/request.ProjectReport"
                     }
                 },
-                "problemsIds": {
+                "problems": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/request.Problem"
                     }
                 },
                 "report_date": {
@@ -4213,9 +4081,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "report_date": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 },
                 "user_id": {
@@ -4478,9 +4343,6 @@ const docTemplate = `{
         "request.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "auth_provider_id": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4516,9 +4378,6 @@ const docTemplate = `{
         "request.UserCreateRequest": {
             "type": "object",
             "properties": {
-                "auth_provider_id": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4865,9 +4724,6 @@ const docTemplate = `{
         "response.GetUserResponse": {
             "type": "object",
             "properties": {
-                "auth_provider_id": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },

@@ -2,6 +2,8 @@ basePath: /
 definitions:
   request.AddRoleUserRequest:
     properties:
+      assigner_id:
+        type: string
       role_id:
         type: string
       user_id:
@@ -103,6 +105,23 @@ definitions:
       redirect_uri:
         type: string
     type: object
+  request.Problem:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
   request.ProblemCreateRequest:
     properties:
       creator_id:
@@ -170,9 +189,9 @@ definitions:
         items:
           $ref: '#/definitions/request.ProjectReport'
         type: array
-      problemsIds:
+      problems:
         items:
-          type: string
+          $ref: '#/definitions/request.Problem'
         type: array
       report_date:
         type: string
@@ -186,8 +205,6 @@ definitions:
   request.ReportUpdateRequest:
     properties:
       report_date:
-        type: string
-      status:
         type: string
       user_id:
         type: string
@@ -364,8 +381,6 @@ definitions:
     type: object
   request.UpdateUserRequest:
     properties:
-      auth_provider_id:
-        type: string
       created_at:
         type: string
       email:
@@ -389,8 +404,6 @@ definitions:
     type: object
   request.UserCreateRequest:
     properties:
-      auth_provider_id:
-        type: string
       created_at:
         type: string
       email:
@@ -616,8 +629,6 @@ definitions:
     type: object
   response.GetUserResponse:
     properties:
-      auth_provider_id:
-        type: string
       created_at:
         type: string
       email:
@@ -1038,40 +1049,6 @@ paths:
       summary: Аутентификация пользователя
       tags:
       - Auth
-  /auth/login-test:
-    post:
-      consumes:
-      - application/json
-      description: Аутентифицирует пользователя по email и паролю через Keycloak
-      parameters:
-      - description: Данные для входа
-        in: body
-        name: login
-        required: true
-        schema:
-          $ref: '#/definitions/request.LoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Успешная аутентификация
-          schema:
-            $ref: '#/definitions/response.AuthResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Неверные учетные данные
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация пользователя
-      tags:
-      - Auth
   /auth/logout:
     post:
       consumes:
@@ -1299,31 +1276,6 @@ paths:
       summary: Проверка access_token
       tags:
       - Auth
-  /auth/validate-test:
-    get:
-      consumes:
-      - application/json
-      description: Проверяет валидность токена через Keycloak
-      parameters:
-      - description: 'Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
-        in: header
-        name: Authorization
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Токен валиден
-          schema:
-            $ref: '#/definitions/response.TokenValidationResponse'
-        "401":
-          description: Невалидный или отсутствующий токен
-          schema:
-            $ref: '#/definitions/response.TokenValidationResponse'
-      summary: Проверка access_token
-      tags:
-      - Auth
   /boards:
     post:
       consumes:
@@ -1465,44 +1417,6 @@ paths:
               type: string
             type: object
       summary: Обновление доски
-      tags:
-      - boards
-  /boards/all/{page}/{pagesize}:
-    get:
-      consumes:
-      - application/json
-      description: Получает список всех досок с учетом пагинации, исключая удаленные.
-      parameters:
-      - description: Номер страницы
-        in: path
-        name: page
-        required: true
-        type: integer
-      - description: Размер страницы
-        in: path
-        name: pagesize
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список досок успешно получен
-          schema:
-            $ref: '#/definitions/response.BoardListResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении досок
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение списка всех досок
       tags:
       - boards
   /boards/project/{projectId}:
@@ -1726,7 +1640,7 @@ paths:
       summary: Получение списка всех сообщений форума
       tags:
       - ForumMessages
-  /forum-messages/problem/{id}/{page}/{pagesize}:
+  /forum-messages/problem/{id}:
     get:
       consumes:
       - application/json
@@ -1738,15 +1652,15 @@ paths:
         name: id
         required: true
         type: string
-      - description: Номер страницы
-        in: path
+      - default: 1
+        description: Номер страницы
+        in: query
         name: page
-        required: true
         type: integer
-      - description: Размер страницы
-        in: path
-        name: pagesize
-        required: true
+      - default: 10
+        description: Размер страницы
+        in: query
+        name: pageSize
         type: integer
       produces:
       - application/json
@@ -1876,7 +1790,7 @@ paths:
       summary: Получение проблемы по ID
       tags:
       - Problems
-    put:
+    patch:
       consumes:
       - application/json
       description: Обновляет данные проблемы по её ID
@@ -2286,7 +2200,7 @@ paths:
       summary: Получение отчета по ID
       tags:
       - Reports
-    put:
+    patch:
       consumes:
       - application/json
       description: Обновляет данные отчета по его ID
@@ -2860,7 +2774,7 @@ paths:
       summary: Получение задачи по ID
       tags:
       - Tasks
-    put:
+    patch:
       consumes:
       - application/json
       description: Обновляет данные задачи по её ID
@@ -3004,7 +2918,7 @@ paths:
       summary: Получение задач по фильтру
       tags:
       - Tasks
-  /task/project/{projectId}/{page}/{pagesize}:
+  /task/project/{projectId}:
     get:
       consumes:
       - application/json
@@ -3015,16 +2929,6 @@ paths:
         name: projectId
         required: true
         type: string
-      - description: Номер страницы
-        in: path
-        name: page
-        required: true
-        type: integer
-      - description: Размер страницы
-        in: path
-        name: pagesize
-        required: true
-        type: integer
       produces:
       - application/json
       responses:

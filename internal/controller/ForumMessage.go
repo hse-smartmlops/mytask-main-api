@@ -20,7 +20,7 @@ func RegisterForumMessagesRoutes(e *echo.Echo){
 	forumMessageGroup := e.Group("/forum-messages")
 	{
 		forumMessageGroup.GET("/all/:page/:pagesize", GetAllForumMessages)
-		forumMessageGroup.GET("/problem/:id/:page/:pagesize", GetForumMessagesByProblemId)
+		forumMessageGroup.GET("/problem/:id", GetForumMessagesByProblemId)
 		forumMessageGroup.GET("/:id", GetForumMessageById)
 		forumMessageGroup.POST("", CreateForumMessage)
 		forumMessageGroup.PATCH("/:id", UpdateForumMessage)
@@ -129,12 +129,12 @@ func GetAllForumMessages(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проблемы"
-// @Param page path int true "Номер страницы"
-// @Param pagesize path int true "Размер страницы"
+// @Param page query int false "Номер страницы" default(1)
+// @Param pageSize query int false "Размер страницы" default(10)
 // @Success 200 {object} response.ForumMessageListByProblemIdResponse "Список сообщений форума успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
-// @Router /forum-messages/problem/{id}/{page}/{pagesize} [get]
+// @Router /forum-messages/problem/{id} [get]
 func GetForumMessagesByProblemId(c echo.Context) error{
 	id := c.Param("id")
 	problemID, err := uuid.Parse(id)
@@ -145,27 +145,20 @@ func GetForumMessagesByProblemId(c echo.Context) error{
 		})
 	}
 
-	pageReq := c.Param("page")
-	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
-	page, err := strconv.Atoi(pageReq)
-	if err != nil{
-		log.Printf("failed to parse page: %v", err)
+	var req request.ForumMessageListByProblemIdRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге страницы",
+			"error": "Не удалось получить данные из запроса",
 		})
 	}
+
+	// Значения по умолчанию
+	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-
-	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
-		log.Printf("failed to parse pagesize: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге номера страницы",
-		})
-	}
+	pageSize := req.PageSize
 	if pageSize <= 0 {
 		pageSize = 10
 	}
@@ -182,7 +175,7 @@ func GetForumMessagesByProblemId(c echo.Context) error{
 
 	// Получаем список проектов с пагинацией
 	var forumMessages []models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and problem_id = ?", false, problemID).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&forumMessages).Error; err != nil {
@@ -348,12 +341,15 @@ func CreateForumMessage(c echo.Context) error{
 		Deleted: &del,
 	}
 
-	result := dbConn.Session(&gorm.Session{}).Create(&forumMessage)
-	if result.Error != nil{
-		log.Printf("DB error (create forum message): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании сообщения форума",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&forumMessage); res.Error != nil {
+			log.Printf("DB error (create forum message): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (create forum message): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании сообщения форума"})
 	}
 
 	createResponse := response.ForumMessageUniversalResponse{
@@ -429,11 +425,15 @@ func UpdateForumMessage(c echo.Context) error{
 
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData).Error; err != nil{
-		log.Printf("DB error (update forum message): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении сообщения форума",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (update forum message): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (update forum message): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении сообщения форума"})
 	}
 
 	updateResponse := response.ForumMessageUniversalResponse{
@@ -460,17 +460,22 @@ func DeleteForumMessage(c echo.Context) error{
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 
-	result := dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete forum message): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении сообщения форума",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.ForumMessage{}).Where("id = ?", id).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete forum message): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete forum message): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении сообщения форума"})
 	}
 
 	delResponse := response.ForumMessageUniversalResponse{

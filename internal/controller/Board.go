@@ -38,7 +38,7 @@ func RegisterBoardRoutes(e *echo.Echo) {
 // @Success 200 {object} response.BoardListResponse "Список досок успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
-// @Router /boards/all/{page}/{pagesize} [get]
+// @Router /project/all/{page}/{pagesize} [get]
 func GetAllBoards(c echo.Context) error {
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
@@ -330,12 +330,17 @@ func CreateBoard(c echo.Context) error {
 		Deleted: 		&del,
 	}
 
-	result := dbConn.Session(&gorm.Session{}).Create(&board)
-	if result.Error != nil {
-		log.Printf("DB error (create board): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании доски",
-		})
+	// create inside a transaction
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Create(&board)
+		if res.Error != nil {
+			log.Printf("DB error (create board): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (create board): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании доски"})
 	}
 
 	createResponse := response.BoardUniversalResponse{
@@ -380,11 +385,17 @@ func UpdateBoard(c echo.Context) error {
 
 	updateData["updated_at"] = time.Now()
 
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Board{}).Where("id = ?", id).Updates(updateData).Error; err != nil {
-		log.Printf("DB error (update board): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении доски",
-		})
+	// update inside a transaction
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.Board{}).Where("id = ?", id).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (update board): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (update board): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении доски"})
 	}
 
 	updateReponse := response.BoardUniversalResponse{
@@ -410,17 +421,23 @@ func DeleteBoard(c echo.Context) error {
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	updateData["updated_at"] = time.Now()
-	result := dbConn.Session(&gorm.Session{}).Model(models.Board{}).Where("id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete board): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении доски",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
+	// logical delete inside a transaction
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.Board{}).Where("id = ?", id).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete board): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete board): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении доски"})
 	}
 
 	deleteResponse := response.BoardUniversalResponse{
