@@ -23,7 +23,7 @@ func RegisterReportRoutes(e *echo.Echo) {
 		reportGroup.GET("/task/:id", GetReportsByTaskId)
 		reportGroup.GET("/project/:id", GetReportsByProjectId)
 		reportGroup.POST("", CreateReport)
-		reportGroup.PUT("/:id", UpdateReport)
+		reportGroup.PATCH("/:id", UpdateReport)
 		reportGroup.DELETE("/:id", DeleteReport)
 		reportGroup.PATCH("/help-request/:id", UpdateHelpRequest)
 		reportGroup.PATCH("/completed-work/:id", UpdateCompletedWork)
@@ -1243,7 +1243,7 @@ func CreateReport(c echo.Context) error {
 // @Success 200 {object} response.ReportUniversalResponse "Отчет успешно обновлен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор отчета или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении отчета"
-// @Router /report/{id} [put]
+// @Router /report/{id} [patch]
 func UpdateReport(c echo.Context) error {
 	id := c.Param("id")
 	reportId, err := uuid.Parse(id)

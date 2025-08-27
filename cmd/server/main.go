@@ -52,7 +52,6 @@ func main() {
 	controller.RegisterForumMessagesRoutes(e)
 	controller.RegisterProblemRoutes(e)
 	controller.RegisterRoleRoutes(e)
-	controller.RegisterWebhookRoutes(e)
 
 	// Swagger UI
 	// Редиректим с /swagger на /swagger/index.html, чтобы работало без явного указания файла

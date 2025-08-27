@@ -2,9 +2,11 @@ package controller
 
 import (
 	"context"
+	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,6 +14,9 @@ import (
 	"net/url"
 	"os"
 	"time"
+
+	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"strings"
 
@@ -29,8 +34,6 @@ func RegisterAuthRoutes(e *echo.Echo) {
 	authGroup.POST("/totp", TOTP)
 	authGroup.GET("/validate", ValidateToken)
 	authGroup.POST("/refresh", RefreshToken)
-	authGroup.GET("/validate-test", ValidateTokenSecond)
-	authGroup.POST("/login-test", LoginTest)
 }
 
 var (
@@ -38,8 +41,6 @@ var (
 	realm          = os.Getenv("KEYCLOAK_REALM")
 	clientID       = os.Getenv("KEYCLOAK_CLIENT_ID")
 	clientSecret   = os.Getenv("KEYCLOAK_CLIENT_SECRET")
-	secondClientId = os.Getenv("KEYCLOAK_SECOND_CLIENT_ID")
-	secontClientSecret = os.Getenv("KEYCLOAK_SECOND_CLIENT_SECRET")
 )
 
 type TokenResponse struct {
@@ -106,53 +107,6 @@ func Login(c echo.Context) error {
 
 	ctx := context.Background()
 	token, err := keycloakClient.Login(ctx, clientID, clientSecret, realm, req.Email, req.Password)
-	if err != nil {
-		log.Printf("Authorization error: %v", err)
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
-	}
-
-	// получаем userInfo
-	userInfo, err := keycloakClient.GetUserInfo(ctx, token.AccessToken, realm)
-	if err != nil {
-		log.Printf("Authorization error: %v", err)
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "cannot fetch userinfo"})
-	}
-
-	expiresAt := time.Now().Add(time.Duration(token.ExpiresIn) * time.Second).Format(time.RFC3339)
-
-	resp := response.AuthResponse{
-		UserID:       strPtrToVal(userInfo.Sub),
-		Email:        strPtrToVal(userInfo.Email),
-		AccessToken:  token.AccessToken,
-		RefreshToken: token.RefreshToken,
-		ExpiresIn:    token.ExpiresIn,
-		RefreshExp:   token.RefreshExpiresIn,
-		TokenType:    token.TokenType,
-		ExpiresAt:    expiresAt,
-	}
-
-	return c.JSON(http.StatusOK, resp)
-}
-
-// LoginTest godoc
-// @Summary Аутентификация пользователя
-// @Description Аутентифицирует пользователя по email и паролю через Keycloak
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param login body request.LoginRequest true "Данные для входа"
-// @Success 200 {object} response.AuthResponse "Успешная аутентификация"
-// @Failure 400 {object} map[string]string "Ошибка в запросе"
-// @Failure 401 {object} map[string]string "Неверные учетные данные"
-// @Router /auth/login-test [post]
-func LoginTest(c echo.Context) error {
-	var req request.LoginRequest
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
-	}
-
-	ctx := context.Background()
-	token, err := keycloakClient.Login(ctx, secondClientId, secontClientSecret, realm, req.Email, req.Password)
 	if err != nil {
 		log.Printf("Authorization error: %v", err)
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid credentials"})
@@ -494,42 +448,63 @@ func ValidateToken(c echo.Context) error {
 		}
 	}
 
+	var userInfo *gocloak.UserInfo
+
+	// Try to fetch user info directly
+	userInfo, err = keycloakClient.GetUserInfo(ctx, token, realm)
+	if err != nil {
+		// Attempt token exchange for Flutter token
+		exchanged, exErr := ExchangeToken(ctx, token)
+		if exErr != nil {
+			log.Printf("Me token exchange failed: %v / original err: %v", exErr, err)
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token"})
+		}
+		token = exchanged.AccessToken
+		userInfo, err = keycloakClient.GetUserInfo(ctx, token, realm)
+		if err != nil {
+			log.Printf("Me failed after exchange: %v", err)
+			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token"})
+		}
+	}
+
+	userId, err := uuid.Parse(strPtrToVal(userInfo.Sub))
+	if err != nil{
+		log.Printf("Failed to parse uuid: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "invalid user_id"})
+	}
+
+	var user models.User
+
+	dbResult := dbConn.Session(&gorm.Session{}).First(&user, "email = ?", strPtrToVal(userInfo.PreferredUsername))
+	if dbResult.Error != nil {
+		if errors.Is(dbResult.Error, gorm.ErrRecordNotFound) {
+			temp := true
+			now := time.Now()
+			userCreateReq := request.UserCreateRequest{
+				Email: userInfo.Email,
+				FirstName: userInfo.GivenName,
+				LastName: userInfo.FamilyName,
+				IsActive: &temp,
+				LastLogin: &now,
+				CreatedAt: &now,
+			}
+			err = CreateUserWithIdFunc(userCreateReq, c, userId)
+			if err != nil{
+				log.Printf("Failed to create user in database: %v", err)
+				return c.JSON(http.StatusInternalServerError, map[string]string{
+					"error": "failed to create user",
+				})
+			}
+		}else{
+			log.Printf("DB error (find user by email): %v", dbResult.Error)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении пользователя из базы данных",
+			})
+		}
+	}
+
 	return c.JSON(http.StatusOK, map[string]string{"message": "Token is valid"})
-}
-
-// ValidateTokenSecond godoc
-// @Summary Проверка access_token
-// @Description Проверяет валидность токена через Keycloak
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param Authorization header string true "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-// @Success 200 {object} response.TokenValidationResponse "Токен валиден"
-// @Failure 401 {object} response.TokenValidationResponse "Невалидный или отсутствующий токен"
-// @Router /auth/validate-test [get]
-func ValidateTokenSecond(c echo.Context) error {
-    authHeader := c.Request().Header.Get("Authorization")
-    if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-        return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Invalid Authorization header format"})
-    }
-
-    token := strings.TrimPrefix(authHeader, "Bearer ")
- // URL вашего Keycloak
-    ctx := context.Background()
-
-    result, err := keycloakClient.RetrospectToken(ctx, token, secondClientId, secontClientSecret, realm)
-    if err != nil {
-		log.Printf("Validate error: %v", err)
-        return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Token is invalid"})
-    }
-
-    if !*result.Active {
-		log.Printf("Validate error: %v", err)
-        return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Token is inactive"})
-    }
-
-    return c.JSON(http.StatusOK, map[string]string{"message": "Token is valid"})
-}
+}	
 
 func getAdminToken() string {
 	ctx := context.Background()

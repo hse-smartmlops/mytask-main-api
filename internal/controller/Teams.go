@@ -303,12 +303,15 @@ func CreateTeam(c echo.Context) error {
 	del := false
 
 	team := models.Team{ID: newUUID, Name: name, Description: description, Deleted: &del}
-	result := dbConn.Session(&gorm.Session{}).Create(&team)
-	if result.Error != nil {
-		log.Printf("DB error (create team): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании команды",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&team); res.Error != nil {
+			log.Printf("DB error (create team): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (create team): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании команды"})
 	}
 
 	createRespose := response.TeamUniversalResponse{
@@ -371,11 +374,15 @@ func UpdateTeam(c echo.Context) error {
 	}
 
 	// Выполняем обновление только указанных полей
-	if err := dbConn.Session(&gorm.Session{}).Model(&models.Team{}).Where("id = ?", teamIDParam).Updates(updateData).Error; err != nil {
-		log.Printf("DB error (update team): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении команды",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Model(&models.Team{}).Where("id = ?", teamIDParam).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (update team): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (update team): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении команды"})
 	}
 
 	// Формируем ответ
@@ -402,33 +409,32 @@ func DeleteTeam(c echo.Context) error {
 	teamIDParam := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	result := dbConn.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete team): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении команды",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
-	}
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete team): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.TeamMember{}).Where("team_id = ?", teamIDParam).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete team_member connections): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении связей пользователь-команда",
-		})
-	}
+		if res = tx.Model(models.TeamMember{}).Where("team_id = ?", teamIDParam).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete team_member connections): %v", res.Error)
+			return res.Error
+		}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Where("team_id = ?", teamIDParam).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete project_team connections): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении связей проект-команда",
-		})
+		if res = tx.Model(models.ProjectTeam{}).Where("team_id = ?", teamIDParam).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete project_team connections): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete team): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении команды"})
 	}
 
 	deleteResponce := response.TeamUniversalResponse{
@@ -483,11 +489,15 @@ func AddUserToTeam(c echo.Context) error {
 		Specialization: user.Profession,
 		Deleted: &del,
 	}
-	if err := dbConn.Session(&gorm.Session{}).Create(&teamMember).Error; err != nil {
-		log.Printf("DB error (create team member): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Не удалось добавить пользователя в команду",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&teamMember); res.Error != nil {
+			log.Printf("DB error (create team member): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (add user to team): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Не удалось добавить пользователя в команду"})
 	}
 
 	addResponce := response.TeamUniversalUserResponse{
@@ -537,17 +547,22 @@ func DeleteUserFromTeam(c echo.Context) error {
 
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	result := dbConn.Session(&gorm.Session{}).Model(models.TeamMember{}).Where("user_id = ? AND team_id = ?", user.ID, team.ID).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete team member): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении пользователя из команды",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.TeamMember{}).Where("user_id = ? AND team_id = ?", user.ID, team.ID).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete team member): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete team member): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении пользователя из команды"})
 	}
 
 	deleteResponse := response.TeamUniversalUserResponse{
@@ -603,11 +618,15 @@ func AddProjectToTeam(c echo.Context) error {
 		Deleted: &del,
 	}
 
-	if err := dbConn.Session(&gorm.Session{}).Create(&projectTeam).Error; err != nil {
-		log.Printf("DB error (add project to team): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при привязке проекта к команде",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&projectTeam); res.Error != nil {
+			log.Printf("DB error (add project to team): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (add project to team): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при привязке проекта к команде"})
 	}
 
 	addResponce := response.TeamUniversalProjectResponse{
@@ -659,17 +678,22 @@ func DeleteProjectFromTeam(c echo.Context) error {
 	updateData["deleted"] = true
 	updateData["updated_at"] = time.Now()
 
-	result := dbConn.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Where("team_id = ? AND project_id = ?", teamID, projectID).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete project from team): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении проекта из команды",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.ProjectTeam{}).Where("team_id = ? AND project_id = ?", teamID, projectID).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete project from team): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete project from team): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проекта из команды"})
 	}
 
 	deleteResponce := response.TeamUniversalProjectResponse{

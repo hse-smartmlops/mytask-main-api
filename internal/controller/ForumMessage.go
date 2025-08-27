@@ -175,7 +175,7 @@ func GetForumMessagesByProblemId(c echo.Context) error{
 
 	// Получаем список проектов с пагинацией
 	var forumMessages []models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and problem_id = ?", false, problemID).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&forumMessages).Error; err != nil {
@@ -341,12 +341,15 @@ func CreateForumMessage(c echo.Context) error{
 		Deleted: &del,
 	}
 
-	result := dbConn.Session(&gorm.Session{}).Create(&forumMessage)
-	if result.Error != nil{
-		log.Printf("DB error (create forum message): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании сообщения форума",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&forumMessage); res.Error != nil {
+			log.Printf("DB error (create forum message): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (create forum message): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании сообщения форума"})
 	}
 
 	createResponse := response.ForumMessageUniversalResponse{
@@ -422,11 +425,15 @@ func UpdateForumMessage(c echo.Context) error{
 
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData).Error; err != nil{
-		log.Printf("DB error (update forum message): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении сообщения форума",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (update forum message): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (update forum message): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении сообщения форума"})
 	}
 
 	updateResponse := response.ForumMessageUniversalResponse{
@@ -453,17 +460,22 @@ func DeleteForumMessage(c echo.Context) error{
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 
-	result := dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete forum message): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении сообщения форума",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.ForumMessage{}).Where("id = ?", id).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete forum message): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete forum message): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении сообщения форума"})
 	}
 
 	delResponse := response.ForumMessageUniversalResponse{

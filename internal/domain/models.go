@@ -7,72 +7,6 @@ import (
 	"github.com/lib/pq"
 )
 
-// ===== Auth =====
-
-type AuthProvider struct {
-	ID            uuid.UUID   `gorm:"type:uuid;primaryKey"`
-	ClientID      *string     `gorm:"size:100;uniqueIndex"`
-	ClientSecret  *string     `gorm:"size:100"`
-	WellKnownURL  *string     `gorm:"size:255"`
-	Scopes        *string     `gorm:"type:text"`
-	PostLogoutURI *string     `gorm:"size:255"`
-	Deleted       *bool       `gorm:"type:boolean"`
-	CreatedAt     *time.Time
-	UpdatedAt     *time.Time
-
-	Events []AuthEvent `gorm:"foreignKey:ProviderID"`
-}
-
-type AuthEvent struct {
-	ID           uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	EventID      uuid.UUID  `gorm:"type:uuid;not null"`
-	EventType    *string    `gorm:"size:50;not null"`
-	UserID       *uuid.UUID `gorm:"type:uuid"`
-	ProviderID   *uuid.UUID `gorm:"type:uuid"`
-	ClientID     *string    `gorm:"size:100"`
-	RealmID      *uuid.UUID `gorm:"type:uuid"`
-	IPAddress    *string    `gorm:"size:45"`
-	ResourcePath *string    `gorm:"type:text"`
-	OccurredAt   *time.Time
-	Error        *string    `gorm:"type:text"`
-	Deleted      *bool      `gorm:"type:boolean"`
-	CreatedAt    *time.Time
-	UpdatedAt    *time.Time
-
-	Provider       *AuthProvider               `gorm:"foreignKey:ProviderID"`
-	Details        []AuthEventDetail           `gorm:"foreignKey:EventID"`
-	Representation []AuthEventUserRepresentation `gorm:"foreignKey:EventID"`
-}
-
-type AuthEventDetail struct {
-	ID                  uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	EventID             uuid.UUID  `gorm:"type:uuid;not null"`
-	AuthMethod          *string    `gorm:"size:50"`
-	ClientAuthMethod    *string    `gorm:"size:50"`
-	GrantType           *string    `gorm:"size:50"`
-	SignatureRequired   *bool
-	Username            *string    `gorm:"size:255"`
-	Scope               *string    `gorm:"type:text"`
-	TokenID             *uuid.UUID `gorm:"type:uuid"`
-	RefreshTokenID      *uuid.UUID `gorm:"type:uuid"`
-	RefreshTokenType    *string    `gorm:"size:50"`
-	UpdatedRefreshTokenID *uuid.UUID `gorm:"type:uuid"`
-
-	Event *AuthEvent `gorm:"foreignKey:EventID"`
-}
-
-type AuthEventUserRepresentation struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	EventID   uuid.UUID  `gorm:"type:uuid;not null"`
-	Username  *string    `gorm:"size:255"`
-	FirstName *string    `gorm:"size:100"`
-	LastName  *string    `gorm:"size:100"`
-	Email     *string    `gorm:"size:255"`
-	Enabled   *bool
-
-	Event *AuthEvent `gorm:"foreignKey:EventID"`
-}
-
 // ===== Users & Roles =====
 
 type User struct {
@@ -87,8 +21,6 @@ type User struct {
 	FirstName      *string    `gorm:"size:50"`
 	LastName       *string    `gorm:"size:50"`
 	LastLogin      *time.Time
-	AuthProviderID *uuid.UUID `gorm:"type:uuid"`
-	AuthProvider   *AuthProvider `gorm:"foreignKey:AuthProviderID;constraint:OnDelete:SET NULL;"`
 	Roles          []Role        `gorm:"many2many:user_role;joinForeignKey:UserID;JoinReferences:RoleID"`
 	Deleted        *bool         `gorm:"type:boolean"`
 	UpdatedAt      *time.Time
@@ -110,20 +42,6 @@ type UserRole struct {
 	AssignedBy *uuid.UUID `gorm:"type:uuid"`
 	Deleted    *bool      `gorm:"type:boolean"`
 	UpdatedAt  *time.Time
-}
-
-// ===== Session =====
-
-type Session struct {
-	ID           uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	UserID       uuid.UUID  `gorm:"type:uuid;index"`
-	User         *User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
-	IDToken      *string    `gorm:"type:text"`
-	SessionState *string    `gorm:"size:50"`
-	ExpiresAt    *time.Time
-	CreatedAt    *time.Time
-	UpdatedAt    *time.Time
-	Deleted      *bool `gorm:"type:boolean"`
 }
 
 // ===== Project / Board / Task =====

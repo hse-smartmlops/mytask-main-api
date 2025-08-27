@@ -24,7 +24,7 @@ func RegisterTaskRoutes(e *echo.Echo) {
 		taskGroup.GET("/project/:projectId", GetTasksByProjectID)
 		taskGroup.GET("/filter", GetTasksByFilter)
 		taskGroup.POST("", CreateTask)
-		taskGroup.PUT("/:id", UpdateTask)
+		taskGroup.PATCH("/:id", UpdateTask)
 		taskGroup.DELETE("/:id", DeleteTask)
 	}
 }
@@ -577,10 +577,15 @@ func CreateTask(c echo.Context) error {
 		Deleted: &del,
 	}
 
-	result = dbConn.Session(&gorm.Session{}).Create(&task)
-	if result.Error != nil {
-		log.Printf("DB error (create task): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&task); res.Error != nil {
+			log.Printf("DB error (create task): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (create task): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании задачи"})
 	}
 
 	createResp := response.TaskUniversaResponse{
@@ -603,7 +608,7 @@ func CreateTask(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении задачи"
-// @Router /task/{id} [put]
+// @Router /task/{id} [patch]
 func UpdateTask(c echo.Context) error {
 	id := c.Param("id")
 	taskID, err := uuid.Parse(id)
@@ -661,13 +666,22 @@ func UpdateTask(c echo.Context) error {
 
 	updates["updated_at"] = time.Now()
 
-	result := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).Where("id = ?", taskID).Updates(updates)
-	if result.Error != nil {
-		log.Printf("DB error (update task): %v", result.Error)
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&models.Task{}).Where("id = ?", taskID).Updates(updates)
+		if res.Error != nil {
+			log.Printf("DB error (update task): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (update task): %v", txErr)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении задачи"})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
 	}
 
 	return c.JSON(http.StatusOK, response.TaskUniversaResponse{
@@ -691,17 +705,22 @@ func DeleteTask(c echo.Context) error {
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	result := dbConn.Session(&gorm.Session{}).Model(models.Task{}).Where("id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete task): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении задачи",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.Task{}).Where("id = ?", id).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete task): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete task): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении задачи"})
 	}
 
 	return c.JSON(http.StatusOK, response.TaskUniversaResponse{

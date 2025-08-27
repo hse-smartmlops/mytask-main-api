@@ -23,7 +23,7 @@ func RegisterProblemRoutes(e *echo.Echo){
 		problemGroup.GET("/:id", GetProblemByID)
 		problemGroup.GET("/user/:id/:page/:pagesize", GetProblemsByUserId)
 		problemGroup.POST("", CreateProblem)
-		problemGroup.PUT("/:id", UpdateProblem)
+		problemGroup.PATCH("/:id", UpdateProblem)
 		problemGroup.DELETE("/:id", DeleteProblem)
 	}
 }
@@ -344,12 +344,15 @@ func CreateProblem(c echo.Context) error{
 		Deleted: &del,
 	}
 
-	result := dbConn.Session(&gorm.Session{}).Create(&problem)
-	if result.Error != nil{
-		log.Printf("DB error (create problem): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании проблемы",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Create(&problem); res.Error != nil {
+			log.Printf("DB error (create problem): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (create problem): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании проблемы"})
 	}
 
 	createResponse := response.ProblemUniversalResponse{
@@ -371,7 +374,7 @@ func CreateProblem(c echo.Context) error{
 // @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проблемы"
-// @Router /problem/{id} [put]
+// @Router /problem/{id} [patch]
 func UpdateProblem(c echo.Context) error{
 	id := c.Param("id")
 	problemId, err := uuid.Parse(id)
@@ -403,11 +406,15 @@ func UpdateProblem(c echo.Context) error{
 
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData).Error; err != nil{
-		log.Printf("DB error (update problem): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении проблемы",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (update problem): %v", res.Error)
+			return res.Error
+		}
+		return nil
+	}); txErr != nil {
+		log.Printf("DB transaction error (update problem): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении проблемы"})
 	}
 
 	updateReponse := response.ProblemUniversalResponse{
@@ -433,33 +440,33 @@ func DeleteProblem(c echo.Context) error{
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
-	result := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id = ?", id).Updates(updateData)
-	if result.Error != nil{
-		log.Printf("DB error (delete problem): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении проблемы",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
-	}
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.Problem{}).Where("id = ?", id).Updates(updateData)
+		if res.Error != nil {
+			log.Printf("DB error (delete problem): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("problem_id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete problem): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении обсуждения данной проблемы",
-		})
-	}
+		if res = tx.Model(models.ForumMessage{}).Where("problem_id = ?", id).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete problem - forum messages): %v", res.Error)
+			return res.Error
+		}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.ReportProblem{}).Where("problem_id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete problem): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении связей отчет-проблема данной проблемы",
-		})
+		if res = tx.Model(models.ReportProblem{}).Where("problem_id = ?", id).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete problem - report_problem): %v", res.Error)
+			return res.Error
+		}
+
+		return nil
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete problem): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проблемы"})
 	}
 
 	delResponse := response.ProblemUniversalResponse{

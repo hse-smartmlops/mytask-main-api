@@ -67,58 +67,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/login-test": {
-            "post": {
-                "description": "Аутентифицирует пользователя по email и паролю через Keycloak",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Аутентификация пользователя",
-                "parameters": [
-                    {
-                        "description": "Данные для входа",
-                        "name": "login",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.LoginRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Успешная аутентификация",
-                        "schema": {
-                            "$ref": "#/definitions/response.AuthResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Неверные учетные данные",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/auth/logout": {
             "post": {
                 "description": "Выполняет выход пользователя из системы, завершая сессию в Keycloak",
@@ -425,44 +373,6 @@ const docTemplate = `{
             }
         },
         "/auth/validate": {
-            "get": {
-                "description": "Проверяет валидность токена через Keycloak",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Проверка access_token",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-                        "name": "Authorization",
-                        "in": "header",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Токен валиден",
-                        "schema": {
-                            "$ref": "#/definitions/response.TokenValidationResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Невалидный или отсутствующий токен",
-                        "schema": {
-                            "$ref": "#/definitions/response.TokenValidationResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/validate-test": {
             "get": {
                 "description": "Проверяет валидность токена через Keycloak",
                 "consumes": [
@@ -1343,7 +1253,55 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "delete": {
+                "description": "Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Problems"
+                ],
+                "summary": "Удаление проблемы",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID проблемы",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Проблема успешно удалена",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProblemUniversalResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Проблема не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении проблемы",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
                 "description": "Обновляет данные проблемы по её ID",
                 "consumes": [
                     "application/json"
@@ -1391,54 +1349,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении проблемы",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Problems"
-                ],
-                "summary": "Удаление проблемы",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID проблемы",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Проблема успешно удалена",
-                        "schema": {
-                            "$ref": "#/definitions/response.ProblemUniversalResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Проблема не найдена",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при удалении проблемы",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2193,7 +2103,55 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "delete": {
+                "description": "Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Удаление отчета",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID отчета",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Отчет успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/response.ReportUniversalResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Отчет не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении отчета",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
                 "description": "Обновляет данные отчета по его ID",
                 "consumes": [
                     "application/json"
@@ -2241,54 +2199,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении отчета",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Reports"
-                ],
-                "summary": "Удаление отчета",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID отчета",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Отчет успешно удален",
-                        "schema": {
-                            "$ref": "#/definitions/response.ReportUniversalResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Отчет не найден",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при удалении отчета",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2891,7 +2801,55 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "delete": {
+                "description": "Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Удаление задачи",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID задачи",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Задача успешно удалена",
+                        "schema": {
+                            "$ref": "#/definitions/response.TaskUniversaResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Задача не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении задачи",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
                 "description": "Обновляет данные задачи по её ID",
                 "consumes": [
                     "application/json"
@@ -2948,54 +2906,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении задачи",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tasks"
-                ],
-                "summary": "Удаление задачи",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID задачи",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Задача успешно удалена",
-                        "schema": {
-                            "$ref": "#/definitions/response.TaskUniversaResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Задача не найдена",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при удалении задачи",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3865,6 +3775,9 @@ const docTemplate = `{
         "request.AddRoleUserRequest": {
             "type": "object",
             "properties": {
+                "assigner_id": {
+                    "type": "string"
+                },
                 "role_id": {
                     "type": "string"
                 },
@@ -4430,9 +4343,6 @@ const docTemplate = `{
         "request.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "auth_provider_id": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4468,9 +4378,6 @@ const docTemplate = `{
         "request.UserCreateRequest": {
             "type": "object",
             "properties": {
-                "auth_provider_id": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },
@@ -4817,9 +4724,6 @@ const docTemplate = `{
         "response.GetUserResponse": {
             "type": "object",
             "properties": {
-                "auth_provider_id": {
-                    "type": "string"
-                },
                 "created_at": {
                     "type": "string"
                 },
