@@ -21,7 +21,7 @@ func RegisterTaskRoutes(e *echo.Echo) {
 	{
 		taskGroup.GET("/all/:page/:pagesize", GetAllTasks)
 		taskGroup.GET("/:id", GetTaskByID)
-		taskGroup.GET("/project/:projectId/:page/:pagesize", GetTasksByProjectID)
+		taskGroup.GET("/project/:projectId", GetTasksByProjectID)
 		taskGroup.GET("/filter", GetTasksByFilter)
 		taskGroup.POST("", CreateTask)
 		taskGroup.PUT("/:id", UpdateTask)
@@ -324,12 +324,10 @@ func GetTaskByID(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param projectId path string true "ID проекта"
-// @Param page path int true "Номер страницы"
-// @Param pagesize path int true "Размер страницы"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
-// @Router /task/project/{projectId}/{page}/{pagesize} [get]
+// @Router /task/project/{projectId} [get]
 func GetTasksByProjectID(c echo.Context) error {
 	// Получаем projectID из параметров URL
 	projectIDParam := c.Param("projectId")
@@ -337,27 +335,19 @@ func GetTasksByProjectID(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
 	}
-	pageReq := c.Param("page")
-	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
-	page, err := strconv.Atoi(pageReq)
-	if err != nil{
-		log.Printf("failed to parse page: %v", err)
+	var req request.TaskListRequest
+	if err = c.Bind(&req); err != nil {
+		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге страницы",
+			"error": "Не удалось получить данные из запроса",
 		})
 	}
+
+	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-
-	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
-		log.Printf("failed to parse pagesize: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге номера страницы",
-		})
-	}
+	pageSize := req.PageSize
 	if pageSize <= 0 {
 		pageSize = 10
 	}

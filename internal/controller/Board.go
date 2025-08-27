@@ -38,7 +38,7 @@ func RegisterBoardRoutes(e *echo.Echo) {
 // @Success 200 {object} response.BoardListResponse "Список досок успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
-// @Router /boards/all/{page}/{pagesize} [get]
+// @Router /project/all/{page}/{pagesize} [get]
 func GetAllBoards(c echo.Context) error {
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")

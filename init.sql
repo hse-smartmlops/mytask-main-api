@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE auth_providers (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    client_id varchar(100) UNIQUE,
+    client_id varchar(100) UNIQUE NOT NULL,
     client_secret varchar(100),
     well_known_url varchar(255),
     scopes text,
@@ -19,7 +19,7 @@ CREATE TABLE auth_providers (
 
 CREATE TABLE users (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    email varchar(100),
+    email varchar(100) UNIQUE,
     is_active boolean DEFAULT true,
     created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     tg_id varchar(50),
@@ -38,7 +38,7 @@ CREATE TABLE users (
 
 CREATE TABLE roles (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name varchar(50),
+    name varchar(50) UNIQUE,
     description varchar(200),
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP
@@ -124,7 +124,7 @@ CREATE TABLE problems (
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     deleted boolean DEFAULT false,
     CONSTRAINT problems_creator_id_fkey FOREIGN KEY (creator_id) 
-        REFERENCES users(id) ON DELETE CASCADE
+        REFERENCES users(id)
 );
 
 CREATE TABLE user_roles (
@@ -163,7 +163,7 @@ CREATE TABLE project_teams (
 
 CREATE TABLE boards (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    project_id uuid NOT NULL,
+    project_id uuid,
     name varchar(100),
     description text,
     filter varchar(50),
@@ -220,47 +220,39 @@ CREATE TABLE attendances (
 CREATE TABLE daily_reports (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id uuid NOT NULL,
-    task_id uuid,
+    task_id uuid not null,
     report_date date DEFAULT CURRENT_DATE,
-    status varchar(20),
-    created_at date DEFAULT CURRENT_DATE,
-    updated_at date DEFAULT CURRENT_DATE,
+    content text,
     deleted boolean DEFAULT false,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT daily_reports_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT daily_reports_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id)
+    CONSTRAINT daily_reports_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 
 CREATE TABLE forum_messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    problem_id UUID NOT NULL,
-    description VARCHAR(255)[],
-    creator_id UUID,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    deleted BOOLEAN DEFAULT false,
-    CONSTRAINT fk_problem
-        FOREIGN KEY(problem_id)
-        REFERENCES problems(id)
-        ON DELETE CASCADE,
-    CONSTRAINT fk_user
-        FOREIGN KEY(creator_id)
-        REFERENCES users(id)
-        ON DELETE CASCADE
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id uuid NOT NULL,
+    message text,
+    stasus varchar(100),
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    deleted boolean DEFAULT false,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT forum_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE report_problems (
-    report_id uuid NOT NULL,
+    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     problem_id uuid NOT NULL,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    report text,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     deleted boolean DEFAULT false,
-    PRIMARY KEY (report_id, problem_id),
-    CONSTRAINT report_problems_report_id_fkey FOREIGN KEY (report_id) REFERENCES daily_reports(id) ON DELETE CASCADE,
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT report_problems_problem_id_fkey FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
 );
 
 -- Table: help_requests
 CREATE TABLE help_requests (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id          UUID PRIMARY KEY,
     helper_id   UUID,
     description VARCHAR(255),
     deleted     BOOLEAN DEFAULT FALSE,
@@ -273,7 +265,7 @@ CREATE TABLE help_requests (
 
 -- Table: completed_works
 CREATE TABLE completed_works (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id          UUID PRIMARY KEY,
     description TEXT,
     deleted     BOOLEAN DEFAULT FALSE,
     report_id   UUID,
@@ -283,7 +275,7 @@ CREATE TABLE completed_works (
 
 -- Table: tomorrow_plans
 CREATE TABLE tomorrow_plans (
-    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id          UUID PRIMARY KEY,
     description TEXT,
     deleted     BOOLEAN DEFAULT FALSE,
     report_id   UUID,
