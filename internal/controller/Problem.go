@@ -18,6 +18,7 @@ import (
 
 func RegisterProblemRoutes(e *echo.Echo){
 	problemGroup := e.Group("/problem")
+	problemGroup.Use(KeycloakAuthMiddleware)
 	{
 		problemGroup.GET("/all/:page/:pagesize", GetAllProblems)
 		problemGroup.GET("/:id", GetProblemByID)
@@ -36,11 +37,19 @@ func RegisterProblemRoutes(e *echo.Echo){
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemListResponse "Список проблем успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/all/{page}/{pagesize} [get]
 func GetAllProblems(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -135,11 +144,16 @@ func GetAllProblems(c echo.Context) error{
 // @Param id path string true "ID пользователя"
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemsByUserId "Список проблем успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/user/{id}/{page}/{pagesize} [get]
 func GetProblemsByUserId(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
@@ -234,12 +248,17 @@ func GetProblemsByUserId(c echo.Context) error{
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проблемы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemResponse "Проблема успешно получена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы"
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблемы"
 // @Router /problem/{id} [get]
 func GetProblemByID(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	problemId, err := uuid.Parse(id)
 	if err != nil {
@@ -301,11 +320,16 @@ func GetProblemByID(c echo.Context) error{
 // @Accept json
 // @Produce json
 // @Param problem body request.ProblemCreateRequest true "Данные для создания проблемы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.ProblemUniversalResponse "Проблема успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор пользователя"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проблемы"
 // @Router /problem [post]
 func CreateProblem(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.ProblemCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -371,11 +395,16 @@ func CreateProblem(c echo.Context) error{
 // @Produce json
 // @Param id path string true "ID проблемы"
 // @Param problem body request.ProblemUpdateRequest true "Данные для обновления проблемы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проблемы"
 // @Router /problem/{id} [patch]
 func UpdateProblem(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	problemId, err := uuid.Parse(id)
 	if err != nil {
@@ -432,11 +461,16 @@ func UpdateProblem(c echo.Context) error{
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проблемы"
+// @Security BearerAuth
+
 // @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно удалена"
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проблемы"
 // @Router /problem/{id} [delete]
 func DeleteProblem(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true

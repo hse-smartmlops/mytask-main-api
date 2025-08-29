@@ -18,6 +18,7 @@ import (
 
 func RegisterTaskRoutes(e *echo.Echo) {
 	taskGroup := e.Group("/task")
+	taskGroup.Use(KeycloakAuthMiddleware)
 	{
 		taskGroup.GET("/all/:page/:pagesize", GetAllTasks)
 		taskGroup.GET("/:id", GetTaskByID)
@@ -37,11 +38,16 @@ func RegisterTaskRoutes(e *echo.Echo) {
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/all/{page}/{pagesize} [get]
 func GetAllTasks(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -150,12 +156,17 @@ func GetAllTasks(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID задачи"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.GetTaskByIDResponse "Задача успешно получена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор задачи"
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задачи"
 // @Router /task/{id} [get]
 func GetTaskByID(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	taskId, err := uuid.Parse(id)
 	if err != nil {
@@ -324,11 +335,16 @@ func GetTaskByID(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param projectId path string true "ID проекта"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/project/{projectId} [get]
 func GetTasksByProjectID(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	// Получаем projectID из параметров URL
 	projectIDParam := c.Param("projectId")
 	projectUUID, err := uuid.Parse(projectIDParam)
@@ -432,25 +448,14 @@ func GetTasksByProjectID(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskList)
 }
 
-// GetTasksByFilter godoc
-// @Summary Получение задач по фильтру
-// @Description Получает список задач, соответствующих указанным фильтрам
-// @Tags Tasks
-// @Accept json
-// @Produce json
-// @Param status query string false "Статус задачи"
-// @Param priority query int false "Приоритет задачи"
-// @Param assignedTo query string false "ID исполнителя"
-// @Param createdBy query string false "ID создателя"
-// @Param startDate query string false "Дата начала (YYYY-MM-DD)"
-// @Param deadline query string false "Дедлайн (YYYY-MM-DD)"
-// @Param page query int false "Номер страницы" default(1)
-// @Param pageSize query int false "Размер страницы" default(10)
-// @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
-// @Failure 400 {object} map[string]string "Ошибка в запросе"
-// @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
-// @Router /task/filter [get]
+
 func GetTasksByFilter(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+		if err := authorize(c); err != nil {
+			return err
+		}
 	filter := new(request.TaskFilter)
 	if err := c.Bind(filter); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid filter parameters"})
@@ -465,12 +470,17 @@ func GetTasksByFilter(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param task body request.TaskCreateRequest true "Данные для создания задачи"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.TaskUniversaResponse "Задача успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 404 {object} map[string]string "Исполнитель или поручитель не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании задачи"
 // @Router /task [post]
 func CreateTask(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.TaskCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -604,12 +614,17 @@ func CreateTask(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID задачи"
 // @Param task body request.TaskUpdateRequest true "Данные для обновления задачи"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskUniversaResponse "Задача успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении задачи"
 // @Router /task/{id} [patch]
 func UpdateTask(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	taskID, err := uuid.Parse(id)
 	if err != nil {
@@ -697,11 +712,16 @@ func UpdateTask(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID задачи"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskUniversaResponse "Задача успешно удалена"
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении задачи"
 // @Router /task/{id} [delete]
 func DeleteTask(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true

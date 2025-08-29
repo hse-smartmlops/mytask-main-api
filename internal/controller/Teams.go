@@ -17,6 +17,7 @@ import (
 
 func RegisterTeamRoutes(e *echo.Echo) {
 	teamGroup := e.Group("/team")
+	teamGroup.Use(KeycloakAuthMiddleware)
 	teamGroup.GET("/all", GetTeams)
 	teamGroup.GET("/:id", GetTeamByID)
 	teamGroup.POST("", CreateTeam)
@@ -37,9 +38,14 @@ var dbConn *gorm.DB = db.DB_conn
 // @Accept json
 // @Produce json
 // @Success 200 {object} response.TeamsListResponse "Список команд успешно получен"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении команд"
 // @Router /team/all [get]
 func GetTeams(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var teams []models.Team
 	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).Find(&teams)
 	if result.Error != nil {
@@ -147,12 +153,17 @@ func GetTeams(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID команды"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamResponse "Команда успешно получена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор команды"
 // @Failure 404 {object} map[string]string "Команда не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении команды"
 // @Router /team/{id} [get]
 func GetTeamByID(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	teamIDParam := c.Param("id")
 	teamUUID, err := uuid.Parse(teamIDParam)
 	if err != nil {
@@ -277,11 +288,16 @@ func GetTeamByID(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param team body request.TeamCreateRequest true "Данные для создания команды"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.TeamUniversalResponse "Команда успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании команды"
 // @Router /team [post]
 func CreateTeam(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.TeamCreateRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -330,11 +346,16 @@ func CreateTeam(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID команды"
 // @Param team body request.TeamUpdateRequest true "Данные для обновления команды"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamUniversalResponse "Команда успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении команды"
 // @Router /team/{id} [patch]
 func UpdateTeam(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	teamIDParam := c.Param("id")
 	// Привязка данных запроса
 	var req request.TeamUpdateRequest
@@ -401,11 +422,16 @@ func UpdateTeam(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID команды"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamUniversalResponse "Команда успешно удалена"
 // @Failure 404 {object} map[string]string "Команда не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении команды"
 // @Router /team/{id} [delete]
 func DeleteTeam(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	teamIDParam := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
@@ -452,11 +478,16 @@ func DeleteTeam(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param addUser body request.TeamAddUserRequest true "Данные для добавления пользователя в команду"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamUniversalUserResponse "Пользователь успешно добавлен в команду"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении пользователя в команду"
 // @Router /team/user [post]
 func AddUserToTeam(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.TeamAddUserRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -516,12 +547,17 @@ func AddUserToTeam(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param deleteUser body request.TeamDeleteUserRequest true "Данные для удаления пользователя из команды"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamUniversalUserResponse "Пользователь успешно удален из команды"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 404 {object} map[string]string "Ничего не удалено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя из команды"
 // @Router /team/user [delete]
 func DeleteUserFromTeam(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.TeamDeleteUserRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -581,11 +617,16 @@ func DeleteUserFromTeam(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param addProject body request.TeamAddProjectRequest true "Данные для добавления проекта в команду"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamUniversalProjectResponse "Проект успешно привязан к команде"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении проекта в команду"
 // @Router /team/project [post]
 func AddProjectToTeam(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.TeamAddProjectRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -644,12 +685,17 @@ func AddProjectToTeam(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param deleteProject body request.TeamDeleteProjectRequest true "Данные для удаления проекта из команды"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamUniversalProjectResponse "Проект успешно отвязан от команды"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 404 {object} map[string]string "Ничего не удалено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта из команды"
 // @Router /team/project [delete]
 func DeleteProjectFromTeam(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.TeamDeleteProjectRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)

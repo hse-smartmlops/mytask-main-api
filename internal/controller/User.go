@@ -19,6 +19,7 @@ import (
 
 func RegisterUserRoutes(e *echo.Echo) {
 	userGroup := e.Group("/user")
+	userGroup.Use(KeycloakAuthMiddleware)
 	userGroup.GET("/all/:page/:pagesize", GetAllUsers)
 	userGroup.GET("/:id", GetUserById)
 	userGroup.POST("", CreateUser)
@@ -36,11 +37,16 @@ func RegisterUserRoutes(e *echo.Echo) {
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.GetAllUsersResponse "Список пользователей успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователей"
 // @Router /user/all/{page}/{pagesize} [get]
 func GetAllUsers(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -159,12 +165,17 @@ func GetAllUsers(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.GetUserResponse "Пользователь успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор пользователя"
 // @Failure 404 {object} map[string]string "Пользователь не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователя"
 // @Router /user/{id} [get]
 func GetUserById(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	userId, err := uuid.Parse(id)
 	if err != nil {
@@ -250,11 +261,16 @@ func GetUserById(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param user body request.UserCreateRequest true "Данные для создания пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.UserUniversalResponse "Пользователь успешно создан"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании пользователя"
 // @Router /user [post]
 func CreateUser(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.UserCreateRequest
 	err := c.Bind(&req)
 	if err != nil {
@@ -357,11 +373,16 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 // @Produce json
 // @Param id path string true "ID пользователя"
 // @Param user body request.UpdateUserRequest true "Данные для обновления пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.UserUniversalResponse "Пользователь успешно обновлен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении пользователя"
 // @Router /user/{id} [post]
 func UpdateUser(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	userId, err := uuid.Parse(id)
 	if err != nil {
@@ -446,11 +467,16 @@ func UpdateUser(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.UserUniversalResponse "Пользователь успешно удален"
 // @Failure 404 {object} map[string]string "Пользователь не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
 // @Router /user/{id} [delete]
 func DeleteUser(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	return DeleteUserFunc(c, id)
 }
@@ -573,11 +599,16 @@ func DeleteUserFunc(c echo.Context, id string) error {
 // @Accept json
 // @Produce json
 // @Param addRole body request.AddRoleUserRequest true "Данные для добавления роли пользователю"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.AddRoleUserResponse "Роль успешно добавлена"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении роли"
 // @Router /user/role [post]
 func AddUserRole(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.AddRoleUserRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -644,12 +675,17 @@ func AddUserRole(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param removeRole body request.RemoveRoleUserRequest true "Данные для удаления роли у пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.RemoveRoleUserResponse "Роль успешно удалена"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 404 {object} map[string]string "Ничего не удалено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /user/role [delete]
 func RemoveUserRole(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.RemoveRoleUserRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)

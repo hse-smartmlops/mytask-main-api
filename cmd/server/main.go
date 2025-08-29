@@ -26,6 +26,7 @@ func main() {
 	e := echo.New() 
 	e.Use(middleware.RemoveTrailingSlash())
 	e.Use(middleware.Logger())
+
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
     AllowOrigins: []string{"*"}, // или конкретный фронтенд, например "http://localhost:3000"
     AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
@@ -37,6 +38,9 @@ func main() {
     },
     AllowCredentials: true,
 	}))
+
+	// Keycloak auth middleware for protected endpoints
+	e.Use(controller.KeycloakAuthMiddleware)
 
 	// Swagger: не хардкодим host, оставляем пустым, чтобы UI брал текущий адрес запроса
 	docs.SwaggerInfo.Host = ""

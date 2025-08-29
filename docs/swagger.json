@@ -62,6 +62,11 @@
         },
         "/auth/logout": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Выполняет выход пользователя из системы, завершая сессию в Keycloak",
                 "consumes": [
                     "application/json"
@@ -115,6 +120,11 @@
         },
         "/auth/me": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Возвращает информацию о пользователе на основе переданного токена",
                 "consumes": [
                     "application/json"
@@ -405,6 +415,11 @@
         },
         "/boards": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую доску с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -443,6 +458,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании доски",
                         "schema": {
@@ -457,6 +481,11 @@
         },
         "/boards/project/{projectId}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список досок, связанных с указанным проектом",
                 "consumes": [
                     "application/json"
@@ -493,6 +522,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Доска не найдена",
                         "schema": {
@@ -516,6 +554,11 @@
         },
         "/boards/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные доски по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -552,6 +595,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Доска не найдена",
                         "schema": {
@@ -573,6 +625,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление доски по ID (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -600,6 +657,15 @@
                             "$ref": "#/definitions/response.BoardUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Доска не найдена",
                         "schema": {
@@ -621,6 +687,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные доски по её ID",
                 "consumes": [
                     "application/json"
@@ -666,6 +737,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении доски",
                         "schema": {
@@ -680,6 +760,11 @@
         },
         "/forum-messages": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новое сообщение форума с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -718,6 +803,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании сообщения форума",
                         "schema": {
@@ -732,6 +826,11 @@
         },
         "/forum-messages/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех сообщений форума с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -775,6 +874,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении сообщений форума",
                         "schema": {
@@ -789,6 +897,11 @@
         },
         "/forum-messages/problem/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список сообщений форума, связанных с указанной проблемой, с учетом пагинации",
                 "consumes": [
                     "application/json"
@@ -839,6 +952,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении сообщений форума",
                         "schema": {
@@ -853,6 +975,11 @@
         },
         "/forum-messages/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные сообщения форума по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -889,6 +1016,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Сообщение форума не найдено",
                         "schema": {
@@ -910,6 +1046,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление сообщения форума по ID (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -937,6 +1078,15 @@
                             "$ref": "#/definitions/response.ForumMessageUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Сообщение форума не найдено",
                         "schema": {
@@ -958,6 +1108,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные сообщения форума по его ID",
                 "consumes": [
                     "application/json"
@@ -1003,6 +1158,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении сообщения форума",
                         "schema": {
@@ -1017,6 +1181,11 @@
         },
         "/problem": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую проблему с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -1055,6 +1224,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании проблемы",
                         "schema": {
@@ -1069,6 +1247,11 @@
         },
         "/problem/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех проблем с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -1112,6 +1295,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении проблем",
                         "schema": {
@@ -1126,6 +1318,11 @@
         },
         "/problem/user/{id}/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список проблем, созданных указанным пользователем, с учетом пагинации",
                 "consumes": [
                     "application/json"
@@ -1176,6 +1373,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении проблем",
                         "schema": {
@@ -1190,6 +1396,11 @@
         },
         "/problem/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные проблемы по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -1226,6 +1437,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Проблема не найдена",
                         "schema": {
@@ -1247,26 +1467,6 @@
                 }
             },
             "delete": {
-                "description": "Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Problems"
-                ],
-                "summary": "Удаление проблемы",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID проблемы",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "Проблема успешно удалена",
@@ -1295,6 +1495,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные проблемы по её ID",
                 "consumes": [
                     "application/json"
@@ -1340,6 +1545,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении проблемы",
                         "schema": {
@@ -1354,6 +1568,11 @@
         },
         "/project": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новый проект с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -1392,6 +1611,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании проекта",
                         "schema": {
@@ -1406,6 +1634,11 @@
         },
         "/project/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех проектов с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -1449,6 +1682,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении проектов",
                         "schema": {
@@ -1463,6 +1705,11 @@
         },
         "/project/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные проекта по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -1499,6 +1746,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Проект не найден",
                         "schema": {
@@ -1520,6 +1776,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление проекта по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -1547,6 +1808,15 @@
                             "$ref": "#/definitions/response.ProjectUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Проект не найден",
                         "schema": {
@@ -1568,6 +1838,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные проекта по его ID",
                 "consumes": [
                     "application/json"
@@ -1613,6 +1888,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении проекта",
                         "schema": {
@@ -1627,6 +1911,11 @@
         },
         "/report": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новый отчет с указанными параметрами, включая выполненную работу, планы на завтра, проблемы и запрос на помощь",
                 "consumes": [
                     "application/json"
@@ -1665,6 +1954,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании отчета",
                         "schema": {
@@ -1679,6 +1977,11 @@
         },
         "/report/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех отчетов с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -1722,6 +2025,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -1745,6 +2057,11 @@
         },
         "/report/completed-work/{id}": {
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные выполненной работы по ее ID",
                 "consumes": [
                     "application/json"
@@ -1790,6 +2107,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении выполненной работы",
                         "schema": {
@@ -1804,6 +2130,11 @@
         },
         "/report/help-request/{id}": {
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные запроса на помощь по его ID",
                 "consumes": [
                     "application/json"
@@ -1849,6 +2180,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении запроса на помощь",
                         "schema": {
@@ -1863,6 +2203,11 @@
         },
         "/report/project/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список отчетов, связанных с задачами указанного проекта",
                 "consumes": [
                     "application/json"
@@ -1899,6 +2244,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -1922,6 +2276,11 @@
         },
         "/report/task/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список отчетов, связанных с указанной задачей",
                 "consumes": [
                     "application/json"
@@ -1958,6 +2317,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -1981,6 +2349,11 @@
         },
         "/report/tomorrow-plans/{id}": {
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные планов на завтра по их ID",
                 "consumes": [
                     "application/json"
@@ -2026,6 +2399,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении планов на завтра",
                         "schema": {
@@ -2040,6 +2422,11 @@
         },
         "/report/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные отчета по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -2076,6 +2463,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -2097,6 +2493,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -2124,6 +2525,15 @@
                             "$ref": "#/definitions/response.ReportUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Отчет не найден",
                         "schema": {
@@ -2145,6 +2555,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные отчета по его ID",
                 "consumes": [
                     "application/json"
@@ -2190,6 +2605,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении отчета",
                         "schema": {
@@ -2204,6 +2628,11 @@
         },
         "/role": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую роль с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -2242,6 +2671,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании роли",
                         "schema": {
@@ -2256,6 +2694,11 @@
         },
         "/role/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех ролей с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -2299,6 +2742,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении ролей",
                         "schema": {
@@ -2313,6 +2765,11 @@
         },
         "/role/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные роли по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -2349,6 +2806,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Роль не найдена",
                         "schema": {
@@ -2370,6 +2836,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление роли по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -2397,6 +2868,15 @@
                             "$ref": "#/definitions/response.ProjectUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Роль не найдена",
                         "schema": {
@@ -2418,6 +2898,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные роли по её ID",
                 "consumes": [
                     "application/json"
@@ -2463,6 +2948,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении роли",
                         "schema": {
@@ -2477,6 +2971,11 @@
         },
         "/task": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую задачу с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -2515,6 +3014,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Исполнитель или поручитель не найден",
                         "schema": {
@@ -2538,6 +3046,11 @@
         },
         "/task/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех задач с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -2581,92 +3094,8 @@
                             }
                         }
                     },
-                    "500": {
-                        "description": "Ошибка сервера при получении задач",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/task/filter": {
-            "get": {
-                "description": "Получает список задач, соответствующих указанным фильтрам",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tasks"
-                ],
-                "summary": "Получение задач по фильтру",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Статус задачи",
-                        "name": "status",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Приоритет задачи",
-                        "name": "priority",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ID исполнителя",
-                        "name": "assignedTo",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ID создателя",
-                        "name": "createdBy",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Дата начала (YYYY-MM-DD)",
-                        "name": "startDate",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Дедлайн (YYYY-MM-DD)",
-                        "name": "deadline",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список задач успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.TaskListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2688,6 +3117,11 @@
         },
         "/task/project/{projectId}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список задач, связанных с указанным проектом",
                 "consumes": [
                     "application/json"
@@ -2724,6 +3158,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении задач",
                         "schema": {
@@ -2738,6 +3181,11 @@
         },
         "/task/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные задачи по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -2774,6 +3222,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Задача не найдена",
                         "schema": {
@@ -2795,6 +3252,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -2822,6 +3284,15 @@
                             "$ref": "#/definitions/response.TaskUniversaResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Задача не найдена",
                         "schema": {
@@ -2843,6 +3314,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные задачи по её ID",
                 "consumes": [
                     "application/json"
@@ -2888,6 +3364,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Задача не найдена",
                         "schema": {
@@ -2911,6 +3396,11 @@
         },
         "/team": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую команду с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -2949,6 +3439,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании команды",
                         "schema": {
@@ -2963,6 +3462,11 @@
         },
         "/team/all": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех команд с их участниками",
                 "consumes": [
                     "application/json"
@@ -2981,6 +3485,15 @@
                             "$ref": "#/definitions/response.TeamsListResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении команд",
                         "schema": {
@@ -2995,6 +3508,11 @@
         },
         "/team/project": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Привязывает проект к указанной команде",
                 "consumes": [
                     "application/json"
@@ -3033,6 +3551,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при добавлении проекта в команду",
                         "schema": {
@@ -3045,6 +3572,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логически удаляет привязку проекта к команде (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -3083,6 +3615,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Ничего не удалено",
                         "schema": {
@@ -3106,6 +3647,11 @@
         },
         "/team/user": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Добавляет пользователя в указанную команду",
                 "consumes": [
                     "application/json"
@@ -3144,6 +3690,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при добавлении пользователя в команду",
                         "schema": {
@@ -3156,6 +3711,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логически удаляет пользователя из команды (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -3194,6 +3754,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Ничего не удалено",
                         "schema": {
@@ -3217,6 +3786,11 @@
         },
         "/team/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные команды по её уникальному идентификатору, включая участников",
                 "consumes": [
                     "application/json"
@@ -3253,6 +3827,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Команда не найдена",
                         "schema": {
@@ -3274,6 +3857,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление команды по ID (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -3301,6 +3889,15 @@
                             "$ref": "#/definitions/response.TeamUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Команда не найдена",
                         "schema": {
@@ -3322,6 +3919,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные команды по её ID",
                 "consumes": [
                     "application/json"
@@ -3367,6 +3969,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении команды",
                         "schema": {
@@ -3381,6 +3992,11 @@
         },
         "/user": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает нового пользователя с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -3419,6 +4035,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании пользователя",
                         "schema": {
@@ -3433,6 +4058,11 @@
         },
         "/user/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех пользователей с учетом пагинации, исключая удаленных",
                 "consumes": [
                     "application/json"
@@ -3476,6 +4106,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении пользователей",
                         "schema": {
@@ -3490,6 +4129,11 @@
         },
         "/user/role": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Добавляет роль указанному пользователю",
                 "consumes": [
                     "application/json"
@@ -3528,6 +4172,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при добавлении роли",
                         "schema": {
@@ -3540,6 +4193,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Удаляет роль у указанного пользователя",
                 "consumes": [
                     "application/json"
@@ -3578,6 +4236,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Ничего не удалено",
                         "schema": {
@@ -3601,6 +4268,11 @@
         },
         "/user/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные пользователя по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -3637,6 +4309,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь не найден",
                         "schema": {
@@ -3658,6 +4339,11 @@
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные пользователя по его ID",
                 "consumes": [
                     "application/json"
@@ -3703,6 +4389,15 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении пользователя",
                         "schema": {
@@ -3715,6 +4410,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -3740,6 +4440,15 @@
                         "description": "Пользователь успешно удален",
                         "schema": {
                             "$ref": "#/definitions/response.UserUniversalResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
