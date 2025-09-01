@@ -2151,6 +2151,18 @@ paths:
       - Problems
   /problem/{id}:
     delete:
+      consumes:
+      - application/json
+      description: Логическое удаление проблемы по ID, включая связанные данные (поле
+        deleted = true)
+      parameters:
+      - description: ID проблемы
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: Проблема успешно удалена
@@ -2168,6 +2180,11 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление проблемы
+      tags:
+      - Problems
     get:
       consumes:
       - application/json

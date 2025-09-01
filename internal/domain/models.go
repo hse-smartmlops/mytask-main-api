@@ -239,8 +239,8 @@ type Subscription struct {
 	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID    *uuid.UUID `gorm:"type:uuid;index"`
 	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE;"`
-	Subscription_Id *int8   `gorm:"type:int8"`
-	UpdatedAt   *time.Time `gorm:"type:timestamp"`
+	SubscriptionId *uuid.UUID  `gorm:"type:int8"`
+	TypeID    *int8     `gorm:"type:int8"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	Deleted     *bool       `gorm:"default:false"`
 }

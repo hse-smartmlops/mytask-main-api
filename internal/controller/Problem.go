@@ -466,7 +466,6 @@ func UpdateProblem(c echo.Context) error{
 // @Produce json
 // @Param id path string true "ID проблемы"
 // @Security BearerAuth
-
 // @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно удалена"
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проблемы"
