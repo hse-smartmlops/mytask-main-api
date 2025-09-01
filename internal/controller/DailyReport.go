@@ -1303,8 +1303,18 @@ func UpdateReport(c echo.Context) error {
 	}
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Where("id = ?", reportId).Updates(updateData).Error ;err != nil{
-		log.Printf("DB error (update report): %v", err)
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Where("id = ? and deleted = ?", reportId, false).Updates(updateData)
+		if res.Error != nil{
+			log.Printf("DB error (update report): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+		}
+		return nil
+	}); txErr != nil{
+		log.Printf("Transaction error (update report): %v", txErr)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении отчета",
 		})
@@ -1312,7 +1322,7 @@ func UpdateReport(c echo.Context) error {
 
 	updateResponse := response.ReportUniversalResponse{
 		ID: id,
-		Message: "Проект успешно изменен",
+		Message: "Отчет успешно изменен",
 	}
 
 	return c.JSON(http.StatusOK, updateResponse)

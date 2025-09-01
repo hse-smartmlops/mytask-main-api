@@ -396,6 +396,14 @@ func UpdateBoard(c echo.Context) error {
 	}
 
 	id := c.Param("id")
+	boardId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор доски",
+		})
+	}
+
 	var req request.BoardUpdateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -419,10 +427,13 @@ func UpdateBoard(c echo.Context) error {
 
 	// update inside a transaction
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Board{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Board{}).Where("id = ? AND deleted = ?", boardId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update board): %v", res.Error)
 			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
 	}); txErr != nil {

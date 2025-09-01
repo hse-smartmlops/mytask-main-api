@@ -440,17 +440,19 @@ func UpdateUser(c echo.Context) error {
 
 	updateData["updated_at"] = time.Now()
 
-	err = dbConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(models.User{}).Where("id = ?", userId).Updates(updateData).Error; err != nil {
-			return err
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(models.User{}).Where("id = ?", userId).Updates(updateData)
+		if res.Error != nil{
+			log.Print("DB error (update user)")
+			return res.Error
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
-	})
-	if err != nil {
-		log.Printf("DB transaction error (update user): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении пользователя",
-		})
+	}); txErr != nil{
+		log.Printf("DB transaction error (update user): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении пользователя"})
 	}
 
 	updateResponse := response.UserUniversalResponse{

@@ -322,10 +322,17 @@ func DeleteRole(c echo.Context) error {
 		return err
 	}
 	id := c.Param("id")
+	roleId, err := uuid.Parse(id)
+	if err != nil{
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор роли",
+		})
+	}
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Role{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Role{}).Where("id = ? and deleted = ?", roleId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete role): %v", res.Error)
 			return res.Error
@@ -334,7 +341,7 @@ func DeleteRole(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(&models.UserRole{}).Where("role_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Model(&models.UserRole{}).Where("role_id = ?", roleId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete user roles): %v", res.Error)
 			return res.Error
 		}

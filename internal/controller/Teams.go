@@ -396,9 +396,13 @@ func UpdateTeam(c echo.Context) error {
 
 	// Выполняем обновление только указанных полей
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Model(&models.Team{}).Where("id = ?", teamIDParam).Updates(updateData); res.Error != nil {
+		res := tx.Model(&models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
+		if res.Error != nil {
 			log.Printf("DB error (update team): %v", res.Error)
 			return res.Error
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
 	}); txErr != nil {

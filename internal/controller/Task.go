@@ -682,7 +682,7 @@ func UpdateTask(c echo.Context) error {
 	updates["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&models.Task{}).Where("id = ?", taskID).Updates(updates)
+		res := tx.Model(&models.Task{}).Where("id = ? and deleted = ?", taskID, false).Updates(updates)
 		if res.Error != nil {
 			log.Printf("DB error (update task): %v", res.Error)
 			return res.Error
