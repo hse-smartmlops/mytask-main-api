@@ -134,7 +134,7 @@ func GetAllProjects(c echo.Context) error {
 		}
 
 		var updatedAt time.Time
-		if project.UpdatedAt != nil {
+		if project.UpdatedAt != nil{ 
 			updatedAt = *project.UpdatedAt
 		}
 

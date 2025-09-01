@@ -6,20 +6,11 @@ type SubscriptionCreateRequest struct {
 	TypeId         int8   `json:"type_id"`
 }
 
-type SubscriptionListRequest struct {
-	Page     *int `json:"page"`
-	PageSize *int `json:"page_size"`
-}
-
 type SubscriptionListByUserRequest struct {
-	UserID   string `json:"user_id"`
-	Page     *int   `json:"page"`
-	PageSize *int   `json:"page_size"`
+	UserID string `json:"user_id"`
 }
 
 type SubscriptionListBySubObjectRequest struct {
 	TypeId         int8   `json:"type_id"`
 	SubscriptionId string `json:"subscription_id"`
-	Page           *int   `json:"page"`
-	PageSize       *int   `json:"page_size"`
 }
