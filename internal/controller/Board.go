@@ -17,6 +17,8 @@ import (
 
 func RegisterBoardRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/boards")
+	// apply Keycloak auth middleware to all board routes
+	projectGroup.Use(KeycloakAuthMiddleware)
 	{
 		projectGroup.GET("/all/:page/:pagesize", GetAllBoards)
 		projectGroup.GET("/:id", GetBoardById)
@@ -35,11 +37,17 @@ func RegisterBoardRoutes(e *echo.Echo) {
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
 // @Success 200 {object} response.BoardListResponse "Список досок успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
 // @Router /project/all/{page}/{pagesize} [get]
 func GetAllBoards(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -135,12 +143,18 @@ func GetAllBoards(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID доски"
+// @Security BearerAuth
 // @Success 200 {object} response.BoardResponse "Доска успешно получена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 404 {object} map[string]string "Доска не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении доски"
 // @Router /boards/{id} [get]
 func GetBoardById(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
 	id := c.Param("id")
 	boardId, err := uuid.Parse(id)
 	if err != nil {
@@ -210,12 +224,18 @@ func GetBoardById(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param projectId path string true "ID проекта"
+// @Security BearerAuth
 // @Success 200 {object} response.BoardForProjectResponse "Список досок успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 404 {object} map[string]string "Доска не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
 // @Router /boards/project/{projectId} [get]
 func GetBoardByProjectId(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
 	projectID := c.Param("projectId")
 	projectId, err := uuid.Parse(projectID)
 	if err != nil {
@@ -292,11 +312,17 @@ func GetBoardByProjectId(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param board body request.BoardCreateRequest true "Данные для создания доски"
+// @Security BearerAuth
 // @Success 201 {object} response.BoardUniversalResponse "Доска успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор проекта"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании доски"
 // @Router /boards [post]
 func CreateBoard(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
 	var req request.BoardCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -321,6 +347,8 @@ func CreateBoard(c echo.Context) error {
 
 	del := false
 
+	now := time.Now()
+
 	board := models.Board{
 		ID:          newUUID,
 		Name:        req.Name,
@@ -328,6 +356,7 @@ func CreateBoard(c echo.Context) error {
 		ProjectID:   projectId,
 		Filter:      req.Filter,
 		Deleted: 		&del,
+		CreatedAt: &now,
 	}
 
 	// create inside a transaction
@@ -358,12 +387,26 @@ func CreateBoard(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID доски"
 // @Param board body request.BoardUpdateRequest true "Данные для обновления доски"
+// @Security BearerAuth
 // @Success 200 {object} response.BoardUniversalResponse "Доска успешно обновлена"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или нет полей для обновления"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении доски"
 // @Router /boards/{id} [patch]
 func UpdateBoard(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
 	id := c.Param("id")
+	boardId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор доски",
+		})
+	}
+
 	var req request.BoardUpdateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -387,10 +430,13 @@ func UpdateBoard(c echo.Context) error {
 
 	// update inside a transaction
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Board{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Board{}).Where("id = ? AND deleted = ?", boardId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update board): %v", res.Error)
 			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
 	}); txErr != nil {
@@ -412,11 +458,17 @@ func UpdateBoard(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID доски"
+// @Security BearerAuth
 // @Success 200 {object} response.BoardUniversalResponse "Доска успешно удалена"
 // @Failure 404 {object} map[string]string "Доска не найдена"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении доски"
 // @Router /boards/{id} [delete]
 func DeleteBoard(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true

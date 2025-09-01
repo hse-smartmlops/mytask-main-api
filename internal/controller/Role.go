@@ -17,6 +17,7 @@ import (
 
 func RegisterRoleRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/role")
+	projectGroup.Use(KeycloakAuthMiddleware)
 	{
 		projectGroup.GET("/all/:page/:pagesize", GetAllRoles)
 		projectGroup.GET("/:id", GetRoleById)
@@ -34,11 +35,16 @@ func RegisterRoleRoutes(e *echo.Echo) {
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.GetAllRolesResponse "Список ролей успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении ролей"
 // @Router /role/all/{page}/{pagesize} [get]
 func GetAllRoles(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -121,12 +127,17 @@ func GetAllRoles(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID роли"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.GetRoleResponse "Роль успешно получена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор роли"
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении роли"
 // @Router /role/{id} [get]
 func GetRoleById(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	roleId, err := uuid.Parse(id)
 	if err != nil {
@@ -177,11 +188,16 @@ func GetRoleById(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param role body request.RoleCreateRequest true "Данные для создания роли"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.RoleUniversalReport "Роль успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании роли"
 // @Router /role [post]
 func CreateRole(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.RoleCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -194,11 +210,14 @@ func CreateRole(c echo.Context) error {
 
 	del := false
 
+	now := time.Now()
+
 	role := models.Role{
 		ID:          newUUID,
 		Name:        req.Name,
 		Description: req.Description,
 		Deleted: &del,
+		CreatedAt: &now,
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
@@ -228,11 +247,16 @@ func CreateRole(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID роли"
 // @Param role body request.RoleUpdateRequest true "Данные для обновления роли"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.RoleUniversalReport "Роль успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении роли"
 // @Router /role/{id} [patch]
 func UpdateRole(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	roleId, err := uuid.Parse(id)
 	if err != nil {
@@ -290,16 +314,28 @@ func UpdateRole(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID роли"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProjectUniversalResponse "Роль успешно удалена"
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /role/{id} [delete]
 func DeleteRole(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
+	roleId, err := uuid.Parse(id)
+	if err != nil{
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор роли",
+		})
+	}
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Role{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Role{}).Where("id = ? and deleted = ?", roleId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete role): %v", res.Error)
 			return res.Error
@@ -308,7 +344,7 @@ func DeleteRole(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(&models.UserRole{}).Where("role_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Model(&models.UserRole{}).Where("role_id = ?", roleId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete user roles): %v", res.Error)
 			return res.Error
 		}

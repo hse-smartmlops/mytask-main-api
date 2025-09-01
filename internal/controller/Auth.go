@@ -248,6 +248,7 @@ func TOTP(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Refresh token"
+// @Security BearerAuth
 // @Success 200 {object} map[string]string "Успешный выход из системы"
 // @Failure 400 {object} map[string]string "Отсутствует токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при выходе"
@@ -319,6 +320,7 @@ func Register(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+// @Security BearerAuth
 // @Success 200 {object} response.UserInfo "Информация о пользователе"
 // @Failure 401 {object} map[string]string "Отсутствует или неверный токен"
 // @Router /auth/me [get]
@@ -475,7 +477,7 @@ func ValidateToken(c echo.Context) error {
 
 	var user models.User
 
-	dbResult := dbConn.Session(&gorm.Session{}).First(&user, "email = ?", strPtrToVal(userInfo.PreferredUsername))
+	dbResult := dbConn.Session(&gorm.Session{}).First(&user, "id = ?", userId)
 	if dbResult.Error != nil {
 		if errors.Is(dbResult.Error, gorm.ErrRecordNotFound) {
 			temp := true
@@ -487,6 +489,7 @@ func ValidateToken(c echo.Context) error {
 				IsActive: &temp,
 				LastLogin: &now,
 				CreatedAt: &now,
+				EmailVerified: userInfo.EmailVerified,
 			}
 			err = CreateUserWithIdFunc(userCreateReq, c, userId)
 			if err != nil{

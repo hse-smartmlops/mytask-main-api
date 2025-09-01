@@ -13,7 +13,7 @@ type User struct {
 	ID             uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	Email          *string    `gorm:"size:100"`
 	IsActive       *bool
-	CreatedAt      *time.Time
+	CreatedAt      *time.Time `gorm:"type:timestamp"`
 	TgID           *string    `gorm:"size:50"`
 	TgUserID       *int64
 	Profession     *string    `gorm:"size:50"`
@@ -23,7 +23,7 @@ type User struct {
 	LastLogin      *time.Time
 	Roles          []Role        `gorm:"many2many:user_role;joinForeignKey:UserID;JoinReferences:RoleID"`
 	Deleted        *bool         `gorm:"type:boolean"`
-	UpdatedAt      *time.Time
+	UpdatedAt      *time.Time `gorm:"type:timestamp"`
 }
 
 type Role struct {
@@ -32,7 +32,8 @@ type Role struct {
 	Description *string   `gorm:"size:200"`
 	Users       []User    `gorm:"many2many:user_role;joinForeignKey:RoleID;JoinReferences:UserID"`
 	Deleted     *bool     `gorm:"type:boolean"`
-	UpdatedAt   *time.Time
+	CreatedAt   *time.Time `gorm:"type:timestamp"`
+	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 }
 
 type UserRole struct {
@@ -41,7 +42,8 @@ type UserRole struct {
 	AssignedAt *time.Time
 	AssignedBy *uuid.UUID `gorm:"type:uuid"`
 	Deleted    *bool      `gorm:"type:boolean"`
-	UpdatedAt  *time.Time
+	CreatedAt  *time.Time `gorm:"type:timestamp"`
+	UpdatedAt  *time.Time `gorm:"type:timestamp"`
 }
 
 // ===== Project / Board / Task =====
@@ -50,7 +52,7 @@ type Project struct {
 	ID              uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	Name            *string    `gorm:"size:100"`
 	Description     *string    `gorm:"type:text"`
-	CreatedAt       *time.Time
+	CreatedAt       *time.Time `gorm:"type:timestamp"`
 	Status          *string    `gorm:"size:20"`
 	GitlabProjectID *int
 	GitlabURL       *string    `gorm:"size:255"`
@@ -59,7 +61,7 @@ type Project struct {
 	Tasks           []Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	ProjectTeams    []ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Deleted         *bool         `gorm:"type:boolean"`
-	UpdatedAt       *time.Time
+	UpdatedAt       *time.Time    `gorm:"type:timestamp"`
 }
 
 type Board struct {
@@ -70,7 +72,8 @@ type Board struct {
 	Description *string   `gorm:"type:text"`
 	Filter      *string   `gorm:"size:50"`
 	Deleted     *bool     `gorm:"type:boolean"`
-	UpdatedAt   *time.Time
+	CreatedAt   *time.Time `gorm:"type:timestamp"`
+	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 }
 
 type Task struct {
@@ -89,7 +92,8 @@ type Task struct {
 	Project       *Project   `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Category      *int8
 	Deleted       *bool `gorm:"type:boolean"`
-	UpdatedAt     *time.Time
+	CreatedAt     *time.Time `gorm:"type:timestamp"`
+	UpdatedAt     *time.Time `gorm:"type:timestamp"`
 }
 
 // ===== Teams =====
@@ -101,7 +105,8 @@ type Team struct {
 	TeamMembers  []TeamMember  `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
 	ProjectTeams []ProjectTeam `gorm:"foreignKey:TeamID;constraint:OnDelete:CASCADE;"`
 	Deleted      *bool         `gorm:"type:boolean"`
-	UpdatedAt    *time.Time
+	CreatedAt    *time.Time     `gorm:"type:timestamp"`
+	UpdatedAt    *time.Time	 	`gorm:"type:timestamp"`
 }
 
 type TeamMember struct {
@@ -111,7 +116,8 @@ type TeamMember struct {
 	User           *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE;"`
 	Team           *Team     `gorm:"foreignKey:TeamID;references:ID;constraint:OnDelete:CASCADE;"`
 	Deleted        *bool     `gorm:"type:boolean"`
-	UpdatedAt      *time.Time
+	CreatedAt      *time.Time `gorm:"type:timestamp"`
+	UpdatedAt      *time.Time `gorm:"type:timestamp"`
 }
 
 type ProjectTeam struct {
@@ -120,7 +126,8 @@ type ProjectTeam struct {
 	Project   *Project  `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
 	Team      *Team     `gorm:"foreignKey:TeamID;references:ID;constraint:OnDelete:CASCADE;"`
 	Deleted   *bool     `gorm:"type:boolean"`
-	UpdatedAt *time.Time
+	CreatedAt *time.Time `gorm:"type:timestamp"`
+	UpdatedAt *time.Time `gorm:"type:timestamp"`
 }
 
 // ===== Attendance / Reports =====
@@ -139,7 +146,8 @@ type Attendance struct {
 	CodeReviews   *int16
 	EndWork       *time.Time `gorm:"type:time"`
 	Deleted       *bool      `gorm:"type:boolean"`
-	UpdatedAt     *time.Time
+	CreatedAt       *time.Time `gorm:"type:timestamp"`
+	UpdatedAt     *time.Time `gorm:"type:timestamp"`
 }
 
 type DailyReport struct {
@@ -186,6 +194,7 @@ type ForumMessage struct {
 type ReportProblem struct {
 	ReportID  uuid.UUID   `gorm:"type:uuid;primaryKey;column:report_id"`
 	ProblemID uuid.UUID   `gorm:"type:uuid;primaryKey;column:problem_id"`
+	CreatedAt       *time.Time `gorm:"type:timestamp"`
 	UpdatedAt *time.Time  `gorm:"type:timestamp"`
 	Deleted   *bool       `gorm:"type:boolean;default:false"`
 	Report    *DailyReport `gorm:"foreignKey:ReportID;constraint:OnDelete:CASCADE;"`
@@ -202,6 +211,8 @@ type HelpRequest struct {
 	Helper      *User       `gorm:"foreignKey:HelperID;references:ID"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
 	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	UpdatedAt   *time.Time `gorm:"type:timestamp"`
+	CreatedAt       *time.Time `gorm:"type:timestamp"`
 }
 
 type CompletedWork struct {
@@ -210,6 +221,8 @@ type CompletedWork struct {
 	Deleted     *bool       `gorm:"default:false"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
 	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	UpdatedAt   *time.Time `gorm:"type:timestamp"`
+	CreatedAt       *time.Time `gorm:"type:timestamp"`
 }
 
 type TomorrowPlans struct {
@@ -218,4 +231,16 @@ type TomorrowPlans struct {
 	Deleted     *bool       `gorm:"default:false"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
 	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	UpdatedAt   *time.Time `gorm:"type:timestamp"`
+	CreatedAt       *time.Time `gorm:"type:timestamp"`
+}
+
+type Subscription struct {
+	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID    *uuid.UUID `gorm:"type:uuid;index"`
+	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE;"`
+	Subscription_Id *int8   `gorm:"type:int8"`
+	UpdatedAt   *time.Time `gorm:"type:timestamp"`
+	CreatedAt   *time.Time `gorm:"type:timestamp"`
+	Deleted     *bool       `gorm:"default:false"`
 }

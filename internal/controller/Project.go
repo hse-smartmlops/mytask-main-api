@@ -17,6 +17,8 @@ import (
 
 func RegisterProjectRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/project")
+	// apply Keycloak auth middleware to all project routes
+	projectGroup.Use(KeycloakAuthMiddleware)
 	{
 		projectGroup.GET("/all/:page/:pagesize", GetAllProjects)
 		projectGroup.GET("/:id", GetProjectByID)
@@ -34,11 +36,16 @@ func RegisterProjectRoutes(e *echo.Echo) {
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProjectListResponse "Список проектов успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/all/{page}/{pagesize} [get]
 func GetAllProjects(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -80,10 +87,10 @@ func GetAllProjects(c echo.Context) error {
 		Limit(pageSize).
 		Offset(offset).
 		Find(&projects).Error; err != nil {
-		log.Printf("DB error (find projects): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проектов из базы данных",
-		})
+			log.Printf("DB error (find projects): %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении проектов из базы данных",
+			})
 	}
 
 	// Формируем ответ
@@ -153,12 +160,17 @@ func GetAllProjects(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проекта"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProjectResponse "Проект успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
 // @Failure 404 {object} map[string]string "Проект не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проекта"
 // @Router /project/{id} [get]
 func GetProjectByID(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	projectId, err := uuid.Parse(id)
 	if err != nil {
@@ -236,11 +248,16 @@ func GetProjectByID(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param project body request.CreateProjectRequest true "Данные для создания проекта"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.ProjectUniversalResponse "Проект успешно создан"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проекта"
 // @Router /project [post]
 func CreateProject(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.CreateProjectRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -294,11 +311,16 @@ func CreateProject(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID проекта"
 // @Param project body request.UpdateProjectRequest true "Данные для обновления проекта"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProjectUniversalResponse "Проект успешно обновлен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проекта"
 // @Router /project/{id} [patch]
 func UpdateProject(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	// Парсинг ID проекта
 	id := c.Param("id")
 	projectId, err := uuid.Parse(id)
@@ -350,9 +372,13 @@ func UpdateProject(c echo.Context) error {
 
 	// Выполняем обновление только указанных полей
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Model(models.Project{}).Where("id = ?", projectId).Updates(updateData); res.Error != nil {
+		res := tx.Model(models.Project{}).Where("id = ? AND deleted = ?", projectId, false).Updates(updateData)
+		if res.Error != nil {
 			log.Printf("DB error (update project): %v", res.Error)
 			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
 	}); txErr != nil {
@@ -376,11 +402,17 @@ func UpdateProject(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проекта"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProjectUniversalResponse "Проект успешно удален"
 // @Failure 404 {object} map[string]string "Проект не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта"
 // @Router /project/{id} [delete]
 func DeleteProject(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true

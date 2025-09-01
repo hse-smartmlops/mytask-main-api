@@ -9,6 +9,50 @@ definitions:
       user_id:
         type: string
     type: object
+  request.AttendanceCreateRequest:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      end_work:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
+  request.AttendanceUpdateRequest:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      end_work:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
   request.BoardCreateRequest:
     properties:
       description:
@@ -433,6 +477,64 @@ definitions:
         type: string
       user_id:
         type: string
+    type: object
+  response.AttendanceResponse:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      deleted:
+        type: boolean
+      end_work:
+        type: string
+      id:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
+  response.AttendanceUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.AttendancesByUserId:
+    properties:
+      attendances:
+        items:
+          $ref: '#/definitions/response.AttendanceResponse'
+        type: array
+      user_id:
+        type: string
+    type: object
+  response.AttendancesListResponse:
+    properties:
+      attendances:
+        items:
+          $ref: '#/definitions/response.AttendanceResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
     type: object
   response.AuthResponse:
     properties:
@@ -1015,6 +1117,235 @@ info:
   title: Emplacc API
   version: "1.0"
 paths:
+  /attendance:
+    post:
+      consumes:
+      - application/json
+      description: Создание нового посещения
+      parameters:
+      - description: Данные для создания посещения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.AttendanceCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Посещение успешно создано
+          schema:
+            $ref: '#/definitions/response.AttendanceUniversalResponse'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании посещения
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание посещения
+      tags:
+      - attendance
+  /attendance/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление посещения по ID (поле deleted = true)
+      parameters:
+      - description: ID посещения
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Посещение успешно удалено
+          schema:
+            $ref: '#/definitions/response.AttendanceUniversalResponse'
+        "400":
+          description: Некорректный ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Посещение не найдено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении посещения
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление посещения
+      tags:
+      - attendance
+    patch:
+      consumes:
+      - application/json
+      description: Обновление полей посещения по ID
+      parameters:
+      - description: ID посещения
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления посещения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.AttendanceUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Посещение успешно обновлено
+          schema:
+            $ref: '#/definitions/response.AttendanceUniversalResponse'
+        "400":
+          description: Некорректные данные запроса или ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Посещение не найдено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении посещения
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновление посещения
+      tags:
+      - attendance
+  /attendance/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка всех посещений с пагинацией (логически не удаленных)
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список посещений успешно получен
+          schema:
+            $ref: '#/definitions/response.AttendancesListResponse'
+        "400":
+          description: Ошибка при парсинге параметров пагинации
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении посещений
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение всех посещений
+      tags:
+      - attendance
+  /attendance/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка посещений для конкретного пользователя (логически
+        не удаленных)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список посещений пользователя успешно получен
+          schema:
+            $ref: '#/definitions/response.AttendancesByUserId'
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении посещений
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение посещений по ID пользователя
+      tags:
+      - attendance
   /auth/login:
     post:
       consumes:
@@ -1081,6 +1412,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Выход из системы
       tags:
       - Auth
@@ -1108,6 +1441,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение информации о текущем пользователе
       tags:
       - Auth
@@ -1301,12 +1636,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании доски
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание новой доски
       tags:
       - boards
@@ -1328,6 +1671,12 @@ paths:
           description: Доска успешно удалена
           schema:
             $ref: '#/definitions/response.BoardUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Доска не найдена
           schema:
@@ -1340,6 +1689,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление доски
       tags:
       - boards
@@ -1366,6 +1717,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Доска не найдена
           schema:
@@ -1378,6 +1735,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение доски по ID
       tags:
       - boards
@@ -1410,12 +1769,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении доски
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление доски
       tags:
       - boards
@@ -1443,6 +1810,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Доска не найдена
           schema:
@@ -1455,6 +1828,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение досок по ID проекта
       tags:
       - boards
@@ -1483,12 +1858,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании сообщения форума
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание нового сообщения форума
       tags:
       - ForumMessages
@@ -1510,6 +1893,12 @@ paths:
           description: Сообщение форума успешно удалено
           schema:
             $ref: '#/definitions/response.ForumMessageUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Сообщение форума не найдено
           schema:
@@ -1522,6 +1911,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление сообщения форума
       tags:
       - ForumMessages
@@ -1548,6 +1939,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Сообщение форума не найдено
           schema:
@@ -1560,6 +1957,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение сообщения форума по ID
       tags:
       - ForumMessages
@@ -1592,12 +1991,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении сообщения форума
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление сообщения форума
       tags:
       - ForumMessages
@@ -1631,12 +2038,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении сообщений форума
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех сообщений форума
       tags:
       - ForumMessages
@@ -1675,12 +2090,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении сообщений форума
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение сообщений форума по ID проблемы
       tags:
       - ForumMessages
@@ -1709,29 +2132,25 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании проблемы
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание новой проблемы
       tags:
       - Problems
   /problem/{id}:
     delete:
-      consumes:
-      - application/json
-      description: Логическое удаление проблемы по ID, включая связанные данные (поле
-        deleted = true)
-      parameters:
-      - description: ID проблемы
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
       responses:
         "200":
           description: Проблема успешно удалена
@@ -1749,9 +2168,6 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Удаление проблемы
-      tags:
-      - Problems
     get:
       consumes:
       - application/json
@@ -1775,6 +2191,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Проблема не найдена
           schema:
@@ -1787,6 +2209,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение проблемы по ID
       tags:
       - Problems
@@ -1819,12 +2243,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении проблемы
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление проблемы
       tags:
       - Problems
@@ -1857,12 +2289,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении проблем
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех проблем
       tags:
       - Problems
@@ -1901,12 +2341,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении проблем
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение проблем по ID пользователя
       tags:
       - Problems
@@ -1935,12 +2383,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании проекта
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание нового проекта
       tags:
       - Projects
@@ -1963,6 +2419,12 @@ paths:
           description: Проект успешно удален
           schema:
             $ref: '#/definitions/response.ProjectUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Проект не найден
           schema:
@@ -1975,6 +2437,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление проекта
       tags:
       - Projects
@@ -2001,6 +2465,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Проект не найден
           schema:
@@ -2013,6 +2483,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение проекта по ID
       tags:
       - Projects
@@ -2045,12 +2517,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении проекта
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление проекта
       tags:
       - Projects
@@ -2083,12 +2563,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении проектов
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех проектов
       tags:
       - Projects
@@ -2118,12 +2606,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании отчета
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание нового отчета
       tags:
       - Reports
@@ -2146,6 +2642,12 @@ paths:
           description: Отчет успешно удален
           schema:
             $ref: '#/definitions/response.ReportUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Отчет не найден
           schema:
@@ -2158,6 +2660,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление отчета
       tags:
       - Reports
@@ -2184,6 +2688,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Отчет, пользователь, запрос на помощь, выполненная работа или
             план на завтра не найдены
@@ -2197,6 +2707,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение отчета по ID
       tags:
       - Reports
@@ -2229,12 +2741,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении отчета
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление отчета
       tags:
       - Reports
@@ -2267,6 +2787,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Пользователь, запрос на помощь, выполненная работа или план
             на завтра не найдены
@@ -2280,6 +2806,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех отчетов
       tags:
       - Reports
@@ -2313,12 +2841,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении выполненной работы
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление выполненной работы
       tags:
       - Reports
@@ -2352,12 +2888,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении запроса на помощь
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление запроса на помощь
       tags:
       - Reports
@@ -2385,6 +2929,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Пользователь, запрос на помощь, выполненная работа или план
             на завтра не найдены
@@ -2398,6 +2948,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение отчетов по ID проекта
       tags:
       - Reports
@@ -2425,6 +2977,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Пользователь, запрос на помощь, выполненная работа или план
             на завтра не найдены
@@ -2438,6 +2996,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение отчетов по ID задачи
       tags:
       - Reports
@@ -2471,12 +3031,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении планов на завтра
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление планов на завтра
       tags:
       - Reports
@@ -2505,12 +3073,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании роли
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание новой роли
       tags:
       - Roles
@@ -2533,6 +3109,12 @@ paths:
           description: Роль успешно удалена
           schema:
             $ref: '#/definitions/response.ProjectUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Роль не найдена
           schema:
@@ -2545,6 +3127,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление роли
       tags:
       - Roles
@@ -2571,6 +3155,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Роль не найдена
           schema:
@@ -2583,6 +3173,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение роли по ID
       tags:
       - Roles
@@ -2615,12 +3207,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении роли
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление роли
       tags:
       - Roles
@@ -2653,12 +3253,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении ролей
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех ролей
       tags:
       - Roles
@@ -2687,6 +3295,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Исполнитель или поручитель не найден
           schema:
@@ -2699,6 +3313,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание новой задачи
       tags:
       - Tasks
@@ -2721,6 +3337,12 @@ paths:
           description: Задача успешно удалена
           schema:
             $ref: '#/definitions/response.TaskUniversaResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Задача не найдена
           schema:
@@ -2733,6 +3355,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление задачи
       tags:
       - Tasks
@@ -2759,6 +3383,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Задача не найдена
           schema:
@@ -2771,6 +3401,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение задачи по ID
       tags:
       - Tasks
@@ -2803,6 +3435,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Задача не найдена
           schema:
@@ -2815,6 +3453,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление задачи
       tags:
       - Tasks
@@ -2847,75 +3487,21 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении задач
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех задач
-      tags:
-      - Tasks
-  /task/filter:
-    get:
-      consumes:
-      - application/json
-      description: Получает список задач, соответствующих указанным фильтрам
-      parameters:
-      - description: Статус задачи
-        in: query
-        name: status
-        type: string
-      - description: Приоритет задачи
-        in: query
-        name: priority
-        type: integer
-      - description: ID исполнителя
-        in: query
-        name: assignedTo
-        type: string
-      - description: ID создателя
-        in: query
-        name: createdBy
-        type: string
-      - description: Дата начала (YYYY-MM-DD)
-        in: query
-        name: startDate
-        type: string
-      - description: Дедлайн (YYYY-MM-DD)
-        in: query
-        name: deadline
-        type: string
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список задач успешно получен
-          schema:
-            $ref: '#/definitions/response.TaskListResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении задач
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Получение задач по фильтру
       tags:
       - Tasks
   /task/project/{projectId}:
@@ -2942,12 +3528,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении задач
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение задач по ID проекта
       tags:
       - Tasks
@@ -2976,12 +3570,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании команды
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание новой команды
       tags:
       - Teams
@@ -3003,6 +3605,12 @@ paths:
           description: Команда успешно удалена
           schema:
             $ref: '#/definitions/response.TeamUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Команда не найдена
           schema:
@@ -3015,6 +3623,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление команды
       tags:
       - Teams
@@ -3042,6 +3652,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Команда не найдена
           schema:
@@ -3054,6 +3670,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение команды по ID
       tags:
       - Teams
@@ -3086,12 +3704,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении команды
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление команды
       tags:
       - Teams
@@ -3107,12 +3733,20 @@ paths:
           description: Список команд успешно получен
           schema:
             $ref: '#/definitions/response.TeamsListResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении команд
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех команд
       tags:
       - Teams
@@ -3141,6 +3775,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Ничего не удалено
           schema:
@@ -3153,6 +3793,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление проекта из команды
       tags:
       - Teams
@@ -3180,12 +3822,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при добавлении проекта в команду
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Добавление проекта в команду
       tags:
       - Teams
@@ -3214,6 +3864,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Ничего не удалено
           schema:
@@ -3226,6 +3882,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление пользователя из команды
       tags:
       - Teams
@@ -3253,12 +3911,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при добавлении пользователя в команду
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Добавление пользователя в команду
       tags:
       - Teams
@@ -3287,12 +3953,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при создании пользователя
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Создание нового пользователя
       tags:
       - Users
@@ -3315,6 +3989,12 @@ paths:
           description: Пользователь успешно удален
           schema:
             $ref: '#/definitions/response.UserUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Пользователь не найден
           schema:
@@ -3327,6 +4007,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление пользователя
       tags:
       - Users
@@ -3353,6 +4035,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Пользователь не найден
           schema:
@@ -3365,6 +4053,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение пользователя по ID
       tags:
       - Users
@@ -3397,12 +4087,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении пользователя
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Обновление пользователя
       tags:
       - Users
@@ -3436,12 +4134,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при получении пользователей
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Получение списка всех пользователей
       tags:
       - Users
@@ -3470,6 +4176,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Ничего не удалено
           schema:
@@ -3482,6 +4194,8 @@ paths:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Удаление роли у пользователя
       tags:
       - Users
@@ -3509,12 +4223,20 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при добавлении роли
           schema:
             additionalProperties:
               type: string
             type: object
+      security:
+      - BearerAuth: []
       summary: Добавление роли пользователю
       tags:
       - Users

@@ -17,6 +17,7 @@ import (
 
 func RegisterReportRoutes(e *echo.Echo) {
 	reportGroup := e.Group("/report")
+	reportGroup.Use(KeycloakAuthMiddleware)
 	{
 		reportGroup.GET("/all/:page/:pagesize", GetAllReports)
 		reportGroup.GET("/:id", GetReport)
@@ -39,12 +40,17 @@ func RegisterReportRoutes(e *echo.Echo) {
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportListResponse "Список отчетов успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/all/{page}/{pagesize} [get]
 func GetAllReports(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -320,12 +326,17 @@ func GetAllReports(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID отчета"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportResponse "Отчет успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор отчета"
 // @Failure 404 {object} map[string]string "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчета"
 // @Router /report/{id} [get]
 func GetReport(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	reportId, err := uuid.Parse(id)
 	if err != nil {
@@ -567,12 +578,17 @@ func GetReport(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID задачи"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportListByTaskId "Список отчетов успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор задачи"
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/task/{id} [get]
 func GetReportsByTaskId(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	taskId := c.Param("id")
 	var reports []models.DailyReport
 	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and task_id = ?", false, taskId).Find(&reports).Error; err != nil {
@@ -809,12 +825,17 @@ func GetReportsByTaskId(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проекта"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportListByProjectId "Список отчетов успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/project/{id} [get]
 func GetReportsByProjectId(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	projectId := c.Param("id")
 
 	var task []models.Task
@@ -1072,11 +1093,17 @@ func GetReportsByProjectId(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param report body request.ReportCreateRequest true "Данные для создания отчета"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.ReportUniversalResponse "Отчет успешно создан"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании отчета"
 // @Router /report [post]
 func CreateReport(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.ReportCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -1213,6 +1240,7 @@ func CreateReport(c echo.Context) error {
 			Description: &req.Help.Description,
 			ReportID:    &newUUID,
 			Deleted: &del,
+			CreatedAt: &now,
 		}
 
 		result = dbConn.Session(&gorm.Session{}).Create(&help)
@@ -1240,11 +1268,16 @@ func CreateReport(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID отчета"
 // @Param report body request.ReportUpdateRequest true "Данные для обновления отчета"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportUniversalResponse "Отчет успешно обновлен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор отчета или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении отчета"
 // @Router /report/{id} [patch]
 func UpdateReport(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	reportId, err := uuid.Parse(id)
 	if err != nil{
@@ -1271,8 +1304,18 @@ func UpdateReport(c echo.Context) error {
 	}
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Where("id = ?", reportId).Updates(updateData).Error ;err != nil{
-		log.Printf("DB error (update report): %v", err)
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Where("id = ? and deleted = ?", reportId, false).Updates(updateData)
+		if res.Error != nil{
+			log.Printf("DB error (update report): %v", res.Error)
+			return res.Error
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+		}
+		return nil
+	}); txErr != nil{
+		log.Printf("Transaction error (update report): %v", txErr)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении отчета",
 		})
@@ -1280,7 +1323,7 @@ func UpdateReport(c echo.Context) error {
 
 	updateResponse := response.ReportUniversalResponse{
 		ID: id,
-		Message: "Проект успешно изменен",
+		Message: "Отчет успешно изменен",
 	}
 
 	return c.JSON(http.StatusOK, updateResponse)
@@ -1293,11 +1336,16 @@ func UpdateReport(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID отчета"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportUniversalResponse "Отчет успешно удален"
 // @Failure 404 {object} map[string]string "Отчет не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении отчета"
 // @Router /report/{id} [delete]
 func DeleteReport(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
@@ -1383,11 +1431,16 @@ func DeleteReport(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID запроса на помощь"
 // @Param helpRequest body request.HelpRequestUpdateRequest true "Данные для обновления запроса на помощь"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportUniversalResponse "Запрос на помощь успешно обновлен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении запроса на помощь"
 // @Router /report/help-request/{id} [patch]
 func UpdateHelpRequest(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	helpRequestId, err := uuid.Parse(id)
 	if err != nil {
@@ -1444,11 +1497,16 @@ func UpdateHelpRequest(c echo.Context) error{
 // @Produce json
 // @Param id path string true "ID выполненной работы"
 // @Param completedWork body request.CompletedWorkUpdateRequest true "Данные для обновления выполненной работы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportUniversalResponse "Выполненная работа успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении выполненной работы"
 // @Router /report/completed-work/{id} [patch]
 func UpdateCompletedWork(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	completedWorkId, err := uuid.Parse(id)
 	if err != nil{
@@ -1502,11 +1560,16 @@ func UpdateCompletedWork(c echo.Context) error{
 // @Produce json
 // @Param id path string true "ID планов на завтра"
 // @Param tomorrowPlans body request.TomorrowPlansUpdateRequest true "Данные для обновления планов на завтра"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportUniversalResponse "Планы на завтра успешно обновлены"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении планов на завтра"
 // @Router /report/tomorrow-plans/{id} [patch]
 func UpdateTomorrowPlans(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	tomorrowPlansId, err := uuid.Parse(id)
 	if err != nil{

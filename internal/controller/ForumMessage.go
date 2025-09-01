@@ -18,6 +18,7 @@ import (
 
 func RegisterForumMessagesRoutes(e *echo.Echo){
 	forumMessageGroup := e.Group("/forum-messages")
+	forumMessageGroup.Use(KeycloakAuthMiddleware)
 	{
 		forumMessageGroup.GET("/all/:page/:pagesize", GetAllForumMessages)
 		forumMessageGroup.GET("/problem/:id", GetForumMessagesByProblemId)
@@ -36,11 +37,16 @@ func RegisterForumMessagesRoutes(e *echo.Echo){
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ForumMessageListResponse "Список сообщений форума успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
 // @Router /forum-messages/all/{page}/{pagesize} [get]
 func GetAllForumMessages(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -131,11 +137,16 @@ func GetAllForumMessages(c echo.Context) error {
 // @Param id path string true "ID проблемы"
 // @Param page query int false "Номер страницы" default(1)
 // @Param pageSize query int false "Размер страницы" default(10)
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ForumMessageListByProblemIdResponse "Список сообщений форума успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
 // @Router /forum-messages/problem/{id} [get]
 func GetForumMessagesByProblemId(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	problemID, err := uuid.Parse(id)
 	if err != nil {
@@ -228,12 +239,17 @@ func GetForumMessagesByProblemId(c echo.Context) error{
 // @Accept json
 // @Produce json
 // @Param id path string true "ID сообщения форума"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ForumMessageResponse "Сообщение форума успешно получено"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор сообщения"
 // @Failure 404 {object} map[string]string "Сообщение форума не найдено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщения форума"
 // @Router /forum-messages/{id} [get]
 func GetForumMessageById(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	messageID, err := uuid.Parse(id)
 	if err != nil {
@@ -290,11 +306,16 @@ func GetForumMessageById(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param forumMessage body request.CreateForumMessageRequest true "Данные для создания сообщения форума"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.ForumMessageUniversalResponse "Сообщение форума успешно создано"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании сообщения форума"
 // @Router /forum-messages [post]
 func CreateForumMessage(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.CreateForumMessageRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -368,11 +389,16 @@ func CreateForumMessage(c echo.Context) error{
 // @Produce json
 // @Param id path string true "ID сообщения форума"
 // @Param forumMessage body request.UpdateForumMessageRequest true "Данные для обновления сообщения форума"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ForumMessageUniversalResponse "Сообщение форума успешно обновлено"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении сообщения форума"
 // @Router /forum-messages/{id} [patch]
 func UpdateForumMessage(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	messageID, err := uuid.Parse(id)
 	if err != nil {
@@ -426,9 +452,13 @@ func UpdateForumMessage(c echo.Context) error{
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData); res.Error != nil {
+		res := tx.Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData)
+		if res.Error != nil {
 			log.Printf("DB error (update forum message): %v", res.Error)
 			return res.Error
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
 	}); txErr != nil {
@@ -451,11 +481,16 @@ func UpdateForumMessage(c echo.Context) error{
 // @Accept json
 // @Produce json
 // @Param id path string true "ID сообщения форума"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ForumMessageUniversalResponse "Сообщение форума успешно удалено"
 // @Failure 404 {object} map[string]string "Сообщение форума не найдено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении сообщения форума"
 // @Router /forum-messages/{id} [delete]
 func DeleteForumMessage(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
