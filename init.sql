@@ -26,7 +26,8 @@ CREATE TABLE roles (
     name varchar(50),
     description varchar(200),
     deleted boolean DEFAULT false,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE teams (
@@ -34,7 +35,8 @@ CREATE TABLE teams (
     name varchar(100),
     description text,
     deleted boolean DEFAULT false,
-    updated_at timestamp DEFAULT CURRENT_TIMESTAMP
+    updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE projects (
@@ -72,6 +74,7 @@ CREATE TABLE user_roles (
     assigned_at timestamp DEFAULT CURRENT_TIMESTAMP,
     assigned_by uuid,
     deleted boolean DEFAULT false,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (role_id, user_id),
     CONSTRAINT user_role_role_id_fkey FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
@@ -84,6 +87,7 @@ CREATE TABLE team_members (
     team_id uuid NOT NULL,
     specialization varchar(50),
     deleted boolean DEFAULT false,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, team_id),
     CONSTRAINT team_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -94,6 +98,7 @@ CREATE TABLE project_teams (
     project_id uuid NOT NULL,
     team_id uuid NOT NULL,
     deleted boolean DEFAULT false,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, team_id),
     CONSTRAINT project_teams_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
@@ -107,6 +112,7 @@ CREATE TABLE boards (
     description text,
     filter varchar(50),
     deleted boolean DEFAULT false,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT board_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
@@ -126,6 +132,7 @@ CREATE TABLE tasks (
     project_id uuid,
     category bigint DEFAULT 1,
     deleted boolean DEFAULT false,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT task_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT task_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
@@ -145,6 +152,7 @@ CREATE TABLE attendances (
     code_reviews smallint DEFAULT 0,
     end_work time,
     deleted boolean DEFAULT false,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT attendances_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -191,6 +199,7 @@ CREATE TABLE report_problems (
     report_id uuid NOT NULL,
     problem_id uuid NOT NULL,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
+    created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     deleted boolean DEFAULT false,
     PRIMARY KEY (report_id, problem_id),
     CONSTRAINT report_problems_report_id_fkey FOREIGN KEY (report_id) REFERENCES daily_reports(id) ON DELETE CASCADE,
@@ -202,8 +211,10 @@ CREATE TABLE help_requests (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     helper_id   UUID,
     description VARCHAR(255),
-    deleted     BOOLEAN DEFAULT FALSE,
     report_id   UUID,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted     BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_help_requests_helper
         FOREIGN KEY (helper_id) REFERENCES users(id),
     CONSTRAINT fk_help_requests_report
@@ -214,8 +225,10 @@ CREATE TABLE help_requests (
 CREATE TABLE completed_works (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     description TEXT,
-    deleted     BOOLEAN DEFAULT FALSE,
     report_id   UUID,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted     BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_completed_works_report
         FOREIGN KEY (report_id) REFERENCES daily_reports(id)
 );
@@ -224,8 +237,22 @@ CREATE TABLE completed_works (
 CREATE TABLE tomorrow_plans (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     description TEXT,
-    deleted     BOOLEAN DEFAULT FALSE,
     report_id   UUID,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted     BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_tomorrow_plans_report
         FOREIGN KEY (report_id) REFERENCES daily_reports(id)
+);
+
+CREATE TABLE subscriptions (
+    id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id         UUID,
+    subscription_id UUID,
+    type_id         int8,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted         BOOLEAN DEFAULT FALSE,
+    CONSTRAINT fk_subscription_user
+        FOREIGN KEY (user_id) REFERENCES users(id)
 );

@@ -318,7 +318,9 @@ func CreateTeam(c echo.Context) error {
 
 	del := false
 
-	team := models.Team{ID: newUUID, Name: name, Description: description, Deleted: &del}
+	now := time.Now()
+
+	team := models.Team{ID: newUUID, Name: name, Description: description, Deleted: &del, CreatedAt: &now}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Create(&team); res.Error != nil {
 			log.Printf("DB error (create team): %v", res.Error)

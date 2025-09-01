@@ -9,6 +9,50 @@ definitions:
       user_id:
         type: string
     type: object
+  request.AttendanceCreateRequest:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      end_work:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
+  request.AttendanceUpdateRequest:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      end_work:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
   request.BoardCreateRequest:
     properties:
       description:
@@ -433,6 +477,64 @@ definitions:
         type: string
       user_id:
         type: string
+    type: object
+  response.AttendanceResponse:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      deleted:
+        type: boolean
+      end_work:
+        type: string
+      id:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
+  response.AttendanceUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.AttendancesByUserId:
+    properties:
+      attendances:
+        items:
+          $ref: '#/definitions/response.AttendanceResponse'
+        type: array
+      user_id:
+        type: string
+    type: object
+  response.AttendancesListResponse:
+    properties:
+      attendances:
+        items:
+          $ref: '#/definitions/response.AttendanceResponse'
+        type: array
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
     type: object
   response.AuthResponse:
     properties:
@@ -1015,6 +1117,235 @@ info:
   title: Emplacc API
   version: "1.0"
 paths:
+  /attendance:
+    post:
+      consumes:
+      - application/json
+      description: Создание нового посещения
+      parameters:
+      - description: Данные для создания посещения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.AttendanceCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Посещение успешно создано
+          schema:
+            $ref: '#/definitions/response.AttendanceUniversalResponse'
+        "400":
+          description: Некорректные данные запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании посещения
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание посещения
+      tags:
+      - attendance
+  /attendance/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление посещения по ID (поле deleted = true)
+      parameters:
+      - description: ID посещения
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Посещение успешно удалено
+          schema:
+            $ref: '#/definitions/response.AttendanceUniversalResponse'
+        "400":
+          description: Некорректный ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Посещение не найдено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении посещения
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление посещения
+      tags:
+      - attendance
+    patch:
+      consumes:
+      - application/json
+      description: Обновление полей посещения по ID
+      parameters:
+      - description: ID посещения
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления посещения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.AttendanceUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Посещение успешно обновлено
+          schema:
+            $ref: '#/definitions/response.AttendanceUniversalResponse'
+        "400":
+          description: Некорректные данные запроса или ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Посещение не найдено
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении посещения
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновление посещения
+      tags:
+      - attendance
+  /attendance/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка всех посещений с пагинацией (логически не удаленных)
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список посещений успешно получен
+          schema:
+            $ref: '#/definitions/response.AttendancesListResponse'
+        "400":
+          description: Ошибка при парсинге параметров пагинации
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении посещений
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение всех посещений
+      tags:
+      - attendance
+  /attendance/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка посещений для конкретного пользователя (логически
+        не удаленных)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список посещений пользователя успешно получен
+          schema:
+            $ref: '#/definitions/response.AttendancesByUserId'
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении посещений
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение посещений по ID пользователя
+      tags:
+      - attendance
   /auth/login:
     post:
       consumes:

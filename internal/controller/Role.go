@@ -210,11 +210,14 @@ func CreateRole(c echo.Context) error {
 
 	del := false
 
+	now := time.Now()
+
 	role := models.Role{
 		ID:          newUUID,
 		Name:        req.Name,
 		Description: req.Description,
 		Deleted: &del,
+		CreatedAt: &now,
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {

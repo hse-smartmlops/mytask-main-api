@@ -571,6 +571,8 @@ func CreateTask(c echo.Context) error {
 
 	del := false
 
+	now := time.Now()
+
 	task := models.Task{
 		ID:            newUUID,
 		Priority:      priority,
@@ -585,6 +587,7 @@ func CreateTask(c echo.Context) error {
 		ProjectID:     temp1,
 		Category:      category,
 		Deleted: &del,
+		CreatedAt: &now,
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {

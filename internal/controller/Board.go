@@ -347,6 +347,8 @@ func CreateBoard(c echo.Context) error {
 
 	del := false
 
+	now := time.Now()
+
 	board := models.Board{
 		ID:          newUUID,
 		Name:        req.Name,
@@ -354,6 +356,7 @@ func CreateBoard(c echo.Context) error {
 		ProjectID:   projectId,
 		Filter:      req.Filter,
 		Deleted: 		&del,
+		CreatedAt: &now,
 	}
 
 	// create inside a transaction

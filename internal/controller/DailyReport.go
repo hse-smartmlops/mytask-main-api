@@ -1240,6 +1240,7 @@ func CreateReport(c echo.Context) error {
 			Description: &req.Help.Description,
 			ReportID:    &newUUID,
 			Deleted: &del,
+			CreatedAt: &now,
 		}
 
 		result = dbConn.Session(&gorm.Session{}).Create(&help)

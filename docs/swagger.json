@@ -8,6 +8,360 @@
     },
     "basePath": "/",
     "paths": {
+        "/attendance": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание нового посещения",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendance"
+                ],
+                "summary": "Создание посещения",
+                "parameters": [
+                    {
+                        "description": "Данные для создания посещения",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AttendanceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Посещение успешно создано",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendanceUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные запроса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при создании посещения",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/all/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка всех посещений с пагинацией (логически не удаленных)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendance"
+                ],
+                "summary": "Получение всех посещений",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список посещений успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendancesListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров пагинации",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении посещений",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/user/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка посещений для конкретного пользователя (логически не удаленных)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendance"
+                ],
+                "summary": "Получение посещений по ID пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список посещений пользователя успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendancesByUserId"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении посещений",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление посещения по ID (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendance"
+                ],
+                "summary": "Удаление посещения",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID посещения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Посещение успешно удалено",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendanceUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Посещение не найдено",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении посещения",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновление полей посещения по ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "attendance"
+                ],
+                "summary": "Обновление посещения",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID посещения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления посещения",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AttendanceUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Посещение успешно обновлено",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendanceUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные запроса или ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Посещение не найдено",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при обновлении посещения",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Аутентифицирует пользователя по email и паролю через Keycloak",
@@ -4488,6 +4842,73 @@
                 }
             }
         },
+        "request.AttendanceCreateRequest": {
+            "type": "object",
+            "properties": {
+                "actual_start": {
+                    "type": "string"
+                },
+                "code_reviews": {
+                    "type": "integer"
+                },
+                "commits": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "end_work": {
+                    "type": "string"
+                },
+                "merge_requests": {
+                    "type": "integer"
+                },
+                "planned_start": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "workday_hours": {
+                    "type": "integer"
+                }
+            }
+        },
+        "request.AttendanceUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "actual_start": {
+                    "type": "string"
+                },
+                "code_reviews": {
+                    "type": "integer"
+                },
+                "commits": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "end_work": {
+                    "type": "string"
+                },
+                "merge_requests": {
+                    "type": "integer"
+                },
+                "planned_start": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "workday_hours": {
+                    "type": "integer"
+                }
+            }
+        },
         "request.BoardCreateRequest": {
             "type": "object",
             "properties": {
@@ -5123,6 +5544,95 @@
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "response.AttendanceResponse": {
+            "type": "object",
+            "properties": {
+                "actual_start": {
+                    "type": "string"
+                },
+                "code_reviews": {
+                    "type": "integer"
+                },
+                "commits": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "end_work": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "merge_requests": {
+                    "type": "integer"
+                },
+                "planned_start": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "workday_hours": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.AttendanceUniversalResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AttendancesByUserId": {
+            "type": "object",
+            "properties": {
+                "attendances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AttendanceResponse"
+                    }
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AttendancesListResponse": {
+            "type": "object",
+            "properties": {
+                "attendances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AttendanceResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
                 }
             }
         },

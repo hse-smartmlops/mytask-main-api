@@ -287,6 +287,8 @@ func CreateAttendance(c echo.Context) error{
 
 	del := false
 
+	now := time.Now()
+
 	userId, err := uuid.Parse(req.UserId)
 	if err != nil{
 		log.Printf("error in parsing user id: %v", err)
@@ -308,6 +310,7 @@ func CreateAttendance(c echo.Context) error{
 		CodeReviews: req.CodeReviews,
 		EndWork: req.EndWork,
 		Deleted: &del,
+		CreatedAt: &now,
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
