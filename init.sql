@@ -250,7 +250,6 @@ CREATE TABLE subscriptions (
     user_id         UUID,
     subscription_id UUID,
     type_id         int8,
-    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted         BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_subscription_user
