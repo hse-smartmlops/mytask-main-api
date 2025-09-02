@@ -476,6 +476,45 @@ func CreateSubscription(c echo.Context) error{
 			"error": "Некорректный идентификатор подписки",
 		})
 	}
+
+	typeId := *req.TypeId
+
+	switch typeId{
+	case 0:
+		var task models.Task
+		result := dbConn.Session(&gorm.Session{}).First(&task, "id = ? AND deleted = ?", req.SubscriptionId, false)
+		if result.Error != nil {
+			log.Printf("DB error %v", err)
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return c.JSON(http.StatusNotFound, map[string]string{
+					"error": "Задача не найдена",
+				})
+			}
+			log.Printf("DB error (find project by id): %v", result.Error)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении задачи из базы данных",
+			})
+		}
+	case 1:
+		var  problem models.Problem
+		result := dbConn.Session(&gorm.Session{}).First(&problem, "id = ? AND deleted = ?", req.SubscriptionId, false)
+		if result.Error != nil{
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return c.JSON(http.StatusNotFound, map[string]string{
+					"error": "Проблема не найдена",
+				})
+			}
+			log.Printf("DB error (find problem by id): %v", result.Error)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении проблемы из базы данных",
+			})
+		}
+	default:
+		log.Print("incorect type of object")
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный тип объекты",
+		})
+	}
  
 	sub := models.Subscription{
 		ID: &newUUID,

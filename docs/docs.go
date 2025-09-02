@@ -30,7 +30,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Создание посещения",
                 "parameters": [
@@ -96,7 +96,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Получение всех посещений",
                 "parameters": [
@@ -167,7 +167,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Получение посещений по ID пользователя",
                 "parameters": [
@@ -231,7 +231,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Удаление посещения",
                 "parameters": [
@@ -302,7 +302,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Обновление посещения",
                 "parameters": [
@@ -789,7 +789,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Создание новой доски",
                 "parameters": [
@@ -855,7 +855,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Получение досок по ID проекта",
                 "parameters": [
@@ -928,7 +928,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Получение доски по ID",
                 "parameters": [
@@ -999,7 +999,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Удаление доски",
                 "parameters": [
@@ -1061,7 +1061,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Обновление доски",
                 "parameters": [

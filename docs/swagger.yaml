@@ -1237,7 +1237,7 @@ paths:
       - BearerAuth: []
       summary: Создание посещения
       tags:
-      - attendance
+      - Attendance
   /attendance/{id}:
     delete:
       consumes:
@@ -1284,7 +1284,7 @@ paths:
       - BearerAuth: []
       summary: Удаление посещения
       tags:
-      - attendance
+      - Attendance
     patch:
       consumes:
       - application/json
@@ -1336,7 +1336,7 @@ paths:
       - BearerAuth: []
       summary: Обновление посещения
       tags:
-      - attendance
+      - Attendance
   /attendance/all/{page}/{pagesize}:
     get:
       consumes:
@@ -1382,7 +1382,7 @@ paths:
       - BearerAuth: []
       summary: Получение всех посещений
       tags:
-      - attendance
+      - Attendance
   /attendance/user/{id}:
     get:
       consumes:
@@ -1424,7 +1424,7 @@ paths:
       - BearerAuth: []
       summary: Получение посещений по ID пользователя
       tags:
-      - attendance
+      - Attendance
   /auth/login:
     post:
       consumes:
@@ -1731,7 +1731,7 @@ paths:
       - BearerAuth: []
       summary: Создание новой доски
       tags:
-      - boards
+      - Boards
   /boards/{id}:
     delete:
       consumes:
@@ -1772,7 +1772,7 @@ paths:
       - BearerAuth: []
       summary: Удаление доски
       tags:
-      - boards
+      - Boards
     get:
       consumes:
       - application/json
@@ -1818,7 +1818,7 @@ paths:
       - BearerAuth: []
       summary: Получение доски по ID
       tags:
-      - boards
+      - Boards
     patch:
       consumes:
       - application/json
@@ -1864,7 +1864,7 @@ paths:
       - BearerAuth: []
       summary: Обновление доски
       tags:
-      - boards
+      - Boards
   /boards/project/{projectId}:
     get:
       consumes:
@@ -1911,7 +1911,7 @@ paths:
       - BearerAuth: []
       summary: Получение досок по ID проекта
       tags:
-      - boards
+      - Boards
   /forum-messages:
     post:
       consumes:

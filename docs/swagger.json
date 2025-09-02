@@ -23,7 +23,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Создание посещения",
                 "parameters": [
@@ -89,7 +89,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Получение всех посещений",
                 "parameters": [
@@ -160,7 +160,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Получение посещений по ID пользователя",
                 "parameters": [
@@ -224,7 +224,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Удаление посещения",
                 "parameters": [
@@ -295,7 +295,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "attendance"
+                    "Attendance"
                 ],
                 "summary": "Обновление посещения",
                 "parameters": [
@@ -782,7 +782,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Создание новой доски",
                 "parameters": [
@@ -848,7 +848,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Получение досок по ID проекта",
                 "parameters": [
@@ -921,7 +921,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Получение доски по ID",
                 "parameters": [
@@ -992,7 +992,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Удаление доски",
                 "parameters": [
@@ -1054,7 +1054,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Обновление доски",
                 "parameters": [
