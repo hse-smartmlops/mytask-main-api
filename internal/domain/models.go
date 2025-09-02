@@ -56,7 +56,6 @@ type Project struct {
 	Status          *string    `gorm:"size:20"`
 	GitlabProjectID *int
 	GitlabURL       *string    `gorm:"size:255"`
-	Priority        *int16
 	Boards          []Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Tasks           []Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	ProjectTeams    []ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`

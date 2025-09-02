@@ -32,7 +32,7 @@ func RegisterBoardRoutes(e *echo.Echo) {
 // GetAllBoards godoc
 // @Summary Получение списка всех досок
 // @Description Получает список всех досок с учетом пагинации, исключая удаленные.
-// @Tags boards
+// @Tags Boards
 // @Accept json
 // @Produce json
 // @Param page path int true "Номер страницы"
@@ -139,7 +139,7 @@ func GetAllBoards(c echo.Context) error {
 // GetBoardById godoc
 // @Summary Получение доски по ID
 // @Description Получает данные доски по её уникальному идентификатору
-// @Tags boards
+// @Tags Boards
 // @Accept json
 // @Produce json
 // @Param id path string true "ID доски"
@@ -220,7 +220,7 @@ func GetBoardById(c echo.Context) error {
 // GetBoardByProjectId godoc
 // @Summary Получение досок по ID проекта
 // @Description Получает список досок, связанных с указанным проектом
-// @Tags boards
+// @Tags Boards
 // @Accept json
 // @Produce json
 // @Param projectId path string true "ID проекта"
@@ -308,7 +308,7 @@ func GetBoardByProjectId(c echo.Context) error {
 // CreateBoard godoc
 // @Summary Создание новой доски
 // @Description Создает новую доску с указанными параметрами
-// @Tags boards
+// @Tags Boards
 // @Accept json
 // @Produce json
 // @Param board body request.BoardCreateRequest true "Данные для создания доски"
@@ -382,7 +382,7 @@ func CreateBoard(c echo.Context) error {
 // UpdateBoard godoc
 // @Summary Обновление доски
 // @Description Обновляет данные доски по её ID
-// @Tags boards
+// @Tags Boards
 // @Accept json
 // @Produce json
 // @Param id path string true "ID доски"
@@ -454,7 +454,7 @@ func UpdateBoard(c echo.Context) error {
 // DeleteBoard godoc
 // @Summary Удаление доски
 // @Description Логическое удаление доски по ID (поле deleted = true)
-// @Tags boards
+// @Tags Boards
 // @Accept json
 // @Produce json
 // @Param id path string true "ID доски"

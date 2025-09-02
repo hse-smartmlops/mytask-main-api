@@ -107,15 +107,12 @@ definitions:
         maxLength: 100
         minLength: 3
         type: string
-      priority:
-        type: integer
       status:
         type: string
     required:
     - gitlab_project_id
     - gitlab_url
     - name
-    - priority
     - status
     type: object
   request.HelpRequest:
@@ -265,6 +262,27 @@ definitions:
       description:
         type: string
       name:
+        type: string
+    type: object
+  request.SubscriptionCreateRequest:
+    properties:
+      subscription_id:
+        type: string
+      type_id:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  request.SubscriptionListBySubObjectRequest:
+    properties:
+      subscription_id:
+        type: string
+      type_id:
+        type: integer
+    type: object
+  request.SubscriptionListByUserRequest:
+    properties:
+      user_id:
         type: string
     type: object
   request.TOTPRequest:
@@ -418,8 +436,6 @@ definitions:
         type: string
       name:
         type: string
-      priority:
-        type: integer
       status:
         type: string
     type: object
@@ -842,8 +858,6 @@ definitions:
         type: string
       name:
         type: string
-      priority:
-        type: integer
       status:
         type: string
       updated_at:
@@ -952,6 +966,71 @@ definitions:
         type: string
     type: object
   response.RoleUniversalReport:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.SubscriptionListBySubObjectResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      subscription_id:
+        type: string
+      subscriptions:
+        items:
+          $ref: '#/definitions/response.SubscriptionResponse'
+        type: array
+      total_count:
+        type: integer
+      type_id:
+        type: integer
+    type: object
+  response.SubscriptionListByUserIdResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      subscriptions:
+        items:
+          $ref: '#/definitions/response.SubscriptionResponse'
+        type: array
+      total_count:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  response.SubscriptionListResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      subscriptions:
+        items:
+          $ref: '#/definitions/response.SubscriptionResponse'
+        type: array
+      total_count:
+        type: integer
+    type: object
+  response.SubscriptionResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      subscription_id:
+        type: string
+      type_id:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  response.SubscriptionUniversalResponse:
     properties:
       id:
         type: string
@@ -3287,6 +3366,287 @@ paths:
       summary: Получение списка всех ролей
       tags:
       - Roles
+  /subscription:
+    post:
+      consumes:
+      - application/json
+      description: Создание новой подписки с указанными данными
+      parameters:
+      - description: Данные для создания подписки
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.SubscriptionCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Подписка успешно создана
+          schema:
+            $ref: '#/definitions/response.SubscriptionUniversalResponse'
+        "400":
+          description: Ошибка при парсинге данных запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании подписки
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание подписки
+      tags:
+      - Subscriptions
+  /subscription/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление подписки по ID (поле deleted = true)
+      parameters:
+      - description: ID подписки
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Подписка успешно удалена
+          schema:
+            $ref: '#/definitions/response.SubscriptionUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Подписка не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении подписки
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление подписки
+      tags:
+      - Subscriptions
+    get:
+      consumes:
+      - application/json
+      description: Получение детальной информации о подписке по её ID (deleted = false)
+      parameters:
+      - description: ID подписки
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Подписка успешно получена
+          schema:
+            $ref: '#/definitions/response.SubscriptionResponse'
+        "400":
+          description: Некорректный ID подписки
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Подписка не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении подписки
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение подписки по ID
+      tags:
+      - Subscriptions
+  /subscription/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка всех подписок с пагинацией (deleted = false)
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список подписок успешно получен
+          schema:
+            $ref: '#/definitions/response.SubscriptionListResponse'
+        "400":
+          description: Ошибка при парсинге параметров
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении подписок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение всех подписок
+      tags:
+      - Subscriptions
+  /subscription/sub-object/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка подписок для конкретного объекта подписки и типа
+        с пагинацией (deleted = false)
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      - description: Данные запроса (SubscriptionId, TypeId)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.SubscriptionListBySubObjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список подписок успешно получен
+          schema:
+            $ref: '#/definitions/response.SubscriptionListBySubObjectResponse'
+        "400":
+          description: Ошибка при парсинге параметров или данных запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении подписок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение подписок по объекту подписки
+      tags:
+      - Subscriptions
+  /subscription/user/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка подписок для конкретного пользователя с пагинацией
+        (deleted = false)
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      - description: Данные запроса (UserID)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.SubscriptionListByUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список подписок успешно получен
+          schema:
+            $ref: '#/definitions/response.SubscriptionListByUserIdResponse'
+        "400":
+          description: Ошибка при парсинге параметров или данных запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении подписок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение подписок по ID пользователя
+      tags:
+      - Subscriptions
   /task:
     post:
       consumes:

@@ -47,7 +47,6 @@ CREATE TABLE projects (
     status varchar(20) DEFAULT 'planning',
     gitlab_project_id integer,
     gitlab_url varchar(255),
-    priority smallint DEFAULT 1,
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
