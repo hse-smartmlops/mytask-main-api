@@ -30,7 +30,7 @@ func RegisterAttendanceRoutes(e *echo.Echo){
 // GetAllAttendances godoc
 // @Summary Получение всех посещений
 // @Description Получение списка всех посещений с пагинацией (логически не удаленных)
-// @Tags attendance
+// @Tags Attendance
 // @Accept json
 // @Produce json
 // @Param page path int true "Номер страницы"
@@ -162,7 +162,7 @@ func GetAllAttendances(c echo.Context) error{
 // GetAttendacesByUserId godoc
 // @Summary Получение посещений по ID пользователя
 // @Description Получение списка посещений для конкретного пользователя (логически не удаленных)
-// @Tags attendance
+// @Tags Attendance
 // @Accept json
 // @Produce json
 // @Param id path string true "ID пользователя"
@@ -261,7 +261,7 @@ func GetAttendacesByUserId(c echo.Context) error{
 // CreateAttendance godoc
 // @Summary Создание посещения
 // @Description Создание нового посещения
-// @Tags attendance
+// @Tags Attendance
 // @Accept json
 // @Produce json
 // @Param body body request.AttendanceCreateRequest true "Данные для создания посещения"
@@ -335,7 +335,7 @@ func CreateAttendance(c echo.Context) error{
 // UpdateAttendance godoc
 // @Summary Обновление посещения
 // @Description Обновление полей посещения по ID
-// @Tags attendance
+// @Tags Attendance
 // @Accept json
 // @Produce json
 // @Param id path string true "ID посещения"
@@ -431,7 +431,7 @@ func UpdateAttendance(c echo.Context) error{
 // DeleteAttendance godoc
 // @Summary Удаление посещения
 // @Description Логическое удаление посещения по ID (поле deleted = true)
-// @Tags attendance
+// @Tags Attendance
 // @Accept json
 // @Produce json
 // @Param id path string true "ID посещения"
