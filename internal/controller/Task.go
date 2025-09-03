@@ -191,14 +191,6 @@ func GetTaskByID(c echo.Context) error {
 		})
 	}
 
-	if task.Deleted != nil {
-		if *task.Deleted {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Задача не найдена",
-			})
-		}
-	}
-
 	creator := models.User{}
 	creatorId := *task.CreatedBy
 	err = dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", creatorId, false).First(&creator).Error

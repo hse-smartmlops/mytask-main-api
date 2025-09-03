@@ -273,18 +273,6 @@ definitions:
       user_id:
         type: string
     type: object
-  request.SubscriptionListBySubObjectRequest:
-    properties:
-      subscription_id:
-        type: string
-      type_id:
-        type: integer
-    type: object
-  request.SubscriptionListByUserRequest:
-    properties:
-      user_id:
-        type: string
-    type: object
   request.TOTPRequest:
     properties:
       email:
@@ -3541,7 +3529,7 @@ paths:
       summary: Получение всех подписок
       tags:
       - Subscriptions
-  /subscription/sub-object/{page}/{pagesize}:
+  /subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -3558,12 +3546,16 @@ paths:
         name: pagesize
         required: true
         type: integer
-      - description: Данные запроса (SubscriptionId, TypeId)
-        in: body
-        name: body
+      - description: UUID объекта подписки
+        in: path
+        name: subId
         required: true
-        schema:
-          $ref: '#/definitions/request.SubscriptionListBySubObjectRequest'
+        type: string
+      - description: Тип объекта подписки
+        in: path
+        name: typeId
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -3594,7 +3586,7 @@ paths:
       summary: Получение подписок по объекту подписки
       tags:
       - Subscriptions
-  /subscription/user/{page}/{pagesize}:
+  /subscription/user/{id}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -3606,17 +3598,16 @@ paths:
         name: page
         required: true
         type: integer
+      - description: user_id
+        in: path
+        name: id
+        required: true
+        type: string
       - description: Размер страницы
         in: path
         name: pagesize
         required: true
         type: integer
-      - description: Данные запроса (UserID)
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/request.SubscriptionListByUserRequest'
       produces:
       - application/json
       responses:

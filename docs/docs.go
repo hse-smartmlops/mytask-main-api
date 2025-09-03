@@ -3492,7 +3492,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/subscription/sub-object/{page}/{pagesize}": {
+        "/subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}": {
             "get": {
                 "security": [
                     {
@@ -3526,13 +3526,18 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Данные запроса (SubscriptionId, TypeId)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.SubscriptionListBySubObjectRequest"
-                        }
+                        "type": "string",
+                        "description": "UUID объекта подписки",
+                        "name": "subId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Тип объекта подписки",
+                        "name": "typeId",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -3572,7 +3577,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/subscription/user/{page}/{pagesize}": {
+        "/subscription/user/{id}/{page}/{pagesize}": {
             "get": {
                 "security": [
                     {
@@ -3599,20 +3604,18 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "type": "string",
+                        "description": "user_id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
                         "type": "integer",
                         "description": "Размер страницы",
                         "name": "pagesize",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "Данные запроса (UserID)",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.SubscriptionListByUserRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -5702,25 +5705,6 @@ const docTemplate = `{
                 "type_id": {
                     "type": "integer"
                 },
-                "user_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.SubscriptionListBySubObjectRequest": {
-            "type": "object",
-            "properties": {
-                "subscription_id": {
-                    "type": "string"
-                },
-                "type_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "request.SubscriptionListByUserRequest": {
-            "type": "object",
-            "properties": {
                 "user_id": {
                     "type": "string"
                 }

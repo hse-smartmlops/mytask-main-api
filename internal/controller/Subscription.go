@@ -19,10 +19,10 @@ func RegisterSubscriptionRoutes(e *echo.Echo){
 	subscriptionGroup := e.Group("/subscription")
 	subscriptionGroup.Use(KeycloakAuthMiddleware)
 	{
-		subscriptionGroup.GET("/all/:page/:pagesize", GetAllAttendances)
+		subscriptionGroup.GET("/all/:page/:pagesize", GetAllSubscriptions)
 		subscriptionGroup.GET("/:id", GetSubscriptionById)
-		subscriptionGroup.GET("/user/:page/:pagesize", GetSubscriptionsByUserId)
-		subscriptionGroup.GET("/sub-object/:page/:pagesize", GetSubscriptionBySubObject)
+		subscriptionGroup.GET("/user/:id/:page/:pagesize", GetSubscriptionsByUserId)
+		subscriptionGroup.GET("/sub-object/:id/:type/:page/:pagesize", GetSubscriptionBySubObject)
 		subscriptionGroup.POST("", CreateSubscription)
 		subscriptionGroup.DELETE("/:id", DeleteSubscription)
 	}
@@ -86,9 +86,9 @@ func GetAllSubscriptions(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription)")
+			log.Printf("DB error (find subscription):%v", result.Error)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении подписок из базы данныхэ", 
+				"error": "Ошибка при получении подписок из базы данных", 
 			})
 	}
 
@@ -134,17 +134,25 @@ func GetAllSubscriptions(c echo.Context) error{
 // @Accept json
 // @Produce json
 // @Param page path int true "Номер страницы"
+// @Param id path string true "user_id"
 // @Param pagesize path int true "Размер страницы"
-// @Param body body request.SubscriptionListByUserRequest true "Данные запроса (UserID)"
 // @Security BearerAuth
 // @Failure 400 {object} map[string]string "Ошибка при парсинге параметров или данных запроса"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListByUserIdResponse "Список подписок успешно получен"
-// @Router /subscription/user/{page}/{pagesize} [get]
+// @Router /subscription/user/{id}/{page}/{pagesize} [get]
 func GetSubscriptionsByUserId(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
+	}
+	id := c.Param("id")
+	userId, err := uuid.Parse(id)
+	if err != nil{
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор подписки",
+		})
 	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
@@ -171,22 +179,6 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 	}
 	offset := (page - 1) * pageSize
 
-	var req request.SubscriptionListByUserRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
-	}
-
-	userId, err := uuid.Parse(req.UserID)
-	if err != nil{
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор пользователя",
-		})
-	}
-
 	var totalCount int64
 	result := dbConn.Session(&gorm.Session{}).Model(models.Subscription{}).Where("deleted = ? and user_id = ?", false, userId).Count(&totalCount)
 	if result.Error != nil {
@@ -201,7 +193,7 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription)")
+			log.Printf("DB error (find subscription by id): %v", result.Error)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении подписок из базы данныхэ", 
 			})
@@ -211,7 +203,7 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 		Page: page,
 		PageSize: pageSize,
 		TotalCount: totalCount,
-		UserId: req.UserID,
+		UserId: id,
 	}
 
 	for _, subscription := range subs{
@@ -251,13 +243,14 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
-// @Param body body request.SubscriptionListBySubObjectRequest true "Данные запроса (SubscriptionId, TypeId)"
+// @Param subId path string true "UUID объекта подписки"
+// @Param typeId path int true "Тип объекта подписки"
 // @Security BearerAuth
 // @Failure 400 {object} map[string]string "Ошибка при парсинге параметров или данных запроса"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListBySubObjectResponse "Список подписок успешно получен"
-// @Router /subscription/sub-object/{page}/{pagesize} [get]
+// @Router /subscription/sub-object/{subId}/{typeId}/{page}/{pagesize} [get]
 func GetSubscriptionBySubObject(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
@@ -287,26 +280,27 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 	}
 	offset := (page - 1) * pageSize
 
-	var req request.SubscriptionListBySubObjectRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
-	}
-
-	subscriptionId, err := uuid.Parse(req.SubscriptionId)
+	id := c.Param("id")
+	log.Print(id)
+	log.Print(c.Request().URL.String())
+	subId, err := uuid.Parse(id)
 	if err != nil{
 		log.Printf("UUID parse error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор объекта подписки",
+			"error": "Некорректный идентификатор объекта",
 		})
 	}
 
-	typeId := req.TypeId
+	typeIdReq := c.Param("type")
+	typeId, err := strconv.Atoi(typeIdReq)
+	if err != nil{
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге типа объекта",
+		})
+	}
 
 	var totalCount int64
-	result := dbConn.Session(&gorm.Session{}).Model(models.Subscription{}).Where("deleted = ? and subscription_id = ? and type_id = ?", false, subscriptionId, typeId).Count(&totalCount)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Subscription{}).Where("deleted = ? and subscription_id = ? and type_id = ?", false, subId, typeId).Count(&totalCount)
 	if result.Error != nil {
 		log.Printf("DB error (count projects): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -315,11 +309,11 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 	}
 
 	var subs []models.Subscription
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and subscription_id = ? and type_id = ?", false, subscriptionId, typeId).
+	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and subscription_id = ? and type_id = ?", false, subId, typeId).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription)")
+			log.Printf("DB error (find subscription by id): %v", result.Error)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении подписок из базы данныхэ", 
 			})
@@ -329,8 +323,8 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 		Page: page,
 		PageSize: pageSize,
 		TotalCount: totalCount,
-		TypeId: typeId,
-		SubscriptionId: req.SubscriptionId,
+		TypeId: int8(typeId),
+		SubscriptionId: id,
 	}
 
 	for _, subscription := range subs{
@@ -390,14 +384,14 @@ func GetSubscriptionById(c echo.Context) error{
 	}
 
 	var subscription models.Subscription
-	result := dbConn.Select(&gorm.Session{}).Where("deleted = ? and id = ?", false, subId).First(&subscription)
+	result := dbConn.Session(&gorm.Session{}).Where("deleted = ? and id = ?", false, subId).First(&subscription)
 	if result.Error != nil{
 		if errors.Is(result.Error, gorm.ErrRecordNotFound){
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Подписка не найдена",
 			})
 		}
-		log.Printf("DB error (find subscription by id)")
+		log.Printf("DB error (find subscription by id): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении подписки из бд",
 		})
