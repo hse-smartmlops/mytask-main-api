@@ -553,14 +553,14 @@ func CreateTask(c echo.Context) error {
 	}
 
 	var creator models.User
-	result = dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	res := dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Поручитель исполнитель не найден",
 			})
 		}
-		log.Printf("DB error (find project by id): %v", result.Error)
+		log.Printf("DB error (find creator by id): %v", res.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении поручителя задачи из базы данных",
 		})
