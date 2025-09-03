@@ -526,21 +526,31 @@ func CreateTask(c echo.Context) error {
 		gitLabIssueID = req.GitlabIssueID
 	}
 
-	var assigner models.User
-	result := dbConn.Session(&gorm.Session{}).First(&assigner, "id = ? AND deleted = ?", req.AssignedTo, false)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Исполнитель не найден",
+	// Обрабатываем исполнителя (assigned_to): поле опционально
+	var assignedTo *uuid.UUID = nil
+	if req.AssignedTo != nil && *req.AssignedTo != "" {
+		// Валидируем UUID до обращения к БД
+		assignedUUID, err := uuid.Parse(*req.AssignedTo)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Некорректный идентификатор исполнителя",
 			})
 		}
-		log.Printf("DB error (find project by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении исполнителя из базы данных",
-		})
+		var assigner models.User
+		result := dbConn.Session(&gorm.Session{}).First(&assigner, "id = ? AND deleted = ?", assignedUUID, false)
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return c.JSON(http.StatusNotFound, map[string]string{
+					"error": "Исполнитель не найден",
+				})
+			}
+			log.Printf("DB error (find assignee by id): %v", result.Error)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении исполнителя из базы данных",
+			})
+		}
+		assignedTo = &assigner.ID
 	}
-
-	var assignedTo *uuid.UUID = &assigner.ID
 
 	var creator models.User
 	result = dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
