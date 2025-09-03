@@ -109,11 +109,6 @@ func GetAllProjects(c echo.Context) error {
 		if project.GitlabURL != nil {
 			gitLabUrl = *project.GitlabURL
 		}
-		var priority int16
-		if project.Priority != nil {
-			priority = int16(*project.Priority)
-		}
-
 		var name string
 		if project.Name != nil {
 			name = *project.Name
@@ -134,7 +129,7 @@ func GetAllProjects(c echo.Context) error {
 		}
 
 		var updatedAt time.Time
-		if project.UpdatedAt != nil {
+		if project.UpdatedAt != nil{ 
 			updatedAt = *project.UpdatedAt
 		}
 
@@ -146,7 +141,6 @@ func GetAllProjects(c echo.Context) error {
 			GitlabProjectId: gitLabId,
 			GitlabUrl:       gitLabUrl,
 			CreatedAt:       createdAt,
-			Priority:        priority,
 			UpdatedAt:       updatedAt,
 		})
 	}
@@ -206,10 +200,6 @@ func GetProjectByID(c echo.Context) error {
 	if project.GitlabURL != nil {
 		gitLabUrl = *project.GitlabURL
 	}
-	var priority int16
-	if project.Priority != nil {
-		priority = int16(*project.Priority)
-	}
 	var name string
 	if project.Name != nil {
 		name = *project.Name
@@ -235,7 +225,6 @@ func GetProjectByID(c echo.Context) error {
 		GitlabProjectId: gitLabId,
 		GitlabUrl:       gitLabUrl,
 		CreatedAt:       createdAt,
-		Priority:        priority,
 		UpdatedAt:       updatedAt,
 	}
 	return c.JSON(http.StatusOK, projectResponse)
@@ -280,7 +269,6 @@ func CreateProject(c echo.Context) error {
 		Status:          req.Status,
 		GitlabProjectID: req.Gitlab_project_id,
 		GitlabURL:       req.Gitlab_url,
-		Priority:        req.Priority,
 		Deleted: &del,
 	}
 
@@ -356,9 +344,6 @@ func UpdateProject(c echo.Context) error {
 	}
 	if req.GitlabUrl != nil {
 		updateData["gitlab_url"] = *req.GitlabUrl
-	}
-	if req.Priority != nil {
-		updateData["priority"] = *req.Priority
 	}
 
 	// Проверяем, есть ли поля для обновления

@@ -12,7 +12,6 @@ type ProjectResponse struct {
 	GitlabProjectId string    `json:"gitlab_project_id"`
 	GitlabUrl       string    `json:"gitlab_url"`
 	CreatedAt       time.Time `json:"created_at"`
-	Priority        int16     `json:"priority"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
 

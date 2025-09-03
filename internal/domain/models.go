@@ -56,7 +56,6 @@ type Project struct {
 	Status          *string    `gorm:"size:20"`
 	GitlabProjectID *int
 	GitlabURL       *string    `gorm:"size:255"`
-	Priority        *int16
 	Boards          []Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Tasks           []Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	ProjectTeams    []ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
@@ -239,7 +238,7 @@ type Subscription struct {
 	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID    *uuid.UUID `gorm:"type:uuid;index"`
 	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE;"`
-	SubscriptionId *uuid.UUID  `gorm:"type:int8"`
+	SubscriptionId *uuid.UUID  `gorm:"type:uuid"`
 	TypeID    *int8     `gorm:"type:int8"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	Deleted     *bool       `gorm:"default:false"`

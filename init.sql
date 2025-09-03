@@ -47,7 +47,6 @@ CREATE TABLE projects (
     status varchar(20) DEFAULT 'planning',
     gitlab_project_id integer,
     gitlab_url varchar(255),
-    priority smallint DEFAULT 1,
     deleted boolean DEFAULT false,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP
 );
@@ -125,9 +124,9 @@ CREATE TABLE tasks (
     status varchar(20) DEFAULT 'open',
     created_by uuid,
     assigned_to uuid,
-    deadline date,
+    deadline TIMESTAMP,
     time_spent interval,
-    start_date date DEFAULT CURRENT_DATE,
+    start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     gitlab_issue_id integer,
     project_id uuid,
     category bigint DEFAULT 1,
