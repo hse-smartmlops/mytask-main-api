@@ -19,15 +19,15 @@ func RegisterRoleRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/role")
 	projectGroup.Use(KeycloakAuthMiddleware)
 	{
-		projectGroup.GET("/all/:page/:pagesize", GetAllRoles)
-		projectGroup.GET("/:id", GetRoleById)
-		projectGroup.POST("", CreateRole)
-		projectGroup.PATCH("/:id", UpdateRole)
-		projectGroup.DELETE("/:id", DeleteRole)
+		projectGroup.GET("/all/:page/:pagesize", getAllRoles)
+		projectGroup.GET("/:id", getRoleById)
+		projectGroup.POST("", createRole)
+		projectGroup.PATCH("/:id", updateRole)
+		projectGroup.DELETE("/:id", deleteRole)
 	}
 }
 
-// GetAllRoles godoc
+// getAllRoles godoc
 // @Summary Получение списка всех ролей
 // @Description Получает список всех ролей с учетом пагинации, исключая удаленные
 // @Tags Roles
@@ -41,7 +41,7 @@ func RegisterRoleRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении ролей"
 // @Router /role/all/{page}/{pagesize} [get]
-func GetAllRoles(c echo.Context) error {
+func getAllRoles(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func GetAllRoles(c echo.Context) error {
 	return c.JSON(http.StatusOK, roleList)
 }
 
-// GetRoleById godoc
+// getRoleById godoc
 // @Summary Получение роли по ID
 // @Description Получает данные роли по её уникальному идентификатору
 // @Tags Roles
@@ -134,7 +134,7 @@ func GetAllRoles(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении роли"
 // @Router /role/{id} [get]
-func GetRoleById(c echo.Context) error {
+func getRoleById(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func GetRoleById(c echo.Context) error {
 	return c.JSON(http.StatusOK, roleResponse)
 }
 
-// CreateRole godoc
+// createRole godoc
 // @Summary Создание новой роли
 // @Description Создает новую роль с указанными параметрами
 // @Tags Roles
@@ -194,7 +194,7 @@ func GetRoleById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании роли"
 // @Router /role [post]
-func CreateRole(c echo.Context) error {
+func createRole(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func CreateRole(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// UpdateRole godoc
+// updateRole godoc
 // @Summary Обновление роли
 // @Description Обновляет данные роли по её ID
 // @Tags Roles
@@ -253,7 +253,7 @@ func CreateRole(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении роли"
 // @Router /role/{id} [patch]
-func UpdateRole(c echo.Context) error {
+func updateRole(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -307,7 +307,7 @@ func UpdateRole(c echo.Context) error {
 	return c.JSON(http.StatusCreated, updateResponse)
 }
 
-// DeleteRole godoc
+// deleteRole godoc
 // @Summary Удаление роли
 // @Description Логическое удаление роли по ID, включая связанные данные (поле deleted = true)
 // @Tags Roles
@@ -320,7 +320,7 @@ func UpdateRole(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /role/{id} [delete]
-func DeleteRole(c echo.Context) error {
+func deleteRole(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}

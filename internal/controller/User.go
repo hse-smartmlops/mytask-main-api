@@ -20,16 +20,16 @@ import (
 func RegisterUserRoutes(e *echo.Echo) {
 	userGroup := e.Group("/user")
 	userGroup.Use(KeycloakAuthMiddleware)
-	userGroup.GET("/all/:page/:pagesize", GetAllUsers)
-	userGroup.GET("/:id", GetUserById)
-	userGroup.POST("", CreateUser)
-	userGroup.POST("/:id", UpdateUser)
-	userGroup.DELETE("/:id", DeleteUser)
-	userGroup.POST("/role", AddUserRole)
-	userGroup.DELETE("/role", RemoveUserRole)
+	userGroup.GET("/all/:page/:pagesize", getAllUsers)
+	userGroup.GET("/:id", getUserById)
+	userGroup.POST("", createUser)
+	userGroup.POST("/:id", updateUser)
+	userGroup.DELETE("/:id", deleteUser)
+	userGroup.POST("/role", addUserRole)
+	userGroup.DELETE("/role", removeUserRole)
 }
 
-// GetAllUsers godoc
+// getAllUsers godoc
 // @Summary Получение списка всех пользователей
 // @Description Получает список всех пользователей с учетом пагинации, исключая удаленных
 // @Tags Users
@@ -43,7 +43,7 @@ func RegisterUserRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователей"
 // @Router /user/all/{page}/{pagesize} [get]
-func GetAllUsers(c echo.Context) error {
+func getAllUsers(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func GetAllUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, userList)
 }
 
-// GetUserById godoc
+// getUserById godoc
 // @Summary Получение пользователя по ID
 // @Description Получает данные пользователя по его уникальному идентификатору
 // @Tags Users
@@ -172,7 +172,7 @@ func GetAllUsers(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователя"
 // @Router /user/{id} [get]
-func GetUserById(c echo.Context) error {
+func getUserById(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func GetUserById(c echo.Context) error {
 	return c.JSON(http.StatusOK, getUserResponse)
 }
 
-// CreateUser godoc
+// createUser godoc
 // @Summary Создание нового пользователя
 // @Description Создает нового пользователя с указанными параметрами
 // @Tags Users
@@ -267,7 +267,7 @@ func GetUserById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании пользователя"
 // @Router /user [post]
-func CreateUser(c echo.Context) error {
+func createUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	return nil
 }
 
-// UpdateUser godoc
+// updateUser godoc
 // @Summary Обновление пользователя
 // @Description Обновляет данные пользователя по его ID
 // @Tags Users
@@ -379,7 +379,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении пользователя"
 // @Router /user/{id} [post]
-func UpdateUser(c echo.Context) error {
+func updateUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -462,7 +462,7 @@ func UpdateUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// DeleteUser godoc
+// deleteUser godoc
 // @Summary Удаление пользователя
 // @Description Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)
 // @Tags Users
@@ -475,7 +475,7 @@ func UpdateUser(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
 // @Router /user/{id} [delete]
-func DeleteUser(c echo.Context) error {
+func deleteUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -594,7 +594,7 @@ func DeleteUserFunc(c echo.Context, id string) error {
 }
 
 
-// AddUserRole godoc
+// addUserRole godoc
 // @Summary Добавление роли пользователю
 // @Description Добавляет роль указанному пользователю
 // @Tags Users
@@ -607,7 +607,7 @@ func DeleteUserFunc(c echo.Context, id string) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении роли"
 // @Router /user/role [post]
-func AddUserRole(c echo.Context) error {
+func addUserRole(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -670,7 +670,7 @@ func AddUserRole(c echo.Context) error {
 	return c.JSON(http.StatusOK, addResponse)
 }
 
-// RemoveUserRole godoc
+// removeUserRole godoc
 // @Summary Удаление роли у пользователя
 // @Description Удаляет роль у указанного пользователя
 // @Tags Users
@@ -684,7 +684,7 @@ func AddUserRole(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Ничего не удалено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /user/role [delete]
-func RemoveUserRole(c echo.Context) error {
+func removeUserRole(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}

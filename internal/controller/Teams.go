@@ -18,20 +18,20 @@ import (
 func RegisterTeamRoutes(e *echo.Echo) {
 	teamGroup := e.Group("/team")
 	teamGroup.Use(KeycloakAuthMiddleware)
-	teamGroup.GET("/all", GetTeams)
-	teamGroup.GET("/:id", GetTeamByID)
-	teamGroup.POST("", CreateTeam)
-	teamGroup.PATCH("/:id", UpdateTeam)
-	teamGroup.DELETE("/:id", DeleteTeam) // Только для admin, добавить проверку роли
-	teamGroup.POST("/user", AddUserToTeam)
-	teamGroup.DELETE("/user", DeleteUserFromTeam)
-	teamGroup.POST("/project", AddProjectToTeam)
-	teamGroup.DELETE("/project", DeleteProjectFromTeam)
+	teamGroup.GET("/all", getTeams)
+	teamGroup.GET("/:id", getTeamByID)
+	teamGroup.POST("", createTeam)
+	teamGroup.PATCH("/:id", updateTeam)
+	teamGroup.DELETE("/:id", deleteTeam) // Только для admin, добавить проверку роли
+	teamGroup.POST("/user", addUserToTeam)
+	teamGroup.DELETE("/user", deleteUserFromTeam)
+	teamGroup.POST("/project", addProjectToTeam)
+	teamGroup.DELETE("/project", deleteProjectFromTeam)
 }
 
 var dbConn *gorm.DB = db.DB_conn
 
-// GetTeams godoc
+// getTeams godoc
 // @Summary Получение списка всех команд
 // @Description Получает список всех команд с их участниками
 // @Tags Teams
@@ -42,7 +42,7 @@ var dbConn *gorm.DB = db.DB_conn
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении команд"
 // @Router /team/all [get]
-func GetTeams(c echo.Context) error {
+func getTeams(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -146,7 +146,7 @@ func GetTeams(c echo.Context) error {
 	return c.JSON(http.StatusOK, teamListResponse)
 }
 
-// GetTeamByID godoc
+// getTeamByID godoc
 // @Summary Получение команды по ID
 // @Description Получает данные команды по её уникальному идентификатору, включая участников
 // @Tags Teams
@@ -160,7 +160,7 @@ func GetTeams(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Команда не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении команды"
 // @Router /team/{id} [get]
-func GetTeamByID(c echo.Context) error {
+func getTeamByID(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -281,7 +281,7 @@ func GetTeamByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, teamResponse)
 }
 
-// CreateTeam godoc
+// createTeam godoc
 // @Summary Создание новой команды
 // @Description Создает новую команду с указанными параметрами
 // @Tags Teams
@@ -294,7 +294,7 @@ func GetTeamByID(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании команды"
 // @Router /team [post]
-func CreateTeam(c echo.Context) error {
+func createTeam(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -340,7 +340,7 @@ func CreateTeam(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createRespose)
 }
 
-// UpdateTeam godoc
+// updateTeam godoc
 // @Summary Обновление команды
 // @Description Обновляет данные команды по её ID
 // @Tags Teams
@@ -354,7 +354,7 @@ func CreateTeam(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении команды"
 // @Router /team/{id} [patch]
-func UpdateTeam(c echo.Context) error {
+func updateTeam(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -421,7 +421,7 @@ func UpdateTeam(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// DeleteTeam godoc
+// deleteTeam godoc
 // @Summary Удаление команды
 // @Description Логическое удаление команды по ID (поле deleted = true)
 // @Tags Teams
@@ -434,7 +434,7 @@ func UpdateTeam(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Команда не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении команды"
 // @Router /team/{id} [delete]
-func DeleteTeam(c echo.Context) error {
+func deleteTeam(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -477,7 +477,7 @@ func DeleteTeam(c echo.Context) error {
 	return c.JSON(http.StatusOK, deleteResponce)
 }
 
-// AddUserToTeam godoc
+// addUserToTeam godoc
 // @Summary Добавление пользователя в команду
 // @Description Добавляет пользователя в указанную команду
 // @Tags Teams
@@ -490,7 +490,7 @@ func DeleteTeam(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении пользователя в команду"
 // @Router /team/user [post]
-func AddUserToTeam(c echo.Context) error {
+func addUserToTeam(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -537,16 +537,16 @@ func AddUserToTeam(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Не удалось добавить пользователя в команду"})
 	}
 
-	addResponce := response.TeamUniversalUserResponse{
+	addResponse := response.TeamUniversalUserResponse{
 		TeamID:  team.ID.String(),
 		UserID:  req.UserID,
 		Message: "Пользователь добавлен в команду",
 	}
 
-	return c.JSON(http.StatusOK, addResponce)
+	return c.JSON(http.StatusOK, addResponse)
 }
 
-// DeleteUserFromTeam godoc
+// deleteUserFromTeam godoc
 // @Summary Удаление пользователя из команды
 // @Description Логически удаляет пользователя из команды (поле deleted = true)
 // @Tags Teams
@@ -560,7 +560,7 @@ func AddUserToTeam(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Ничего не удалено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя из команды"
 // @Router /team/user [delete]
-func DeleteUserFromTeam(c echo.Context) error {
+func deleteUserFromTeam(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -616,7 +616,7 @@ func DeleteUserFromTeam(c echo.Context) error {
 	return c.JSON(http.StatusOK, deleteResponse)
 }
 
-// AddProjectToTeam godoc
+// addProjectToTeam godoc
 // @Summary Добавление проекта в команду
 // @Description Привязывает проект к указанной команде
 // @Tags Teams
@@ -629,7 +629,7 @@ func DeleteUserFromTeam(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении проекта в команду"
 // @Router /team/project [post]
-func AddProjectToTeam(c echo.Context) error {
+func addProjectToTeam(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -684,7 +684,7 @@ func AddProjectToTeam(c echo.Context) error {
 	return c.JSON(http.StatusOK, addResponce)
 }
 
-// DeleteProjectFromTeam godoc
+// deleteProjectFromTeam godoc
 // @Summary Удаление проекта из команды
 // @Description Логически удаляет привязку проекта к команде (поле deleted = true)
 // @Tags Teams
@@ -698,7 +698,7 @@ func AddProjectToTeam(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Ничего не удалено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта из команды"
 // @Router /team/project [delete]
-func DeleteProjectFromTeam(c echo.Context) error {
+func deleteProjectFromTeam(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}

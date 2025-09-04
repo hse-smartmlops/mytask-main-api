@@ -20,15 +20,15 @@ func RegisterProjectRoutes(e *echo.Echo) {
 	// apply Keycloak auth middleware to all project routes
 	projectGroup.Use(KeycloakAuthMiddleware)
 	{
-		projectGroup.GET("/all/:page/:pagesize", GetAllProjects)
-		projectGroup.GET("/:id", GetProjectByID)
-		projectGroup.POST("", CreateProject)
-		projectGroup.PATCH("/:id", UpdateProject)
-		projectGroup.DELETE("/:id", DeleteProject)
+		projectGroup.GET("/all/:page/:pagesize", getAllProjects)
+		projectGroup.GET("/:id", getProjectByID)
+		projectGroup.POST("", createProject)
+		projectGroup.PATCH("/:id", updateProject)
+		projectGroup.DELETE("/:id", deleteProject)
 	}
 }
 
-// GetAllProjects godoc
+// getAllProjects godoc
 // @Summary Получение списка всех проектов
 // @Description Получает список всех проектов с учетом пагинации, исключая удаленные
 // @Tags Projects
@@ -42,7 +42,7 @@ func RegisterProjectRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/all/{page}/{pagesize} [get]
-func GetAllProjects(c echo.Context) error {
+func getAllProjects(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -118,10 +118,6 @@ func GetAllProjects(c echo.Context) error {
 		if project.Description != nil {
 			description = *project.Description
 		}
-		var status string
-		if project.Status != nil {
-			status = *project.Status
-		}
 
 		var createdAt time.Time
 		if project.CreatedAt != nil {
@@ -137,7 +133,6 @@ func GetAllProjects(c echo.Context) error {
 			ID:              project.ID.String(),
 			Name:            name,
 			Description:     description, // исправлено
-			Status:          status,
 			GitlabProjectId: gitLabId,
 			GitlabUrl:       gitLabUrl,
 			CreatedAt:       createdAt,
@@ -147,7 +142,7 @@ func GetAllProjects(c echo.Context) error {
 	return c.JSON(http.StatusOK, projectList)
 }
 
-// GetProjectByID godoc
+// getProjectByID godoc
 // @Summary Получение проекта по ID
 // @Description Получает данные проекта по его уникальному идентификатору
 // @Tags Projects
@@ -161,7 +156,7 @@ func GetAllProjects(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проект не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проекта"
 // @Router /project/{id} [get]
-func GetProjectByID(c echo.Context) error {
+func getProjectByID(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -204,10 +199,6 @@ func GetProjectByID(c echo.Context) error {
 	if project.Name != nil {
 		name = *project.Name
 	}
-	var status string
-	if project.Status != nil {
-		status = *project.Status
-	}
 	var createdAt time.Time
 	if project.CreatedAt != nil {
 		createdAt = *project.CreatedAt
@@ -221,7 +212,6 @@ func GetProjectByID(c echo.Context) error {
 		ID:              id,
 		Name:            name,
 		Description:     description,
-		Status:          status,
 		GitlabProjectId: gitLabId,
 		GitlabUrl:       gitLabUrl,
 		CreatedAt:       createdAt,
@@ -230,7 +220,7 @@ func GetProjectByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, projectResponse)
 }
 
-// CreateProject godoc
+// createProject godoc
 // @Summary Создание нового проекта
 // @Description Создает новый проект с указанными параметрами
 // @Tags Projects
@@ -243,7 +233,7 @@ func GetProjectByID(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проекта"
 // @Router /project [post]
-func CreateProject(c echo.Context) error {
+func createProject(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -266,7 +256,6 @@ func CreateProject(c echo.Context) error {
 		Name:            req.Name,
 		Description:     req.Description,
 		CreatedAt:       &now,
-		Status:          req.Status,
 		GitlabProjectID: req.Gitlab_project_id,
 		GitlabURL:       req.Gitlab_url,
 		Deleted: &del,
@@ -291,7 +280,7 @@ func CreateProject(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// UpdateProject godoc
+// updateProject godoc
 // @Summary Обновление проекта
 // @Description Обновляет данные проекта по его ID
 // @Tags Projects
@@ -305,7 +294,7 @@ func CreateProject(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проекта"
 // @Router /project/{id} [patch]
-func UpdateProject(c echo.Context) error {
+func updateProject(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -380,7 +369,7 @@ func UpdateProject(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// DeleteProject godoc
+// deleteProject godoc
 // @Summary Удаление проекта
 // @Description Логическое удаление проекта по ID, включая связанные данные (поле deleted = true)
 // @Tags Projects
@@ -393,7 +382,7 @@ func UpdateProject(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проект не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта"
 // @Router /project/{id} [delete]
-func DeleteProject(c echo.Context) error {
+func deleteProject(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}

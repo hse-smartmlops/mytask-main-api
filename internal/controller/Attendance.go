@@ -18,16 +18,16 @@ func RegisterAttendanceRoutes(e *echo.Echo){
 	attendanceGroup := e.Group("/attendance")
 	attendanceGroup.Use(KeycloakAuthMiddleware)
 	{
-		attendanceGroup.GET("/all/:page/:pagesize", GetAllAttendances)
-		attendanceGroup.GET("/:id", GetAllAttendances)
-		attendanceGroup.GET("/user/:id", GetAttendacesByUserId)
-		attendanceGroup.POST("", CreateAttendance)
-		attendanceGroup.PATCH("/:id", UpdateAttendance)
-		attendanceGroup.DELETE("/:id", DeleteAttendance)
+		attendanceGroup.GET("/all/:page/:pagesize", getAllAttendances)
+		attendanceGroup.GET("/:id", getAllAttendances)
+		attendanceGroup.GET("/user/:id", getAttendacesByUserId)
+		attendanceGroup.POST("", createAttendance)
+		attendanceGroup.PATCH("/:id", updateAttendance)
+		attendanceGroup.DELETE("/:id", deleteAttendance)
 	}
 }
 
-// GetAllAttendances godoc
+// getAllAttendances godoc
 // @Summary Получение всех посещений
 // @Description Получение списка всех посещений с пагинацией (логически не удаленных)
 // @Tags Attendance
@@ -41,7 +41,7 @@ func RegisterAttendanceRoutes(e *echo.Echo){
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/all/{page}/{pagesize} [get]
-func GetAllAttendances(c echo.Context) error{
+func getAllAttendances(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -117,10 +117,6 @@ func GetAllAttendances(c echo.Context) error{
 		if attendance.ActualStart != nil{ 
 			actualStart = *attendance.ActualStart
 		}
-		var status string
-		if attendance.Status != nil{
-			status = *attendance.Status
-		}
 		var commits int16
 		if attendance.Commits != nil{
 			commits = *attendance.Commits
@@ -148,7 +144,6 @@ func GetAllAttendances(c echo.Context) error{
 			WorkdayHours: workdayHours,
 			PlannedStart: plannedStart,
 			ActualStart: actualStart,
-			Status: status,
 			Commits: commits,
 			MergeRequests: mergeRequests,
 			CodeReviews: codeReviews,
@@ -159,7 +154,7 @@ func GetAllAttendances(c echo.Context) error{
 	return c.JSON(http.StatusOK, attendanceList)
 }
 
-// GetAttendacesByUserId godoc
+// getAttendacesByUserId godoc
 // @Summary Получение посещений по ID пользователя
 // @Description Получение списка посещений для конкретного пользователя (логически не удаленных)
 // @Tags Attendance
@@ -172,7 +167,7 @@ func GetAllAttendances(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/user/{id} [get]
-func GetAttendacesByUserId(c echo.Context) error{
+func getAttendacesByUserId(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -216,10 +211,6 @@ func GetAttendacesByUserId(c echo.Context) error{
 		if attendance.ActualStart != nil{ 
 			actualStart = *attendance.ActualStart
 		}
-		var status string
-		if attendance.Status != nil{
-			status = *attendance.Status
-		}
 		var commits int16
 		if attendance.Commits != nil{
 			commits = *attendance.Commits
@@ -247,7 +238,6 @@ func GetAttendacesByUserId(c echo.Context) error{
 			WorkdayHours: workdayHours,
 			PlannedStart: plannedStart,
 			ActualStart: actualStart,
-			Status: status,
 			Commits: commits,
 			MergeRequests: mergeRequests,
 			CodeReviews: codeReviews,
@@ -258,7 +248,7 @@ func GetAttendacesByUserId(c echo.Context) error{
 	return c.JSON(http.StatusOK, attendanceList)
 }
 
-// CreateAttendance godoc
+// createAttendance godoc
 // @Summary Создание посещения
 // @Description Создание нового посещения
 // @Tags Attendance
@@ -271,7 +261,7 @@ func GetAttendacesByUserId(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании посещения"
 // @Router /attendance [post]
-func CreateAttendance(c echo.Context) error{
+func createAttendance(c echo.Context) error{
 	if err := authorize(c); err != nil{
 		return err
 	}
@@ -304,7 +294,6 @@ func CreateAttendance(c echo.Context) error{
 		WorkdayHours: req.WorkdayHours,
 		PlannedStart: req.PlannedStart,
 		ActualStart: req.ActualStart,
-		Status: req.Status,
 		Commits: req.Commits,
 		MergeRequests: req.MergeRequests,
 		CodeReviews: req.CodeReviews,
@@ -332,7 +321,7 @@ func CreateAttendance(c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// UpdateAttendance godoc
+// updateAttendance godoc
 // @Summary Обновление посещения
 // @Description Обновление полей посещения по ID
 // @Tags Attendance
@@ -347,7 +336,7 @@ func CreateAttendance(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении посещения"
 // @Router /attendance/{id} [patch]
-func UpdateAttendance(c echo.Context) error{
+func updateAttendance(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -428,7 +417,7 @@ func UpdateAttendance(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// DeleteAttendance godoc
+// deleteAttendance godoc
 // @Summary Удаление посещения
 // @Description Логическое удаление посещения по ID (поле deleted = true)
 // @Tags Attendance
@@ -442,7 +431,7 @@ func UpdateAttendance(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении посещения"
 // @Router /attendance/{id} [delete]
-func DeleteAttendance(c echo.Context) error{
+func deleteAttendance(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}

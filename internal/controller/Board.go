@@ -20,16 +20,16 @@ func RegisterBoardRoutes(e *echo.Echo) {
 	// apply Keycloak auth middleware to all board routes
 	projectGroup.Use(KeycloakAuthMiddleware)
 	{
-		projectGroup.GET("/all/:page/:pagesize", GetAllBoards)
-		projectGroup.GET("/:id", GetBoardById)
-		projectGroup.GET("/project/:projectId", GetBoardByProjectId)
-		projectGroup.POST("", CreateBoard)
-		projectGroup.PATCH("/:id", UpdateBoard)
-		projectGroup.DELETE("/:id", DeleteBoard)
+		projectGroup.GET("/all/:page/:pagesize", getAllBoards)
+		projectGroup.GET("/:id", getBoardById)
+		projectGroup.GET("/project/:projectId", getBoardByProjectId)
+		projectGroup.POST("", createBoard)
+		projectGroup.PATCH("/:id", updateBoard)
+		projectGroup.DELETE("/:id", deleteBoard)
 	}
 }
 
-// GetAllBoards godoc
+// getAllBoards godoc
 // @Summary Получение списка всех досок
 // @Description Получает список всех досок с учетом пагинации, исключая удаленные.
 // @Tags Boards
@@ -43,7 +43,7 @@ func RegisterBoardRoutes(e *echo.Echo) {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
 // @Router /project/all/{page}/{pagesize} [get]
-func GetAllBoards(c echo.Context) error {
+func getAllBoards(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -112,10 +112,6 @@ func GetAllBoards(c echo.Context) error {
 				if board.Description != nil {
 					description = *board.Description
 				}
-				var filter string
-				if board.Filter != nil {
-					filter = *board.Filter
-				}
 				var updatedAt time.Time
 				if board.UpdatedAt != nil {
 					updatedAt = *board.UpdatedAt
@@ -126,7 +122,6 @@ func GetAllBoards(c echo.Context) error {
 					ProjectId:   projectId,
 					Name:        name,
 					Description: description,
-					Filter:      filter,
 					UpdatedAt:   updatedAt,
 				})
 			}
@@ -136,7 +131,7 @@ func GetAllBoards(c echo.Context) error {
 	return c.JSON(http.StatusOK, boardList)
 }
 
-// GetBoardById godoc
+// getBoardById godoc
 // @Summary Получение доски по ID
 // @Description Получает данные доски по её уникальному идентификатору
 // @Tags Boards
@@ -150,7 +145,7 @@ func GetAllBoards(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Доска не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении доски"
 // @Router /boards/{id} [get]
-func GetBoardById(c echo.Context) error {
+func getBoardById(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -196,11 +191,6 @@ func GetBoardById(c echo.Context) error {
 		description = *board.Description
 	}
 
-	var filter string
-	if board.Filter != nil {
-		filter = *board.Filter
-	}
-
 	var updatedAt time.Time
 	if board.UpdatedAt != nil {
 		updatedAt = *board.UpdatedAt
@@ -211,13 +201,12 @@ func GetBoardById(c echo.Context) error {
 		ProjectId:   board.ProjectID.String(),
 		Name:        name,
 		Description: description,
-		Filter:      filter,
 		UpdatedAt:   updatedAt,
 	}
 	return c.JSON(http.StatusOK, boardResponse)
 }
 
-// GetBoardByProjectId godoc
+// getBoardByProjectId godoc
 // @Summary Получение досок по ID проекта
 // @Description Получает список досок, связанных с указанным проектом
 // @Tags Boards
@@ -231,7 +220,7 @@ func GetBoardById(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Доска не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
 // @Router /boards/project/{projectId} [get]
-func GetBoardByProjectId(c echo.Context) error {
+func getBoardByProjectId(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -282,11 +271,6 @@ func GetBoardByProjectId(c echo.Context) error {
 			description = *board.Description
 		}
 
-		var filter string
-		if board.Filter != nil {
-			filter = *board.Filter
-		}
-
 		var updatedAt time.Time
 		if board.UpdatedAt != nil {
 			updatedAt = *board.UpdatedAt
@@ -297,7 +281,6 @@ func GetBoardByProjectId(c echo.Context) error {
 			ProjectId:   projectId.String(),
 			Name:        name,
 			Description: description,
-			Filter:      filter,
 			UpdatedAt:   updatedAt,
 		})
 	}
@@ -305,7 +288,7 @@ func GetBoardByProjectId(c echo.Context) error {
 	return c.JSON(http.StatusOK, projectResponse)
 }
 
-// CreateBoard godoc
+// createBoard godoc
 // @Summary Создание новой доски
 // @Description Создает новую доску с указанными параметрами
 // @Tags Boards
@@ -318,7 +301,7 @@ func GetBoardByProjectId(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании доски"
 // @Router /boards [post]
-func CreateBoard(c echo.Context) error {
+func createBoard(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -354,7 +337,6 @@ func CreateBoard(c echo.Context) error {
 		Name:        req.Name,
 		Description: req.Description,
 		ProjectID:   projectId,
-		Filter:      req.Filter,
 		Deleted: 		&del,
 		CreatedAt: &now,
 	}
@@ -379,7 +361,7 @@ func CreateBoard(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// UpdateBoard godoc
+// updateBoard godoc
 // @Summary Обновление доски
 // @Description Обновляет данные доски по её ID
 // @Tags Boards
@@ -393,7 +375,7 @@ func CreateBoard(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении доски"
 // @Router /boards/{id} [patch]
-func UpdateBoard(c echo.Context) error {
+func updateBoard(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -451,7 +433,7 @@ func UpdateBoard(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateReponse)
 }
 
-// DeleteBoard godoc
+// deleteBoard godoc
 // @Summary Удаление доски
 // @Description Логическое удаление доски по ID (поле deleted = true)
 // @Tags Boards
@@ -464,7 +446,7 @@ func UpdateBoard(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении доски"
 // @Router /boards/{id} [delete]
-func DeleteBoard(c echo.Context) error {
+func deleteBoard(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -482,6 +464,10 @@ func DeleteBoard(c echo.Context) error {
 		}
 		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		if res = tx.Model(models.StatusBoard{}).Where("board_id = ?", id).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete status_board): %v", res.Error)
+			return res.Error
 		}
 		return nil
 	}); txErr != nil {

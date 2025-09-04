@@ -19,20 +19,20 @@ func RegisterReportRoutes(e *echo.Echo) {
 	reportGroup := e.Group("/report")
 	reportGroup.Use(KeycloakAuthMiddleware)
 	{
-		reportGroup.GET("/all/:page/:pagesize", GetAllReports)
-		reportGroup.GET("/:id", GetReport)
-		reportGroup.GET("/task/:id", GetReportsByTaskId)
-		reportGroup.GET("/project/:id", GetReportsByProjectId)
-		reportGroup.POST("", CreateReport)
-		reportGroup.PATCH("/:id", UpdateReport)
-		reportGroup.DELETE("/:id", DeleteReport)
-		reportGroup.PATCH("/help-request/:id", UpdateHelpRequest)
-		reportGroup.PATCH("/completed-work/:id", UpdateCompletedWork)
-		reportGroup.PATCH("/tomorrow-plans/:id", UpdateTomorrowPlans)
+		reportGroup.GET("/all/:page/:pagesize", getAllReports)
+		reportGroup.GET("/:id", getReport)
+		reportGroup.GET("/task/:id", getReportsByTaskId)
+		reportGroup.GET("/project/:id", getReportsByProjectId)
+		reportGroup.POST("", createReport)
+		reportGroup.PATCH("/:id", updateReport)
+		reportGroup.DELETE("/:id", deleteReport)
+		reportGroup.PATCH("/help-request/:id", updateHelpRequest)
+		reportGroup.PATCH("/completed-work/:id", updateCompletedWork)
+		reportGroup.PATCH("/tomorrow-plans/:id", updateTomorrowPlans)
 	}
 }
 
-// GetAllReports godoc
+// getAllReports godoc
 // @Summary Получение списка всех отчетов
 // @Description Получает список всех отчетов с учетом пагинации, исключая удаленные
 // @Tags Reports
@@ -47,7 +47,7 @@ func RegisterReportRoutes(e *echo.Echo) {
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/all/{page}/{pagesize} [get]
-func GetAllReports(c echo.Context) error {
+func getAllReports(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -109,11 +109,6 @@ func GetAllReports(c echo.Context) error {
 		var reportDate time.Time
 		if report.ReportDate != nil {
 			reportDate = *report.ReportDate
-		}
-
-		var status string
-		if report.Status != nil {
-			status = *report.Status
 		}
 
 		var taskId string
@@ -305,7 +300,6 @@ func GetAllReports(c echo.Context) error {
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
 			HelpRequest:   helpRequest,
-			Status:        status,
 			TaskId:        taskId,
 			CreatedAt:     createdAt,
 			UpdatedAt:     updatedAt,
@@ -319,7 +313,7 @@ func GetAllReports(c echo.Context) error {
 	return c.JSON(http.StatusOK, reportList)
 }
 
-// GetReport godoc
+// getReport godoc
 // @Summary Получение отчета по ID
 // @Description Получает данные отчета по его уникальному идентификатору
 // @Tags Reports
@@ -333,7 +327,7 @@ func GetAllReports(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчета"
 // @Router /report/{id} [get]
-func GetReport(c echo.Context) error {
+func getReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -365,11 +359,6 @@ func GetReport(c echo.Context) error {
 	var reportDate time.Time
 	if report.ReportDate != nil {
 		reportDate = *report.ReportDate
-	}
-
-	var status string
-	if report.Status != nil {
-		status = *report.Status
 	}
 
 	var taskId string
@@ -561,7 +550,6 @@ func GetReport(c echo.Context) error {
 		CompletedWork: complWork,
 		PlanTomorrow:  tomorrowPlans,
 		HelpRequest:   helpRequest,
-		Status:        status,
 		TaskId:        taskId,
 		CreatedAt:     createdAt,
 		UpdatedAt:     updatedAt,
@@ -571,7 +559,7 @@ func GetReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// GetReportsByTaskId godoc
+// getReportsByTaskId godoc
 // @Summary Получение отчетов по ID задачи
 // @Description Получает список отчетов, связанных с указанной задачей
 // @Tags Reports
@@ -585,7 +573,7 @@ func GetReport(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/task/{id} [get]
-func GetReportsByTaskId(c echo.Context) error {
+func getReportsByTaskId(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -608,11 +596,6 @@ func GetReportsByTaskId(c echo.Context) error {
 		var reportDate time.Time
 		if report.ReportDate != nil {
 			reportDate = *report.ReportDate
-		}
-
-		var status string
-		if report.Status != nil {
-			status = *report.Status
 		}
 
 		var taskId string
@@ -804,7 +787,6 @@ func GetReportsByTaskId(c echo.Context) error {
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
 			HelpRequest:   helpRequest,
-			Status:        status,
 			TaskId:        taskId,
 			CreatedAt:     createdAt,
 			UpdatedAt:     updatedAt,
@@ -818,7 +800,7 @@ func GetReportsByTaskId(c echo.Context) error {
 	return c.JSON(http.StatusOK, reportList)
 }
 
-// GetReportsByProjectId godoc
+// getReportsByProjectId godoc
 // @Summary Получение отчетов по ID проекта
 // @Description Получает список отчетов, связанных с задачами указанного проекта
 // @Tags Reports
@@ -832,7 +814,7 @@ func GetReportsByTaskId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/project/{id} [get]
-func GetReportsByProjectId(c echo.Context) error {
+func getReportsByProjectId(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -871,11 +853,6 @@ func GetReportsByProjectId(c echo.Context) error {
 		var reportDate time.Time
 		if report.ReportDate != nil {
 			reportDate = *report.ReportDate
-		}
-
-		var status string
-		if report.Status != nil {
-			status = *report.Status
 		}
 
 		var taskId string
@@ -1072,7 +1049,6 @@ func GetReportsByProjectId(c echo.Context) error {
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
 			HelpRequest:   helpRequest,
-			Status:        status,
 			TaskId:        taskId,
 			CreatedAt:     createdAt,
 			UpdatedAt:     updatedAt,
@@ -1086,7 +1062,7 @@ func GetReportsByProjectId(c echo.Context) error {
 	return c.JSON(http.StatusOK, reportList)
 }
 
-// CreateReport godoc
+// createReport godoc
 // @Summary Создание нового отчета
 // @Description Создает новый отчет с указанными параметрами, включая выполненную работу, планы на завтра, проблемы и запрос на помощь
 // @Tags Reports
@@ -1100,7 +1076,7 @@ func GetReportsByProjectId(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании отчета"
 // @Router /report [post]
-func CreateReport(c echo.Context) error {
+func createReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -1139,7 +1115,6 @@ func CreateReport(c echo.Context) error {
 	report := models.DailyReport{
 		ID:         newUUID,
 		UserID:     userId,
-		Status:     req.Status,
 		TaskID:     &taskId,
 		ReportDate: req.ReportDate,
 		CreatedAt:  &now,
@@ -1260,7 +1235,7 @@ func CreateReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// UpdateReport godoc
+// updateReport godoc
 // @Summary Обновление отчета
 // @Description Обновляет данные отчета по его ID
 // @Tags Reports
@@ -1274,7 +1249,7 @@ func CreateReport(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор отчета или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении отчета"
 // @Router /report/{id} [patch]
-func UpdateReport(c echo.Context) error {
+func updateReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -1329,7 +1304,7 @@ func UpdateReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// DeleteReport godoc
+// deleteReport godoc
 // @Summary Удаление отчета
 // @Description Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)
 // @Tags Reports
@@ -1342,7 +1317,7 @@ func UpdateReport(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Отчет не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении отчета"
 // @Router /report/{id} [delete]
-func DeleteReport(c echo.Context) error {
+func deleteReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -1423,7 +1398,7 @@ func DeleteReport(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// UpdateHelpRequest godoc
+// updateHelpRequest godoc
 // @Summary Обновление запроса на помощь
 // @Description Обновляет данные запроса на помощь по его ID
 // @Tags Reports
@@ -1437,7 +1412,7 @@ func DeleteReport(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении запроса на помощь"
 // @Router /report/help-request/{id} [patch]
-func UpdateHelpRequest(c echo.Context) error{
+func updateHelpRequest(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -1489,7 +1464,7 @@ func UpdateHelpRequest(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// UpdateCompletedWork godoc
+// updateCompletedWork godoc
 // @Summary Обновление выполненной работы
 // @Description Обновляет данные выполненной работы по ее ID
 // @Tags Reports
@@ -1503,7 +1478,7 @@ func UpdateHelpRequest(c echo.Context) error{
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении выполненной работы"
 // @Router /report/completed-work/{id} [patch]
-func UpdateCompletedWork(c echo.Context) error{
+func updateCompletedWork(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -1566,7 +1541,7 @@ func UpdateCompletedWork(c echo.Context) error{
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении планов на завтра"
 // @Router /report/tomorrow-plans/{id} [patch]
-func UpdateTomorrowPlans(c echo.Context) error{
+func updateTomorrowPlans(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}

@@ -44,7 +44,6 @@ CREATE TABLE projects (
     name varchar(100),
     description text,
     created_at timestamp DEFAULT CURRENT_TIMESTAMP,
-    status varchar(20) DEFAULT 'planning',
     gitlab_project_id integer,
     gitlab_url varchar(255),
     deleted boolean DEFAULT false,
@@ -109,7 +108,6 @@ CREATE TABLE boards (
     project_id uuid NOT NULL,
     name varchar(100),
     description text,
-    filter varchar(50),
     deleted boolean DEFAULT false,
     created_at timestamp DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp DEFAULT CURRENT_TIMESTAMP,
@@ -121,7 +119,6 @@ CREATE TABLE tasks (
     priority smallint DEFAULT 1,
     name varchar(100),
     description text,
-    status varchar(20) DEFAULT 'open',
     created_by uuid,
     assigned_to uuid,
     deadline TIMESTAMP,
@@ -145,7 +142,6 @@ CREATE TABLE attendances (
     workday_hours smallint,
     planned_start time,
     actual_start time,
-    status varchar(20),
     commits smallint DEFAULT 0,
     merge_requests smallint DEFAULT 0,
     code_reviews smallint DEFAULT 0,
@@ -168,7 +164,6 @@ CREATE TABLE daily_reports (
     user_id uuid NOT NULL,
     task_id uuid,
     report_date date DEFAULT CURRENT_DATE,
-    status varchar(20),
     created_at date DEFAULT CURRENT_DATE,
     updated_at date DEFAULT CURRENT_DATE,
     deleted boolean DEFAULT false,
@@ -253,4 +248,39 @@ CREATE TABLE subscriptions (
     deleted         BOOLEAN DEFAULT FALSE,
     CONSTRAINT fk_subscription_user
         FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE statuses(
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    key varchar(8) UNIQUE,
+    name varchar(50),
+    color varchar(16),
+    is_default boolean DEFAULT false,
+    is_active boolean DEFAULT true,
+    is_open boolean DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted boolean DEFAULT false
+);
+
+create table status_boards(
+    status_id uuid,
+    board_id uuid,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted boolean DEFAULT false,
+    primary key(status_id, board_id),
+    CONSTRAINT fk_status_projects_status FOREIGN KEY (status_id) REFERENCES statuses(id) ON DELETE CASCADE,
+    CONSTRAINT fk_status_board_board FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+);
+
+create table status_tasks(
+    status_id uuid,
+    task_id uuid,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted boolean DEFAULT false,
+    primary key(status_id, task_id),
+    CONSTRAINT fk_status_tasks_status FOREIGN KEY (status_id) REFERENCES statuses(id) ON DELETE CASCADE,
+    CONSTRAINT fk_status_tasks_task FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );

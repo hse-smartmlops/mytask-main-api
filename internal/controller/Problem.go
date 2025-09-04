@@ -20,16 +20,16 @@ func RegisterProblemRoutes(e *echo.Echo){
 	problemGroup := e.Group("/problem")
 	problemGroup.Use(KeycloakAuthMiddleware)
 	{
-		problemGroup.GET("/all/:page/:pagesize", GetAllProblems)
-		problemGroup.GET("/:id", GetProblemByID)
-		problemGroup.GET("/user/:id/:page/:pagesize", GetProblemsByUserId)
-		problemGroup.POST("", CreateProblem)
-		problemGroup.PATCH("/:id", UpdateProblem)
-		problemGroup.DELETE("/:id", DeleteProblem)
+		problemGroup.GET("/all/:page/:pagesize", getAllProblems)
+		problemGroup.GET("/:id", getProblemByID)
+		problemGroup.GET("/user/:id/:page/:pagesize", getProblemsByUserId)
+		problemGroup.POST("", createProblem)
+		problemGroup.PATCH("/:id", updateProblem)
+		problemGroup.DELETE("/:id", deleteProblem)
 	}
 }
 
-// GetAllProblems godoc
+// getAllProblems godoc
 // @Summary Получение списка всех проблем
 // @Description Получает список всех проблем с учетом пагинации, исключая удаленные
 // @Tags Problems
@@ -43,7 +43,7 @@ func RegisterProblemRoutes(e *echo.Echo){
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/all/{page}/{pagesize} [get]
-func GetAllProblems(c echo.Context) error{
+func getAllProblems(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func GetAllProblems(c echo.Context) error{
 	return c.JSON(http.StatusOK, problemList)
 }
 
-// GetProblemsByUserId godoc
+// getProblemsByUserId godoc
 // @Summary Получение проблем по ID пользователя
 // @Description Получает список проблем, созданных указанным пользователем, с учетом пагинации
 // @Tags Problems
@@ -150,7 +150,7 @@ func GetAllProblems(c echo.Context) error{
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/user/{id}/{page}/{pagesize} [get]
-func GetProblemsByUserId(c echo.Context) error{
+func getProblemsByUserId(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func GetProblemsByUserId(c echo.Context) error{
 	return c.JSON(http.StatusOK, problemList)
 }
 
-// GetProblemByID godoc
+// getProblemByID godoc
 // @Summary Получение проблемы по ID
 // @Description Получает данные проблемы по её уникальному идентификатору
 // @Tags Problems
@@ -255,7 +255,7 @@ func GetProblemsByUserId(c echo.Context) error{
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблемы"
 // @Router /problem/{id} [get]
-func GetProblemByID(c echo.Context) error{
+func getProblemByID(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -313,7 +313,7 @@ func GetProblemByID(c echo.Context) error{
 	return c.JSON(http.StatusOK, problemResponse)
 }
 
-// CreateProblem godoc
+// createProblem godoc
 // @Summary Создание новой проблемы
 // @Description Создает новую проблему с указанными параметрами
 // @Tags Problems
@@ -326,7 +326,7 @@ func GetProblemByID(c echo.Context) error{
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор пользователя"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проблемы"
 // @Router /problem [post]
-func CreateProblem(c echo.Context) error{
+func createProblem(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -387,7 +387,7 @@ func CreateProblem(c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// UpdateProblem godoc
+// updateProblem godoc
 // @Summary Обновление проблемы
 // @Description Обновляет данные проблемы по её ID
 // @Tags Problems
@@ -401,7 +401,7 @@ func CreateProblem(c echo.Context) error{
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проблемы"
 // @Router /problem/{id} [patch]
-func UpdateProblem(c echo.Context) error{
+func updateProblem(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -458,7 +458,7 @@ func UpdateProblem(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateReponse)
 }
 
-// DeleteProblem godoc
+// deleteProblem godoc
 // @Summary Удаление проблемы
 // @Description Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)
 // @Tags Problems
@@ -470,7 +470,7 @@ func UpdateProblem(c echo.Context) error{
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проблемы"
 // @Router /problem/{id} [delete]
-func DeleteProblem(c echo.Context) error{
+func deleteProblem(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}

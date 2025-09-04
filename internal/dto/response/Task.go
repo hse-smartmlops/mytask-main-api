@@ -10,7 +10,6 @@ type GetTaskByIDResponse struct {
 	ProjectID     string    `json:"project_id"`
 	Name          string    `json:"name"`
 	Description   string    `json:"description"`
-	Status        string    `json:"status"`
 	Priority      int16     `json:"priority"`
 	CreatedBy     UserShort `json:"created_by"`            // Связь с users
 	AssignedTo    UserShort `json:"assigned_to,omitempty"` // Связь с users
@@ -27,7 +26,6 @@ type TaskShort struct {
 	ID        string    `json:"id"`
 	ProjectID string    `json:"project_id"`
 	Name      string    `json:"name"`
-	Status    string    `json:"status"`
 	Priority  int16     `json:"priority"`
 	StartDate time.Time `json:"start_date"`
 	Deadline  time.Time `json:"deadline,omitempty"`

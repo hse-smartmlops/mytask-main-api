@@ -3355,6 +3355,615 @@ const docTemplate = `{
                 }
             }
         },
+        "/status": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание нового статуса",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Создание статуса",
+                "parameters": [
+                    {
+                        "description": "Данные для создания статуса",
+                        "name": "/status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.CreateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Статус успешно создан",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при привязке данных",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при создании статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/add-to-board": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание связи между статусом и доской",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Добавление статуса к доске",
+                "parameters": [
+                    {
+                        "description": "Данные для добавления статуса к доске",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AddStatusToBoardRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Статус успешно добавлен к доске",
+                        "schema": {
+                            "$ref": "#/definitions/response.AddStatusToBoardResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при привязке данных или парсинге UUID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при добавлении статуса к доске",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/add-to-task": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание связи между статусом и задачей",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Добавление статуса к задаче",
+                "parameters": [
+                    {
+                        "description": "Данные для добавления статуса к задаче",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AddStatusToTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Статус успешно добавлен к задаче",
+                        "schema": {
+                            "$ref": "#/definitions/response.AddStatusToTaskResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при привязке данных или парсинге UUID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при добавлении статуса к задаче",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/all/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка всех статусов с пагинацией (только неудаленные)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение всех статусов",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список статусов",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статусов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/project/{board_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка статусов, связанных с доской по ее ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение статусов по ID доски",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID доски",
+                        "name": "board_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список статусов для доски",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusByBoardIdResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге ID доски",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статусов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/task/{task_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка статусов, связанных с задачей по ее ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение статусов по ID задачи",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID задачи",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список статусов для задачи",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusByTaskIdResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге ID задачи",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статусов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение информации о статусе по его ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение статуса по ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о статусе",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Статус не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление статуса по ID, включая связанные данные (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Удаление статуса",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Статус успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Статус не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновление информации о статусе по ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Обновление статуса",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления статуса",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UpdateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Статус успешно обновлен",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Нет данных для обновления или некорректный ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Статус не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при обновлении статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/subscription": {
             "post": {
                 "security": [
@@ -5309,6 +5918,28 @@ const docTemplate = `{
                 }
             }
         },
+        "request.AddStatusToBoardRequest": {
+            "type": "object",
+            "properties": {
+                "board_id": {
+                    "type": "string"
+                },
+                "status_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.AddStatusToTaskRequest": {
+            "type": "object",
+            "properties": {
+                "status_id": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.AttendanceCreateRequest": {
             "type": "object",
             "properties": {
@@ -5463,6 +6094,30 @@ const docTemplate = `{
                     "minLength": 3
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.CreateStatusRequest": {
+            "type": "object",
+            "required": [
+                "color",
+                "name"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "is_open": {
+                    "type": "boolean"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -5731,8 +6386,7 @@ const docTemplate = `{
                 "name",
                 "priority",
                 "project_id",
-                "start_date",
-                "status"
+                "start_date"
             ],
             "properties": {
                 "assigned_to": {
@@ -5769,14 +6423,6 @@ const docTemplate = `{
                 },
                 "start_date": {
                     "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "todo",
-                        "in_progress",
-                        "done"
-                    ]
                 }
             }
         },
@@ -5811,14 +6457,6 @@ const docTemplate = `{
                 },
                 "start_date": {
                     "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "todo",
-                        "in_progress",
-                        "done"
-                    ]
                 }
             }
         },
@@ -5937,6 +6575,26 @@ const docTemplate = `{
                 }
             }
         },
+        "request.UpdateStatusRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "is_open": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "request.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -6017,6 +6675,34 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AddStatusToBoardResponse": {
+            "type": "object",
+            "properties": {
+                "board_id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AddStatusToTaskResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status_id": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }
@@ -6395,9 +7081,6 @@ const docTemplate = `{
                     "description": "DATE в БД",
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
-                },
                 "time_spent": {
                     "description": "INTERVAL в БД",
                     "type": "string"
@@ -6756,6 +7439,97 @@ const docTemplate = `{
                 }
             }
         },
+        "response.StatusByBoardIdResponse": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
+                }
+            }
+        },
+        "response.StatusByTaskIdResponse": {
+            "type": "object",
+            "properties": {
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.StatusListResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "is_open": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.StatusUniversalResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "response.SubscriptionListBySubObjectResponse": {
             "type": "object",
             "properties": {
@@ -6895,9 +7669,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "start_date": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 },
                 "updated_at": {

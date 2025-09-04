@@ -53,7 +53,6 @@ type Project struct {
 	Name            *string    `gorm:"size:100"`
 	Description     *string    `gorm:"type:text"`
 	CreatedAt       *time.Time `gorm:"type:timestamp"`
-	Status          *string    `gorm:"size:20"`
 	GitlabProjectID *int
 	GitlabURL       *string    `gorm:"size:255"`
 	Boards          []Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
@@ -69,7 +68,6 @@ type Board struct {
 	Project     *Project  `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Name        *string   `gorm:"size:100"`
 	Description *string   `gorm:"type:text"`
-	Filter      *string   `gorm:"size:50"`
 	Deleted     *bool     `gorm:"type:boolean"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
@@ -80,7 +78,6 @@ type Task struct {
 	Priority      *int16
 	Name          *string    `gorm:"size:100"`
 	Description   *string    `gorm:"type:text"`
-	Status        *string    `gorm:"size:20"`
 	CreatedBy     *uuid.UUID `gorm:"type:uuid"`
 	AssignedTo    *uuid.UUID `gorm:"type:uuid"`
 	Deadline      *time.Time
@@ -139,7 +136,6 @@ type Attendance struct {
 	WorkdayHours  *int16
 	PlannedStart  *time.Time `gorm:"type:time"`
 	ActualStart   *time.Time `gorm:"type:time"`
-	Status        *string    `gorm:"size:20"`
 	Commits       *int16
 	MergeRequests *int16
 	CodeReviews   *int16
@@ -156,7 +152,6 @@ type DailyReport struct {
 	TaskID     *uuid.UUID `gorm:"type:uuid;index"`
 	Task       *Task      `gorm:"foreignKey:TaskID;references:ID"`
 	ReportDate *time.Time `gorm:"type:date"`
-	Status     *string    `gorm:"size:20"`
 	CreatedAt  *time.Time `gorm:"type:date"`
 	UpdatedAt  *time.Time `gorm:"type:date"`
 	Deleted    *bool      `gorm:"type:boolean"`
@@ -221,7 +216,7 @@ type CompletedWork struct {
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
 	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
-	CreatedAt       *time.Time `gorm:"type:timestamp"`
+	CreatedAt   *time.Time `gorm:"type:timestamp"`
 }
 
 type TomorrowPlans struct {
@@ -242,4 +237,47 @@ type Subscription struct {
 	TypeID    *int8     `gorm:"type:int8"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	Deleted     *bool       `gorm:"default:false"`
+}
+
+type Status struct {
+	ID        *uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	Key       *string    `gorm:"type:varchar(8);uniqueIndex"`
+	Name      *string    `gorm:"type:varchar(50)"`
+	Color     *string    `gorm:"type:varchar(16)"`
+	IsDefault *bool      `gorm:"default:false"`
+	IsActive  *bool      `gorm:"default:true"`
+	IsOpen    *bool      `gorm:"default:true"`
+	CreatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
+	UpdatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
+	Deleted   *bool      `gorm:"default:false"`
+
+	// Relations
+	Boards []*StatusBoard `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE;"`
+	Tasks  []*StatusTask  `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE;"`
+}
+
+type StatusBoard struct {
+	StatusID *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	BoardID  *uuid.UUID `gorm:"type:uuid;primaryKey"`
+
+	CreatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
+	UpdatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
+	Deleted   *bool      `gorm:"default:false"`
+
+	// Relations
+	Status *Status `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE;"`
+	Board  *Board  `gorm:"foreignKey:BoardID;references:ID;constraint:OnDelete:CASCADE;"`
+}
+
+type StatusTask struct {
+	StatusID *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TaskID   *uuid.UUID `gorm:"type:uuid;primaryKey"`
+
+	CreatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
+	UpdatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
+	Deleted   *bool      `gorm:"default:false"`
+
+	// Relations
+	Status *Status `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE;"`
+	Task   *Task   `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE;"`
 }

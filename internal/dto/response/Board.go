@@ -12,7 +12,6 @@ type BoardResponse struct {
 	ProjectId   string    `json:"project_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"descroption"`
-	Filter      string    `json:"filter"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 

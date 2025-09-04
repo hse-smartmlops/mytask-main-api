@@ -14,6 +14,7 @@ import (
 	"emplacc-api/internal/controller"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4/middleware"
 
@@ -23,6 +24,11 @@ import (
 )
 
 func main() {
+	loc, err := time.LoadLocation("Europe/Moscow")
+    if err != nil {
+        panic(err)
+    }
+    time.Local = loc
 	e := echo.New() 
 	e.Use(middleware.RemoveTrailingSlash())
 	e.Use(middleware.Logger())
@@ -58,6 +64,7 @@ func main() {
 	controller.RegisterRoleRoutes(e)
 	controller.RegisterAttendanceRoutes(e)
 	controller.RegisterSubscriptionRoutes(e)
+	controller.RegisterStatusRoutes(e)
 
 	// Swagger UI
 	// Редиректим с /swagger на /swagger/index.html, чтобы работало без явного указания файла

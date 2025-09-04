@@ -20,17 +20,16 @@ func RegisterTaskRoutes(e *echo.Echo) {
 	taskGroup := e.Group("/task")
 	taskGroup.Use(KeycloakAuthMiddleware)
 	{
-		taskGroup.GET("/all/:page/:pagesize", GetAllTasks)
-		taskGroup.GET("/:id", GetTaskByID)
-		taskGroup.GET("/project/:projectId", GetTasksByProjectID)
-		taskGroup.GET("/filter", GetTasksByFilter)
-		taskGroup.POST("", CreateTask)
-		taskGroup.PATCH("/:id", UpdateTask)
-		taskGroup.DELETE("/:id", DeleteTask)
+		taskGroup.GET("/all/:page/:pagesize", getAllTasks)
+		taskGroup.GET("/:id", getTaskByID)
+		taskGroup.GET("/project/:projectId", getTasksByProjectID)
+		taskGroup.POST("", createTask)
+		taskGroup.PATCH("/:id", updateTask)
+		taskGroup.DELETE("/:id", deleteTask)
 	}
 }
 
-// GetAllTasks godoc
+// getAllTasks godoc
 // @Summary Получение списка всех задач
 // @Description Получает список всех задач с учетом пагинации, исключая удаленные
 // @Tags Tasks
@@ -44,7 +43,7 @@ func RegisterTaskRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/all/{page}/{pagesize} [get]
-func GetAllTasks(c echo.Context) error {
+func getAllTasks(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -110,11 +109,6 @@ func GetAllTasks(c echo.Context) error {
 			name = *task.Name
 		}
 
-		var status string
-		if task.Status != nil {
-			status = *task.Status
-		}
-
 		var priority int16
 		if task.Priority != nil {
 			priority = *task.Priority
@@ -139,7 +133,6 @@ func GetAllTasks(c echo.Context) error {
 			ID:        id,
 			Name:      name,
 			ProjectID: projectId,
-			Status:    status,
 			Priority:  priority,
 			StartDate: startTime,
 			Deadline:  deadLine,
@@ -149,7 +142,7 @@ func GetAllTasks(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskList)
 }
 
-// GetTaskByID godoc
+// getTaskByID godoc
 // @Summary Получение задачи по ID
 // @Description Получает данные задачи по её уникальному идентификатору
 // @Tags Tasks
@@ -163,7 +156,7 @@ func GetAllTasks(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задачи"
 // @Router /task/{id} [get]
-func GetTaskByID(c echo.Context) error {
+func getTaskByID(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -267,11 +260,6 @@ func GetTaskByID(c echo.Context) error {
 		description = *task.Description
 	}
 
-	var status string
-	if task.Status != nil {
-		status = *task.Status
-	}
-
 	var priority int16
 	if task.Priority != nil {
 		priority = *task.Priority
@@ -306,7 +294,6 @@ func GetTaskByID(c echo.Context) error {
 		ProjectID:     projectId,
 		Name:          name,
 		Description:   description,
-		Status:        status,
 		Priority:      priority,
 		CreatedBy:     creatorInfo,
 		AssignedTo:    assignerInfo,
@@ -320,7 +307,7 @@ func GetTaskByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskResponse)
 }
 
-// GetTasksByProjectID godoc
+// getTasksByProjectID godoc
 // @Summary Получение задач по ID проекта
 // @Description Получает список задач, связанных с указанным проектом
 // @Tags Tasks
@@ -333,7 +320,7 @@ func GetTaskByID(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/project/{projectId} [get]
-func GetTasksByProjectID(c echo.Context) error {
+func getTasksByProjectID(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -399,11 +386,6 @@ func GetTasksByProjectID(c echo.Context) error {
 					name = *task.Name
 				}
 
-				var status string
-				if task.Status != nil {
-					status = *task.Status
-				}
-
 				var priority int16
 				if task.Priority != nil {
 					priority = *task.Priority
@@ -428,7 +410,6 @@ func GetTasksByProjectID(c echo.Context) error {
 					ID:        id,
 					Name:      name,
 					ProjectID: projectId,
-					Status:    status,
 					Priority:  priority,
 					StartDate: startTime,
 					Deadline:  deadLine,
@@ -440,22 +421,7 @@ func GetTasksByProjectID(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskList)
 }
 
-
-func GetTasksByFilter(c echo.Context) error {
-	if err := authorize(c); err != nil {
-		return err
-	}
-		if err := authorize(c); err != nil {
-			return err
-		}
-	filter := new(request.TaskFilter)
-	if err := c.Bind(filter); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid filter parameters"})
-	}
-	return c.JSON(http.StatusOK, nil)
-}
-
-// CreateTask godoc
+// createTask godoc
 // @Summary Создание новой задачи
 // @Description Создает новую задачу с указанными параметрами
 // @Tags Tasks
@@ -469,7 +435,7 @@ func GetTasksByFilter(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Исполнитель или поручитель не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании задачи"
 // @Router /task [post]
-func CreateTask(c echo.Context) error {
+func createTask(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -491,11 +457,6 @@ func CreateTask(c echo.Context) error {
 	var description *string
 	if req.Description != "" {
 		description = &req.Description
-	}
-
-	var status *string
-	if req.Status != nil {
-		status = req.Status
 	}
 
 	var priority *int16
@@ -570,7 +531,6 @@ func CreateTask(c echo.Context) error {
 		Priority:      priority,
 		Name:          name,
 		Description:   description,
-		Status:        status,
 		CreatedBy:     creatorID,
 		AssignedTo:    assignedTo,
 		Deadline:      deadline,
@@ -601,7 +561,7 @@ func CreateTask(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResp)
 }
 
-// UpdateTask godoc
+// updateTask godoc
 // @Summary Обновление задачи
 // @Description Обновляет данные задачи по её ID
 // @Tags Tasks
@@ -616,7 +576,7 @@ func CreateTask(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении задачи"
 // @Router /task/{id} [patch]
-func UpdateTask(c echo.Context) error {
+func updateTask(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -638,9 +598,6 @@ func UpdateTask(c echo.Context) error {
 	}
 	if req.Description != nil {
 		updates["description"] = *req.Description
-	}
-	if req.Status != nil {
-		updates["status"] = *req.Status
 	}
 	if req.Priority != nil {
 		updates["priority"] = *req.Priority
@@ -700,7 +657,7 @@ func UpdateTask(c echo.Context) error {
 	})
 }
 
-// DeleteTask godoc
+// deleteTask godoc
 // @Summary Удаление задачи
 // @Description Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)
 // @Tags Tasks
@@ -713,7 +670,7 @@ func UpdateTask(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении задачи"
 // @Router /task/{id} [delete]
-func DeleteTask(c echo.Context) error {
+func deleteTask(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -728,6 +685,10 @@ func DeleteTask(c echo.Context) error {
 		}
 		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		if res = tx.Model(models.StatusTask{}).Where("task_id = ?", id).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete status_task): %v", res.Error)
+			return res.Error
 		}
 		return nil
 	}); txErr != nil {
