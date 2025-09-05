@@ -71,8 +71,6 @@ definitions:
     properties:
       description:
         type: string
-      filter:
-        type: string
       name:
         type: string
       project_id:
@@ -636,14 +634,16 @@ definitions:
     properties:
       descroption:
         type: string
-      filter:
-        type: string
       id:
         type: string
       name:
         type: string
       project_id:
         type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
       updated_at:
         type: string
     type: object
@@ -773,6 +773,10 @@ definitions:
       start_date:
         description: DATE в БД
         type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
       time_spent:
         description: INTERVAL в БД
         type: string
@@ -1157,6 +1161,10 @@ definitions:
         type: string
       start_date:
         type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
       updated_at:
         type: string
     type: object
@@ -4367,7 +4375,7 @@ paths:
       summary: Получение списка всех задач
       tags:
       - Tasks
-  /task/project/{projectId}:
+  /task/project/{projectId}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -4378,6 +4386,16 @@ paths:
         name: projectId
         required: true
         type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -4406,6 +4424,58 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение задач по ID проекта
+      tags:
+      - Tasks
+  /task/user/{id}/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка задач, назначенных на конкретного пользователя,
+        с пагинацией (deleted = false)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач успешно получен
+          schema:
+            $ref: '#/definitions/response.TaskListResponse'
+        "400":
+          description: Ошибка при парсинге параметров или некорректный ID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение задач по ID пользователя
       tags:
       - Tasks
   /team:
@@ -4702,6 +4772,53 @@ paths:
       summary: Добавление проекта в команду
       tags:
       - Teams
+  /team/project/{project_id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех команд, связанных с проектом, по project_id
+      parameters:
+      - description: ID проекта
+        in: path
+        name: project_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список команд успешно получен
+          schema:
+            $ref: '#/definitions/response.TeamsListResponse'
+        "400":
+          description: Некорректный project_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Проект или команды не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении команд
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение списка команд проекта
+      tags:
+      - Projects
   /team/user:
     delete:
       consumes:

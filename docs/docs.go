@@ -4545,7 +4545,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/task/project/{projectId}": {
+        "/task/project/{projectId}/{page}/{pagesize}": {
             "get": {
                 "security": [
                     {
@@ -4570,6 +4570,20 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -4581,6 +4595,84 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Некорректный идентификатор проекта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении задач",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/task/user/{id}/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка задач, назначенных на конкретного пользователя, с пагинацией (deleted = false)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Получение задач по ID пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список задач успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.TaskListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров или некорректный ID пользователя",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -5065,6 +5157,79 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при удалении проекта из команды",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/team/project/{project_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список всех команд, связанных с проектом, по project_id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Получение списка команд проекта",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID проекта",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список команд успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.TeamsListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный project_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Проект или команды не найдены",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении команд",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6013,9 +6178,6 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "filter": {
-                    "type": "string"
-                },
                 "name": {
                     "type": "string"
                 },
@@ -6868,9 +7030,6 @@ const docTemplate = `{
                 "descroption": {
                     "type": "string"
                 },
-                "filter": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "string"
                 },
@@ -6879,6 +7038,12 @@ const docTemplate = `{
                 },
                 "project_id": {
                     "type": "string"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
                 },
                 "updated_at": {
                     "type": "string"
@@ -7080,6 +7245,12 @@ const docTemplate = `{
                 "start_date": {
                     "description": "DATE в БД",
                     "type": "string"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
                 },
                 "time_spent": {
                     "description": "INTERVAL в БД",
@@ -7670,6 +7841,12 @@ const docTemplate = `{
                 },
                 "start_date": {
                     "type": "string"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
                 },
                 "updated_at": {
                     "type": "string"

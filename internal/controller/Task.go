@@ -22,10 +22,11 @@ func RegisterTaskRoutes(e *echo.Echo) {
 	{
 		taskGroup.GET("/all/:page/:pagesize", getAllTasks)
 		taskGroup.GET("/:id", getTaskByID)
-		taskGroup.GET("/project/:projectId", getTasksByProjectID)
+		taskGroup.GET("/project/:projectId/:page/:pagesize", getTasksByProjectID)
 		taskGroup.POST("", createTask)
 		taskGroup.PATCH("/:id", updateTask)
 		taskGroup.DELETE("/:id", deleteTask)
+		taskGroup.GET("/user/:id/:page/:pagesize", getTasksByUserId)
 	}
 }
 
@@ -129,7 +130,7 @@ func getAllTasks(c echo.Context) error {
 			updatedAt = *task.UpdatedAt
 		}
 
-		taskList.Tasks = append(taskList.Tasks, response.TaskShort{
+		taskResponse := response.TaskShort{
 			ID:        id,
 			Name:      name,
 			ProjectID: projectId,
@@ -137,7 +138,36 @@ func getAllTasks(c echo.Context) error {
 			StartDate: startTime,
 			Deadline:  deadLine,
 			UpdatedAt: updatedAt,
-		})
+		}
+
+		// Fetch all StatusTask entries with preloaded Status in one query
+		var statusTasks []models.StatusTask
+		if err := dbConn.Session(&gorm.Session{}).
+			Preload("Status", "deleted = ?", false).
+			Where("deleted = ? AND task_id = ?", false, task.ID).
+			Find(&statusTasks).Error; err != nil {
+			log.Printf("failed to get statuses for task %s: %v", task.ID, err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении статусов для задачи",
+			})
+		}
+
+		for _, st := range statusTasks {
+			if st.Status != nil {
+				taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
+					ID:        st.Status.ID.String(),
+					Key:       getString(st.Status.Key),
+					Name:      getString(st.Status.Name),
+					Color:     getString(st.Status.Color),
+					IsDefault: getBool(st.Status.IsDefault),
+					IsActive:  getBool(st.Status.IsActive),
+					IsOpen:    getBool(st.Status.IsOpen),
+					CreatedAt: getTime(st.Status.CreatedAt),
+					UpdatedAt: getTime(st.Status.UpdatedAt),
+				})
+			}
+		}
+		taskList.Tasks = append(taskList.Tasks, taskResponse)
 	}
 	return c.JSON(http.StatusOK, taskList)
 }
@@ -172,7 +202,7 @@ func getTaskByID(c echo.Context) error {
 	var task models.Task
 	result := dbConn.Session(&gorm.Session{}).First(&task, "id = ? AND deleted = ?", taskId, false)
 	if result.Error != nil {
-		log.Printf("DB error %v", err)
+		log.Printf("DB error %v", result.Error)
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Задача не найдена",
@@ -196,7 +226,7 @@ func getTaskByID(c echo.Context) error {
 
 	var creatorInfo response.UserShort
 	if creator.Deleted != nil {
-		if *creator.Deleted {
+		if !*creator.Deleted {
 			var creatorID string = creator.ID.String()
 
 			var creatorFirstName string
@@ -224,7 +254,7 @@ func getTaskByID(c echo.Context) error {
 
 	var assignerInfo response.UserShort
 	if assigner.Deleted != nil {
-		if *assigner.Deleted {
+		if !*assigner.Deleted {
 			var assignerID = assigner.ID.String()
 
 			var assignerFirstName string
@@ -289,6 +319,7 @@ func getTaskByID(c echo.Context) error {
 	if task.Category != nil {
 		category = *task.Category
 	}
+
 	taskResponse := response.GetTaskByIDResponse{
 		ID:            Id,
 		ProjectID:     projectId,
@@ -304,6 +335,35 @@ func getTaskByID(c echo.Context) error {
 		Category:      category,
 		UpdatedAt:     updatedAt,
 	}
+
+	// Fetch all StatusTask entries with preloaded Status in one query
+    var statusTasks []models.StatusTask
+    if err := dbConn.Session(&gorm.Session{}).
+        Preload("Status", "deleted = ?", false).
+        Where("deleted = ? AND task_id = ?", false, taskId).
+        Find(&statusTasks).Error; err != nil {
+        log.Printf("failed to get statuses for task %s: %v", taskId, err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{
+            "error": "Ошибка при получении статусов для задачи",
+        })
+    }
+
+    for _, st := range statusTasks {
+        if st.Status != nil {
+            taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
+                ID:        st.Status.ID.String(),
+                Key:       getString(st.Status.Key),
+                Name:      getString(st.Status.Name),
+                Color:     getString(st.Status.Color),
+                IsDefault: getBool(st.Status.IsDefault),
+                IsActive:  getBool(st.Status.IsActive),
+                IsOpen:    getBool(st.Status.IsOpen),
+                CreatedAt: getTime(st.Status.CreatedAt),
+                UpdatedAt: getTime(st.Status.UpdatedAt),
+            })
+        }
+    }
+
 	return c.JSON(http.StatusOK, taskResponse)
 }
 
@@ -314,12 +374,14 @@ func getTaskByID(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param projectId path string true "ID проекта"
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
 // @Security BearerAuth
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
-// @Router /task/project/{projectId} [get]
+// @Router /task/project/{projectId}/{page}/{pagesize} [get]
 func getTasksByProjectID(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
@@ -330,19 +392,30 @@ func getTasksByProjectID(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
 	}
-	var req request.TaskListRequest
-	if err = c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
+	if err := authorize(c); err != nil {
+		return err
+	}
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
+			"error": "Ошибка при парсинге страницы",
 		})
 	}
-
-	page := req.Page
 	if page <= 0 {
 		page = 1
 	}
-	pageSize := req.PageSize
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
 	if pageSize <= 0 {
 		pageSize = 10
 	}
@@ -406,7 +479,7 @@ func getTasksByProjectID(c echo.Context) error {
 					updatedAt = *task.UpdatedAt
 				}
 
-				taskList.Tasks = append(taskList.Tasks, response.TaskShort{
+				taskResponse := response.TaskShort{
 					ID:        id,
 					Name:      name,
 					ProjectID: projectId,
@@ -414,7 +487,36 @@ func getTasksByProjectID(c echo.Context) error {
 					StartDate: startTime,
 					Deadline:  deadLine,
 					UpdatedAt: updatedAt,
-				})
+				}
+
+				// Fetch all StatusTask entries with preloaded Status in one query
+				var statusTasks []models.StatusTask
+				if err := dbConn.Session(&gorm.Session{}).
+					Preload("Status", "deleted = ?", false).
+					Where("deleted = ? AND task_id = ?", false, task.ID).
+					Find(&statusTasks).Error; err != nil {
+					log.Printf("failed to get statuses for task %s: %v", task.ID, err)
+					return c.JSON(http.StatusInternalServerError, map[string]string{
+						"error": "Ошибка при получении статусов для задачи",
+					})
+				}
+
+				for _, st := range statusTasks {
+					if st.Status != nil {
+						taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
+							ID:        st.Status.ID.String(),
+							Key:       getString(st.Status.Key),
+							Name:      getString(st.Status.Name),
+							Color:     getString(st.Status.Color),
+							IsDefault: getBool(st.Status.IsDefault),
+							IsActive:  getBool(st.Status.IsActive),
+							IsOpen:    getBool(st.Status.IsOpen),
+							CreatedAt: getTime(st.Status.CreatedAt),
+							UpdatedAt: getTime(st.Status.UpdatedAt),
+						})
+					}
+				}
+				taskList.Tasks = append(taskList.Tasks, taskResponse)
 			}
 		}
 	}
@@ -703,4 +805,160 @@ func deleteTask(c echo.Context) error {
 		ID:      id,
 		Message: "Задача удалена",
 	})
+}
+
+// getTasksByUserId godoc
+// @Summary Получение задач по ID пользователя
+// @Description Получение списка задач, назначенных на конкретного пользователя, с пагинацией (deleted = false)
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 400 {object} map[string]string "Ошибка при парсинге параметров или некорректный ID пользователя"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
+// @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
+// @Router /task/user/{id}/{page}/{pagesize} [get]
+func getTasksByUserId(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+	// Получаем projectID из параметров URL
+	userIDParam := c.Param("id")
+	userUUID, err := uuid.Parse(userIDParam)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
+	}
+	if err := authorize(c); err != nil {
+		return err
+	}
+	pageReq := c.Param("page")
+	pageSizeReq := c.Param("pagesize")
+	// Значения по умолчанию
+	page, err := strconv.Atoi(pageReq)
+	if err != nil{
+		log.Printf("failed to parse page: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге страницы",
+		})
+	}
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeReq)
+	if err != nil{
+		log.Printf("failed to parse pagesize: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Ошибка при парсинге номера страницы",
+		})
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+
+	var tasks []models.Task
+	if err = dbConn.Session(&gorm.Session{}).Where("assigned_to = ? AND deleted = ?", userUUID, false).
+		Limit(pageSize).
+		Offset(offset).
+		Find(&tasks).Error; err != nil {
+		log.Printf("DB error (find tasks): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при получении задач из базы данных",
+		})
+	}
+
+	var totalCount int64
+	result := dbConn.Session(&gorm.Session{}).Model(models.Task{}).Where("deleted = ?", false).Count(&totalCount)
+	if result.Error != nil {
+		log.Printf("DB error (count tasks): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при подсчете задач",
+		})
+	}
+
+	taskList := response.TaskListResponse{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+	}
+
+	for _, task := range tasks {
+		if task.Deleted != nil {
+			if !*task.Deleted {
+				var id string = task.ID.String()
+
+				var projectId string = task.ProjectID.String()
+
+				var name string
+				if task.Name != nil {
+					name = *task.Name
+				}
+
+				var priority int16
+				if task.Priority != nil {
+					priority = *task.Priority
+				}
+
+				var startTime time.Time
+				if task.StartDate != nil {
+					startTime = *task.StartDate
+				}
+
+				var deadLine time.Time
+				if task.Deadline != nil {
+					deadLine = *task.Deadline
+				}
+
+				var updatedAt time.Time
+				if task.UpdatedAt != nil {
+					updatedAt = *task.UpdatedAt
+				}
+
+				taskResponse := response.TaskShort{
+					ID:        id,
+					Name:      name,
+					ProjectID: projectId,
+					Priority:  priority,
+					StartDate: startTime,
+					Deadline:  deadLine,
+					UpdatedAt: updatedAt,
+				}
+
+				// Fetch all StatusTask entries with preloaded Status in one query
+				var statusTasks []models.StatusTask
+				if err := dbConn.Session(&gorm.Session{}).
+					Preload("Status", "deleted = ?", false).
+					Where("deleted = ? AND task_id = ?", false, task.ID).
+					Find(&statusTasks).Error; err != nil {
+					log.Printf("failed to get statuses for task %s: %v", task.ID, err)
+					return c.JSON(http.StatusInternalServerError, map[string]string{
+						"error": "Ошибка при получении статусов для задачи",
+					})
+				}
+
+				for _, st := range statusTasks {
+					if st.Status != nil {
+						taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
+							ID:        st.Status.ID.String(),
+							Key:       getString(st.Status.Key),
+							Name:      getString(st.Status.Name),
+							Color:     getString(st.Status.Color),
+							IsDefault: getBool(st.Status.IsDefault),
+							IsActive:  getBool(st.Status.IsActive),
+							IsOpen:    getBool(st.Status.IsOpen),
+							CreatedAt: getTime(st.Status.CreatedAt),
+							UpdatedAt: getTime(st.Status.UpdatedAt),
+						})
+					}
+				}
+				taskList.Tasks = append(taskList.Tasks, taskResponse)
+			}
+		}
+	}
+	return c.JSON(http.StatusOK, taskList)
 }

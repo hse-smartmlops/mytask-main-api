@@ -27,6 +27,7 @@ func RegisterTeamRoutes(e *echo.Echo) {
 	teamGroup.DELETE("/user", deleteUserFromTeam)
 	teamGroup.POST("/project", addProjectToTeam)
 	teamGroup.DELETE("/project", deleteProjectFromTeam)
+	teamGroup.GET("/project/:project_id", getProjectTeams)
 }
 
 var dbConn *gorm.DB = db.DB_conn
@@ -46,34 +47,192 @@ func getTeams(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
+
+	// Загружаем команды вместе с участниками и пользователями
 	var teams []models.Team
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).Find(&teams)
-	if result.Error != nil {
-		log.Printf("DB error (find teams): %v", result.Error)
+	if err := dbConn.Session(&gorm.Session{}).
+		Preload("TeamMembers.User").
+		Where("deleted = ?", false).
+		Find(&teams).Error; err != nil {
+		log.Printf("DB error (find teams with preload): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении списка команд",
 		})
 	}
 
+	// Формируем ответ
+	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0, len(teams))}
+	for _, team := range teams {
+		var name, description string
+		if team.Name != nil {
+			name = *team.Name
+		}
+		if team.Description != nil {
+			description = *team.Description
+		}
+
+		var updatedAt time.Time
+		if team.UpdatedAt != nil {
+			updatedAt = *team.UpdatedAt
+		}
+
+		// Участники
+		members := make([]response.TeamMemberResponse, 0, len(team.TeamMembers))
+		for _, tm := range team.TeamMembers {
+			if tm.Deleted != nil && *tm.Deleted {
+				continue
+			}
+			if tm.User == nil || (tm.User.Deleted != nil && *tm.User.Deleted) {
+				continue
+			}
+
+			user := tm.User
+
+			profession := ""
+			if user.Profession != nil {
+				profession = *user.Profession
+			}
+
+			var memberFirstName, memberLastName, memberEmail string
+			if user.FirstName != nil {
+				memberFirstName = *user.FirstName
+			}
+			if user.LastName != nil {
+				memberLastName = *user.LastName
+			}
+			if user.Email != nil {
+				memberEmail = *user.Email
+			}
+
+			members = append(members, response.TeamMemberResponse{
+				UserID:         user.ID.String(),
+				Specialization: profession,
+				FirstName:      memberFirstName,
+				LastName:       memberLastName,
+				Email:          memberEmail,
+			})
+		}
+
+		teamListResponse.Teams = append(teamListResponse.Teams, response.TeamResponse{
+			ID:          team.ID.String(),
+			Name:        name,
+			Description: description,
+			UpdatedAt:   updatedAt,
+			Members:     members,
+		})
+	}
+
+	return c.JSON(http.StatusOK, teamListResponse)
+}
+
+// getProjectTeams godoc
+// @Summary Получение списка команд проекта
+// @Description Получает список всех команд, связанных с проектом, по project_id
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param project_id path string true "ID проекта"
+// @Success 200 {object} response.TeamsListResponse "Список команд успешно получен"
+// @Security BearerAuth
+// @Failure 400 {object} map[string]string "Некорректный project_id"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Проект или команды не найдены"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении команд"
+// @Router /team/project/{project_id} [get]
+func getProjectTeams(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
+	projectIDStr := c.Param("project_id")
+	projectID, err := uuid.Parse(projectIDStr)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный project_id",
+		})
+	}
+
+	// Получаем связи проект-команда
+	var projectTeams []models.ProjectTeam
+	if err := dbConn.
+		Session(&gorm.Session{NewDB: true}).
+		Where("project_id = ? AND deleted = ?", projectID, false).
+		Find(&projectTeams).Error; err != nil {
+		log.Printf("DB error (find projectTeams): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при получении связей проект-команда",
+		})
+	}
+
+	if len(projectTeams) == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "Для данного проекта команды не найдены",
+		})
+	}
+
+	// Собираем teamIDs
+	teamIDs := make([]uuid.UUID, 0, len(projectTeams))
+	for _, pt := range projectTeams {
+		teamIDs = append(teamIDs, pt.TeamID)
+	}
+
+	// Получаем команды
+	var teams []models.Team
+	if err := dbConn.
+		Session(&gorm.Session{NewDB: true}).
+		Where("id IN ? AND deleted = ?", teamIDs, false).
+		Find(&teams).Error; err != nil {
+		log.Printf("DB error (find teams): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при получении списка команд",
+		})
+	}
+
+	// Получаем участников команд
 	var teamMembers []models.TeamMember
-	resultTM := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).Find(&teamMembers)
-	if resultTM.Error != nil {
-		log.Printf("DB error (find team members): %v", resultTM.Error)
+	if err := dbConn.
+		Session(&gorm.Session{NewDB: true}).
+		Where("team_id IN ? AND deleted = ?", teamIDs, false).
+		Find(&teamMembers).Error; err != nil {
+		log.Printf("DB error (find team members): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении участников команд",
 		})
 	}
 
-	teamAndMembers := make(map[uuid.UUID][]response.TeamMemberResponse, len(teams))
-	teamInfo := make(map[uuid.UUID]response.TeamResponse, 0)
+	// Собираем userIDs
+	userIDs := make([]uuid.UUID, 0, len(teamMembers))
+	for _, tm := range teamMembers {
+		userIDs = append(userIDs, tm.UserID)
+	}
 
+	// Загружаем пользователей
+	var users []models.User
+	if len(userIDs) > 0 {
+		if err := dbConn.
+			Session(&gorm.Session{NewDB: true}).
+			Select("id, profession, first_name, last_name, email").
+			Where("id IN ? AND deleted = ?", userIDs, false).
+			Find(&users).Error; err != nil {
+			log.Printf("DB error (find users): %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении пользователей",
+			})
+		}
+	}
+
+	userMap := make(map[uuid.UUID]models.User, len(users))
+	for _, u := range users {
+		userMap[u.ID] = u
+	}
+
+	// Формируем ответ
+	teamInfo := make(map[uuid.UUID]response.TeamResponse, len(teams))
 	for _, team := range teams {
-		var name string
+		var name, description string
 		if team.Name != nil {
 			name = *team.Name
 		}
-
-		var description string
 		if team.Description != nil {
 			description = *team.Description
 		}
@@ -91,60 +250,46 @@ func getTeams(c echo.Context) error {
 		}
 	}
 
+	teamAndMembers := make(map[uuid.UUID][]response.TeamMemberResponse, len(teams))
 	for _, tm := range teamMembers {
-		var member models.User
-		userId := tm.UserID.String()
-		err := dbConn.Session(&gorm.Session{}).Select("id, profession, first_name, last_name, email").
-			Where("id = ? AND deleted = ?", userId, false).
-			Find(&member).Error
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, err)
-		}
+		if member, ok := userMap[tm.UserID]; ok {
+			profession := ""
+			if member.Profession != nil {
+				profession = *member.Profession
+			}
+			var memberFirstName, memberLastName, memberEmail string
+			if member.FirstName != nil {
+				memberFirstName = *member.FirstName
+			}
+			if member.LastName != nil {
+				memberLastName = *member.LastName
+			}
+			if member.Email != nil {
+				memberEmail = *member.Email
+			}
 
-		profession := ""
-		if member.Profession != nil {
-			profession = *member.Profession
+			teamAndMembers[tm.TeamID] = append(teamAndMembers[tm.TeamID],
+				response.TeamMemberResponse{
+					UserID:         member.ID.String(),
+					Specialization: profession,
+					FirstName:      memberFirstName,
+					LastName:       memberLastName,
+					Email:          memberEmail,
+				})
 		}
-
-		var memberFirstName string
-		if member.FirstName != nil {
-			memberFirstName = *member.FirstName
-		}
-
-		var memberLastName string
-		if member.LastName != nil {
-			memberLastName = *member.LastName
-		}
-
-		var memberEmail string
-		if member.Email != nil {
-			memberEmail = *member.Email
-		}
-
-		teamAndMembers[tm.TeamID] = append(teamAndMembers[tm.TeamID],
-			response.TeamMemberResponse{
-				UserID:         member.ID.String(),
-				Specialization: profession,
-				FirstName:      memberFirstName,
-				LastName:       memberLastName,
-				Email:          memberEmail,
-			})
 	}
 
-	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0)}
-
-
+	// Итоговый список
+	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0, len(teams))}
 	for id, info := range teamInfo {
-		teamListResponse.Teams = append(teamListResponse.Teams, response.TeamResponse{
-			ID:          id.String(),
-			Name:        info.Name,
-			Description: info.Description,
-			Members:     teamAndMembers[id],
-		})
+		info.Members = teamAndMembers[id]
+		teamListResponse.Teams = append(teamListResponse.Teams, info)
 	}
 
 	return c.JSON(http.StatusOK, teamListResponse)
 }
+
+
 
 // getTeamByID godoc
 // @Summary Получение команды по ID

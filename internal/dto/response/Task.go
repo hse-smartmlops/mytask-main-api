@@ -19,6 +19,7 @@ type GetTaskByIDResponse struct {
 	GitlabIssueID int       `json:"gitlab_issue_id,omitempty"`
 	Category      int8      `json:"community"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 
 // Краткая информация о задаче (для списков)
@@ -30,6 +31,7 @@ type TaskShort struct {
 	StartDate time.Time `json:"start_date"`
 	Deadline  time.Time `json:"deadline,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
+	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 
 // Ответ для списка задач с пагинацией

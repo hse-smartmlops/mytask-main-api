@@ -102,7 +102,6 @@ func getAllBoards(c echo.Context) error {
 		if board.Deleted != nil {
 			if !*board.Deleted {
 				var id string = board.ID.String()
-				var projectId string = board.ProjectID.String()
 
 				var name string
 				if board.Name != nil {
@@ -117,13 +116,43 @@ func getAllBoards(c echo.Context) error {
 					updatedAt = *board.UpdatedAt
 				}
 
-				boardList.Boards = append(boardList.Boards, response.BoardResponse{
+				boardResponse := response.BoardResponse{
 					Id:          id,
-					ProjectId:   projectId,
+					ProjectId:   board.ProjectID.String(),
 					Name:        name,
 					Description: description,
 					UpdatedAt:   updatedAt,
-				})
+				}
+
+				// Fetch all StatusBoard entries with preloaded Status in one query
+				var statusBoards []models.StatusBoard
+				if err := dbConn.
+					Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
+					Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
+					Find(&statusBoards).Error; err != nil {
+					log.Printf("failed to get statuses for board %s: %v", id, err)
+					return c.JSON(http.StatusInternalServerError, map[string]string{
+						"error": "Ошибка при получении статусов для доски",
+					})
+				}
+
+				for _, sb := range statusBoards {
+					if sb.Status != nil {
+						boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
+							ID:        sb.Status.ID.String(),
+							Key:       getString(sb.Status.Key),
+							Name:      getString(sb.Status.Name),
+							Color:     getString(sb.Status.Color),
+							IsDefault: getBool(sb.Status.IsDefault),
+							IsActive:  getBool(sb.Status.IsActive),
+							IsOpen:    getBool(sb.Status.IsOpen),
+							CreatedAt: getTime(sb.Status.CreatedAt),
+							UpdatedAt: getTime(sb.Status.UpdatedAt),
+						})
+					}
+				}
+				
+				boardList.Boards = append(boardList.Boards, boardResponse)
 			}
 		}
 	}
@@ -203,6 +232,35 @@ func getBoardById(c echo.Context) error {
 		Description: description,
 		UpdatedAt:   updatedAt,
 	}
+
+	// Fetch all StatusBoard entries with preloaded Status in one query
+    var statusBoards []models.StatusBoard
+    if err := dbConn.
+        Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
+        Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
+        Find(&statusBoards).Error; err != nil {
+        log.Printf("failed to get statuses for board %s: %v", boardId, err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{
+            "error": "Ошибка при получении статусов для доски",
+        })
+    }
+
+    for _, sb := range statusBoards {
+        if sb.Status != nil {
+            boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
+                ID:        sb.Status.ID.String(),
+                Key:       getString(sb.Status.Key),
+                Name:      getString(sb.Status.Name),
+                Color:     getString(sb.Status.Color),
+                IsDefault: getBool(sb.Status.IsDefault),
+                IsActive:  getBool(sb.Status.IsActive),
+                IsOpen:    getBool(sb.Status.IsOpen),
+                CreatedAt: getTime(sb.Status.CreatedAt),
+                UpdatedAt: getTime(sb.Status.UpdatedAt),
+            })
+        }
+    }
+
 	return c.JSON(http.StatusOK, boardResponse)
 }
 
@@ -261,6 +319,8 @@ func getBoardByProjectId(c echo.Context) error {
 			}
 		}
 
+		var id string = board.ID.String()
+
 		var name string
 		if board.Name != nil {
 			name = *board.Name
@@ -276,13 +336,43 @@ func getBoardByProjectId(c echo.Context) error {
 			updatedAt = *board.UpdatedAt
 		}
 
-		projectResponse.Boards = append(projectResponse.Boards, response.BoardResponse{
-			Id:          board.ID.String(),
-			ProjectId:   projectId.String(),
+		boardResponse := response.BoardResponse{
+			Id:          id,
+			ProjectId:   board.ProjectID.String(),
 			Name:        name,
 			Description: description,
 			UpdatedAt:   updatedAt,
-		})
+		}
+
+		// Fetch all StatusBoard entries with preloaded Status in one query
+		var statusBoards []models.StatusBoard
+		if err := dbConn.
+			Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
+			Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
+			Find(&statusBoards).Error; err != nil {
+			log.Printf("failed to get statuses for board %s: %v", id, err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении статусов для доски",
+			})
+		}
+
+		for _, sb := range statusBoards {
+			if sb.Status != nil {
+				boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
+					ID:        sb.Status.ID.String(),
+					Key:       getString(sb.Status.Key),
+					Name:      getString(sb.Status.Name),
+					Color:     getString(sb.Status.Color),
+					IsDefault: getBool(sb.Status.IsDefault),
+					IsActive:  getBool(sb.Status.IsActive),
+					IsOpen:    getBool(sb.Status.IsOpen),
+					CreatedAt: getTime(sb.Status.CreatedAt),
+					UpdatedAt: getTime(sb.Status.UpdatedAt),
+				})
+			}
+		}
+		
+		projectResponse.Boards = append(projectResponse.Boards, boardResponse)		
 	}
 
 	return c.JSON(http.StatusOK, projectResponse)

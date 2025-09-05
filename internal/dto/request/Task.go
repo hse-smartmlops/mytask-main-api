@@ -26,18 +26,6 @@ type TaskUpdateRequest struct {
 	Category     *bool      `json:"category"`
 }
 
-type TaskFilter struct {
-	ProjectID    *string    `json:"project_id" form:"project_id" validate:"omitempty,uuid4"`
-	BoardID      *string    `json:"board_id" form:"board_id" validate:"omitempty,uuid4"`
-	Priority     *int       `json:"priority" form:"priority" validate:"omitempty,min=1,max=10"`
-	AssignedTo   *string    `json:"assigned_to" form:"assigned_to" validate:"omitempty,uuid4"`
-	CreatedBy    *string    `json:"created_by" form:"created_by" validate:"omitempty,uuid4"`
-	DeadlineFrom *time.Time `json:"deadline_from" form:"deadline_from"`
-	DeadlineTo   *time.Time `json:"deadline_to" form:"deadline_to"`
-	Page         *int       `json:"page" form:"page" validate:"omitempty,min=1"`
-	PageSize     *int       `json:"page_size" form:"page_size" validate:"omitempty,min=5,max=100"`
-}
-
 type TaskListRequest struct {
 	Page     int `json:"page"`
 	PageSize int `json:"page_size"`
