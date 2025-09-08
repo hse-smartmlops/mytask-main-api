@@ -63,16 +63,17 @@ type Project struct {
 }
 
 type Board struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	ProjectID   uuid.UUID `gorm:"type:uuid;index;not null"`
-	Project     *Project  `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
-	Name        *string   `gorm:"size:100"`
-	Description *string   `gorm:"type:text"`
-	Deleted     *bool     `gorm:"type:boolean"`
-	CreatedAt   *time.Time `gorm:"type:timestamp"`
-	UpdatedAt   *time.Time `gorm:"type:timestamp"`
-}
+	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
+	ProjectID   uuid.UUID      `gorm:"type:uuid;index;not null"`
+	Project     *Project       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	Name        *string        `gorm:"size:100"`
+	Description *string        `gorm:"type:text"`
+	Deleted     *bool          `gorm:"type:boolean"`
+	CreatedAt   *time.Time     `gorm:"type:timestamp"`
+	UpdatedAt   *time.Time     `gorm:"type:timestamp"`
 
+	StatusBoards []StatusBoard `gorm:"foreignKey:BoardID;constraint:OnDelete:CASCADE;"`
+}
 type Task struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	Priority      *int16
@@ -90,6 +91,10 @@ type Task struct {
 	Deleted       *bool `gorm:"type:boolean"`
 	CreatedAt     *time.Time `gorm:"type:timestamp"`
 	UpdatedAt     *time.Time `gorm:"type:timestamp"`
+
+	StatusTasks []StatusTask `gorm:"foreignKey:TaskID"`
+	CreatedByUser  *User `gorm:"foreignKey:CreatedBy"`
+    AssignedToUser *User `gorm:"foreignKey:AssignedTo"`
 }
 
 // ===== Teams =====
@@ -146,15 +151,20 @@ type Attendance struct {
 }
 
 type DailyReport struct {
-	ID         uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	UserID     uuid.UUID  `gorm:"type:uuid;index"`
-	User       *User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
-	TaskID     *uuid.UUID `gorm:"type:uuid;index"`
-	Task       *Task      `gorm:"foreignKey:TaskID;references:ID"`
-	ReportDate *time.Time `gorm:"type:date"`
-	CreatedAt  *time.Time `gorm:"type:date"`
-	UpdatedAt  *time.Time `gorm:"type:date"`
-	Deleted    *bool      `gorm:"type:boolean"`
+	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	UserID        uuid.UUID  `gorm:"type:uuid;index"`
+	User          *User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
+	TaskID        *uuid.UUID `gorm:"type:uuid;index"`
+	Task          *Task      `gorm:"foreignKey:TaskID;references:ID"`
+	ReportDate    *time.Time `gorm:"type:date"`
+	CreatedAt     *time.Time `gorm:"type:date"`
+	UpdatedAt     *time.Time `gorm:"type:date"`
+	Deleted       *bool      `gorm:"type:boolean"`
+
+	HelpRequest   *HelpRequest     `gorm:"foreignKey:ReportID"`
+	CompletedWork []CompletedWork  `gorm:"foreignKey:ReportID"`
+	TomorrowPlans []TomorrowPlans  `gorm:"foreignKey:ReportID"`
+	ReportProblems []ReportProblem `gorm:"foreignKey:ReportID"`
 }
 
 // ===== Problems / Forum =====

@@ -9,6 +9,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -89,7 +90,7 @@ func getAllUsers(c echo.Context) error {
 		Find(&users).Error; err != nil {
 		log.Printf("DB error (find projects): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проектов из базы данных",
+			"error": "Ошибка при получении пользователей из базы данных",
 		})
 	}
 
@@ -100,59 +101,18 @@ func getAllUsers(c echo.Context) error {
 	}
 
 	for _, user := range users {
-		var userId string = user.ID.String()
-		var email string
-		if user.Email != nil {
-			email = *user.Email
-		}
-		var isActive bool
-		if user.IsActive != nil {
-			isActive = *user.IsActive
-		}
-		var createdAt time.Time
-		if user.CreatedAt != nil {
-			createdAt = *user.CreatedAt
-		}
-		var tgId string
-		if user.TgID != nil {
-			tgId = *user.TgID
-		}
-		var tgUserId int64
-		if user.TgUserID != nil {
-			tgUserId = *user.TgUserID
-		}
-		var profession string
-		if user.Profession != nil {
-			profession = *user.Profession
-		}
-		var emailVerified bool
-		if user.EmailVerified != nil {
-			emailVerified = *user.EmailVerified
-		}
-		var firstName string
-		if user.FirstName != nil {
-			firstName = *user.FirstName
-		}
-		var lastName string
-		if user.LastName != nil {
-			lastName = *user.LastName
-		}
-		var lastLogin time.Time
-		if user.LastLogin != nil {
-			lastLogin = *user.LastLogin
-		}
 		userList.Users = append(userList.Users, response.GetUserResponse{
-			ID:             userId,
-			Email:          email,
-			IsActive:       isActive,
-			CreatedAt:      createdAt,
-			TgId:           tgId,
-			TgUserId:       tgUserId,
-			Profession:     profession,
-			EmailVerified:  emailVerified,
-			FirstName:      firstName,
-			LastName:       lastName,
-			LastLogin:      lastLogin,
+			ID:             user.ID.String(),
+			Email:          utils.GetString(user.Email),
+			IsActive:       utils.GetBool(user.IsActive),
+			CreatedAt:      utils.GetTime(user.CreatedAt),
+			TgId:           utils.GetString(user.TgID),
+			TgUserId:       utils.GetInt64(user.TgUserID),
+			Profession:     utils.GetString(user.Profession),
+			EmailVerified:  utils.GetBool(user.EmailVerified),
+			FirstName:      utils.GetString(user.FirstName),
+			LastName:       utils.GetString(user.LastName),
+			LastLogin:      utils.GetTime(user.LastLogin),
 		})
 	}
 	return c.JSON(http.StatusOK, userList)
@@ -198,58 +158,18 @@ func getUserById(c echo.Context) error {
 			"error": "Ошибка при получении пользователя из базы данных",
 		})
 	}
-	var email string
-	if user.Email != nil {
-		email = *user.Email
-	}
-	var isActive bool
-	if user.IsActive != nil {
-		isActive = *user.IsActive
-	}
-	var createdAt time.Time
-	if user.CreatedAt != nil {
-		createdAt = *user.CreatedAt
-	}
-	var tgId string
-	if user.TgID != nil {
-		tgId = *user.TgID
-	}
-	var tgUserId int64
-	if user.TgUserID != nil {
-		tgUserId = *user.TgUserID
-	}
-	var profession string
-	if user.Profession != nil {
-		profession = *user.Profession
-	}
-	var emailVerified bool
-	if user.EmailVerified != nil {
-		emailVerified = *user.EmailVerified
-	}
-	var firstName string
-	if user.FirstName != nil {
-		firstName = *user.FirstName
-	}
-	var lastName string
-	if user.LastName != nil {
-		lastName = *user.LastName
-	}
-	var lastLogin time.Time
-	if user.LastLogin != nil {
-		lastLogin = *user.LastLogin
-	}
 	getUserResponse := response.GetUserResponse{
-		ID:             id,
-		Email:          email,
-		IsActive:       isActive,
-		CreatedAt:      createdAt,
-		TgId:           tgId,
-		TgUserId:       tgUserId,
-		Profession:     profession,
-		EmailVerified:  emailVerified,
-		FirstName:      firstName,
-		LastName:       lastName,
-		LastLogin:      lastLogin,
+		ID:             user.ID.String(),
+		Email:          utils.GetString(user.Email),
+		IsActive:       utils.GetBool(user.IsActive),
+		CreatedAt:      utils.GetTime(user.CreatedAt),
+		TgId:           utils.GetString(user.TgID),
+		TgUserId:       utils.GetInt64(user.TgUserID),
+		Profession:     utils.GetString(user.Profession),
+		EmailVerified:  utils.GetBool(user.EmailVerified),
+		FirstName:      utils.GetString(user.FirstName),
+		LastName:       utils.GetString(user.LastName),
+		LastLogin:      utils.GetTime(user.LastLogin),
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
 }
@@ -510,12 +430,10 @@ func DeleteUserFunc(c echo.Context, id string) error {
 			}
 		}
 
-		// Помечаем задачи удаленными
 		if err := tx.Model(&models.Task{}).Where("created_by = ? OR assigned_to = ?", id, id).Updates(updateData).Error; err != nil {
 			return err
 		}
 
-		// Отчёты
 		var dailyReports []models.DailyReport
 		if err := tx.Where("user_id = ? and deleted = ?", id, false).Find(&dailyReports).Error; err != nil {
 			return err
@@ -531,7 +449,6 @@ func DeleteUserFunc(c echo.Context, id string) error {
 			return err
 		}
 
-		// Остальные связи
 		if err := tx.Model(&models.UserRole{}).Where("assigned_by = ? OR user_id = ?", id, id).Updates(updateData).Error; err != nil {
 			return err
 		}
@@ -544,7 +461,6 @@ func DeleteUserFunc(c echo.Context, id string) error {
 			return err
 		}
 
-		// Проблемы
 		var problems []models.Problem
 		if err := tx.Where("deleted = ? and creator_id = ?", false, id).Find(&problems).Error; err != nil {
 			return err
@@ -576,7 +492,6 @@ func DeleteUserFunc(c echo.Context, id string) error {
 	})
 
 	if err != nil {
-		// Если это ошибка echo.NewHTTPError, возвращаем её
 		if he, ok := err.(*echo.HTTPError); ok {
 			return c.JSON(he.Code, map[string]string{"error": he.Message.(string)})
 		}

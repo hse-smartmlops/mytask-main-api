@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -86,7 +87,7 @@ func getAllSubscriptions(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription):%v", result.Error)
+			log.Printf("DB error (find subscription):%v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении подписок из базы данных", 
 			})
@@ -107,20 +108,12 @@ func getAllSubscriptions(c echo.Context) error{
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
-		var typeId int8
-		if subscription.TypeID != nil{
-			typeId = *subscription.TypeID
-		}
-		var createdAt time.Time
-		if subscription.CreatedAt != nil{
-			createdAt = *subscription.CreatedAt
-		}	
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
 			UserId: userId,
 			SubscriptionId: subscriptionId,
-			TypeId: typeId,
-			CreatedAt: createdAt,	
+			TypeId: utils.GetInt8(subscription.TypeID),
+			CreatedAt: utils.GetTime(subscription.CreatedAt),	
 		})
 	}
 
@@ -193,7 +186,7 @@ func getSubscriptionsByUserId(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription by id): %v", result.Error)
+			log.Printf("DB error (find subscription by id): %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении подписок из базы данныхэ", 
 			})
@@ -215,20 +208,12 @@ func getSubscriptionsByUserId(c echo.Context) error{
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
-		var typeId int8
-		if subscription.TypeID != nil{
-			typeId = *subscription.TypeID
-		}
-		var createdAt time.Time
-		if subscription.CreatedAt != nil{
-			createdAt = *subscription.CreatedAt
-		}	
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
 			UserId: userId,
 			SubscriptionId: subscriptionId,
-			TypeId: typeId,
-			CreatedAt: createdAt,	
+			TypeId: utils.GetInt8(subscription.TypeID),
+			CreatedAt: utils.GetTime(subscription.CreatedAt),	
 		})
 	}
 
@@ -313,9 +298,9 @@ func getSubscriptionBySubObject(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription by id): %v", result.Error)
+			log.Printf("DB error (find subscription by id): %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении подписок из базы данныхэ", 
+				"error": "Ошибка при получении подписок из базы данных", 
 			})
 	}
 
@@ -336,20 +321,12 @@ func getSubscriptionBySubObject(c echo.Context) error{
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
-		var typeId int8
-		if subscription.TypeID != nil{
-			typeId = *subscription.TypeID
-		}
-		var createdAt time.Time
-		if subscription.CreatedAt != nil{
-			createdAt = *subscription.CreatedAt
-		}	
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
 			UserId: userId,
 			SubscriptionId: subscriptionId,
-			TypeId: typeId,
-			CreatedAt: createdAt,	
+			TypeId: utils.GetInt8(subscription.TypeID),
+			CreatedAt: utils.GetTime(subscription.CreatedAt),	
 		})
 	}
 
@@ -405,21 +382,12 @@ func getSubscriptionById(c echo.Context) error{
 	if subscription.SubscriptionId != nil{
 		subscriptionId = subscription.SubscriptionId.String()
 	}
-	var typeId int8
-	if subscription.TypeID != nil{
-		typeId = *subscription.TypeID
-	}
-	var createdAt time.Time
-	if subscription.CreatedAt != nil{
-		createdAt = *subscription.CreatedAt
-	}
-
 	subResponse := response.SubscriptionResponse{
 		ID: subscription.ID.String(),
 		UserId: userId,
 		SubscriptionId: subscriptionId,
-		TypeId: typeId,
-		CreatedAt: createdAt,
+		TypeId: utils.GetInt8(subscription.TypeID),
+		CreatedAt: utils.GetTime(subscription.CreatedAt),	
 	}
 	return c.JSON(http.StatusOK, subResponse)
 }
@@ -476,7 +444,7 @@ func createSubscription(c echo.Context) error{
 	switch typeId{
 	case 0:
 		var task models.Task
-		result := dbConn.Session(&gorm.Session{}).First(&task, "id = ? AND deleted = ?", req.SubscriptionId, false)
+		result := dbConn.Session(&gorm.Session{}).First(&task, "id = ? AND deleted = ?", subId, false)
 		if result.Error != nil {
 			log.Printf("DB error %v", err)
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -491,7 +459,7 @@ func createSubscription(c echo.Context) error{
 		}
 	case 1:
 		var  problem models.Problem
-		result := dbConn.Session(&gorm.Session{}).First(&problem, "id = ? AND deleted = ?", req.SubscriptionId, false)
+		result := dbConn.Session(&gorm.Session{}).First(&problem, "id = ? AND deleted = ?", subId, false)
 		if result.Error != nil{
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				return c.JSON(http.StatusNotFound, map[string]string{
@@ -506,7 +474,7 @@ func createSubscription(c echo.Context) error{
 	default:
 		log.Print("incorect type of object")
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный тип объекты",
+			"error": "Некорректный тип объекта",
 		})
 	}
  
@@ -556,10 +524,18 @@ func deleteSubscription(c echo.Context) error {
 	}
 
 	id := c.Param("id")
+	subId, err := uuid.Parse(id)
+	if err != nil{
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор подписки",
+		})
+	}
+
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Subscription{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Subscription{}).Where("id = ?", subId).Updates(updateData)
 		if res.Error != nil{
 			log.Printf("DB error (delete subscription): %v", res.Error)
 			return res.Error
@@ -573,7 +549,7 @@ func deleteSubscription(c echo.Context) error {
 			return c.JSON(he.Code, he.Message)
 		}
 		log.Printf("DB transaction error (delete project): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проекта"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении подписки"})
 	}
 
 	delResponse :=  response.SubscriptionUniversalResponse{

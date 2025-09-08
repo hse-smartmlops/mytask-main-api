@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -108,21 +109,13 @@ func getAllForumMessages(c echo.Context) error {
 		if message.CreatorID != nil {
 			creatorId = message.CreatorID.String()
 		}
-		var createdAt time.Time
-		if message.CreatedAt != nil {
-			createdAt = *message.CreatedAt
-		}
-		var updatedAt time.Time
-		if message.UpdatedAt != nil {
-			updatedAt = *message.UpdatedAt
-		}
 		forumMessageList.Messages = append(forumMessageList.Messages, response.ForumMessageResponse{
 			ID:          messageId,
 			ProblemID:   problemId,
 			Description: description,
 			CreatorID:   creatorId,
-			CreatedAt:   createdAt,
-			UpdatedAt:   updatedAt,
+			CreatedAt:   utils.GetTime(message.CreatedAt),
+			UpdatedAt:   utils.GetTime(message.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, forumMessageList)
@@ -207,26 +200,17 @@ func getForumMessagesByProblemId(c echo.Context) error{
 		var messageId = message.ID.String()
 		var problemId = message.ProblemID.String()
 		var description []string = []string(message.Description)
-
 		var creatorId string
 		if message.CreatorID != nil {
 			creatorId = message.CreatorID.String()
-		}
-		var createdAt time.Time
-		if message.CreatedAt != nil {
-			createdAt = *message.CreatedAt
-		}
-		var updatedAt time.Time
-		if message.UpdatedAt != nil {
-			updatedAt = *message.UpdatedAt
 		}
 		forumMessageList.Messages = append(forumMessageList.Messages, response.ForumMessageResponse{
 			ID:          messageId,
 			ProblemID:   problemId,
 			Description: description,
 			CreatorID:   creatorId,
-			CreatedAt:   createdAt,
-			UpdatedAt:   updatedAt,
+			CreatedAt:   utils.GetTime(message.CreatedAt),
+			UpdatedAt:   utils.GetTime(message.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, forumMessageList)
@@ -259,8 +243,8 @@ func getForumMessageById(c echo.Context) error {
 		})
 	}
 
-	var forumMessage models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).Where("id = ? and deleted = ?", messageID, false).First(&forumMessage).Error; err != nil {
+	var message models.ForumMessage
+	if err := dbConn.Session(&gorm.Session{}).Where("id = ? and deleted = ?", messageID, false).First(&message).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Сообщение не найдено",
@@ -272,28 +256,21 @@ func getForumMessageById(c echo.Context) error {
 		})
 	}
 	
-	var problemId = forumMessage.ProblemID.String()
-	var description []string = []string(forumMessage.Description)
+	var messageId = message.ID.String()
+	var problemId = message.ProblemID.String()
+	var description []string = []string(message.Description)
 	var creatorId string
-	if forumMessage.CreatorID != nil{
-		creatorId = forumMessage.CreatorID.String()
-	}
-	var createdAt time.Time
-	if forumMessage.CreatedAt != nil{
-		createdAt = *forumMessage.CreatedAt
-	}
-	var updatedAt time.Time
-	if forumMessage.UpdatedAt != nil{
-		updatedAt = *forumMessage.UpdatedAt
+	if message.CreatorID != nil {
+		creatorId = message.CreatorID.String()
 	}
 
 	forumMessageResponse := response.ForumMessageResponse{
-		ID: forumMessage.ID.String(),
-		ProblemID: problemId,
+		ID:          messageId,
+		ProblemID:   problemId,
 		Description: description,
-		CreatorID: creatorId,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		CreatorID:   creatorId,
+		CreatedAt:   utils.GetTime(message.CreatedAt),
+		UpdatedAt:   utils.GetTime(message.UpdatedAt),
 	}
 
 	return c.JSON(http.StatusOK, forumMessageResponse)
@@ -492,11 +469,18 @@ func deleteForumMessage(c echo.Context) error{
 		return err
 	}
 	id := c.Param("id")
+	messageID, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("Invalid UUID format: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Неверный формат идентификатора сообщения",
+		})
+	}
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.ForumMessage{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete forum message): %v", res.Error)
 			return res.Error

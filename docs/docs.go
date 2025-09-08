@@ -840,6 +840,77 @@ const docTemplate = `{
                 }
             }
         },
+        "/boards/all/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список всех досок с учетом пагинации, исключая удаленные.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Boards"
+                ],
+                "summary": "Получение списка всех досок",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список досок успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.BoardListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении досок",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/boards/project/{projectId}": {
             "get": {
                 "security": [
@@ -3045,7 +3116,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Роль успешно создана",
                         "schema": {
-                            "$ref": "#/definitions/response.RoleUniversalReport"
+                            "$ref": "#/definitions/response.RoleUniversalResponse"
                         }
                     },
                     "400": {
@@ -3251,7 +3322,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Роль успешно удалена",
                         "schema": {
-                            "$ref": "#/definitions/response.ProjectUniversalResponse"
+                            "$ref": "#/definitions/response.RoleUniversalResponse"
                         }
                     },
                     "401": {
@@ -3322,7 +3393,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Роль успешно обновлена",
                         "schema": {
-                            "$ref": "#/definitions/response.RoleUniversalReport"
+                            "$ref": "#/definitions/response.RoleUniversalResponse"
                         }
                     },
                     "400": {
@@ -6881,6 +6952,9 @@ const docTemplate = `{
                 "commits": {
                     "type": "integer"
                 },
+                "created_at": {
+                    "type": "string"
+                },
                 "date": {
                     "type": "string"
                 },
@@ -7027,6 +7101,9 @@ const docTemplate = `{
         "response.BoardResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "descroption": {
                     "type": "string"
                 },
@@ -7184,6 +7261,9 @@ const docTemplate = `{
         "response.GetRoleResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -7211,6 +7291,9 @@ const docTemplate = `{
                 },
                 "community": {
                     "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
                 },
                 "created_by": {
                     "description": "Связь с users",
@@ -7423,7 +7506,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "gitlab_project_id": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "gitlab_url": {
                     "type": "string"
@@ -7599,7 +7682,7 @@ const docTemplate = `{
                 }
             }
         },
-        "response.RoleUniversalReport": {
+        "response.RoleUniversalResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -7824,6 +7907,9 @@ const docTemplate = `{
         "response.TaskShort": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "deadline": {
                     "type": "string"
                 },
@@ -7887,6 +7973,9 @@ const docTemplate = `{
         "response.TeamResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },

@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -101,42 +102,14 @@ func getAllProjects(c echo.Context) error {
 	}
 
 	for _, project := range projects {
-		gitLabId := ""
-		if project.GitlabProjectID != nil {
-			gitLabId = strconv.Itoa(*project.GitlabProjectID)
-		}
-		gitLabUrl := ""
-		if project.GitlabURL != nil {
-			gitLabUrl = *project.GitlabURL
-		}
-		var name string
-		if project.Name != nil {
-			name = *project.Name
-		}
-
-		var description string
-		if project.Description != nil {
-			description = *project.Description
-		}
-
-		var createdAt time.Time
-		if project.CreatedAt != nil {
-			createdAt = *project.CreatedAt
-		}
-
-		var updatedAt time.Time
-		if project.UpdatedAt != nil{ 
-			updatedAt = *project.UpdatedAt
-		}
-
 		projectList.Projects = append(projectList.Projects, response.ProjectResponse{
 			ID:              project.ID.String(),
-			Name:            name,
-			Description:     description, // исправлено
-			GitlabProjectId: gitLabId,
-			GitlabUrl:       gitLabUrl,
-			CreatedAt:       createdAt,
-			UpdatedAt:       updatedAt,
+			Name:            utils.GetString(project.Name),
+			Description:     utils.GetString(project.Description), // исправлено
+			GitlabProjectId: utils.GetInt(project.GitlabProjectID),
+			GitlabUrl:       utils.GetString(project.GitlabURL),
+			CreatedAt:       utils.GetTime(project.CreatedAt),
+			UpdatedAt:       utils.GetTime(project.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, projectList)
@@ -183,39 +156,14 @@ func getProjectByID(c echo.Context) error {
 		})
 	}
 
-	var description string
-	if project.Description != nil {
-		description = *project.Description
-	}
-	var gitLabId string
-	if project.GitlabProjectID != nil {
-		gitLabId = strconv.Itoa(*project.GitlabProjectID)
-	}
-	var gitLabUrl string
-	if project.GitlabURL != nil {
-		gitLabUrl = *project.GitlabURL
-	}
-	var name string
-	if project.Name != nil {
-		name = *project.Name
-	}
-	var createdAt time.Time
-	if project.CreatedAt != nil {
-		createdAt = *project.CreatedAt
-	}
-	var updatedAt time.Time
-	if project.UpdatedAt != nil {
-		updatedAt = *project.UpdatedAt
-	}
-
 	projectResponse := response.ProjectResponse{
-		ID:              id,
-		Name:            name,
-		Description:     description,
-		GitlabProjectId: gitLabId,
-		GitlabUrl:       gitLabUrl,
-		CreatedAt:       createdAt,
-		UpdatedAt:       updatedAt,
+		ID:              project.ID.String(),
+		Name:            utils.GetString(project.Name),
+		Description:     utils.GetString(project.Description), // исправлено
+		GitlabProjectId: utils.GetInt(project.GitlabProjectID),
+		GitlabUrl:       utils.GetString(project.GitlabURL),
+		CreatedAt:       utils.GetTime(project.CreatedAt),
+		UpdatedAt:       utils.GetTime(project.UpdatedAt),
 	}
 	return c.JSON(http.StatusOK, projectResponse)
 }
@@ -388,10 +336,17 @@ func deleteProject(c echo.Context) error {
 	}
 
 	id := c.Param("id")
+	projectId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор проекта",
+		})
+	}
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Project{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Project{}).Where("id = ?", projectId).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete project): %v", res.Error)
 			return res.Error
@@ -400,17 +355,17 @@ func deleteProject(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(models.Task{}).Where("project_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Model(models.Task{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete project - tasks): %v", res.Error)
 			return res.Error
 		}
 
-		if res = tx.Model(models.Board{}).Where("project_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Model(models.Board{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete project - boards): %v", res.Error)
 			return res.Error
 		}
 
-		if res = tx.Model(models.ProjectTeam{}).Where("project_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Model(models.ProjectTeam{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete project - project_teams): %v", res.Error)
 			return res.Error
 		}

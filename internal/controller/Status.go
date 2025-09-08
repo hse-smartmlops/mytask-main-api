@@ -5,6 +5,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"encoding/hex"
 	"errors"
 	"log"
@@ -103,49 +104,16 @@ func getAllStatuses(c echo.Context) error{
 	}
 
 	for _, status := range statuses{
-		var key string
-		if status.Key != nil{
-			key = *status.Key
-		}
-		var name string
-		if status.Name != nil{
-			name = *status.Name
-		}
-		var color string
-		if status.Color != nil{
-			color = *status.Color
-		}
-		var isDefault bool
-		if status.IsDefault != nil{
-			isDefault = *status.IsDefault
-		}
-		var isActive bool
-		if status.IsActive != nil{
-			isActive = *status.IsActive
-		}
-		var isOpen bool
-		if status.IsOpen != nil{
-			isOpen = *status.IsOpen
-		}
-		var createdAt time.Time
-		if status.CreatedAt	!= nil{
-			createdAt = *status.CreatedAt
-		}
-		var updatedAt time.Time
-		if status.UpdatedAt != nil{
-			updatedAt = *status.UpdatedAt
-		}
-
 		statusesList.Statuses = append(statusesList.Statuses, response.StatusResponse{
-			ID: status.ID.String(),
-			Key: key,
-			Name: name,
-			Color: color,
-			IsDefault: isDefault,
-			IsActive: isActive,
-			IsOpen: isOpen,
-			CreatedAt: createdAt,
-			UpdatedAt: updatedAt,
+			ID:        status.ID.String(),
+			Key:       utils.GetString(status.Key),
+			Name:      utils.GetString(status.Name),
+			Color:     utils.GetString(status.Color),
+			IsDefault: utils.GetBool(status.IsDefault),
+			IsActive:  utils.GetBool(status.IsActive),
+			IsOpen:    utils.GetBool(status.IsOpen),
+			CreatedAt: utils.GetTime(status.CreatedAt),
+			UpdatedAt: utils.GetTime(status.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, statusesList)
@@ -199,14 +167,14 @@ func getStatusesByBoardId(c echo.Context) error {
         if sb.Status != nil {
             getResponse.Statuses = append(getResponse.Statuses, response.StatusResponse{
                 ID:        sb.Status.ID.String(),
-                Key:       getString(sb.Status.Key),
-                Name:      getString(sb.Status.Name),
-                Color:     getString(sb.Status.Color),
-                IsDefault: getBool(sb.Status.IsDefault),
-                IsActive:  getBool(sb.Status.IsActive),
-                IsOpen:    getBool(sb.Status.IsOpen),
-                CreatedAt: getTime(sb.Status.CreatedAt),
-                UpdatedAt: getTime(sb.Status.UpdatedAt),
+                Key:       utils.GetString(sb.Status.Key),
+                Name:      utils.GetString(sb.Status.Name),
+                Color:     utils.GetString(sb.Status.Color),
+                IsDefault: utils.GetBool(sb.Status.IsDefault),
+                IsActive:  utils.GetBool(sb.Status.IsActive),
+                IsOpen:    utils.GetBool(sb.Status.IsOpen),
+                CreatedAt: utils.GetTime(sb.Status.CreatedAt),
+                UpdatedAt: utils.GetTime(sb.Status.UpdatedAt),
             })
         }
     }
@@ -262,14 +230,14 @@ func getStatusesByTaskId(c echo.Context) error {
         if st.Status != nil {
             getResponse.Statuses = append(getResponse.Statuses, response.StatusResponse{
                 ID:        st.Status.ID.String(),
-                Key:       getString(st.Status.Key),
-                Name:      getString(st.Status.Name),
-                Color:     getString(st.Status.Color),
-                IsDefault: getBool(st.Status.IsDefault),
-                IsActive:  getBool(st.Status.IsActive),
-                IsOpen:    getBool(st.Status.IsOpen),
-                CreatedAt: getTime(st.Status.CreatedAt),
-                UpdatedAt: getTime(st.Status.UpdatedAt),
+                Key:       utils.GetString(st.Status.Key),
+                Name:      utils.GetString(st.Status.Name),
+                Color:     utils.GetString(st.Status.Color),
+                IsDefault: utils.GetBool(st.Status.IsDefault),
+                IsActive:  utils.GetBool(st.Status.IsActive),
+                IsOpen:    utils.GetBool(st.Status.IsOpen),
+                CreatedAt: utils.GetTime(st.Status.CreatedAt),
+                UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
             })
         }
     }
@@ -317,49 +285,16 @@ func getStatusByID(c echo.Context) error{
 		})
 	}
 
-	var key string
-	if status.Key != nil{
-		key = *status.Key
-	}
-	var name string
-	if status.Name != nil{
-		name = *status.Name
-	}
-	var color string
-	if status.Color != nil{
-		color = *status.Color
-	}
-	var isDefault bool
-	if status.IsDefault != nil{
-		isDefault = *status.IsDefault
-	}
-	var isActive bool
-	if status.IsActive != nil{
-		isActive = *status.IsActive
-	}
-	var isOpen bool
-	if status.IsOpen != nil{
-		isOpen = *status.IsOpen
-	}
-	var createdAt time.Time
-	if status.CreatedAt	!= nil{
-		createdAt = *status.CreatedAt
-	}
-	var updatedAt time.Time
-	if status.UpdatedAt != nil{
-		updatedAt = *status.UpdatedAt
-	}
-
 	statusResponse := response.StatusResponse{
-		ID: id,
-		Key: key,
-		Name: name,
-		Color: color,
-		IsDefault: isDefault,
-		IsActive: isActive,
-		IsOpen: isOpen,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		ID:        status.ID.String(),
+		Key:       utils.GetString(status.Key),
+		Name:      utils.GetString(status.Name),
+		Color:     utils.GetString(status.Color),
+		IsDefault: utils.GetBool(status.IsDefault),
+		IsActive:  utils.GetBool(status.IsActive),
+		IsOpen:    utils.GetBool(status.IsOpen),
+		CreatedAt: utils.GetTime(status.CreatedAt),
+		UpdatedAt: utils.GetTime(status.UpdatedAt),
 	}
 	return c.JSON(http.StatusOK, statusResponse)
 }
@@ -728,25 +663,4 @@ func addStatusToBoard(c echo.Context) error{
 	}
 
 	return c.JSON(http.StatusCreated, addResponse)
-}
-
-func getString(s *string) string {
-    if s != nil {
-        return *s
-    }
-    return ""
-}
-
-func getBool(b *bool) bool {
-    if b != nil {
-        return *b
-    }
-    return false
-}
-
-func getTime(t *time.Time) time.Time {
-    if t != nil {
-        return *t
-    }
-    return time.Time{}
 }

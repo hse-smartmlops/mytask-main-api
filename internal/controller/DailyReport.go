@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	utils "emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -51,43 +52,40 @@ func getAllReports(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	pageReq := c.Param("page")
-	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
-	page, err := strconv.Atoi(pageReq)
-	if err != nil{
-		log.Printf("failed to parse page: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге страницы",
-		})
-	}
+
+	// Пагинация
+	page, _ := strconv.Atoi(c.Param("page"))
 	if page <= 0 {
 		page = 1
 	}
-
-	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
-		log.Printf("failed to parse pagesize: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге номера страницы",
-		})
-	}
+	pageSize, _ := strconv.Atoi(c.Param("pagesize"))
 	if pageSize <= 0 {
 		pageSize = 10
 	}
 	offset := (page - 1) * pageSize
 
+	// Считаем общее количество отчетов
 	var totalCount int64
-	result := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Where("deleted = ?", false).Count(&totalCount)
-	if result.Error != nil {
-		log.Printf("DB error (count reports): %v", result.Error)
+	if err := dbConn.Model(&models.DailyReport{}).
+		Where("deleted = ?", false).
+		Count(&totalCount).Error; err != nil {
+		log.Printf("DB error (count reports): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при подсчете отчетов",
 		})
 	}
 
+	// Загружаем отчеты с preloaded связями
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).
+		Preload("User", "deleted = ?", false).
+		Preload("Task", "deleted = ?", false).
+		Preload("HelpRequest", "deleted = ?", false).
+		Preload("CompletedWork", "deleted = ?", false).
+		Preload("TomorrowPlans", "deleted = ?", false).
+		Preload("ReportProblems", "deleted = ?", false).
+		Preload("ReportProblems.Problem", "deleted = ?", false).
+		Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&reports).Error; err != nil {
@@ -97,6 +95,7 @@ func getAllReports(c echo.Context) error {
 		})
 	}
 
+	// Формируем ответ
 	reportList := response.ReportListResponse{
 		Page:       page,
 		PageSize:   pageSize,
@@ -104,205 +103,71 @@ func getAllReports(c echo.Context) error {
 	}
 
 	for _, report := range reports {
-		var userId string = report.UserID.String()
-
-		var reportDate time.Time
-		if report.ReportDate != nil {
-			reportDate = *report.ReportDate
+		if report.Deleted != nil && *report.Deleted {
+			continue
 		}
 
-		var taskId string
-		if report.TaskID != nil {
-			taskId = report.TaskID.String()
-		}
-
-		var createdAt time.Time
-		if report.CreatedAt != nil {
-			createdAt = *report.CreatedAt
-		}
-
-		var updatedAt time.Time
-		if report.UpdatedAt != nil {
-			updatedAt = *report.UpdatedAt
-		}
-
-		var user models.User
-		result = dbConn.Session(&gorm.Session{}).Where("id = ? and deleted = ?", userId, false).First(&user)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Пользователь не найден",
-				})
-			}
-			log.Printf("DB error (find user by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении пользователя из базы данных",
-			})
-		}
-
-		var firstName string
-		if user.FirstName != nil {
-			firstName = *user.FirstName
-		}
-
-		var lastName string
-		if user.LastName != nil {
-			lastName = *user.LastName
-		}
-
+		// Пользователь
+		user := report.User
 		userInfo := response.UserShort{
-			ID:        userId,
-			FirstName: firstName,
-			LastName:  lastName,
+			ID:        report.UserID.String(),
+			FirstName: utils.GetString(user.FirstName),
+			LastName:  utils.GetString(user.LastName),
 		}
 
-		var helpReq models.HelpRequest
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? AND deleted = ?", report.ID, false).First(&helpReq)
-		if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			log.Printf("DB error (find help request by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении запроса на помощь из базы данных",
-			})
-		}
-
-		var hrId string = helpReq.ID.String()
-
-		var helperId string
-		if helpReq.HelperID != nil {
-			helperId = helpReq.HelperID.String()
-		}
-
-		var description string
-		if helpReq.Description != nil {
-			description = *helpReq.Description
-		}
-
-		helpRequest := response.HelpRequestItem{
-			ID:          hrId,
-			HelperID:    helperId,
-			Description: description,
-		}
-
-		var completedWork []models.CompletedWork
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&completedWork)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Выполненная работа не найдена",
-				})
-			}
-			log.Printf("DB error (find help requst by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении выполненной работы из базы данных",
-			})
-		}
-
+		// Выполненная работа
 		var complWork []response.WorkItem
-		for _, workItem := range completedWork {
-			var iD string = workItem.ID.String()
-
-			var desc string
-			if workItem.Description != nil {
-				desc = *workItem.Description
-			}
+		for _, workItem := range report.CompletedWork {
 			complWork = append(complWork, response.WorkItem{
-				ID:          iD,
-				Description: desc,
+				ID:          workItem.ID.String(),
+				Description: utils.GetString(workItem.Description),
 			})
 		}
 
-		var tomorrowPlan []models.TomorrowPlans
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&tomorrowPlan)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "План на завтра не найден",
-				})
-			}
-			log.Printf("DB error (find help requst by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении плана на завтра из базы данных",
-			})
-		}
-
+		// План на завтра
 		var tomorrowPlans []response.WorkItem
-		for _, workItem := range tomorrowPlan {
-			var iD string = workItem.ID.String()
-
-			var desc string
-			if workItem.Description != nil {
-				desc = *workItem.Description
-			}
+		for _, plan := range report.TomorrowPlans {
 			tomorrowPlans = append(tomorrowPlans, response.WorkItem{
-				ID:          iD,
-				Description: desc,
+				ID:          plan.ID.String(),
+				Description: utils.GetString(plan.Description),
 			})
 		}
 
-		var reportProblems []models.ReportProblem
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&reportProblems)
-		if result.Error != nil {
-			log.Printf("DB error (find report-problem by id): %v", result.Error)
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Ошибка при получении связи отчет-проблема из базы данных",
+		// Запрос на помощь
+		var helpRequest response.HelpRequestItem
+		if report.HelpRequest != nil {
+			helpRequest = response.HelpRequestItem{
+				ID:          report.HelpRequest.ID.String(),
+				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
+				Description: utils.GetString(report.HelpRequest.Description),
+			}
+		}
+
+		// Проблемы
+		var problemsResp []response.ProblemResponse
+		for _, rp := range report.ReportProblems {
+			if rp.Problem != nil {
+				problemsResp = append(problemsResp, response.ProblemResponse{
+					ID:          rp.Problem.ID.String(),
+					Name:        utils.GetString(rp.Problem.Name),
+					Description: rp.Problem.Description,
+					CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
+					CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
+					UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
 				})
 			}
-		}
-
-		var problemsId []uuid.UUID
-		for _, reportProblem := range reportProblems {
-			problemsId = append(problemsId, reportProblem.ReportID)
-		}
-
-		var problems []models.Problem
-		result = dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id in (?)", problemsId).Find(&problems)
-		if result.Error != nil {
-			log.Printf("DB error (find problem by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении проблем из базы данных",
-			})
-		}
-
-		var problemsResp []response.ProblemResponse
-		for _, problem := range problems {
-			var name string
-			if problem.Name != nil {
-				name = *problem.Name
-			}
-			var description []string = []string(problem.Description)
-			var creatorId string
-			if problem.CreatorID != nil {
-				creatorId = problem.CreatorID.String()
-			}
-			var createdAt time.Time
-			if problem.CreatedAt != nil {
-				createdAt = *problem.CreatedAt
-			}
-			var updatedAt time.Time
-			if problem.UpdatedAt != nil {
-				updatedAt = *problem.UpdatedAt
-			}
-			problemsResp = append(problemsResp, response.ProblemResponse{
-				ID:          problem.ID.String(),
-				Name:        name,
-				Description: description,
-				CreatorId:   creatorId,
-				CreatedAt:   createdAt,
-				UpdatedAt:   updatedAt,
-			})
 		}
 
 		resp := response.ReportResponse{
 			ID:            report.ID.String(),
-			UserID:        userId,
-			ReportDate:    reportDate,
+			UserID:        report.UserID.String(),
+			ReportDate:    utils.GetTime(report.ReportDate),
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
 			HelpRequest:   helpRequest,
-			TaskId:        taskId,
-			CreatedAt:     createdAt,
-			UpdatedAt:     updatedAt,
+			TaskId:        utils.GetUUIDString(report.TaskID),
+			CreatedAt:     utils.GetTime(report.CreatedAt),
+			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
 		}
@@ -331,231 +196,103 @@ func getReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	id := c.Param("id")
-	reportId, err := uuid.Parse(id)
+
+	// Парсим UUID отчета
+	reportID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Некорректный идентификатор отчета",
 		})
 	}
 
+	// Загружаем отчет с предзагрузкой всех связанных сущностей
 	var report models.DailyReport
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).First(&report, "id = ?", reportId)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Отчет не найден",
-			})
+	if err := dbConn.Session(&gorm.Session{}).
+		Preload("User", "deleted = ?", false).
+		Preload("Task", "deleted = ?", false).
+		Preload("HelpRequest", "deleted = ?", false).
+		Preload("CompletedWork", "deleted = ?", false).
+		Preload("TomorrowPlans", "deleted = ?", false).
+		Preload("ReportProblems", "deleted = ?", false).
+		Preload("ReportProblems.Problem", "deleted = ?", false).
+		Where("deleted = ? AND id = ?", false, reportID).
+		First(&report).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Отчет не найден"})
 		}
-		log.Printf("DB error (find report by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении отчета из базы данных",
-		})
+		log.Printf("DB error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчета"})
 	}
 
-	var userId string = report.UserID.String()
-
-	var reportDate time.Time
-	if report.ReportDate != nil {
-		reportDate = *report.ReportDate
-	}
-
-	var taskId string
-	if report.TaskID != nil {
-		taskId = report.TaskID.String()
-	}
-
-	var createdAt time.Time
-	if report.CreatedAt != nil {
-		createdAt = *report.CreatedAt
-	}
-
-	var updatedAt time.Time
-	if report.UpdatedAt != nil {
-		updatedAt = *report.UpdatedAt
-	}
-
-	var user models.User
-	result = dbConn.Session(&gorm.Session{}).Where("id = ? and deleted = ?", userId, false).First(&user)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Пользователь не найден",
-			})
-		}
-		log.Printf("DB error (find user by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении пользователя из базы данных",
-		})
-	}
-
-	var firstName string
-	if user.FirstName != nil {
-		firstName = *user.FirstName
-	}
-
-	var lastName string
-	if user.LastName != nil {
-		lastName = *user.LastName
-	}
-
+	// Пользователь
+	user := report.User
 	userInfo := response.UserShort{
-		ID:        userId,
-		FirstName: firstName,
-		LastName:  lastName,
+		ID:        report.UserID.String(),
+		FirstName: utils.GetString(user.FirstName),
+		LastName:  utils.GetString(user.LastName),
 	}
 
-	var helpReq models.HelpRequest
-	result = dbConn.Session(&gorm.Session{}).Where("report_id = ? AND deleted = ?", report.ID, false).First(&helpReq)
-	if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-		log.Printf("DB error (find help request by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении запроса на помощь из базы данных",
-		})
-	}
-
-	var hrId string = helpReq.ID.String()
-
-	var helperId string
-	if helpReq.HelperID != nil {
-		helperId = helpReq.HelperID.String()
-	}
-
-	var description string
-	if helpReq.Description != nil {
-		description = *helpReq.Description
-	}
-
-	helpRequest := response.HelpRequestItem{
-		ID:          hrId,
-		HelperID:    helperId,
-		Description: description,
-	}
-
-	var completedWork []models.CompletedWork
-	result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", reportId, false).Find(&completedWork)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Выполненная работа не найдена",
-			})
-		}
-		log.Printf("DB error (find help requst by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении выполненной работы из базы данных",
-		})
-	}
-
+	// Выполненная работа
 	var complWork []response.WorkItem
-	for _, workItem := range completedWork {
-		var iD string = workItem.ID.String()
-
-		var desc string
-		if workItem.Description != nil {
-			desc = *workItem.Description
-		}
+	for _, work := range report.CompletedWork {
 		complWork = append(complWork, response.WorkItem{
-			ID:          iD,
-			Description: desc,
+			ID:          work.ID.String(),
+			Description: utils.GetString(work.Description),
 		})
 	}
 
-	var tomorrowPlan []models.TomorrowPlans
-	result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", reportId, false).Find(&tomorrowPlan)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "План на завтра не найден",
-			})
-		}
-		log.Printf("DB error (find help requst by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении плана на завтра из базы данных",
-		})
-	}
-
+	// План на завтра
 	var tomorrowPlans []response.WorkItem
-	for _, workItem := range tomorrowPlan {
-		var iD string = workItem.ID.String()
-
-		var desc string
-		if workItem.Description != nil {
-			desc = *workItem.Description
-		}
+	for _, plan := range report.TomorrowPlans {
 		tomorrowPlans = append(tomorrowPlans, response.WorkItem{
-			ID:          iD,
-			Description: desc,
+			ID:          plan.ID.String(),
+			Description: utils.GetString(plan.Description),
 		})
 	}
 
-	var reportProblems []models.ReportProblem
-	result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", id, false).Find(&reportProblems)
-	if result.Error != nil {
-		log.Printf("DB error (find report-problem by id): %v", result.Error)
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Ошибка при получении связи отчет-проблема из базы данных",
+	// Запрос на помощь
+	var helpRequest response.HelpRequestItem
+	if report.HelpRequest != nil {
+		helpRequest = response.HelpRequestItem{
+			ID:          report.HelpRequest.ID.String(),
+			HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
+			Description: utils.GetString(report.HelpRequest.Description),
+		}
+	}
+
+	// Проблемы
+	var problemsResp []response.ProblemResponse
+	for _, rp := range report.ReportProblems {
+		if rp.Problem != nil {
+			problemsResp = append(problemsResp, response.ProblemResponse{
+				ID:          rp.Problem.ID.String(),
+				Name:        utils.GetString(rp.Problem.Name),
+				Description: rp.Problem.Description, // pq.StringArray уже []string
+				CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
+				CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
+				UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
 			})
 		}
 	}
 
-	var problemsId []uuid.UUID
-	for _, reportProblem := range reportProblems {
-		problemsId = append(problemsId, reportProblem.ReportID)
-	}
+	// TaskID (nullable)
+	taskID := utils.GetUUIDString(report.TaskID)
 
-	var problems []models.Problem
-	result = dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id in (?)", problemsId).Find(&problems)
-	if result.Error != nil {
-		log.Printf("DB error (find problem by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проблем из базы данных",
-		})
-	}
-
-	var problemsResp []response.ProblemResponse
-	for _, problem := range problems {
-		var name string
-		if problem.Name != nil {
-			name = *problem.Name
-		}
-		var description []string = []string(problem.Description)
-		var creatorId string
-		if problem.CreatorID != nil {
-			creatorId = problem.CreatorID.String()
-		}
-		var createdAt time.Time
-		if problem.CreatedAt != nil {
-			createdAt = *problem.CreatedAt
-		}
-		var updatedAt time.Time
-		if problem.UpdatedAt != nil {
-			updatedAt = *problem.UpdatedAt
-		}
-		problemsResp = append(problemsResp, response.ProblemResponse{
-			ID:          problem.ID.String(),
-			Name:        name,
-			Description: description,
-			CreatorId:   creatorId,
-			CreatedAt:   createdAt,
-			UpdatedAt:   updatedAt,
-		})
-	}
-
+	// Формируем ответ
 	resp := response.ReportResponse{
-		ID:            id,
-		UserID:        userId,
-		ReportDate:    reportDate,
+		ID:            report.ID.String(),
+		UserID:        report.UserID.String(),
+		ReportDate:    utils.GetTime(report.ReportDate),
 		CompletedWork: complWork,
 		PlanTomorrow:  tomorrowPlans,
 		HelpRequest:   helpRequest,
-		TaskId:        taskId,
-		CreatedAt:     createdAt,
-		UpdatedAt:     updatedAt,
+		TaskId:        taskID,
+		CreatedAt:     utils.GetTime(report.CreatedAt),
+		UpdatedAt:     utils.GetTime(report.UpdatedAt),
 		UserInfo:      userInfo,
 		Problems:      problemsResp,
 	}
+
 	return c.JSON(http.StatusOK, resp)
 }
 
@@ -577,219 +314,97 @@ func getReportsByTaskId(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	taskId := c.Param("id")
+
+	taskIDParam := c.Param("id")
+	taskUUID, err := uuid.Parse(taskIDParam)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный ID задачи"})
+	}
+
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and task_id = ?", false, taskId).Find(&reports).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).
+		Preload("User", "deleted = ?", false).
+		Preload("HelpRequest", "deleted = ?", false).
+		Preload("CompletedWork", "deleted = ?", false).
+		Preload("TomorrowPlans", "deleted = ?", false).
+		Preload("ReportProblems", "deleted = ?", false).
+		Preload("ReportProblems.Problem", "deleted = ?", false).
+		Where("deleted = ? AND task_id = ?", false, taskUUID).
+		Find(&reports).Error; err != nil {
 		log.Printf("DB error (find reports): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении отчетов из базы данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчетов"})
 	}
 
 	reportList := response.ReportListByTaskId{
-		TaskID: taskId,
+		TaskID: taskIDParam,
 	}
 
 	for _, report := range reports {
-		var userId string = report.UserID.String()
-
-		var reportDate time.Time
-		if report.ReportDate != nil {
-			reportDate = *report.ReportDate
-		}
-
-		var taskId string
-		if report.TaskID != nil {
-			taskId = report.TaskID.String()
-		}
-
-		var createdAt time.Time
-		if report.CreatedAt != nil {
-			createdAt = *report.CreatedAt
-		}
-
-		var updatedAt time.Time
-		if report.UpdatedAt != nil {
-			updatedAt = *report.UpdatedAt
-		}
-
-		var user models.User
-		result := dbConn.Session(&gorm.Session{}).Where("id = ? and deleted = ?", userId, false).First(&user)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Пользователь не найден",
-				})
-			}
-			log.Printf("DB error (find user by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении пользователя из базы данных",
-			})
-		}
-
-		var firstName string
-		if user.FirstName != nil {
-			firstName = *user.FirstName
-		}
-
-		var lastName string
-		if user.LastName != nil {
-			lastName = *user.LastName
+		if report.Deleted != nil && *report.Deleted {
+			continue
 		}
 
 		userInfo := response.UserShort{
-			ID:        userId,
-			FirstName: firstName,
-			LastName:  lastName,
+			ID:        report.UserID.String(),
+			FirstName: utils.GetString(report.User.FirstName),
+			LastName:  utils.GetString(report.User.LastName),
 		}
 
-		var helpReq models.HelpRequest
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? AND deleted = ?", report.ID, false).First(&helpReq)
-		if result.Error != nil && !errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			log.Printf("DB error (find help request by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении запроса на помощь из базы данных",
-			})
-		}
-
-		var hrId string = helpReq.ID.String()
-
-		var helperId string
-		if helpReq.HelperID != nil {
-			helperId = helpReq.HelperID.String()
-		}
-
-		var description string
-		if helpReq.Description != nil {
-			description = *helpReq.Description
-		}
-
-		helpRequest := response.HelpRequestItem{
-			ID:          hrId,
-			HelperID:    helperId,
-			Description: description,
-		}
-
-		var completedWork []models.CompletedWork
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&completedWork)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Выполненная работа не найдена",
-				})
-			}
-			log.Printf("DB error (find help requst by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении выполненной работы из базы данных",
-			})
-		}
-
+		// Выполненная работа
 		var complWork []response.WorkItem
-		for _, workItem := range completedWork {
-			var iD string = workItem.ID.String()
-
-			var desc string
-			if workItem.Description != nil {
-				desc = *workItem.Description
-			}
+		for _, work := range report.CompletedWork {
 			complWork = append(complWork, response.WorkItem{
-				ID:          iD,
-				Description: desc,
+				ID:          work.ID.String(),
+				Description: utils.GetString(work.Description),
 			})
 		}
 
-		var tomorrowPlan []models.TomorrowPlans
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&tomorrowPlan)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "План на завтра не найден",
-				})
-			}
-			log.Printf("DB error (find help requst by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении плана на завтра из базы данных",
-			})
-		}
-
+		// План на завтра
 		var tomorrowPlans []response.WorkItem
-		for _, workItem := range tomorrowPlan {
-			var iD string = workItem.ID.String()
-
-			var desc string
-			if workItem.Description != nil {
-				desc = *workItem.Description
-			}
+		for _, plan := range report.TomorrowPlans {
 			tomorrowPlans = append(tomorrowPlans, response.WorkItem{
-				ID:          iD,
-				Description: desc,
+				ID:          plan.ID.String(),
+				Description: utils.GetString(plan.Description),
 			})
 		}
 
-		var reportProblems []models.ReportProblem
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&reportProblems)
-		if result.Error != nil {
-			log.Printf("DB error (find report-problem by id): %v", result.Error)
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Ошибка при получении связи отчет-проблема из базы данных",
+		// Запрос на помощь
+		var helpRequest response.HelpRequestItem
+		if report.HelpRequest != nil {
+			helpRequest = response.HelpRequestItem{
+				ID:          report.HelpRequest.ID.String(),
+				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
+				Description: utils.GetString(report.HelpRequest.Description),
+			}
+		}
+
+		// Проблемы
+		var problemsResp []response.ProblemResponse
+		for _, rp := range report.ReportProblems {
+			if rp.Problem != nil {
+				problemsResp = append(problemsResp, response.ProblemResponse{
+					ID:          rp.Problem.ID.String(),
+					Name:        utils.GetString(rp.Problem.Name),
+					Description: rp.Problem.Description, // pq.StringArray уже []string
+					CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
+					CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
+					UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
 				})
 			}
 		}
 
-		var problemsId []uuid.UUID
-		for _, reportProblem := range reportProblems {
-			problemsId = append(problemsId, reportProblem.ReportID)
-		}
-
-		var problems []models.Problem
-		result = dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id in (?)", problemsId).Find(&problems)
-		if result.Error != nil {
-			log.Printf("DB error (find problem by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении проблем из базы данных",
-			})
-		}
-
-		var problemsResp []response.ProblemResponse
-		for _, problem := range problems {
-			var name string
-			if problem.Name != nil {
-				name = *problem.Name
-			}
-			var description []string = []string(problem.Description)
-			var creatorId string
-			if problem.CreatorID != nil {
-				creatorId = problem.CreatorID.String()
-			}
-			var createdAt time.Time
-			if problem.CreatedAt != nil {
-				createdAt = *problem.CreatedAt
-			}
-			var updatedAt time.Time
-			if problem.UpdatedAt != nil {
-				updatedAt = *problem.UpdatedAt
-			}
-			problemsResp = append(problemsResp, response.ProblemResponse{
-				ID:          problem.ID.String(),
-				Name:        name,
-				Description: description,
-				CreatorId:   creatorId,
-				CreatedAt:   createdAt,
-				UpdatedAt:   updatedAt,
-			})
-		}
+		taskID := utils.GetUUIDString(report.TaskID)
 
 		resp := response.ReportResponse{
 			ID:            report.ID.String(),
-			UserID:        userId,
-			ReportDate:    reportDate,
+			UserID:        report.UserID.String(),
+			ReportDate:    utils.GetTime(report.ReportDate),
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
 			HelpRequest:   helpRequest,
-			TaskId:        taskId,
-			CreatedAt:     createdAt,
-			UpdatedAt:     updatedAt,
+			TaskId:        taskID,
+			CreatedAt:     utils.GetTime(report.CreatedAt),
+			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
 		}
@@ -818,249 +433,103 @@ func getReportsByProjectId(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	projectId := c.Param("id")
 
-	var task []models.Task
-	result := dbConn.Session(&gorm.Session{}).Where("project_id = ? and deleted = ?", projectId, false).Find(&task)
-	if result.Error != nil {
-		log.Printf("DB error (find tasks by project id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении задач из базы данных",
-		})
+	projectID := c.Param("id")
+	var tasks []models.Task
+	if err := dbConn.Where("project_id = ? AND deleted = ?", projectID, false).Find(&tasks).Error; err != nil {
+		log.Printf("DB error (find tasks by project id): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач"})
 	}
 
-	var tasksId []uuid.UUID
-	for _, taskItem := range task {
-		tasksId = append(tasksId, taskItem.ID)
+	var taskIDs []uuid.UUID
+	for _, t := range tasks {
+		taskIDs = append(taskIDs, t.ID)
 	}
 
 	var reports []models.DailyReport
-	result = dbConn.Session(&gorm.Session{}).Where("task_id in (?)", tasksId).Find(&reports)
-	if result.Error != nil {
-		log.Printf("DB error (find reports by project id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении отчетов из базы данных",
-		})
+	if err := dbConn.Session(&gorm.Session{}).
+		Preload("User", "deleted = ?", false).
+		Preload("HelpRequest", "deleted = ?", false).
+		Preload("CompletedWork", "deleted = ?", false).
+		Preload("TomorrowPlans", "deleted = ?", false).
+		Preload("ReportProblems", "deleted = ?", false).
+		Preload("ReportProblems.Problem", "deleted = ?", false).
+		Where("task_id IN (?)", taskIDs).
+		Find(&reports).Error; err != nil {
+		log.Printf("DB error (find reports by project id): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчетов"})
 	}
 
-	reportList := response.ReportListByProjectId{
-		ProjectID: projectId,
-	}
+	reportList := response.ReportListByProjectId{ProjectID: projectID}
 
 	for _, report := range reports {
-		var userId string = report.UserID.String()
-
-		var reportDate time.Time
-		if report.ReportDate != nil {
-			reportDate = *report.ReportDate
-		}
-
-		var taskId string
-		if report.TaskID != nil {
-			taskId = report.TaskID.String()
-		}
-
-		var createdAt time.Time
-		if report.CreatedAt != nil {
-			createdAt = *report.CreatedAt
-		}
-
-		var updatedAt time.Time
-		if report.UpdatedAt != nil {
-			updatedAt = *report.UpdatedAt
-		}
-
-		var user models.User
-		result := dbConn.Session(&gorm.Session{}).Where("id = ? and deleted = ?", userId, false).First(&user)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Пользователь не найден",
-				})
-			}
-			log.Printf("DB error (find user by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении пользователя из базы данных",
-			})
-		}
-
-		var firstName string
-		if user.FirstName != nil {
-			firstName = *user.FirstName
-		}
-
-		var lastName string
-		if user.LastName != nil {
-			lastName = *user.LastName
+		if report.Deleted != nil && *report.Deleted {
+			continue
 		}
 
 		userInfo := response.UserShort{
-			ID:        userId,
-			FirstName: firstName,
-			LastName:  lastName,
-		}
-
-		var helpReq models.HelpRequest
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? AND deleted = ?", report.ID, false).First(&helpReq)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Запрос на помощь не найден",
-				})
-			}
-			log.Printf("DB error (find help request by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении запроса на помощь из базы данных",
-			})
-		}
-
-		var hrId string = helpReq.ID.String()
-
-		var helperId string
-		if helpReq.HelperID != nil {
-			helperId = helpReq.HelperID.String()
-		}
-
-		var description string
-		if helpReq.Description != nil {
-			description = *helpReq.Description
-		}
-
-		helpRequest := response.HelpRequestItem{
-			ID:          hrId,
-			HelperID:    helperId,
-			Description: description,
-		}
-
-		var completedWork []models.CompletedWork
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&completedWork)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Выполненная работа не найдена",
-				})
-			}
-			log.Printf("DB error (find help requst by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении выполненной работы из базы данных",
-			})
+			ID:        report.UserID.String(),
+			FirstName: utils.GetString(report.User.FirstName),
+			LastName:  utils.GetString(report.User.LastName),
 		}
 
 		var complWork []response.WorkItem
-		for _, workItem := range completedWork {
-			var iD string = workItem.ID.String()
-
-			var desc string
-			if workItem.Description != nil {
-				desc = *workItem.Description
-			}
+		for _, w := range report.CompletedWork {
 			complWork = append(complWork, response.WorkItem{
-				ID:          iD,
-				Description: desc,
-			})
-		}
-
-		var tomorrowPlan []models.TomorrowPlans
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&tomorrowPlan)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "План на завтра не найден",
-				})
-			}
-			log.Printf("DB error (find help requst by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении плана на завтра из базы данных",
+				ID:          w.ID.String(),
+				Description: utils.GetString(w.Description),
 			})
 		}
 
 		var tomorrowPlans []response.WorkItem
-		for _, workItem := range tomorrowPlan {
-			var iD string = workItem.ID.String()
-
-			var desc string
-			if workItem.Description != nil {
-				desc = *workItem.Description
-			}
+		for _, t := range report.TomorrowPlans {
 			tomorrowPlans = append(tomorrowPlans, response.WorkItem{
-				ID:          iD,
-				Description: desc,
+				ID:          t.ID.String(),
+				Description: utils.GetString(t.Description),
 			})
 		}
 
-		var reportProblems []models.ReportProblem
-		result = dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", report.ID, false).Find(&reportProblems)
-		if result.Error != nil {
-			log.Printf("DB error (find report-problem by id): %v", result.Error)
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Ошибка при получении связи отчет-проблема из базы данных",
+		var helpRequest response.HelpRequestItem
+		if report.HelpRequest != nil {
+			helpRequest = response.HelpRequestItem{
+				ID:          report.HelpRequest.ID.String(),
+				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
+				Description: utils.GetString(report.HelpRequest.Description),
+			}
+		}
+
+		var problemsResp []response.ProblemResponse
+		for _, rp := range report.ReportProblems {
+			if rp.Problem != nil {
+				problemsResp = append(problemsResp, response.ProblemResponse{
+					ID:          rp.Problem.ID.String(),
+					Name:        utils.GetString(rp.Problem.Name),
+					Description: rp.Problem.Description, // уже []string
+					CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
+					CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
+					UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
 				})
 			}
 		}
 
-		var problemsId []uuid.UUID
-		for _, reportProblem := range reportProblems {
-			problemsId = append(problemsId, reportProblem.ReportID)
-		}
-
-		var problems []models.Problem
-		result = dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id in (?)", problemsId).Find(&problems)
-		if result.Error != nil {
-			log.Printf("DB error (find problem by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении проблем из базы данных",
-			})
-		}
-
-		var problemsResp []response.ProblemResponse
-		for _, problem := range problems {
-			var name string
-			if problem.Name != nil {
-				name = *problem.Name
-			}
-			var description []string = []string(problem.Description)
-			var creatorId string
-			if problem.CreatorID != nil {
-				creatorId = problem.CreatorID.String()
-			}
-			var createdAt time.Time
-			if problem.CreatedAt != nil {
-				createdAt = *problem.CreatedAt
-			}
-			var updatedAt time.Time
-			if problem.UpdatedAt != nil {
-				updatedAt = *problem.UpdatedAt
-			}
-			problemsResp = append(problemsResp, response.ProblemResponse{
-				ID:          problem.ID.String(),
-				Name:        name,
-				Description: description,
-				CreatorId:   creatorId,
-				CreatedAt:   createdAt,
-				UpdatedAt:   updatedAt,
-			})
-		}
-
-		resp := response.ReportResponse{
+		reportList.Reports = append(reportList.Reports, response.ReportResponse{
 			ID:            report.ID.String(),
-			UserID:        userId,
-			ReportDate:    reportDate,
+			UserID:        report.UserID.String(),
+			ReportDate:    utils.GetTime(report.ReportDate),
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
 			HelpRequest:   helpRequest,
-			TaskId:        taskId,
-			CreatedAt:     createdAt,
-			UpdatedAt:     updatedAt,
+			TaskId:        utils.GetUUIDString(report.TaskID),
+			CreatedAt:     utils.GetTime(report.CreatedAt),
+			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
-		}
-
-		reportList.Reports = append(reportList.Reports, resp)
+		})
 	}
 
 	return c.JSON(http.StatusOK, reportList)
 }
+
 
 // createReport godoc
 // @Summary Создание нового отчета
@@ -1322,78 +791,66 @@ func deleteReport(c echo.Context) error {
 		return err
 	}
 	id := c.Param("id")
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
-	result := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Where("id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete report): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении отчета",
-		})
-	}
-	if result.RowsAffected == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не удалено",
-		})
-	}	
+	updateData := map[string]interface{}{"deleted": true}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("report_id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete report): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении запроса на помощь",
-		})
-	}
-	
-	result = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("report_id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete report): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении выполненной за день работы",
-		})
-	}
+	txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Model(&models.DailyReport{}).Where("id = ?", id).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete report): %v", res.Error)
+			return res.Error
+		} else if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("report_id = ?", id).Updates(updateData)
-	if result.Error != nil {
-		log.Printf("DB error (delete report): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении планов на завтра",
-		})
-	}
+		tables := []interface{}{
+			&models.HelpRequest{},
+			&models.CompletedWork{},
+			&models.TomorrowPlans{},
+		}
 
-	var reportProblems []models.ReportProblem
-	if err := dbConn.Session(&gorm.Session{}).Where("report_id = ? and deleted = ?", id, false).Find(&reportProblems); err != nil{
-		log.Printf("DB error (get report-problem): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении связи отчет-проблема",
-		})
-	}
+		for _, table := range tables {
+			if res := tx.Model(table).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
+				log.Printf("DB error (delete related table %T): %v", table, res.Error)
+				return res.Error
+			}
+		}
 
-	var problemsId []uuid.UUID
-	for _, reportProblem := range reportProblems{
-		problemsId = append(problemsId, reportProblem.ProblemID)
-	}
+		var reportProblems []models.ReportProblem
+		if err := tx.Where("report_id = ? AND deleted = ?", id, false).Find(&reportProblems).Error; err != nil {
+			log.Printf("DB error (get report-problem): %v", err)
+			return err
+		}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("id in (?)", problemsId).Updates(updateData)
-	if result.Error != nil{
-		log.Printf("DB error (delete problem): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении проблем",
-		})
+		var problemIDs []uuid.UUID
+		for _, rp := range reportProblems {
+			problemIDs = append(problemIDs, rp.ProblemID)
+		}
+
+		if len(problemIDs) > 0 {
+			if res := tx.Model(&models.Problem{}).Where("id IN ?", problemIDs).Updates(updateData); res.Error != nil {
+				log.Printf("DB error (delete problems): %v", res.Error)
+				return res.Error
+			}
+		}
+
+		if res := tx.Model(&models.ReportProblem{}).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
+			log.Printf("DB error (delete report-problem): %v", res.Error)
+			return res.Error
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		if httpErr, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(httpErr.Code, httpErr.Message)
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении отчета"})
 	}
 
-	result = dbConn.Session(&gorm.Session{}).Model(models.ReportProblem{}).Where("report_id = ?", id).Updates(updateData)
-	if result.Error != nil{
-		log.Printf("DB error (delete report-problem): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении связей отчет-проблема",
-		})
-	}
-	
 	resp := response.ReportUniversalResponse{
-		ID: id,
+		ID:      id,
 		Message: "Отчет успешно удален",
-	}	
+	}
 
 	return c.JSON(http.StatusOK, resp)
 }
@@ -1449,10 +906,17 @@ func updateHelpRequest(c echo.Context) error{
 
 	updateData["created_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("id = ?", helpRequestId).Error; err != nil{
-		log.Printf("DB error (update help request): %v", err)
+	result := dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("id = ?", helpRequestId).Updates(updateData)
+	if result.Error != nil{
+		log.Printf("DB error (update help request): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении запроса на помощь",
+		})
+	}
+
+	if result.RowsAffected == 0{
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "Ничего не обновлено",
 		})
 	}
 
@@ -1512,12 +976,19 @@ func updateCompletedWork(c echo.Context) error{
 
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("id = ?", completedWorkId).Error; err != nil{
-		log.Printf("DB error (update completedWork): %v", err)
+	result := dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("id = ?", completedWorkId).Updates(updateData)
+	if result.Error != nil{
+		log.Printf("DB error (update completedWork): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении проделанной работы",
 		})
 	}
+
+	if result.RowsAffected == 0{
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "Ничего не обновлено",
+		})
+	}	
 
 	updateResponse := response.ReportUniversalResponse{
 		ID:      id,
@@ -1575,16 +1046,23 @@ func updateTomorrowPlans(c echo.Context) error{
 
 	updateData["updated_at"] = time.Now()
 
-	if err = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("id = ?", tomorrowPlansId).Error; err != nil{
-		log.Printf("DB error (update completedWork): %v", err)
+	result := dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("id = ?", tomorrowPlansId).Updates(updateData)
+	if result.Error != nil{
+		log.Printf("DB error (update completedWork): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обновлении планов на завтра",
 		})
 	}
 
+	if result.RowsAffected == 0{
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"message": "Ничего не обновлено",
+		})
+	}
+
 	updateResponse := response.ReportUniversalResponse{
 		ID:      id,
-		Message: "Выполненная работа успешно обновлена",
+		Message: "Планы на завтра успешно обновлены",
 	}
 
 	return c.JSON(http.StatusOK, updateResponse)

@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -76,7 +77,7 @@ func getAllRoles(c echo.Context) error {
 	if result.Error != nil {
 		log.Printf("DB error (count roles): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчете проектов",
+			"error": "Ошибка при подсчете ролей",
 		})
 	}
 
@@ -98,23 +99,12 @@ func getAllRoles(c echo.Context) error {
 	}
 
 	for _, role := range roles {
-		var name string
-		if role.Name != nil {
-			name = *role.Name
-		}
-		var Descripton string
-		if role.Description != nil {
-			Descripton = *role.Description
-		}
-		var updatedAt time.Time
-		if role.UpdatedAt != nil {
-			updatedAt = *role.UpdatedAt
-		}
 		roleList.Roles = append(roleList.Roles, response.GetRoleResponse{
 			ID:          role.ID.String(),
-			Name:        name,
-			Description: Descripton,
-			UpdatedAt:   updatedAt,
+			Name:        utils.GetString(role.Name),
+			Description: utils.GetString(role.Description),
+			UpdatedAt:   utils.GetTime(role.UpdatedAt),
+			CreatedAt:   utils.GetTime(role.CreatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, roleList)
@@ -160,23 +150,13 @@ func getRoleById(c echo.Context) error {
 			"error": "Ошибка при получении роли из базы данных",
 		})
 	}
-	var name string
-	if role.Name != nil {
-		name = *role.Name
-	}
-	var Descripton string
-	if role.Description != nil {
-		Descripton = *role.Description
-	}
-	var updatedAt time.Time
-	if role.UpdatedAt != nil {
-		updatedAt = *role.UpdatedAt
-	}
+
 	roleResponse := response.GetRoleResponse{
 		ID:          role.ID.String(),
-		Name:        name,
-		Description: Descripton,
-		UpdatedAt:   updatedAt,
+		Name:        utils.GetString(role.Name),
+		Description: utils.GetString(role.Description),
+		UpdatedAt:   utils.GetTime(role.UpdatedAt),
+		CreatedAt:   utils.GetTime(role.CreatedAt),
 	}
 	return c.JSON(http.StatusOK, roleResponse)
 }
@@ -190,7 +170,7 @@ func getRoleById(c echo.Context) error {
 // @Param role body request.RoleCreateRequest true "Данные для создания роли"
 // @Security BearerAuth
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
-// @Success 201 {object} response.RoleUniversalReport "Роль успешно создана"
+// @Success 201 {object} response.RoleUniversalResponse "Роль успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании роли"
 // @Router /role [post]
@@ -231,7 +211,7 @@ func createRole(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании роли"})
 	}
 
-	createResponse := response.RoleUniversalReport{
+	createResponse := response.RoleUniversalResponse{
 		ID:      role.ID.String(),
 		Message: "Роль успешно создана",
 	}
@@ -249,7 +229,7 @@ func createRole(c echo.Context) error {
 // @Param role body request.RoleUpdateRequest true "Данные для обновления роли"
 // @Security BearerAuth
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
-// @Success 200 {object} response.RoleUniversalReport "Роль успешно обновлена"
+// @Success 200 {object} response.RoleUniversalResponse "Роль успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении роли"
 // @Router /role/{id} [patch]
@@ -299,12 +279,12 @@ func updateRole(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении роль"})
 	}
 
-	updateResponse := response.RoleUniversalReport{
+	updateResponse := response.RoleUniversalResponse{
 		ID:      roleId.String(),
 		Message: "Роль с ID " + id + " обновлен",
 	}
 
-	return c.JSON(http.StatusCreated, updateResponse)
+	return c.JSON(http.StatusOK, updateResponse)
 }
 
 // deleteRole godoc
@@ -316,7 +296,7 @@ func updateRole(c echo.Context) error {
 // @Param id path string true "ID роли"
 // @Security BearerAuth
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
-// @Success 200 {object} response.ProjectUniversalResponse "Роль успешно удалена"
+// @Success 200 {object} response.RoleUniversalResponse "Роль успешно удалена"
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /role/{id} [delete]
@@ -358,7 +338,7 @@ func deleteRole(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении роли"})
 	}
 
-	delResponse := response.ProjectUniversalResponse{ID: id, Message: "Роль с ID " + id + " удалена"}
+	delResponse := response.RoleUniversalResponse{ID: id, Message: "Роль с ID " + id + " удалена"}
 
 	return c.JSON(http.StatusOK, delResponse)
 }

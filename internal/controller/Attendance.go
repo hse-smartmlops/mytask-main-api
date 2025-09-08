@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	utils "emplacc-api/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,8 +20,7 @@ func RegisterAttendanceRoutes(e *echo.Echo){
 	attendanceGroup.Use(KeycloakAuthMiddleware)
 	{
 		attendanceGroup.GET("/all/:page/:pagesize", getAllAttendances)
-		attendanceGroup.GET("/:id", getAllAttendances)
-		attendanceGroup.GET("/user/:id", getAttendacesByUserId)
+		attendanceGroup.GET("/user/:id", getAttendancesByUserId)
 		attendanceGroup.POST("", createAttendance)
 		attendanceGroup.PATCH("/:id", updateAttendance)
 		attendanceGroup.DELETE("/:id", deleteAttendance)
@@ -75,7 +75,7 @@ func getAllAttendances(c echo.Context) error{
 	var totalCount int64
 	result := dbConn.Session(&gorm.Session{}).Model(models.Attendance{}).Where("deleted = ?", false).Count(&totalCount)
 	if result.Error != nil {
-		log.Printf("DB error (count attendancese): %v", result.Error)
+		log.Printf("DB error (count attendances): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при подсчете посещений",
 		})
@@ -86,7 +86,7 @@ func getAllAttendances(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&attendances).Error; err != nil{
-			log.Printf("DB error (find attendancese): %v", err)
+			log.Printf("DB error (find attendances): %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении посещений из базы данных",
 			})
@@ -99,56 +99,19 @@ func getAllAttendances(c echo.Context) error{
 	}
 
 	for _, attendance := range 	attendances{
-		attendanceId := attendance.ID.String()
-		userId := attendance.ID.String()
-		var date time.Time
-		if attendance.Date != nil{
-			date = *attendance.Date
-		}
-		var workdayHours int16
-		if attendance.WorkdayHours != nil{
-			workdayHours = *attendance.WorkdayHours
-		}
-		var plannedStart time.Time
-		if attendance.PlannedStart != nil{
-			plannedStart = *attendance.PlannedStart
-		}
-		var actualStart time.Time
-		if attendance.ActualStart != nil{ 
-			actualStart = *attendance.ActualStart
-		}
-		var commits int16
-		if attendance.Commits != nil{
-			commits = *attendance.Commits
-		}
-		var mergeRequests int16
-		if attendance.MergeRequests != nil{
-			mergeRequests = *attendance.MergeRequests
-		}
-		var codeReviews int16
-		if attendance.CodeReviews != nil{
-			codeReviews = *attendance.CodeReviews
-		}
-		var endWork time.Time
-		if attendance.EndWork != nil{
-			endWork = *attendance.EndWork
-		}
-		var updatedAt time.Time
-		if attendance.UpdatedAt != nil{
-			updatedAt = *attendance.UpdatedAt
-		}
 		attendanceList.Attendances = append(attendanceList.Attendances, response.AttendanceResponse{
-			ID: attendanceId,
-			UserID: userId,
-			Date: date,
-			WorkdayHours: workdayHours,
-			PlannedStart: plannedStart,
-			ActualStart: actualStart,
-			Commits: commits,
-			MergeRequests: mergeRequests,
-			CodeReviews: codeReviews,
-			EndWork: endWork,
-			UpdatedAt: updatedAt,
+			ID: attendance.ID.String(),
+			UserID: attendance.UserID.String(),
+			Date: utils.GetTime(attendance.Date),
+			WorkdayHours: utils.GetInt16(attendance.WorkdayHours),
+			PlannedStart: utils.GetTime(attendance.PlannedStart),
+			ActualStart: utils.GetTime(attendance.ActualStart),
+			Commits: utils.GetInt16(attendance.Commits),
+			MergeRequests: utils.GetInt16(attendance.MergeRequests),
+			CodeReviews: utils.GetInt16(attendance.CodeReviews),
+			EndWork: utils.GetTime(attendance.EndWork),
+			UpdatedAt: utils.GetTime(attendance.UpdatedAt),
+			CreatedAt: utils.GetTime(attendance.CreatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, attendanceList)
@@ -167,7 +130,7 @@ func getAllAttendances(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/user/{id} [get]
-func getAttendacesByUserId(c echo.Context) error{
+func getAttendancesByUserId(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -193,56 +156,19 @@ func getAttendacesByUserId(c echo.Context) error{
 	}
 
 	for _, attendance := range 	attendances{
-		attendanceId := attendance.ID.String()
-		userId := attendance.ID.String()
-		var date time.Time
-		if attendance.Date != nil{
-			date = *attendance.Date
-		}
-		var workdayHours int16
-		if attendance.WorkdayHours != nil{
-			workdayHours = *attendance.WorkdayHours
-		}
-		var plannedStart time.Time
-		if attendance.PlannedStart != nil{
-			plannedStart = *attendance.PlannedStart
-		}
-		var actualStart time.Time
-		if attendance.ActualStart != nil{ 
-			actualStart = *attendance.ActualStart
-		}
-		var commits int16
-		if attendance.Commits != nil{
-			commits = *attendance.Commits
-		}
-		var mergeRequests int16
-		if attendance.MergeRequests != nil{
-			mergeRequests = *attendance.MergeRequests
-		}
-		var codeReviews int16
-		if attendance.CodeReviews != nil{
-			codeReviews = *attendance.CodeReviews
-		}
-		var endWork time.Time
-		if attendance.EndWork != nil{
-			endWork = *attendance.EndWork
-		}
-		var updatedAt time.Time
-		if attendance.UpdatedAt != nil{
-			updatedAt = *attendance.UpdatedAt
-		}
 		attendanceList.Attendances = append(attendanceList.Attendances, response.AttendanceResponse{
-			ID: attendanceId,
-			UserID: userId,
-			Date: date,
-			WorkdayHours: workdayHours,
-			PlannedStart: plannedStart,
-			ActualStart: actualStart,
-			Commits: commits,
-			MergeRequests: mergeRequests,
-			CodeReviews: codeReviews,
-			EndWork: endWork,
-			UpdatedAt: updatedAt,
+			ID: attendance.ID.String(),
+			UserID: attendance.UserID.String(),
+			Date: utils.GetTime(attendance.Date),
+			WorkdayHours: utils.GetInt16(attendance.WorkdayHours),
+			PlannedStart: utils.GetTime(attendance.PlannedStart),
+			ActualStart: utils.GetTime(attendance.ActualStart),
+			Commits: utils.GetInt16(attendance.Commits),
+			MergeRequests: utils.GetInt16(attendance.MergeRequests),
+			CodeReviews: utils.GetInt16(attendance.CodeReviews),
+			EndWork: utils.GetTime(attendance.EndWork),
+			UpdatedAt: utils.GetTime(attendance.UpdatedAt),
+			CreatedAt: utils.GetTime(attendance.CreatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, attendanceList)

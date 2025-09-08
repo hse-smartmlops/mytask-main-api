@@ -536,6 +536,8 @@ definitions:
         type: integer
       commits:
         type: integer
+      created_at:
+        type: string
       date:
         type: string
       deleted:
@@ -632,6 +634,8 @@ definitions:
     type: object
   response.BoardResponse:
     properties:
+      created_at:
+        type: string
       descroption:
         type: string
       id:
@@ -734,6 +738,8 @@ definitions:
     type: object
   response.GetRoleResponse:
     properties:
+      created_at:
+        type: string
       description:
         type: string
       id:
@@ -751,6 +757,8 @@ definitions:
         description: Связь с users
       community:
         type: integer
+      created_at:
+        type: string
       created_by:
         allOf:
         - $ref: '#/definitions/response.UserShort'
@@ -889,7 +897,7 @@ definitions:
       descroption:
         type: string
       gitlab_project_id:
-        type: string
+        type: integer
       gitlab_url:
         type: string
       id:
@@ -1003,7 +1011,7 @@ definitions:
       message:
         type: string
     type: object
-  response.RoleUniversalReport:
+  response.RoleUniversalResponse:
     properties:
       id:
         type: string
@@ -1149,6 +1157,8 @@ definitions:
     type: object
   response.TaskShort:
     properties:
+      created_at:
+        type: string
       deadline:
         type: string
       id:
@@ -1190,6 +1200,8 @@ definitions:
     type: object
   response.TeamResponse:
     properties:
+      created_at:
+        type: string
       description:
         type: string
       id:
@@ -1962,6 +1974,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление доски
+      tags:
+      - Boards
+  /boards/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех досок с учетом пагинации, исключая удаленные.
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список досок успешно получен
+          schema:
+            $ref: '#/definitions/response.BoardListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении досок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение списка всех досок
       tags:
       - Boards
   /boards/project/{projectId}:
@@ -3261,7 +3319,7 @@ paths:
         "201":
           description: Роль успешно создана
           schema:
-            $ref: '#/definitions/response.RoleUniversalReport'
+            $ref: '#/definitions/response.RoleUniversalResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -3303,7 +3361,7 @@ paths:
         "200":
           description: Роль успешно удалена
           schema:
-            $ref: '#/definitions/response.ProjectUniversalResponse'
+            $ref: '#/definitions/response.RoleUniversalResponse'
         "401":
           description: Нет или неверный токен
           schema:
@@ -3395,7 +3453,7 @@ paths:
         "200":
           description: Роль успешно обновлена
           schema:
-            $ref: '#/definitions/response.RoleUniversalReport'
+            $ref: '#/definitions/response.RoleUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:

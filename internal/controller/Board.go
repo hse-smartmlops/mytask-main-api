@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -42,121 +43,86 @@ func RegisterBoardRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
-// @Router /project/all/{page}/{pagesize} [get]
+// @Router /boards/all/{page}/{pagesize} [get]
 func getAllBoards(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
 
-	pageReq := c.Param("page")
-	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
-	page, err := strconv.Atoi(pageReq)
-	if err != nil{
-		log.Printf("failed to parse page: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге страницы",
-		})
-	}
-	if page <= 0 {
+	page, err := strconv.Atoi(c.Param("page"))
+	if err != nil || page <= 0 {
 		page = 1
 	}
-
-	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
-		log.Printf("failed to parse pagesize: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге номера страницы",
-		})
-	}
-	if pageSize <= 0 {
+	pageSize, err := strconv.Atoi(c.Param("pagesize"))
+	if err != nil || pageSize <= 0 {
 		pageSize = 10
 	}
 	offset := (page - 1) * pageSize
 
 	var total int64
-	if err := dbConn.Session(&gorm.Session{}).Model(&models.Board{}).Count(&total).Error; err != nil {
+	if err := dbConn.Model(&models.Board{}).Where("deleted = ?", false).Count(&total).Error; err != nil {
 		log.Printf("DB error (count boards): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчёте досок",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте досок"})
 	}
 
 	var boards []models.Board
-	if err := dbConn.Session(&gorm.Session{}).
-		Limit(pageSize).
-		Offset(offset).
-		Find(&boards).Error; err != nil {
+	if err := dbConn.Where("deleted = ?", false).Limit(pageSize).Offset(offset).Find(&boards).Error; err != nil {
 		log.Printf("DB error (find boards): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении досок из базы данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении досок"})
+	}
+
+	// Собираем все board IDs
+	boardIDs := make([]uuid.UUID, 0, len(boards))
+	for _, b := range boards {
+		boardIDs = append(boardIDs, b.ID)
+	}
+
+	// Подгружаем все StatusBoard с Status для этих досок одним запросом
+	var statusBoards []models.StatusBoard
+	if err := dbConn.Preload("Status", "deleted = ?", false).Session(&gorm.Session{}).
+		Where("board_id IN (?) AND deleted = ?", boardIDs, false).
+		Find(&statusBoards).Error; err != nil {
+		log.Printf("DB error (find statusBoards): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов"})
+	}
+
+	// Группируем статус по boardID
+	statusMap := make(map[uuid.UUID][]response.StatusResponse)
+	for _, sb := range statusBoards {
+		if sb.Status != nil {
+			boardID := *sb.BoardID 
+			statusMap[boardID] = append(statusMap[boardID], response.StatusResponse{
+				ID:        sb.Status.ID.String(),
+				Key:       utils.GetString(sb.Status.Key),
+				Name:      utils.GetString(sb.Status.Name),
+				Color:     utils.GetString(sb.Status.Color),
+				IsDefault: utils.GetBool(sb.Status.IsDefault),
+				IsActive:  utils.GetBool(sb.Status.IsActive),
+				IsOpen:    utils.GetBool(sb.Status.IsOpen),
+				CreatedAt: utils.GetTime(sb.Status.CreatedAt),
+				UpdatedAt: utils.GetTime(sb.Status.UpdatedAt),
+			})
+		}
 	}
 
 	boardList := response.BoardListResponse{
-		Page:     page,
-		PageSize: pageSize,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: int(total),
 	}
 
 	for _, board := range boards {
-		if board.Deleted != nil {
-			if !*board.Deleted {
-				var id string = board.ID.String()
-
-				var name string
-				if board.Name != nil {
-					name = *board.Name
-				}
-				var description string
-				if board.Description != nil {
-					description = *board.Description
-				}
-				var updatedAt time.Time
-				if board.UpdatedAt != nil {
-					updatedAt = *board.UpdatedAt
-				}
-
-				boardResponse := response.BoardResponse{
-					Id:          id,
-					ProjectId:   board.ProjectID.String(),
-					Name:        name,
-					Description: description,
-					UpdatedAt:   updatedAt,
-				}
-
-				// Fetch all StatusBoard entries with preloaded Status in one query
-				var statusBoards []models.StatusBoard
-				if err := dbConn.
-					Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
-					Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
-					Find(&statusBoards).Error; err != nil {
-					log.Printf("failed to get statuses for board %s: %v", id, err)
-					return c.JSON(http.StatusInternalServerError, map[string]string{
-						"error": "Ошибка при получении статусов для доски",
-					})
-				}
-
-				for _, sb := range statusBoards {
-					if sb.Status != nil {
-						boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
-							ID:        sb.Status.ID.String(),
-							Key:       getString(sb.Status.Key),
-							Name:      getString(sb.Status.Name),
-							Color:     getString(sb.Status.Color),
-							IsDefault: getBool(sb.Status.IsDefault),
-							IsActive:  getBool(sb.Status.IsActive),
-							IsOpen:    getBool(sb.Status.IsOpen),
-							CreatedAt: getTime(sb.Status.CreatedAt),
-							UpdatedAt: getTime(sb.Status.UpdatedAt),
-						})
-					}
-				}
-				
-				boardList.Boards = append(boardList.Boards, boardResponse)
-			}
-		}
+		boardList.Boards = append(boardList.Boards, response.BoardResponse{
+			Id:          board.ID.String(),
+			ProjectId:   board.ProjectID.String(),
+			Name:        utils.GetString(board.Name),
+			Description: utils.GetString(board.Description),
+			UpdatedAt:   utils.GetTime(board.UpdatedAt),
+			CreatedAt:   utils.GetTime(board.CreatedAt),
+			Statuses:    statusMap[board.ID],
+		})
 	}
-	boardList.TotalCount = len(boardList.Boards)
+
 	return c.JSON(http.StatusOK, boardList)
 }
 
@@ -189,7 +155,7 @@ func getBoardById(c echo.Context) error {
 	}
 
 	var board models.Board
-	result := dbConn.Session(&gorm.Session{}).First(&board, "id = ?", boardId)
+	result := dbConn.Session(&gorm.Session{}).First(&board, "id = ? and deleted = ?", boardId, false)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -202,35 +168,19 @@ func getBoardById(c echo.Context) error {
 		})
 	}
 
-	if board.Deleted != nil {
-		if *board.Deleted {
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Доска не найдена",
-			})
-		}
-	}
-
-	var name string
-	if board.Name != nil {
-		name = *board.Name
-	}
-
-	var description string
-	if board.Description != nil {
-		description = *board.Description
-	}
-
-	var updatedAt time.Time
-	if board.UpdatedAt != nil {
-		updatedAt = *board.UpdatedAt
+	if result.RowsAffected == 0{
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Доска не найдена",
+		})
 	}
 
 	boardResponse := response.BoardResponse{
-		Id:          id,
+		Id:          board.ID.String(),
 		ProjectId:   board.ProjectID.String(),
-		Name:        name,
-		Description: description,
-		UpdatedAt:   updatedAt,
+		Name:        utils.GetString(board.Name),
+		Description: utils.GetString(board.Description),
+		UpdatedAt:   utils.GetTime(board.UpdatedAt),
+		CreatedAt: utils.GetTime(board.CreatedAt),
 	}
 
 	// Fetch all StatusBoard entries with preloaded Status in one query
@@ -248,15 +198,15 @@ func getBoardById(c echo.Context) error {
     for _, sb := range statusBoards {
         if sb.Status != nil {
             boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
-                ID:        sb.Status.ID.String(),
-                Key:       getString(sb.Status.Key),
-                Name:      getString(sb.Status.Name),
-                Color:     getString(sb.Status.Color),
-                IsDefault: getBool(sb.Status.IsDefault),
-                IsActive:  getBool(sb.Status.IsActive),
-                IsOpen:    getBool(sb.Status.IsOpen),
-                CreatedAt: getTime(sb.Status.CreatedAt),
-                UpdatedAt: getTime(sb.Status.UpdatedAt),
+				ID:        sb.Status.ID.String(),
+				Key:       utils.GetString(sb.Status.Key),
+				Name:      utils.GetString(sb.Status.Name),
+				Color:     utils.GetString(sb.Status.Color),
+				IsDefault: utils.GetBool(sb.Status.IsDefault),
+				IsActive:  utils.GetBool(sb.Status.IsActive),
+				IsOpen:    utils.GetBool(sb.Status.IsOpen),
+				CreatedAt: utils.GetTime(sb.Status.CreatedAt),
+				UpdatedAt: utils.GetTime(sb.Status.UpdatedAt),
             })
         }
     }
@@ -284,7 +234,7 @@ func getBoardByProjectId(c echo.Context) error {
 	}
 
 	projectID := c.Param("projectId")
-	projectId, err := uuid.Parse(projectID)
+	projectUUID, err := uuid.Parse(projectID)
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -292,17 +242,16 @@ func getBoardByProjectId(c echo.Context) error {
 		})
 	}
 
+	// Загружаем доски проекта с предзагрузкой статусов
 	var boards []models.Board
-	result := dbConn.Session(&gorm.Session{}).Find(&boards, "project_id = ?", projectId)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Доска не найден",
-			})
-		}
-		log.Printf("DB error (find project by id): %v", result.Error)
+	if err := dbConn.Session(&gorm.Session{}).
+		Preload("StatusBoards", "deleted = ?", false).
+		Preload("StatusBoards.Status", "deleted = ?", false).
+		Where("project_id = ? AND deleted = ?", projectUUID, false).
+		Find(&boards).Error; err != nil {
+		log.Printf("DB error (find boards by project id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении доски из базы данных",
+			"error": "Ошибка при получении досок из базы данных",
 		})
 	}
 
@@ -311,68 +260,33 @@ func getBoardByProjectId(c echo.Context) error {
 	}
 
 	for _, board := range boards {
-		if board.Deleted != nil {
-			if *board.Deleted {
-				return c.JSON(http.StatusInternalServerError, map[string]string{
-					"error": "Доска не найдена",
-				})
-			}
-		}
-
-		var id string = board.ID.String()
-
-		var name string
-		if board.Name != nil {
-			name = *board.Name
-		}
-
-		var description string
-		if board.Description != nil {
-			description = *board.Description
-		}
-
-		var updatedAt time.Time
-		if board.UpdatedAt != nil {
-			updatedAt = *board.UpdatedAt
-		}
-
 		boardResponse := response.BoardResponse{
-			Id:          id,
+			Id:          board.ID.String(),
 			ProjectId:   board.ProjectID.String(),
-			Name:        name,
-			Description: description,
-			UpdatedAt:   updatedAt,
+			Name:        utils.GetString(board.Name),
+			Description: utils.GetString(board.Description),
+			CreatedAt:   utils.GetTime(board.CreatedAt),
+			UpdatedAt:   utils.GetTime(board.UpdatedAt),
 		}
 
-		// Fetch all StatusBoard entries with preloaded Status in one query
-		var statusBoards []models.StatusBoard
-		if err := dbConn.
-			Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
-			Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
-			Find(&statusBoards).Error; err != nil {
-			log.Printf("failed to get statuses for board %s: %v", id, err)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении статусов для доски",
-			})
-		}
-
-		for _, sb := range statusBoards {
+		// Добавляем статусы из предзагрузки
+		for _, sb := range board.StatusBoards {
 			if sb.Status != nil {
 				boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
 					ID:        sb.Status.ID.String(),
-					Key:       getString(sb.Status.Key),
-					Name:      getString(sb.Status.Name),
-					Color:     getString(sb.Status.Color),
-					IsDefault: getBool(sb.Status.IsDefault),
-					IsActive:  getBool(sb.Status.IsActive),
-					IsOpen:    getBool(sb.Status.IsOpen),
-					CreatedAt: getTime(sb.Status.CreatedAt),
-					UpdatedAt: getTime(sb.Status.UpdatedAt),
+					Key:       utils.GetString(sb.Status.Key),
+					Name:      utils.GetString(sb.Status.Name),
+					Color:     utils.GetString(sb.Status.Color),
+					IsDefault: utils.GetBool(sb.Status.IsDefault),
+					IsActive:  utils.GetBool(sb.Status.IsActive),
+					IsOpen:    utils.GetBool(sb.Status.IsOpen),
+					CreatedAt: utils.GetTime(sb.Status.CreatedAt),
+					UpdatedAt: utils.GetTime(sb.Status.UpdatedAt),
 				})
 			}
 		}
-		
-		projectResponse.Boards = append(projectResponse.Boards, boardResponse)		
+
+		projectResponse.Boards = append(projectResponse.Boards, boardResponse)
 	}
 
 	return c.JSON(http.StatusOK, projectResponse)
@@ -488,9 +402,15 @@ func updateBoard(c echo.Context) error {
 	}
 
 	updateData := make(map[string]interface{})
-	updateData["name"] = req.Name
-	updateData["description"] = req.Description
-	updateData["filter"] = req.Filter
+	if req.Name != nil {
+    	updateData["name"] = req.Name
+	}
+	if req.Description != nil{
+		updateData["description"] = req.Description
+	}
+	if req.Filter != nil{
+		updateData["filter"] = req.Filter
+	}
 
 	if len(updateData) == 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{

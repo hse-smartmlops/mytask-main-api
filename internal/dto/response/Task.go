@@ -19,6 +19,7 @@ type GetTaskByIDResponse struct {
 	GitlabIssueID int       `json:"gitlab_issue_id,omitempty"`
 	Category      int8      `json:"community"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at"`
 	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 
@@ -31,6 +32,7 @@ type TaskShort struct {
 	StartDate time.Time `json:"start_date"`
 	Deadline  time.Time `json:"deadline,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at"`
 	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 

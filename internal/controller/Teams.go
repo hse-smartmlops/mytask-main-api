@@ -5,6 +5,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -60,23 +61,8 @@ func getTeams(c echo.Context) error {
 		})
 	}
 
-	// Формируем ответ
 	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0, len(teams))}
 	for _, team := range teams {
-		var name, description string
-		if team.Name != nil {
-			name = *team.Name
-		}
-		if team.Description != nil {
-			description = *team.Description
-		}
-
-		var updatedAt time.Time
-		if team.UpdatedAt != nil {
-			updatedAt = *team.UpdatedAt
-		}
-
-		// Участники
 		members := make([]response.TeamMemberResponse, 0, len(team.TeamMembers))
 		for _, tm := range team.TeamMembers {
 			if tm.Deleted != nil && *tm.Deleted {
@@ -88,36 +74,21 @@ func getTeams(c echo.Context) error {
 
 			user := tm.User
 
-			profession := ""
-			if user.Profession != nil {
-				profession = *user.Profession
-			}
-
-			var memberFirstName, memberLastName, memberEmail string
-			if user.FirstName != nil {
-				memberFirstName = *user.FirstName
-			}
-			if user.LastName != nil {
-				memberLastName = *user.LastName
-			}
-			if user.Email != nil {
-				memberEmail = *user.Email
-			}
-
 			members = append(members, response.TeamMemberResponse{
 				UserID:         user.ID.String(),
-				Specialization: profession,
-				FirstName:      memberFirstName,
-				LastName:       memberLastName,
-				Email:          memberEmail,
+				Specialization: utils.GetString(user.Profession),
+				FirstName:      utils.GetString(user.FirstName),
+				LastName:       utils.GetString(user.LastName),
+				Email:          utils.GetString(user.Email),
 			})
 		}
 
 		teamListResponse.Teams = append(teamListResponse.Teams, response.TeamResponse{
 			ID:          team.ID.String(),
-			Name:        name,
-			Description: description,
-			UpdatedAt:   updatedAt,
+			Name:        utils.GetString(team.Name),
+			Description: utils.GetString(team.Description),
+			UpdatedAt:   utils.GetTime(team.UpdatedAt),
+			CreatedAt: utils.GetTime(team.CreatedAt),
 			Members:     members,
 		})
 	}
@@ -155,7 +126,7 @@ func getProjectTeams(c echo.Context) error {
 	// Получаем связи проект-команда
 	var projectTeams []models.ProjectTeam
 	if err := dbConn.
-		Session(&gorm.Session{NewDB: true}).
+		Session(&gorm.Session{}).
 		Where("project_id = ? AND deleted = ?", projectID, false).
 		Find(&projectTeams).Error; err != nil {
 		log.Printf("DB error (find projectTeams): %v", err)
@@ -179,7 +150,7 @@ func getProjectTeams(c echo.Context) error {
 	// Получаем команды
 	var teams []models.Team
 	if err := dbConn.
-		Session(&gorm.Session{NewDB: true}).
+		Session(&gorm.Session{}).
 		Where("id IN ? AND deleted = ?", teamIDs, false).
 		Find(&teams).Error; err != nil {
 		log.Printf("DB error (find teams): %v", err)
@@ -191,7 +162,7 @@ func getProjectTeams(c echo.Context) error {
 	// Получаем участников команд
 	var teamMembers []models.TeamMember
 	if err := dbConn.
-		Session(&gorm.Session{NewDB: true}).
+		Session(&gorm.Session{}).
 		Where("team_id IN ? AND deleted = ?", teamIDs, false).
 		Find(&teamMembers).Error; err != nil {
 		log.Printf("DB error (find team members): %v", err)
@@ -210,7 +181,7 @@ func getProjectTeams(c echo.Context) error {
 	var users []models.User
 	if len(userIDs) > 0 {
 		if err := dbConn.
-			Session(&gorm.Session{NewDB: true}).
+			Session(&gorm.Session{}).
 			Select("id, profession, first_name, last_name, email").
 			Where("id IN ? AND deleted = ?", userIDs, false).
 			Find(&users).Error; err != nil {
@@ -229,52 +200,25 @@ func getProjectTeams(c echo.Context) error {
 	// Формируем ответ
 	teamInfo := make(map[uuid.UUID]response.TeamResponse, len(teams))
 	for _, team := range teams {
-		var name, description string
-		if team.Name != nil {
-			name = *team.Name
-		}
-		if team.Description != nil {
-			description = *team.Description
-		}
-
-		var updatedAt time.Time
-		if team.UpdatedAt != nil {
-			updatedAt = *team.UpdatedAt
-		}
-
 		teamInfo[team.ID] = response.TeamResponse{
 			ID:          team.ID.String(),
-			Name:        name,
-			Description: description,
-			UpdatedAt:   updatedAt,
+			Name:        utils.GetString(team.Name),
+			Description: utils.GetString(team.Description),
+			UpdatedAt:   utils.GetTime(team.UpdatedAt),
+			CreatedAt: utils.GetTime(team.CreatedAt),
 		}
 	}
 
 	teamAndMembers := make(map[uuid.UUID][]response.TeamMemberResponse, len(teams))
 	for _, tm := range teamMembers {
-		if member, ok := userMap[tm.UserID]; ok {
-			profession := ""
-			if member.Profession != nil {
-				profession = *member.Profession
-			}
-			var memberFirstName, memberLastName, memberEmail string
-			if member.FirstName != nil {
-				memberFirstName = *member.FirstName
-			}
-			if member.LastName != nil {
-				memberLastName = *member.LastName
-			}
-			if member.Email != nil {
-				memberEmail = *member.Email
-			}
-
+		if user, ok := userMap[tm.UserID]; ok {
 			teamAndMembers[tm.TeamID] = append(teamAndMembers[tm.TeamID],
 				response.TeamMemberResponse{
-					UserID:         member.ID.String(),
-					Specialization: profession,
-					FirstName:      memberFirstName,
-					LastName:       memberLastName,
-					Email:          memberEmail,
+					UserID:         user.ID.String(),
+					Specialization: utils.GetString(user.Profession),
+					FirstName:      utils.GetString(user.FirstName),
+					LastName:       utils.GetString(user.LastName),
+					Email:          utils.GetString(user.Email),
 				})
 		}
 	}
@@ -329,7 +273,7 @@ func getTeamByID(c echo.Context) error {
 
 	if team.Deleted != nil {
 		if *team.Deleted {
-			return c.JSON(http.StatusInternalServerError, map[string]string{
+			return c.JSON(http.StatusNotFound, map[string]string{
 				"message": "Команда не найдена",
 			})
 		}
@@ -369,58 +313,24 @@ func getTeamByID(c echo.Context) error {
 	// Формируем список участников ответа
 	membersResp := make([]response.TeamMemberResponse, 0, len(teamMembers))
 	for _, tm := range teamMembers {
-		member := memberMap[tm.UserID]
-		profession := ""
-		if member.Profession != nil {
-			profession = *member.Profession
-		}
-
-		var memberFirstName string
-		if member.FirstName != nil {
-			memberFirstName = *member.FirstName
-		}
-
-		var memberLastName string
-		if member.LastName != nil {
-			memberLastName = *member.LastName
-		}
-
-		var memberEmail string
-		if member.Email != nil {
-			memberEmail = *member.Email
-		}
-
+		user := memberMap[tm.UserID]
 		membersResp = append(membersResp, response.TeamMemberResponse{
-			UserID:         member.ID.String(),
-			Specialization: profession,
-			FirstName:      memberFirstName,
-			LastName:       memberLastName,
-			Email:          memberEmail,
+			UserID:         user.ID.String(),
+			Specialization: utils.GetString(user.Profession),
+			FirstName:      utils.GetString(user.FirstName),
+			LastName:       utils.GetString(user.LastName),
+			Email:          utils.GetString(user.Email),
 		})
-	}
-
-	var name string
-	if team.Name != nil {
-		name = *team.Name
-	}
-
-	var description string
-	if team.Description != nil {
-		description = *team.Description
-	}
-
-	var updatedAt time.Time
-	if team.UpdatedAt != nil {
-		updatedAt = *team.UpdatedAt
 	}
 
 	// Формируем итоговый ответ
 	teamResponse := response.TeamResponse{
 		ID:          team.ID.String(),
-		Name:        name,
-		Description: description,
-		Members:     membersResp,
-		UpdatedAt:   updatedAt,
+		Name:        utils.GetString(team.Name),
+		Description: utils.GetString(team.Description),
+		UpdatedAt:   utils.GetTime(team.UpdatedAt),
+		CreatedAt: utils.GetTime(team.CreatedAt),
+		Members: membersResp,
 	}
 
 	return c.JSON(http.StatusOK, teamResponse)
@@ -465,7 +375,12 @@ func createTeam(c echo.Context) error {
 
 	now := time.Now()
 
-	team := models.Team{ID: newUUID, Name: name, Description: description, Deleted: &del, CreatedAt: &now}
+	team := models.Team{
+		ID: newUUID, 
+		Name: name, 
+		Description: description, 
+		Deleted: &del, CreatedAt: &now,
+	}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Create(&team); res.Error != nil {
 			log.Printf("DB error (create team): %v", res.Error)
@@ -477,12 +392,12 @@ func createTeam(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании команды"})
 	}
 
-	createRespose := response.TeamUniversalResponse{
+	createResponse := response.TeamUniversalResponse{
 		ID:      newUUID.String(),
 		Message: "Команда создана",
 	}
 
-	return c.JSON(http.StatusCreated, createRespose)
+	return c.JSON(http.StatusCreated, createResponse)
 }
 
 // updateTeam godoc
@@ -504,6 +419,10 @@ func updateTeam(c echo.Context) error {
 		return err
 	}
 	teamIDParam := c.Param("id")
+	teamUUID, err := uuid.Parse(teamIDParam)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор команды"})
+	}
 	// Привязка данных запроса
 	var req request.TeamUpdateRequest
 	if err := c.Bind(&req); err != nil {
@@ -534,7 +453,7 @@ func updateTeam(c echo.Context) error {
 
 	// Проверка существования команды
 	var team models.Team
-	if err := dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", teamIDParam, false).First(&team).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", teamUUID, false).First(&team).Error; err != nil {
 		log.Printf("Team not found: %v", err)
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "Команда не найдена",
@@ -543,7 +462,7 @@ func updateTeam(c echo.Context) error {
 
 	// Выполняем обновление только указанных полей
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
+		res := tx.Model(&models.Team{}).Where("id = ?", teamUUID).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update team): %v", res.Error)
 			return res.Error
@@ -614,12 +533,12 @@ func deleteTeam(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении команды"})
 	}
 
-	deleteResponce := response.TeamUniversalResponse{
+	deleteResponse := response.TeamUniversalResponse{
 		ID:      teamIDParam,
 		Message: "Команда удалена",
 	}
 
-	return c.JSON(http.StatusOK, deleteResponce)
+	return c.JSON(http.StatusOK, deleteResponse)
 }
 
 // addUserToTeam godoc
@@ -650,7 +569,7 @@ func addUserToTeam(c echo.Context) error {
 	var user models.User
 	if err := dbConn.Session(&gorm.Session{}).Select("id, profession").Where("id = ? AND deleted = ?", req.UserID, false).First(&user).Error; err != nil {
 		log.Printf("DB error (select profession): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Ошибка при получении данных пользователя",
 		})
 	}
@@ -658,7 +577,7 @@ func addUserToTeam(c echo.Context) error {
 	var team models.Team
 	if err := dbConn.Session(&gorm.Session{}).Where("id = ? AND deleted = ?", req.TeamID, false).First(&team).Error; err != nil {
 		log.Printf("DB error (select team): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
+		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Ошибка при получении команды",
 		})
 	}
@@ -821,12 +740,12 @@ func addProjectToTeam(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при привязке проекта к команде"})
 	}
 
-	addResponce := response.TeamUniversalProjectResponse{
+	addResponse := response.TeamUniversalProjectResponse{
 		TeamID:    team.ID.String(),
 		ProjectID: project.ID.String(),
 		Message:   "Проект успешно привязан к команде",
 	}
-	return c.JSON(http.StatusOK, addResponce)
+	return c.JSON(http.StatusOK, addResponse)
 }
 
 // deleteProjectFromTeam godoc
@@ -893,11 +812,11 @@ func deleteProjectFromTeam(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проекта из команды"})
 	}
 
-	deleteResponce := response.TeamUniversalProjectResponse{
+	deleteResponse := response.TeamUniversalProjectResponse{
 		TeamID:    teamID.String(),
 		ProjectID: projectID.String(),
 		Message:   "Проект успешно отвязан от команды",
 	}
 
-	return c.JSON(http.StatusOK, deleteResponce)
+	return c.JSON(http.StatusOK, deleteResponse)
 }

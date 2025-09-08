@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -44,9 +45,6 @@ func RegisterProblemRoutes(e *echo.Echo){
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/all/{page}/{pagesize} [get]
 func getAllProblems(c echo.Context) error{
-	if err := authorize(c); err != nil {
-		return err
-	}
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -110,26 +108,14 @@ func getAllProblems(c echo.Context) error{
 		if problem.CreatorID != nil{
 			creatorID = problem.CreatorID.String()
 		} 
-		var name string
-		if problem.Name != nil{
-			name = *problem.Name
-		}
-		var createdAt time.Time
-		if problem.CreatedAt != nil{
-			createdAt = *problem.CreatedAt
-		}
-		var updatedAt time.Time
-		if problem.UpdatedAt != nil{
-			updatedAt = *problem.UpdatedAt
-		}
 
 		problemList.Problems = append(problemList.Problems, response.ProblemResponse{
 			ID: problemID,
-			Name: name,
+			Name: utils.GetString(problem.Name),
 			Description: description,
 			CreatorId: creatorID,
-			CreatedAt: createdAt,
-			UpdatedAt: updatedAt,
+			CreatedAt: utils.GetTime(problem.CreatedAt),
+			UpdatedAt: utils.GetTime(problem.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, problemList)
@@ -191,13 +177,20 @@ func getProblemsByUserId(c echo.Context) error{
 	}
 
 	var problems []models.Problem
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	newResult := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
-		Find(&problems).Error; err != nil{
-		log.Printf("DB error (find projects): %v", err)
+		Where("creator_id = ? and deleted = ?", id, false).Find(&problems)
+	if newResult.Error != nil {
+		log.Printf("DB error (find problem): %v", newResult.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проектов из базы данных",
+			"error": "Ошибка при получении проблем из базы данных",
+		})
+	}
+	if newResult.RowsAffected == 0{
+		log.Printf("DB error (no problems finded): %v", newResult.Error)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Не найдены проблемы в базе данных",
 		})
 	}
 
@@ -210,32 +203,20 @@ func getProblemsByUserId(c echo.Context) error{
 
 	for _, problem := range problems{
 		var problemID string = problem.ID.String()
+		var description []string = []string(problem.Description) 
 
-		var description []string = []string(problem.Description)
 		var creatorID string
 		if problem.CreatorID != nil{
 			creatorID = problem.CreatorID.String()
 		} 
-		var name string
-		if problem.Name != nil{
-			name = *problem.Name
-		}
-		var createdAt time.Time
-		if problem.CreatedAt != nil{
-			createdAt = *problem.CreatedAt
-		}
-		var updatedAt time.Time
-		if problem.UpdatedAt != nil{
-			updatedAt = *problem.UpdatedAt
-		}
 
 		problemList.Problems = append(problemList.Problems, response.ProblemResponse{
 			ID: problemID,
-			Name: name,
+			Name: utils.GetString(problem.Name),
 			Description: description,
 			CreatorId: creatorID,
-			CreatedAt: createdAt,
-			UpdatedAt: updatedAt,
+			CreatedAt: utils.GetTime(problem.CreatedAt),
+			UpdatedAt: utils.GetTime(problem.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, problemList)
@@ -264,7 +245,7 @@ func getProblemByID(c echo.Context) error{
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
+			"error": "Некорректный идентификатор проблемы",
 		})
 	}
 
@@ -282,32 +263,21 @@ func getProblemByID(c echo.Context) error{
 		})
 	}
 
-	var description []string = []string(problem.Description)
-	var creatorId string
-	if problem.CreatorID != nil{
-		creatorId = problem.CreatorID.String()
-	}
-	var name string
-	if problem.Name != nil{
-		name = *problem.Name
-	}
+	var problemID string = problem.ID.String()
+	var description []string = []string(problem.Description) 
 
-	var createdAt time.Time
-	if problem.CreatedAt != nil{
-		createdAt = *problem.CreatedAt
-	}
-	var updatedAt time.Time
-	if problem.UpdatedAt != nil{
-		updatedAt = *problem.UpdatedAt
-	}
+	var creatorID string
+	if problem.CreatorID != nil{
+		creatorID = problem.CreatorID.String()
+	} 
 
 	problemResponse := response.ProblemResponse{
-		ID: id,
+		ID: problemID,
+		Name: utils.GetString(problem.Name),
 		Description: description,
-		Name: name,
-		CreatorId: creatorId,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		CreatorId: creatorID,
+		CreatedAt: utils.GetTime(problem.CreatedAt),
+		UpdatedAt: utils.GetTime(problem.UpdatedAt),
 	}
 
 	return c.JSON(http.StatusOK, problemResponse)
@@ -452,7 +422,7 @@ func updateProblem(c echo.Context) error{
 
 	updateReponse := response.ProblemUniversalResponse{
 		ID: id,
-		Message: "Проблема успешно создана",
+		Message: "Проблема успешно обновлена",
 	}
 
 	return c.JSON(http.StatusOK, updateReponse)
@@ -475,10 +445,17 @@ func deleteProblem(c echo.Context) error{
 		return err
 	}
 	id := c.Param("id")
+	problemId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор проблемы",
+		})
+	}
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Problem{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete problem): %v", res.Error)
 			return res.Error
@@ -487,12 +464,12 @@ func deleteProblem(c echo.Context) error{
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(models.ForumMessage{}).Where("problem_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Model(models.ForumMessage{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete problem - forum messages): %v", res.Error)
 			return res.Error
 		}
 
-		if res = tx.Model(models.ReportProblem{}).Where("problem_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Model(models.ReportProblem{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete problem - report_problem): %v", res.Error)
 			return res.Error
 		}

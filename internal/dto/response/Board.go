@@ -13,6 +13,7 @@ type BoardResponse struct {
 	Name        string    `json:"name"`
 	Description string    `json:"descroption"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt   time.Time `json:"created_at"`
 	Statuses   []StatusResponse `json:"statuses,omitempty"`
 }
 
