@@ -375,23 +375,43 @@ func createTask(c echo.Context) error {
 				"error": "Исполнитель не найден",
 			})
 		}
-		log.Printf("DB error (find project by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении исполнителя из базы данных",
-		})
+		var assigner models.User
+		result := dbConn.Session(&gorm.Session{}).First(&assigner, "id = ? AND deleted = ?", assignedUUID, false)
+		if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+				return c.JSON(http.StatusNotFound, map[string]string{
+					"error": "Исполнитель не найден",
+				})
+			}
+			log.Printf("DB error (find assignee by id): %v", result.Error)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при получении исполнителя из базы данных",
+			})
+		}
+		assignedTo = &assigner.ID
 	}
 
-	var assignedTo *uuid.UUID = &assigner.ID
-
+	// Валидируем и получаем поручителя (creator_id)
+	if req.CreatorID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Отсутствует идентификатор поручителя",
+		})
+	}
+	creatorUUID, err := uuid.Parse(req.CreatorID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор поручителя",
+		})
+	}
 	var creator models.User
-	result = dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	res := dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", creatorUUID, false)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Поручитель исполнитель не найден",
 			})
 		}
-		log.Printf("DB error (find project by id): %v", result.Error)
+		log.Printf("DB error (find creator by id): %v", res.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении поручителя задачи из базы данных",
 		})
@@ -400,9 +420,12 @@ func createTask(c echo.Context) error {
 	var creatorID *uuid.UUID = &creator.ID
 
 
+	// Валидируем идентификатор проекта
 	temp1, err := uuid.Parse(req.ProjectID)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{})
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор проекта",
+		})
 	}
 
 	var category *int8
