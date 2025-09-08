@@ -84,7 +84,7 @@ func getAllProblems(c echo.Context) error{
 	}
 
 	var problems []models.Problem
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&problems).Error; err != nil{
@@ -177,7 +177,7 @@ func getProblemsByUserId(c echo.Context) error{
 	}
 
 	var problems []models.Problem
-	newResult := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	newResult := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Where("creator_id = ? and deleted = ?", id, false).Find(&problems)
@@ -250,7 +250,7 @@ func getProblemByID(c echo.Context) error{
 	}
 
 	var  problem models.Problem
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).First(&problem, "id = ?", problemId)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("deleted = ?", false).First(&problem, "id = ?", problemId)
 	if result.Error != nil{
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -339,7 +339,7 @@ func createProblem(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&problem); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Problem{}).Create(&problem); res.Error != nil {
 			log.Printf("DB error (create problem): %v", res.Error)
 			return res.Error
 		}
@@ -406,7 +406,7 @@ func updateProblem(c echo.Context) error{
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update problem): %v", res.Error)
 			return res.Error
@@ -455,7 +455,7 @@ func deleteProblem(c echo.Context) error{
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete problem): %v", res.Error)
 			return res.Error
@@ -464,12 +464,12 @@ func deleteProblem(c echo.Context) error{
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(models.ForumMessage{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete problem - forum messages): %v", res.Error)
 			return res.Error
 		}
 
-		if res = tx.Model(models.ReportProblem{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.ReportProblem{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete problem - report_problem): %v", res.Error)
 			return res.Error
 		}

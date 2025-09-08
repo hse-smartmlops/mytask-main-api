@@ -82,7 +82,7 @@ func getAllAttendances(c echo.Context) error{
 	}
 
 	var attendances []models.Attendance
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Attendance{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&attendances).Error; err != nil{
@@ -144,7 +144,7 @@ func getAttendancesByUserId(c echo.Context) error{
 	}
 
 	var attendances []models.Attendance
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and user_id = ?", false, userId).Find(&attendances).Error; err != nil{
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Attendance{}).Where("deleted = ? and user_id = ?", false, userId).Find(&attendances).Error; err != nil{
 		log.Printf("DB error (find attendances): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении посещений из базы данных",
@@ -229,7 +229,7 @@ func createAttendance(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&attendance); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Attendance{}).Create(&attendance); res.Error != nil {
 			log.Printf("DB error (create attendance): %v", res.Error)
 			return res.Error
 		}
@@ -321,7 +321,7 @@ func updateAttendance(c echo.Context) error{
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&models.Attendance{}).Where("id = ? AND deleted = ?", attendanceId, false).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(&models.Attendance{}).Where("id = ? AND deleted = ?", attendanceId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update attendance): %v", res.Error)
 			return res.Error
@@ -374,7 +374,7 @@ func deleteAttendance(c echo.Context) error{
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Attendance{}).Where("id = ?", attendanceId).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Attendance{}).Where("id = ?", attendanceId).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete attendance): %v", res.Error)
 			return res.Error

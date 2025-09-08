@@ -66,7 +66,7 @@ func getAllReports(c echo.Context) error {
 
 	// Считаем общее количество отчетов
 	var totalCount int64
-	if err := dbConn.Model(&models.DailyReport{}).
+	if err := dbConn.Model(&models.DailyReport{}).Session(&gorm.Session{}).
 		Where("deleted = ?", false).
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count reports): %v", err)
@@ -77,7 +77,7 @@ func getAllReports(c echo.Context) error {
 
 	// Загружаем отчеты с preloaded связями
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
 		Preload("User", "deleted = ?", false).
 		Preload("Task", "deleted = ?", false).
 		Preload("HelpRequest", "deleted = ?", false).
@@ -207,7 +207,7 @@ func getReport(c echo.Context) error {
 
 	// Загружаем отчет с предзагрузкой всех связанных сущностей
 	var report models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
 		Preload("User", "deleted = ?", false).
 		Preload("Task", "deleted = ?", false).
 		Preload("HelpRequest", "deleted = ?", false).
@@ -322,7 +322,7 @@ func getReportsByTaskId(c echo.Context) error {
 	}
 
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
 		Preload("User", "deleted = ?", false).
 		Preload("HelpRequest", "deleted = ?", false).
 		Preload("CompletedWork", "deleted = ?", false).
@@ -436,7 +436,7 @@ func getReportsByProjectId(c echo.Context) error {
 
 	projectID := c.Param("id")
 	var tasks []models.Task
-	if err := dbConn.Where("project_id = ? AND deleted = ?", projectID, false).Find(&tasks).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).Where("project_id = ? AND deleted = ?", projectID, false).Find(&tasks).Error; err != nil {
 		log.Printf("DB error (find tasks by project id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач"})
 	}
@@ -447,7 +447,7 @@ func getReportsByProjectId(c echo.Context) error {
 	}
 
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
 		Preload("User", "deleted = ?", false).
 		Preload("HelpRequest", "deleted = ?", false).
 		Preload("CompletedWork", "deleted = ?", false).
@@ -590,7 +590,7 @@ func createReport(c echo.Context) error {
 		Deleted: &del,
 	}
 
-	result := dbConn.Session(&gorm.Session{}).Create(&report)
+	result := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Create(&report)
 	if result.Error != nil {
 		log.Printf("DB error (create report): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -610,7 +610,7 @@ func createReport(c echo.Context) error {
 				Deleted: &del,
 			}
 
-			result = dbConn.Session(&gorm.Session{}).Create(&complWork)
+			result = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Create(&complWork)
 			if result.Error != nil {
 				log.Printf("DB error (create report): %v", result.Error)
 				return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -631,7 +631,7 @@ func createReport(c echo.Context) error {
 				Deleted: &del,
 			}
 
-			result = dbConn.Session(&gorm.Session{}).Create(&tomPlan)
+			result = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Create(&tomPlan)
 			if result.Error != nil {
 				log.Printf("DB error (create report): %v", result.Error)
 				return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -657,7 +657,7 @@ func createReport(c echo.Context) error {
 				Deleted: &del,
 			}
 
-			result = dbConn.Session(&gorm.Session{}).Create(&reportProblem)
+			result = dbConn.Session(&gorm.Session{}).Model(models.ReportProblem{}).Create(&reportProblem)
 			if result.Error != nil {
 				log.Printf("DB error (create report): %v", result.Error)
 				return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -687,7 +687,7 @@ func createReport(c echo.Context) error {
 			CreatedAt: &now,
 		}
 
-		result = dbConn.Session(&gorm.Session{}).Create(&help)
+		result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Create(&help)
 		if result.Error != nil {
 			log.Printf("DB error (create report): %v", result.Error)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -701,7 +701,7 @@ func createReport(c echo.Context) error {
 		Message: "Успешно создано",
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusCreated, resp)
 }
 
 // updateReport godoc
@@ -794,7 +794,7 @@ func deleteReport(c echo.Context) error {
 	updateData := map[string]interface{}{"deleted": true}
 
 	txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Model(&models.DailyReport{}).Where("id = ?", id).Updates(updateData); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Where("id = ?", id).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete report): %v", res.Error)
 			return res.Error
 		} else if res.RowsAffected == 0 {
@@ -808,31 +808,19 @@ func deleteReport(c echo.Context) error {
 		}
 
 		for _, table := range tables {
-			if res := tx.Model(table).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
+			if res := tx.Session(&gorm.Session{}).Model(table).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
 				log.Printf("DB error (delete related table %T): %v", table, res.Error)
 				return res.Error
 			}
 		}
 
 		var reportProblems []models.ReportProblem
-		if err := tx.Where("report_id = ? AND deleted = ?", id, false).Find(&reportProblems).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Model(models.ReportProblem{}).Where("report_id = ? AND deleted = ?", id, false).Find(&reportProblems).Error; err != nil {
 			log.Printf("DB error (get report-problem): %v", err)
 			return err
 		}
 
-		var problemIDs []uuid.UUID
-		for _, rp := range reportProblems {
-			problemIDs = append(problemIDs, rp.ProblemID)
-		}
-
-		if len(problemIDs) > 0 {
-			if res := tx.Model(&models.Problem{}).Where("id IN ?", problemIDs).Updates(updateData); res.Error != nil {
-				log.Printf("DB error (delete problems): %v", res.Error)
-				return res.Error
-			}
-		}
-
-		if res := tx.Model(&models.ReportProblem{}).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(&models.ReportProblem{}).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete report-problem): %v", res.Error)
 			return res.Error
 		}
@@ -904,7 +892,7 @@ func updateHelpRequest(c echo.Context) error{
 		})
 	}
 
-	updateData["created_at"] = time.Now()
+	updateData["updated_at"] = time.Now()
 
 	result := dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("id = ?", helpRequestId).Updates(updateData)
 	if result.Error != nil{

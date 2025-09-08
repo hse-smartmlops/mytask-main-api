@@ -82,7 +82,7 @@ func getAllRoles(c echo.Context) error {
 	}
 
 	var roles []models.Role
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Role{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&roles).Error; err != nil {
@@ -138,7 +138,7 @@ func getRoleById(c echo.Context) error {
 	}
 
 	var role models.Role
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).First(&role, "id = ?", roleId)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Role{}).Where("deleted = ?", false).First(&role, "id = ?", roleId)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -201,7 +201,7 @@ func createRole(c echo.Context) error {
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&role); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Role{}).Create(&role); res.Error != nil {
 			log.Printf("DB error (create role): %v", res.Error)
 			return res.Error
 		}
@@ -269,7 +269,7 @@ func updateRole(c echo.Context) error {
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Model(models.Role{}).Where("id = ?", roleId).Updates(updateData); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Role{}).Where("id = ?", roleId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (update role): %v", res.Error)
 			return res.Error
 		}
@@ -315,7 +315,7 @@ func deleteRole(c echo.Context) error {
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Role{}).Where("id = ? and deleted = ?", roleId, false).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Role{}).Where("id = ? and deleted = ?", roleId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete role): %v", res.Error)
 			return res.Error
@@ -324,7 +324,7 @@ func deleteRole(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(&models.UserRole{}).Where("role_id = ?", roleId).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(&models.UserRole{}).Where("role_id = ?", roleId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete user roles): %v", res.Error)
 			return res.Error
 		}

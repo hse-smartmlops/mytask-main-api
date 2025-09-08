@@ -16,10 +16,11 @@ var DB_conn *gorm.DB = getDBConnection()
 
 func getDBConnection() *gorm.DB {
 	time.Sleep(5 * time.Second)
-	err := godotenv.Load(".env")
-	if err != nil {
+
+	if err := godotenv.Load(".env"); err != nil {
 		log.Fatal("Error loading .env file")
 	}
+
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
 	user := os.Getenv("DB_USER")
@@ -28,13 +29,13 @@ func getDBConnection() *gorm.DB {
 	sslMode := os.Getenv("DB_SSLMODE")
 	timezone := os.Getenv("DB_TIMEZONE")
 
-	connectData := fmt.Sprintf(
+	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
 		host, user, pass, name, port, sslMode, timezone,
 	)
 
-	db, err := gorm.Open(postgres.Open(connectData), &gorm.Config{
-    	Logger: logger.Default.LogMode(logger.Info),
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Info),
 	})
 	if err != nil {
 		log.Fatal("Failed to connect to database", err)
@@ -42,6 +43,17 @@ func getDBConnection() *gorm.DB {
 
 	// Включаем поддержку внешних ключей с каскадом
 	db = db.Set("gorm:foreignKeyConstraints", true)
+
+	// Настройка пула соединений
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal("Failed to get *sql.DB from GORM:", err)
+	}
+
+	// Настройки пула
+	sqlDB.SetMaxOpenConns(50)           // максимум открытых соединений
+	sqlDB.SetMaxIdleConns(10)           // максимум неиспользуемых соединений
+	sqlDB.SetConnMaxLifetime(time.Hour) // максимальное время жизни соединения
 
 	return db
 }

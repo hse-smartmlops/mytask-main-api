@@ -85,7 +85,7 @@ func getAllForumMessages(c echo.Context) error {
 
 	// Получаем список проектов с пагинацией
 	var forumMessages []models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&forumMessages).Error; err != nil {
@@ -179,7 +179,7 @@ func getForumMessagesByProblemId(c echo.Context) error{
 
 	// Получаем список проектов с пагинацией
 	var forumMessages []models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and problem_id = ?", false, problemID).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("deleted = ? and problem_id = ?", false, problemID).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&forumMessages).Error; err != nil {
@@ -244,7 +244,7 @@ func getForumMessageById(c echo.Context) error {
 	}
 
 	var message models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).Where("id = ? and deleted = ?", messageID, false).First(&message).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("id = ? and deleted = ?", messageID, false).First(&message).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Сообщение не найдено",
@@ -340,7 +340,7 @@ func createForumMessage(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&forumMessage); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.ForumMessage{}).Create(&forumMessage); res.Error != nil {
 			log.Printf("DB error (create forum message): %v", res.Error)
 			return res.Error
 		}
@@ -429,7 +429,7 @@ func updateForumMessage(c echo.Context) error{
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update forum message): %v", res.Error)
 			return res.Error
@@ -480,7 +480,7 @@ func deleteForumMessage(c echo.Context) error{
 	updateData["deleted"] = true
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("id = ?", messageID).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete forum message): %v", res.Error)
 			return res.Error

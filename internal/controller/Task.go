@@ -76,7 +76,7 @@ func getAllTasks(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
 		Preload("StatusTasks", "deleted = ?", false).
 		Preload("StatusTasks.Status", "deleted = ?", false).
 		Where("deleted = ?", false).
@@ -164,7 +164,7 @@ func getTaskByID(c echo.Context) error {
 
     var task models.Task
     // Подгружаем статусы и пользователей сразу
-    if err := dbConn.Session(&gorm.Session{}).
+    if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
         Preload("StatusTasks", "deleted = ?", false).
         Preload("StatusTasks.Status", "deleted = ?", false).
         Preload("CreatedByUser", "deleted = ?", false).
@@ -273,7 +273,7 @@ func getTasksByProjectID(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
 		Preload("StatusTasks", "deleted = ?", false).
 		Preload("StatusTasks.Status", "deleted = ?", false).
 		Where("project_id = ? AND deleted = ?", projectUUID, false).
@@ -287,7 +287,7 @@ func getTasksByProjectID(c echo.Context) error {
 	}
 
 	var totalCount int64
-	if err := dbConn.Model(&models.Task{}).
+	if err := dbConn.Model(&models.Task{}).Session(&gorm.Session{}).
 		Where("project_id = ? AND deleted = ?", projectUUID, false).
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count tasks): %v", err)
@@ -368,7 +368,7 @@ func createTask(c echo.Context) error {
 	newUUID := uuid.New()
 
 	var assigner models.User
-	result := dbConn.Session(&gorm.Session{}).First(&assigner, "id = ? AND deleted = ?", req.AssignedTo, false)
+	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&assigner, "id = ? AND deleted = ?", req.AssignedTo, false)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -404,9 +404,9 @@ func createTask(c echo.Context) error {
 		})
 	}
 	var creator models.User
-	res := dbConn.Session(&gorm.Session{}).First(&creator, "id = ? AND deleted = ?", creatorUUID, false)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+	result = dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Поручитель исполнитель не найден",
 			})
@@ -454,7 +454,7 @@ func createTask(c echo.Context) error {
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&task); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Task{}).Create(&task); res.Error != nil {
 			log.Printf("DB error (create task): %v", res.Error)
 			return res.Error
 		}
@@ -545,7 +545,7 @@ func updateTask(c echo.Context) error {
 	updates["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&models.Task{}).Where("id = ? and deleted = ?", taskID, false).Updates(updates)
+		res := tx.Session(&gorm.Session{}).Model(models.Task{}).Where("id = ? and deleted = ?", taskID, false).Updates(updates)
 		if res.Error != nil {
 			log.Printf("DB error (update task): %v", res.Error)
 			return res.Error
@@ -589,7 +589,7 @@ func deleteTask(c echo.Context) error {
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Task{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Task{}).Where("id = ?", id).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete task): %v", res.Error)
 			return res.Error
@@ -597,7 +597,7 @@ func deleteTask(c echo.Context) error {
 		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		if res = tx.Model(models.StatusTask{}).Where("task_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.StatusTask{}).Where("task_id = ?", id).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete status_task): %v", res.Error)
 			return res.Error
 		}
@@ -653,7 +653,7 @@ func getTasksByUserId(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
 		Preload("StatusTasks", "deleted = ?", false).
 		Preload("StatusTasks.Status", "deleted = ?", false).
 		Where("assigned_to = ? AND deleted = ?", userUUID, false).
@@ -667,7 +667,7 @@ func getTasksByUserId(c echo.Context) error {
 	}
 
 	var totalCount int64
-	if err := dbConn.Model(&models.Task{}).
+	if err := dbConn.Model(&models.Task{}).Session(&gorm.Session{}).
 		Where("assigned_to = ? AND deleted = ?", userUUID, false).
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count tasks): %v", err)
