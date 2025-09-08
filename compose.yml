@@ -1,6 +1,8 @@
 services:
   postgres_new:
-    image: postgres:15
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     container_name: postgres_new
     restart: always
     environment:
@@ -10,7 +12,6 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
       - postgres_new_data:/var/lib/postgresql/data
     networks:
       - emplacc-net
@@ -18,7 +19,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.server
     container_name: server
     restart: always
     env_file:

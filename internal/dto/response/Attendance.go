@@ -23,6 +23,7 @@ type AttendanceResponse struct {
 	EndWork       time.Time `json:"end_work"`
 	Deleted       bool      `json:"deleted"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 type AttendancesByUserId struct {

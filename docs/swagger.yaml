@@ -9,6 +9,20 @@ definitions:
       user_id:
         type: string
     type: object
+  request.AddStatusToBoardRequest:
+    properties:
+      board_id:
+        type: string
+      status_id:
+        type: string
+    type: object
+  request.AddStatusToTaskRequest:
+    properties:
+      status_id:
+        type: string
+      task_id:
+        type: string
+    type: object
   request.AttendanceCreateRequest:
     properties:
       actual_start:
@@ -56,8 +70,6 @@ definitions:
   request.BoardCreateRequest:
     properties:
       description:
-        type: string
-      filter:
         type: string
       name:
         type: string
@@ -114,6 +126,22 @@ definitions:
     - gitlab_url
     - name
     - status
+    type: object
+  request.CreateStatusRequest:
+    properties:
+      color:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      name:
+        type: string
+    required:
+    - color
+    - name
     type: object
   request.HelpRequest:
     properties:
@@ -309,19 +337,12 @@ definitions:
         type: string
       start_date:
         type: string
-      status:
-        enum:
-        - todo
-        - in_progress
-        - done
-        type: string
     required:
     - creator_id
     - name
     - priority
     - project_id
     - start_date
-    - status
     type: object
   request.TaskUpdateRequest:
     properties:
@@ -345,12 +366,6 @@ definitions:
         minimum: 1
         type: integer
       start_date:
-        type: string
-      status:
-        enum:
-        - todo
-        - in_progress
-        - done
         type: string
     type: object
   request.TeamAddProjectRequest:
@@ -427,6 +442,19 @@ definitions:
       status:
         type: string
     type: object
+  request.UpdateStatusRequest:
+    properties:
+      color:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      name:
+        type: string
+    type: object
   request.UpdateUserRequest:
     properties:
       created_at:
@@ -482,6 +510,24 @@ definitions:
       user_id:
         type: string
     type: object
+  response.AddStatusToBoardResponse:
+    properties:
+      board_id:
+        type: string
+      message:
+        type: string
+      status_id:
+        type: string
+    type: object
+  response.AddStatusToTaskResponse:
+    properties:
+      message:
+        type: string
+      status_id:
+        type: string
+      task_id:
+        type: string
+    type: object
   response.AttendanceResponse:
     properties:
       actual_start:
@@ -490,6 +536,8 @@ definitions:
         type: integer
       commits:
         type: integer
+      created_at:
+        type: string
       date:
         type: string
       deleted:
@@ -586,9 +634,9 @@ definitions:
     type: object
   response.BoardResponse:
     properties:
-      descroption:
+      created_at:
         type: string
-      filter:
+      descroption:
         type: string
       id:
         type: string
@@ -596,6 +644,10 @@ definitions:
         type: string
       project_id:
         type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
       updated_at:
         type: string
     type: object
@@ -686,6 +738,8 @@ definitions:
     type: object
   response.GetRoleResponse:
     properties:
+      created_at:
+        type: string
       description:
         type: string
       id:
@@ -703,6 +757,8 @@ definitions:
         description: Связь с users
       community:
         type: integer
+      created_at:
+        type: string
       created_by:
         allOf:
         - $ref: '#/definitions/response.UserShort'
@@ -725,8 +781,10 @@ definitions:
       start_date:
         description: DATE в БД
         type: string
-      status:
-        type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
       time_spent:
         description: INTERVAL в БД
         type: string
@@ -839,7 +897,7 @@ definitions:
       descroption:
         type: string
       gitlab_project_id:
-        type: string
+        type: integer
       gitlab_url:
         type: string
       id:
@@ -953,7 +1011,66 @@ definitions:
       message:
         type: string
     type: object
-  response.RoleUniversalReport:
+  response.RoleUniversalResponse:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.StatusByBoardIdResponse:
+    properties:
+      project_id:
+        type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
+    type: object
+  response.StatusByTaskIdResponse:
+    properties:
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
+      task_id:
+        type: string
+    type: object
+  response.StatusListResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
+      total_count:
+        type: integer
+    type: object
+  response.StatusResponse:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.StatusUniversalResponse:
     properties:
       id:
         type: string
@@ -1040,6 +1157,8 @@ definitions:
     type: object
   response.TaskShort:
     properties:
+      created_at:
+        type: string
       deadline:
         type: string
       id:
@@ -1052,8 +1171,10 @@ definitions:
         type: string
       start_date:
         type: string
-      status:
-        type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.StatusResponse'
+        type: array
       updated_at:
         type: string
     type: object
@@ -1079,6 +1200,8 @@ definitions:
     type: object
   response.TeamResponse:
     properties:
+      created_at:
+        type: string
       description:
         type: string
       id:
@@ -1851,6 +1974,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление доски
+      tags:
+      - Boards
+  /boards/all/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех досок с учетом пагинации, исключая удаленные.
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список досок успешно получен
+          schema:
+            $ref: '#/definitions/response.BoardListResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении досок
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение списка всех досок
       tags:
       - Boards
   /boards/project/{projectId}:
@@ -3150,7 +3319,7 @@ paths:
         "201":
           description: Роль успешно создана
           schema:
-            $ref: '#/definitions/response.RoleUniversalReport'
+            $ref: '#/definitions/response.RoleUniversalResponse'
         "400":
           description: Ошибка в запросе
           schema:
@@ -3192,7 +3361,7 @@ paths:
         "200":
           description: Роль успешно удалена
           schema:
-            $ref: '#/definitions/response.ProjectUniversalResponse'
+            $ref: '#/definitions/response.RoleUniversalResponse'
         "401":
           description: Нет или неверный токен
           schema:
@@ -3284,7 +3453,7 @@ paths:
         "200":
           description: Роль успешно обновлена
           schema:
-            $ref: '#/definitions/response.RoleUniversalReport'
+            $ref: '#/definitions/response.RoleUniversalResponse'
         "400":
           description: Некорректный идентификатор или ошибка в запросе
           schema:
@@ -3354,6 +3523,398 @@ paths:
       summary: Получение списка всех ролей
       tags:
       - Roles
+  /status:
+    post:
+      consumes:
+      - application/json
+      description: Создание нового статуса
+      parameters:
+      - description: Данные для создания статуса
+        in: body
+        name: /status
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Статус успешно создан
+          schema:
+            $ref: '#/definitions/response.StatusUniversalResponse'
+        "400":
+          description: Ошибка при привязке данных
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при создании статуса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание статуса
+      tags:
+      - Statuses
+  /status/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление статуса по ID, включая связанные данные (поле
+        deleted = true)
+      parameters:
+      - description: ID статуса
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Статус успешно удален
+          schema:
+            $ref: '#/definitions/response.StatusUniversalResponse'
+        "400":
+          description: Некорректный идентификатор статуса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Статус не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении статуса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление статуса
+      tags:
+      - Statuses
+    get:
+      description: Получение информации о статусе по его ID
+      parameters:
+      - description: ID статуса
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о статусе
+          schema:
+            $ref: '#/definitions/response.StatusResponse'
+        "400":
+          description: Некорректный идентификатор статуса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Статус не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении статуса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение статуса по ID
+      tags:
+      - Statuses
+    patch:
+      consumes:
+      - application/json
+      description: Обновление информации о статусе по ID
+      parameters:
+      - description: ID статуса
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для обновления статуса
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Статус успешно обновлен
+          schema:
+            $ref: '#/definitions/response.StatusUniversalResponse'
+        "400":
+          description: Нет данных для обновления или некорректный ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Статус не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении статуса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновление статуса
+      tags:
+      - Statuses
+  /status/add-to-board:
+    post:
+      consumes:
+      - application/json
+      description: Создание связи между статусом и доской
+      parameters:
+      - description: Данные для добавления статуса к доске
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.AddStatusToBoardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Статус успешно добавлен к доске
+          schema:
+            $ref: '#/definitions/response.AddStatusToBoardResponse'
+        "400":
+          description: Ошибка при привязке данных или парсинге UUID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при добавлении статуса к доске
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Добавление статуса к доске
+      tags:
+      - Statuses
+  /status/add-to-task:
+    post:
+      consumes:
+      - application/json
+      description: Создание связи между статусом и задачей
+      parameters:
+      - description: Данные для добавления статуса к задаче
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.AddStatusToTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Статус успешно добавлен к задаче
+          schema:
+            $ref: '#/definitions/response.AddStatusToTaskResponse'
+        "400":
+          description: Ошибка при привязке данных или парсинге UUID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при добавлении статуса к задаче
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Добавление статуса к задаче
+      tags:
+      - Statuses
+  /status/all/{page}/{pagesize}:
+    get:
+      description: Получение списка всех статусов с пагинацией (только неудаленные)
+      parameters:
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список статусов
+          schema:
+            $ref: '#/definitions/response.StatusListResponse'
+        "400":
+          description: Ошибка при парсинге параметров
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении статусов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение всех статусов
+      tags:
+      - Statuses
+  /status/project/{board_id}:
+    get:
+      description: Получение списка статусов, связанных с доской по ее ID
+      parameters:
+      - description: ID доски
+        in: path
+        name: board_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список статусов для доски
+          schema:
+            $ref: '#/definitions/response.StatusByBoardIdResponse'
+        "400":
+          description: Ошибка при парсинге ID доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении статусов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение статусов по ID доски
+      tags:
+      - Statuses
+  /status/task/{task_id}:
+    get:
+      description: Получение списка статусов, связанных с задачей по ее ID
+      parameters:
+      - description: ID задачи
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список статусов для задачи
+          schema:
+            $ref: '#/definitions/response.StatusByTaskIdResponse'
+        "400":
+          description: Ошибка при парсинге ID задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении статусов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение статусов по ID задачи
+      tags:
+      - Statuses
   /subscription:
     post:
       consumes:
@@ -3872,7 +4433,7 @@ paths:
       summary: Получение списка всех задач
       tags:
       - Tasks
-  /task/project/{projectId}:
+  /task/project/{projectId}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -3883,6 +4444,16 @@ paths:
         name: projectId
         required: true
         type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
       produces:
       - application/json
       responses:
@@ -3911,6 +4482,58 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение задач по ID проекта
+      tags:
+      - Tasks
+  /task/user/{id}/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка задач, назначенных на конкретного пользователя,
+        с пагинацией (deleted = false)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач успешно получен
+          schema:
+            $ref: '#/definitions/response.TaskListResponse'
+        "400":
+          description: Ошибка при парсинге параметров или некорректный ID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение задач по ID пользователя
       tags:
       - Tasks
   /team:
@@ -4207,6 +4830,53 @@ paths:
       summary: Добавление проекта в команду
       tags:
       - Teams
+  /team/project/{project_id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех команд, связанных с проектом, по project_id
+      parameters:
+      - description: ID проекта
+        in: path
+        name: project_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список команд успешно получен
+          schema:
+            $ref: '#/definitions/response.TeamsListResponse'
+        "400":
+          description: Некорректный project_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Проект или команды не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении команд
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение списка команд проекта
+      tags:
+      - Projects
   /team/user:
     delete:
       consumes:

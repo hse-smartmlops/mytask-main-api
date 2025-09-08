@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	utils "emplacc-api/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,16 +19,15 @@ func RegisterAttendanceRoutes(e *echo.Echo){
 	attendanceGroup := e.Group("/attendance")
 	attendanceGroup.Use(KeycloakAuthMiddleware)
 	{
-		attendanceGroup.GET("/all/:page/:pagesize", GetAllAttendances)
-		attendanceGroup.GET("/:id", GetAllAttendances)
-		attendanceGroup.GET("/user/:id", GetAttendacesByUserId)
-		attendanceGroup.POST("", CreateAttendance)
-		attendanceGroup.PATCH("/:id", UpdateAttendance)
-		attendanceGroup.DELETE("/:id", DeleteAttendance)
+		attendanceGroup.GET("/all/:page/:pagesize", getAllAttendances)
+		attendanceGroup.GET("/user/:id", getAttendancesByUserId)
+		attendanceGroup.POST("", createAttendance)
+		attendanceGroup.PATCH("/:id", updateAttendance)
+		attendanceGroup.DELETE("/:id", deleteAttendance)
 	}
 }
 
-// GetAllAttendances godoc
+// getAllAttendances godoc
 // @Summary Получение всех посещений
 // @Description Получение списка всех посещений с пагинацией (логически не удаленных)
 // @Tags Attendance
@@ -41,7 +41,7 @@ func RegisterAttendanceRoutes(e *echo.Echo){
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/all/{page}/{pagesize} [get]
-func GetAllAttendances(c echo.Context) error{
+func getAllAttendances(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -75,7 +75,7 @@ func GetAllAttendances(c echo.Context) error{
 	var totalCount int64
 	result := dbConn.Session(&gorm.Session{}).Model(models.Attendance{}).Where("deleted = ?", false).Count(&totalCount)
 	if result.Error != nil {
-		log.Printf("DB error (count attendancese): %v", result.Error)
+		log.Printf("DB error (count attendances): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при подсчете посещений",
 		})
@@ -86,7 +86,7 @@ func GetAllAttendances(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&attendances).Error; err != nil{
-			log.Printf("DB error (find attendancese): %v", err)
+			log.Printf("DB error (find attendances): %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении посещений из базы данных",
 			})
@@ -99,67 +99,25 @@ func GetAllAttendances(c echo.Context) error{
 	}
 
 	for _, attendance := range 	attendances{
-		attendanceId := attendance.ID.String()
-		userId := attendance.ID.String()
-		var date time.Time
-		if attendance.Date != nil{
-			date = *attendance.Date
-		}
-		var workdayHours int16
-		if attendance.WorkdayHours != nil{
-			workdayHours = *attendance.WorkdayHours
-		}
-		var plannedStart time.Time
-		if attendance.PlannedStart != nil{
-			plannedStart = *attendance.PlannedStart
-		}
-		var actualStart time.Time
-		if attendance.ActualStart != nil{ 
-			actualStart = *attendance.ActualStart
-		}
-		var status string
-		if attendance.Status != nil{
-			status = *attendance.Status
-		}
-		var commits int16
-		if attendance.Commits != nil{
-			commits = *attendance.Commits
-		}
-		var mergeRequests int16
-		if attendance.MergeRequests != nil{
-			mergeRequests = *attendance.MergeRequests
-		}
-		var codeReviews int16
-		if attendance.CodeReviews != nil{
-			codeReviews = *attendance.CodeReviews
-		}
-		var endWork time.Time
-		if attendance.EndWork != nil{
-			endWork = *attendance.EndWork
-		}
-		var updatedAt time.Time
-		if attendance.UpdatedAt != nil{
-			updatedAt = *attendance.UpdatedAt
-		}
 		attendanceList.Attendances = append(attendanceList.Attendances, response.AttendanceResponse{
-			ID: attendanceId,
-			UserID: userId,
-			Date: date,
-			WorkdayHours: workdayHours,
-			PlannedStart: plannedStart,
-			ActualStart: actualStart,
-			Status: status,
-			Commits: commits,
-			MergeRequests: mergeRequests,
-			CodeReviews: codeReviews,
-			EndWork: endWork,
-			UpdatedAt: updatedAt,
+			ID: attendance.ID.String(),
+			UserID: attendance.UserID.String(),
+			Date: utils.GetTime(attendance.Date),
+			WorkdayHours: utils.GetInt16(attendance.WorkdayHours),
+			PlannedStart: utils.GetTime(attendance.PlannedStart),
+			ActualStart: utils.GetTime(attendance.ActualStart),
+			Commits: utils.GetInt16(attendance.Commits),
+			MergeRequests: utils.GetInt16(attendance.MergeRequests),
+			CodeReviews: utils.GetInt16(attendance.CodeReviews),
+			EndWork: utils.GetTime(attendance.EndWork),
+			UpdatedAt: utils.GetTime(attendance.UpdatedAt),
+			CreatedAt: utils.GetTime(attendance.CreatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, attendanceList)
 }
 
-// GetAttendacesByUserId godoc
+// getAttendacesByUserId godoc
 // @Summary Получение посещений по ID пользователя
 // @Description Получение списка посещений для конкретного пользователя (логически не удаленных)
 // @Tags Attendance
@@ -172,7 +130,7 @@ func GetAllAttendances(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/user/{id} [get]
-func GetAttendacesByUserId(c echo.Context) error{
+func getAttendancesByUserId(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -198,67 +156,25 @@ func GetAttendacesByUserId(c echo.Context) error{
 	}
 
 	for _, attendance := range 	attendances{
-		attendanceId := attendance.ID.String()
-		userId := attendance.ID.String()
-		var date time.Time
-		if attendance.Date != nil{
-			date = *attendance.Date
-		}
-		var workdayHours int16
-		if attendance.WorkdayHours != nil{
-			workdayHours = *attendance.WorkdayHours
-		}
-		var plannedStart time.Time
-		if attendance.PlannedStart != nil{
-			plannedStart = *attendance.PlannedStart
-		}
-		var actualStart time.Time
-		if attendance.ActualStart != nil{ 
-			actualStart = *attendance.ActualStart
-		}
-		var status string
-		if attendance.Status != nil{
-			status = *attendance.Status
-		}
-		var commits int16
-		if attendance.Commits != nil{
-			commits = *attendance.Commits
-		}
-		var mergeRequests int16
-		if attendance.MergeRequests != nil{
-			mergeRequests = *attendance.MergeRequests
-		}
-		var codeReviews int16
-		if attendance.CodeReviews != nil{
-			codeReviews = *attendance.CodeReviews
-		}
-		var endWork time.Time
-		if attendance.EndWork != nil{
-			endWork = *attendance.EndWork
-		}
-		var updatedAt time.Time
-		if attendance.UpdatedAt != nil{
-			updatedAt = *attendance.UpdatedAt
-		}
 		attendanceList.Attendances = append(attendanceList.Attendances, response.AttendanceResponse{
-			ID: attendanceId,
-			UserID: userId,
-			Date: date,
-			WorkdayHours: workdayHours,
-			PlannedStart: plannedStart,
-			ActualStart: actualStart,
-			Status: status,
-			Commits: commits,
-			MergeRequests: mergeRequests,
-			CodeReviews: codeReviews,
-			EndWork: endWork,
-			UpdatedAt: updatedAt,
+			ID: attendance.ID.String(),
+			UserID: attendance.UserID.String(),
+			Date: utils.GetTime(attendance.Date),
+			WorkdayHours: utils.GetInt16(attendance.WorkdayHours),
+			PlannedStart: utils.GetTime(attendance.PlannedStart),
+			ActualStart: utils.GetTime(attendance.ActualStart),
+			Commits: utils.GetInt16(attendance.Commits),
+			MergeRequests: utils.GetInt16(attendance.MergeRequests),
+			CodeReviews: utils.GetInt16(attendance.CodeReviews),
+			EndWork: utils.GetTime(attendance.EndWork),
+			UpdatedAt: utils.GetTime(attendance.UpdatedAt),
+			CreatedAt: utils.GetTime(attendance.CreatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, attendanceList)
 }
 
-// CreateAttendance godoc
+// createAttendance godoc
 // @Summary Создание посещения
 // @Description Создание нового посещения
 // @Tags Attendance
@@ -271,7 +187,7 @@ func GetAttendacesByUserId(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании посещения"
 // @Router /attendance [post]
-func CreateAttendance(c echo.Context) error{
+func createAttendance(c echo.Context) error{
 	if err := authorize(c); err != nil{
 		return err
 	}
@@ -304,7 +220,6 @@ func CreateAttendance(c echo.Context) error{
 		WorkdayHours: req.WorkdayHours,
 		PlannedStart: req.PlannedStart,
 		ActualStart: req.ActualStart,
-		Status: req.Status,
 		Commits: req.Commits,
 		MergeRequests: req.MergeRequests,
 		CodeReviews: req.CodeReviews,
@@ -332,7 +247,7 @@ func CreateAttendance(c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// UpdateAttendance godoc
+// updateAttendance godoc
 // @Summary Обновление посещения
 // @Description Обновление полей посещения по ID
 // @Tags Attendance
@@ -347,7 +262,7 @@ func CreateAttendance(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении посещения"
 // @Router /attendance/{id} [patch]
-func UpdateAttendance(c echo.Context) error{
+func updateAttendance(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -428,7 +343,7 @@ func UpdateAttendance(c echo.Context) error{
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// DeleteAttendance godoc
+// deleteAttendance godoc
 // @Summary Удаление посещения
 // @Description Логическое удаление посещения по ID (поле deleted = true)
 // @Tags Attendance
@@ -442,7 +357,7 @@ func UpdateAttendance(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении посещения"
 // @Router /attendance/{id} [delete]
-func DeleteAttendance(c echo.Context) error{
+func deleteAttendance(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -19,16 +20,16 @@ func RegisterSubscriptionRoutes(e *echo.Echo){
 	subscriptionGroup := e.Group("/subscription")
 	subscriptionGroup.Use(KeycloakAuthMiddleware)
 	{
-		subscriptionGroup.GET("/all/:page/:pagesize", GetAllSubscriptions)
-		subscriptionGroup.GET("/:id", GetSubscriptionById)
-		subscriptionGroup.GET("/user/:id/:page/:pagesize", GetSubscriptionsByUserId)
-		subscriptionGroup.GET("/sub-object/:id/:type/:page/:pagesize", GetSubscriptionBySubObject)
-		subscriptionGroup.POST("", CreateSubscription)
-		subscriptionGroup.DELETE("/:id", DeleteSubscription)
+		subscriptionGroup.GET("/all/:page/:pagesize", getAllSubscriptions)
+		subscriptionGroup.GET("/:id", getSubscriptionById)
+		subscriptionGroup.GET("/user/:id/:page/:pagesize", getSubscriptionsByUserId)
+		subscriptionGroup.GET("/sub-object/:id/:type/:page/:pagesize", getSubscriptionBySubObject)
+		subscriptionGroup.POST("", createSubscription)
+		subscriptionGroup.DELETE("/:id", deleteSubscription)
 	}
 }
 
-// GetAllSubscriptions godoc
+// getAllSubscriptions godoc
 // @Summary Получение всех подписок
 // @Description Получение списка всех подписок с пагинацией (deleted = false)
 // @Tags Subscriptions
@@ -42,7 +43,7 @@ func RegisterSubscriptionRoutes(e *echo.Echo){
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListResponse "Список подписок успешно получен"
 // @Router /subscription/all/{page}/{pagesize} [get]
-func GetAllSubscriptions(c echo.Context) error{
+func getAllSubscriptions(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -86,7 +87,7 @@ func GetAllSubscriptions(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription):%v", result.Error)
+			log.Printf("DB error (find subscription):%v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении подписок из базы данных", 
 			})
@@ -107,27 +108,19 @@ func GetAllSubscriptions(c echo.Context) error{
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
-		var typeId int8
-		if subscription.TypeID != nil{
-			typeId = *subscription.TypeID
-		}
-		var createdAt time.Time
-		if subscription.CreatedAt != nil{
-			createdAt = *subscription.CreatedAt
-		}	
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
 			UserId: userId,
 			SubscriptionId: subscriptionId,
-			TypeId: typeId,
-			CreatedAt: createdAt,	
+			TypeId: utils.GetInt8(subscription.TypeID),
+			CreatedAt: utils.GetTime(subscription.CreatedAt),	
 		})
 	}
 
 	return c.JSON(http.StatusOK, subsList)
 }
 
-// GetSubscriptionsByUserId godoc
+// getSubscriptionsByUserId godoc
 // @Summary Получение подписок по ID пользователя
 // @Description Получение списка подписок для конкретного пользователя с пагинацией (deleted = false)
 // @Tags Subscriptions
@@ -142,7 +135,7 @@ func GetAllSubscriptions(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListByUserIdResponse "Список подписок успешно получен"
 // @Router /subscription/user/{id}/{page}/{pagesize} [get]
-func GetSubscriptionsByUserId(c echo.Context) error{
+func getSubscriptionsByUserId(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -193,7 +186,7 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription by id): %v", result.Error)
+			log.Printf("DB error (find subscription by id): %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении подписок из базы данныхэ", 
 			})
@@ -215,27 +208,19 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
-		var typeId int8
-		if subscription.TypeID != nil{
-			typeId = *subscription.TypeID
-		}
-		var createdAt time.Time
-		if subscription.CreatedAt != nil{
-			createdAt = *subscription.CreatedAt
-		}	
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
 			UserId: userId,
 			SubscriptionId: subscriptionId,
-			TypeId: typeId,
-			CreatedAt: createdAt,	
+			TypeId: utils.GetInt8(subscription.TypeID),
+			CreatedAt: utils.GetTime(subscription.CreatedAt),	
 		})
 	}
 
 	return c.JSON(http.StatusOK, subsList)
 }
 
-// GetSubscriptionBySubObject godoc
+// getSubscriptionBySubObject godoc
 // @Summary Получение подписок по объекту подписки
 // @Description Получение списка подписок для конкретного объекта подписки и типа с пагинацией (deleted = false)
 // @Tags Subscriptions
@@ -251,7 +236,7 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListBySubObjectResponse "Список подписок успешно получен"
 // @Router /subscription/sub-object/{subId}/{typeId}/{page}/{pagesize} [get]
-func GetSubscriptionBySubObject(c echo.Context) error{
+func getSubscriptionBySubObject(c echo.Context) error{
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -313,9 +298,9 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
-			log.Printf("DB error (find subscription by id): %v", result.Error)
+			log.Printf("DB error (find subscription by id): %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении подписок из базы данныхэ", 
+				"error": "Ошибка при получении подписок из базы данных", 
 			})
 	}
 
@@ -336,27 +321,19 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
-		var typeId int8
-		if subscription.TypeID != nil{
-			typeId = *subscription.TypeID
-		}
-		var createdAt time.Time
-		if subscription.CreatedAt != nil{
-			createdAt = *subscription.CreatedAt
-		}	
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
 			UserId: userId,
 			SubscriptionId: subscriptionId,
-			TypeId: typeId,
-			CreatedAt: createdAt,	
+			TypeId: utils.GetInt8(subscription.TypeID),
+			CreatedAt: utils.GetTime(subscription.CreatedAt),	
 		})
 	}
 
 	return c.JSON(http.StatusOK, subsList)
 }
 
-// GetSubscriptionById godoc
+// getSubscriptionById godoc
 // @Summary Получение подписки по ID
 // @Description Получение детальной информации о подписке по её ID (deleted = false)
 // @Tags Subscriptions
@@ -370,7 +347,7 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписки"
 // @Success 200 {object} response.SubscriptionResponse "Подписка успешно получена"
 // @Router /subscription/{id} [get]
-func GetSubscriptionById(c echo.Context) error{
+func getSubscriptionById(c echo.Context) error{
 	if err := authorize(c); err != nil{
 		return err
 	}
@@ -405,26 +382,17 @@ func GetSubscriptionById(c echo.Context) error{
 	if subscription.SubscriptionId != nil{
 		subscriptionId = subscription.SubscriptionId.String()
 	}
-	var typeId int8
-	if subscription.TypeID != nil{
-		typeId = *subscription.TypeID
-	}
-	var createdAt time.Time
-	if subscription.CreatedAt != nil{
-		createdAt = *subscription.CreatedAt
-	}
-
 	subResponse := response.SubscriptionResponse{
 		ID: subscription.ID.String(),
 		UserId: userId,
 		SubscriptionId: subscriptionId,
-		TypeId: typeId,
-		CreatedAt: createdAt,
+		TypeId: utils.GetInt8(subscription.TypeID),
+		CreatedAt: utils.GetTime(subscription.CreatedAt),	
 	}
 	return c.JSON(http.StatusOK, subResponse)
 }
 
-// CreateSubscription godoc
+// createSubscription godoc
 // @Summary Создание подписки
 // @Description Создание новой подписки с указанными данными
 // @Tags Subscriptions
@@ -437,7 +405,7 @@ func GetSubscriptionById(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании подписки"
 // @Success 201 {object} response.SubscriptionUniversalResponse "Подписка успешно создана"
 // @Router /subscription [post]
-func CreateSubscription(c echo.Context) error{
+func createSubscription(c echo.Context) error{
 	if err := authorize(c); err != nil{
 		return err
 	}
@@ -476,7 +444,7 @@ func CreateSubscription(c echo.Context) error{
 	switch typeId{
 	case 0:
 		var task models.Task
-		result := dbConn.Session(&gorm.Session{}).First(&task, "id = ? AND deleted = ?", req.SubscriptionId, false)
+		result := dbConn.Session(&gorm.Session{}).First(&task, "id = ? AND deleted = ?", subId, false)
 		if result.Error != nil {
 			log.Printf("DB error %v", err)
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
@@ -491,7 +459,7 @@ func CreateSubscription(c echo.Context) error{
 		}
 	case 1:
 		var  problem models.Problem
-		result := dbConn.Session(&gorm.Session{}).First(&problem, "id = ? AND deleted = ?", req.SubscriptionId, false)
+		result := dbConn.Session(&gorm.Session{}).First(&problem, "id = ? AND deleted = ?", subId, false)
 		if result.Error != nil{
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				return c.JSON(http.StatusNotFound, map[string]string{
@@ -506,7 +474,7 @@ func CreateSubscription(c echo.Context) error{
 	default:
 		log.Print("incorect type of object")
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный тип объекты",
+			"error": "Некорректный тип объекта",
 		})
 	}
  
@@ -537,7 +505,7 @@ func CreateSubscription(c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// DeleteSubscription godoc
+// deleteSubscription godoc
 // @Summary Удаление подписки
 // @Description Логическое удаление подписки по ID (поле deleted = true)
 // @Tags Subscriptions
@@ -550,16 +518,24 @@ func CreateSubscription(c echo.Context) error{
 // @Failure 404 {object} map[string]string "Подписка не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении подписки"
 // @Router /subscription/{id} [delete]
-func DeleteSubscription(c echo.Context) error {
+func deleteSubscription(c echo.Context) error {
 	if err := authorize(c); err != nil{
 		return err
 	}
 
 	id := c.Param("id")
+	subId, err := uuid.Parse(id)
+	if err != nil{
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор подписки",
+		})
+	}
+
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Subscription{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Model(models.Subscription{}).Where("id = ?", subId).Updates(updateData)
 		if res.Error != nil{
 			log.Printf("DB error (delete subscription): %v", res.Error)
 			return res.Error
@@ -573,7 +549,7 @@ func DeleteSubscription(c echo.Context) error {
 			return c.JSON(he.Code, he.Message)
 		}
 		log.Printf("DB transaction error (delete project): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проекта"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении подписки"})
 	}
 
 	delResponse :=  response.SubscriptionUniversalResponse{

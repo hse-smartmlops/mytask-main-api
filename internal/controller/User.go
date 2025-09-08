@@ -9,6 +9,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
@@ -20,16 +21,16 @@ import (
 func RegisterUserRoutes(e *echo.Echo) {
 	userGroup := e.Group("/user")
 	userGroup.Use(KeycloakAuthMiddleware)
-	userGroup.GET("/all/:page/:pagesize", GetAllUsers)
-	userGroup.GET("/:id", GetUserById)
-	userGroup.POST("", CreateUser)
-	userGroup.POST("/:id", UpdateUser)
-	userGroup.DELETE("/:id", DeleteUser)
-	userGroup.POST("/role", AddUserRole)
-	userGroup.DELETE("/role", RemoveUserRole)
+	userGroup.GET("/all/:page/:pagesize", getAllUsers)
+	userGroup.GET("/:id", getUserById)
+	userGroup.POST("", createUser)
+	userGroup.POST("/:id", updateUser)
+	userGroup.DELETE("/:id", deleteUser)
+	userGroup.POST("/role", addUserRole)
+	userGroup.DELETE("/role", removeUserRole)
 }
 
-// GetAllUsers godoc
+// getAllUsers godoc
 // @Summary Получение списка всех пользователей
 // @Description Получает список всех пользователей с учетом пагинации, исключая удаленных
 // @Tags Users
@@ -43,7 +44,7 @@ func RegisterUserRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователей"
 // @Router /user/all/{page}/{pagesize} [get]
-func GetAllUsers(c echo.Context) error {
+func getAllUsers(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -89,7 +90,7 @@ func GetAllUsers(c echo.Context) error {
 		Find(&users).Error; err != nil {
 		log.Printf("DB error (find projects): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проектов из базы данных",
+			"error": "Ошибка при получении пользователей из базы данных",
 		})
 	}
 
@@ -100,65 +101,24 @@ func GetAllUsers(c echo.Context) error {
 	}
 
 	for _, user := range users {
-		var userId string = user.ID.String()
-		var email string
-		if user.Email != nil {
-			email = *user.Email
-		}
-		var isActive bool
-		if user.IsActive != nil {
-			isActive = *user.IsActive
-		}
-		var createdAt time.Time
-		if user.CreatedAt != nil {
-			createdAt = *user.CreatedAt
-		}
-		var tgId string
-		if user.TgID != nil {
-			tgId = *user.TgID
-		}
-		var tgUserId int64
-		if user.TgUserID != nil {
-			tgUserId = *user.TgUserID
-		}
-		var profession string
-		if user.Profession != nil {
-			profession = *user.Profession
-		}
-		var emailVerified bool
-		if user.EmailVerified != nil {
-			emailVerified = *user.EmailVerified
-		}
-		var firstName string
-		if user.FirstName != nil {
-			firstName = *user.FirstName
-		}
-		var lastName string
-		if user.LastName != nil {
-			lastName = *user.LastName
-		}
-		var lastLogin time.Time
-		if user.LastLogin != nil {
-			lastLogin = *user.LastLogin
-		}
 		userList.Users = append(userList.Users, response.GetUserResponse{
-			ID:             userId,
-			Email:          email,
-			IsActive:       isActive,
-			CreatedAt:      createdAt,
-			TgId:           tgId,
-			TgUserId:       tgUserId,
-			Profession:     profession,
-			EmailVerified:  emailVerified,
-			FirstName:      firstName,
-			LastName:       lastName,
-			LastLogin:      lastLogin,
+			ID:             user.ID.String(),
+			Email:          utils.GetString(user.Email),
+			IsActive:       utils.GetBool(user.IsActive),
+			CreatedAt:      utils.GetTime(user.CreatedAt),
+			TgId:           utils.GetString(user.TgID),
+			TgUserId:       utils.GetInt64(user.TgUserID),
+			Profession:     utils.GetString(user.Profession),
+			EmailVerified:  utils.GetBool(user.EmailVerified),
+			FirstName:      utils.GetString(user.FirstName),
+			LastName:       utils.GetString(user.LastName),
+			LastLogin:      utils.GetTime(user.LastLogin),
 		})
 	}
 	return c.JSON(http.StatusOK, userList)
 }
 
-// GetUserById godoc
+// getUserById godoc
 // @Summary Получение пользователя по ID
 // @Description Получает данные пользователя по его уникальному идентификатору
 // @Tags Users
@@ -172,7 +132,7 @@ func GetAllUsers(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении пользователя"
 // @Router /user/{id} [get]
-func GetUserById(c echo.Context) error {
+func getUserById(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -198,63 +158,23 @@ func GetUserById(c echo.Context) error {
 			"error": "Ошибка при получении пользователя из базы данных",
 		})
 	}
-	var email string
-	if user.Email != nil {
-		email = *user.Email
-	}
-	var isActive bool
-	if user.IsActive != nil {
-		isActive = *user.IsActive
-	}
-	var createdAt time.Time
-	if user.CreatedAt != nil {
-		createdAt = *user.CreatedAt
-	}
-	var tgId string
-	if user.TgID != nil {
-		tgId = *user.TgID
-	}
-	var tgUserId int64
-	if user.TgUserID != nil {
-		tgUserId = *user.TgUserID
-	}
-	var profession string
-	if user.Profession != nil {
-		profession = *user.Profession
-	}
-	var emailVerified bool
-	if user.EmailVerified != nil {
-		emailVerified = *user.EmailVerified
-	}
-	var firstName string
-	if user.FirstName != nil {
-		firstName = *user.FirstName
-	}
-	var lastName string
-	if user.LastName != nil {
-		lastName = *user.LastName
-	}
-	var lastLogin time.Time
-	if user.LastLogin != nil {
-		lastLogin = *user.LastLogin
-	}
 	getUserResponse := response.GetUserResponse{
-		ID:             id,
-		Email:          email,
-		IsActive:       isActive,
-		CreatedAt:      createdAt,
-		TgId:           tgId,
-		TgUserId:       tgUserId,
-		Profession:     profession,
-		EmailVerified:  emailVerified,
-		FirstName:      firstName,
-		LastName:       lastName,
-		LastLogin:      lastLogin,
+		ID:             user.ID.String(),
+		Email:          utils.GetString(user.Email),
+		IsActive:       utils.GetBool(user.IsActive),
+		CreatedAt:      utils.GetTime(user.CreatedAt),
+		TgId:           utils.GetString(user.TgID),
+		TgUserId:       utils.GetInt64(user.TgUserID),
+		Profession:     utils.GetString(user.Profession),
+		EmailVerified:  utils.GetBool(user.EmailVerified),
+		FirstName:      utils.GetString(user.FirstName),
+		LastName:       utils.GetString(user.LastName),
+		LastLogin:      utils.GetTime(user.LastLogin),
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
 }
 
-// CreateUser godoc
+// createUser godoc
 // @Summary Создание нового пользователя
 // @Description Создает нового пользователя с указанными параметрами
 // @Tags Users
@@ -267,7 +187,7 @@ func GetUserById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании пользователя"
 // @Router /user [post]
-func CreateUser(c echo.Context) error {
+func createUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -365,7 +285,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	return nil
 }
 
-// UpdateUser godoc
+// updateUser godoc
 // @Summary Обновление пользователя
 // @Description Обновляет данные пользователя по его ID
 // @Tags Users
@@ -379,7 +299,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении пользователя"
 // @Router /user/{id} [post]
-func UpdateUser(c echo.Context) error {
+func updateUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -462,7 +382,7 @@ func UpdateUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
-// DeleteUser godoc
+// deleteUser godoc
 // @Summary Удаление пользователя
 // @Description Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)
 // @Tags Users
@@ -475,7 +395,7 @@ func UpdateUser(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
 // @Router /user/{id} [delete]
-func DeleteUser(c echo.Context) error {
+func deleteUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -510,12 +430,10 @@ func DeleteUserFunc(c echo.Context, id string) error {
 			}
 		}
 
-		// Помечаем задачи удаленными
 		if err := tx.Model(&models.Task{}).Where("created_by = ? OR assigned_to = ?", id, id).Updates(updateData).Error; err != nil {
 			return err
 		}
 
-		// Отчёты
 		var dailyReports []models.DailyReport
 		if err := tx.Where("user_id = ? and deleted = ?", id, false).Find(&dailyReports).Error; err != nil {
 			return err
@@ -531,7 +449,6 @@ func DeleteUserFunc(c echo.Context, id string) error {
 			return err
 		}
 
-		// Остальные связи
 		if err := tx.Model(&models.UserRole{}).Where("assigned_by = ? OR user_id = ?", id, id).Updates(updateData).Error; err != nil {
 			return err
 		}
@@ -544,7 +461,6 @@ func DeleteUserFunc(c echo.Context, id string) error {
 			return err
 		}
 
-		// Проблемы
 		var problems []models.Problem
 		if err := tx.Where("deleted = ? and creator_id = ?", false, id).Find(&problems).Error; err != nil {
 			return err
@@ -576,7 +492,6 @@ func DeleteUserFunc(c echo.Context, id string) error {
 	})
 
 	if err != nil {
-		// Если это ошибка echo.NewHTTPError, возвращаем её
 		if he, ok := err.(*echo.HTTPError); ok {
 			return c.JSON(he.Code, map[string]string{"error": he.Message.(string)})
 		}
@@ -594,7 +509,7 @@ func DeleteUserFunc(c echo.Context, id string) error {
 }
 
 
-// AddUserRole godoc
+// addUserRole godoc
 // @Summary Добавление роли пользователю
 // @Description Добавляет роль указанному пользователю
 // @Tags Users
@@ -607,7 +522,7 @@ func DeleteUserFunc(c echo.Context, id string) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении роли"
 // @Router /user/role [post]
-func AddUserRole(c echo.Context) error {
+func addUserRole(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -670,7 +585,7 @@ func AddUserRole(c echo.Context) error {
 	return c.JSON(http.StatusOK, addResponse)
 }
 
-// RemoveUserRole godoc
+// removeUserRole godoc
 // @Summary Удаление роли у пользователя
 // @Description Удаляет роль у указанного пользователя
 // @Tags Users
@@ -684,7 +599,7 @@ func AddUserRole(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Ничего не удалено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /user/role [delete]
-func RemoveUserRole(c echo.Context) error {
+func removeUserRole(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}

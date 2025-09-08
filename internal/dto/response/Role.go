@@ -14,9 +14,10 @@ type GetRoleResponse struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
-type RoleUniversalReport struct {
+type RoleUniversalResponse struct {
 	ID      string `json:"id"`
 	Message string `json:"message"`
 }
