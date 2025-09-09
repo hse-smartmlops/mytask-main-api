@@ -25,7 +25,8 @@ func RegisterUserRoutes(e *echo.Echo) {
 	userGroup.GET("/:id", getUserById)
 	userGroup.POST("", createUser)
 	userGroup.POST("/:id", updateUser)
-	userGroup.DELETE("/:id", deleteUser)
+	userGroup.DELETE("/:id", banUser)
+	userGroup.POST("/restore", restoreUser)
 	userGroup.POST("/role", addUserRole)
 	userGroup.DELETE("/role", removeUserRole)
 }
@@ -382,6 +383,7 @@ func updateUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, updateResponse)
 }
 
+/*
 // deleteUser godoc
 // @Summary Удаление пользователя
 // @Description Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)
@@ -506,6 +508,121 @@ func DeleteUserFunc(c echo.Context, id string) error {
 		Message: "Пользователь с ID " + id + " удален",
 	}
 	return c.JSON(http.StatusOK, deleteResponse)
+}*/
+
+// banUser godoc
+// @Summary Ban пользователя
+// @Description Логическое удаление пользователя по ID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Success 200 {object} response.UserUniversalResponse "Пользователь успешно удален"
+// @Failure 404 {object} map[string]string "Пользователь не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
+// @Router /user/{id} [delete]
+func banUser(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
+	id := c.Param("id")
+	updateData := map[string]interface{}{
+		"deleted": true,
+	}
+
+	err := dbConn.Transaction(func(tx *gorm.DB) error {
+		// Удаляем пользователя
+		result := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("id = ?", id).Updates(updateData)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Ничего не удалено")
+		}
+		return nil
+	})
+
+	if err != nil {
+		if he, ok := err.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, map[string]string{"error": he.Message.(string)})
+		}
+		log.Printf("DB transaction error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении пользователя",
+		})
+	}
+
+	deleteResponse := response.UserUniversalResponse{
+		ID:      id,
+		Message: "Пользователь с ID " + id + " забанен",
+	}
+	return c.JSON(http.StatusOK, deleteResponse)
+}
+
+// restoreUser godoc
+// @Summary Восстановление пользователя
+// @Description Восстанавливает пользователя по email (логическое удаление снимается)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param request body request.RestoreUserRequest true "Email пользователя для восстановления"
+// @Security BearerAuth
+// @Success 200 {object} response.UserUniversalResponse "Пользователь успешно восстановлен"
+// @Failure 400 {object} map[string]string "Неверный запрос или пользователь не найден"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 500 {object} map[string]string "Ошибка сервера при восстановлении пользователя"
+// @Router /user/restore [post]
+func restoreUser(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
+	var req request.RestoreUserRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Не удалось получить данные из запроса",
+		})
+	}
+
+	updateData := map[string]interface{}{
+		"deleted": false,
+	}
+
+	var id string
+	err := dbConn.Transaction(func(tx *gorm.DB) error {
+		var user models.User
+		if err := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("email = ?", req.Email).First(&user).Error; err != nil {
+        	return err
+    	}
+	
+		result := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("email = ?", req.Email).Updates(updateData)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Ничего не восстановлено")
+		}
+		id = user.ID.String()
+		return nil
+	})
+
+	if err != nil {
+		if he, ok := err.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, map[string]string{"error": he.Message.(string)})
+		}
+		log.Printf("DB transaction error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении пользователя",
+		})
+	}
+
+	restoreResponse := response.UserUniversalResponse{
+		ID: id,
+		Message: "Пользователь с email " + *req.Email + " восстановлен",
+	}
+	return c.JSON(http.StatusOK, restoreResponse)
 }
 
 

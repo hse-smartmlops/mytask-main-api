@@ -273,9 +273,6 @@ func updateProject(c echo.Context) error {
 	if req.Description != nil {
 		updateData["description"] = *req.Description
 	}
-	if req.Status != nil {
-		updateData["status"] = *req.Status
-	}
 	if req.GitlabProjectId != nil {
 		updateData["gitlab_project_id"] = *req.GitlabProjectId
 	}

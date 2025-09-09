@@ -477,7 +477,7 @@ func validateToken(c echo.Context) error {
 
 	var user models.User
 
-	dbResult := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&user, "id = ?", userId)
+	dbResult := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&user, "id = ? and deleted = ?", userId, false)
 	if dbResult.Error != nil {
 		if errors.Is(dbResult.Error, gorm.ErrRecordNotFound) {
 			temp := true

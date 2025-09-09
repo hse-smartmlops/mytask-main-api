@@ -392,9 +392,16 @@ func updateProblem(c echo.Context) error{
 		})
 	}
 
+	var description pq.StringArray
+	if req.Description != nil{
+		description = pq.StringArray(*req.Description)
+	}else{
+		description = pq.StringArray{}
+	}
+
 	updateData := make(map[string]interface{})
 	if req.Description != nil{
-		updateData["description"] = *req.Description
+		updateData["description"] = description
 	}
 
 	if len(updateData) == 0{

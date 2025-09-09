@@ -367,51 +367,56 @@ func createTask(c echo.Context) error {
 
 	newUUID := uuid.New()
 
+	if req.AssignedTo == nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Отсутствует идентификатор исполнителя",
+		})
+	}
+	assignerUUID, err := uuid.Parse(*req.AssignedTo)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор исполнителя",
+		})
+	}
+
+	assignerID := &assignerUUID
+
 	var assigner models.User
-	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&assigner, "id = ? AND deleted = ?", req.AssignedTo, false)
+	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&assigner, "id = ? AND deleted = ?", assignerUUID, false)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Исполнитель не найден",
 			})
 		}
-		var assigner models.User
-		result := dbConn.Session(&gorm.Session{}).First(&assigner, "id = ? AND deleted = ?", assignedUUID, false)
-		if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{
-					"error": "Исполнитель не найден",
-				})
-			}
-			log.Printf("DB error (find assignee by id): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении исполнителя из базы данных",
-			})
-		}
-		assignedTo = &assigner.ID
+		log.Printf("DB error (find assignee by id): %v", result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при получении исполнителя из базы данных",
+		})
 	}
 
 	// Валидируем и получаем поручителя (creator_id)
-	if req.CreatorID == "" {
+	if req.CreatorID == nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Отсутствует идентификатор поручителя",
 		})
 	}
-	creatorUUID, err := uuid.Parse(req.CreatorID)
+	creatorUUID, err := uuid.Parse(*req.CreatorID)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Некорректный идентификатор поручителя",
 		})
 	}
+
 	var creator models.User
-	result = dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&creator, "id = ? AND deleted = ?", req.CreatorID, false)
+	result = dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&creator, "id = ? AND deleted = ?", creatorUUID, false)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "Поручитель исполнитель не найден",
 			})
 		}
-		log.Printf("DB error (find creator by id): %v", res.Error)
+		log.Printf("DB error (find creator by id): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении поручителя задачи из базы данных",
 		})
@@ -443,7 +448,7 @@ func createTask(c echo.Context) error {
 		Name:          req.Name,
 		Description:   req.Description,
 		CreatedBy:     creatorID,
-		AssignedTo:    assignedTo,
+		AssignedTo:    assignerID,
 		Deadline:      req.Deadline,
 		StartDate:     req.StartDate,
 		GitlabIssueID: req.GitlabIssueID,

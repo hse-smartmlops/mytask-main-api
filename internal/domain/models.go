@@ -262,8 +262,8 @@ type Status struct {
 	Deleted   *bool      `gorm:"default:false"`
 
 	// Relations
-	Boards []*StatusBoard `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE;"`
-	Tasks  []*StatusTask  `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE;"`
+	Boards []*Board `gorm:"many2many:status_boards;joinForeignKey:StatusID;joinReferences:BoardID"`
+	Tasks []*Task `gorm:"many2many:status_tasks;joinForeignKey:StatusID;joinReferences:TaskID"`
 }
 
 type StatusBoard struct {
