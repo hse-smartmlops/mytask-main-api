@@ -1,8 +1,6 @@
 services:
   postgres_new:
-    build:
-      context: .
-      dockerfile: Dockerfile.postgres
+    image: postgres:15
     container_name: postgres_new
     restart: always
     environment:
@@ -19,7 +17,7 @@ services:
   server:
     build:
       context: .
-      dockerfile: Dockerfile.server
+      dockerfile: Dockerfile
     container_name: server
     restart: always
     env_file:

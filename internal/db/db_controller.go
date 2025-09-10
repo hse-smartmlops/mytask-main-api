@@ -1,9 +1,12 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -41,19 +44,44 @@ func getDBConnection() *gorm.DB {
 		log.Fatal("Failed to connect to database", err)
 	}
 
-	// Включаем поддержку внешних ключей с каскадом
+	// включаем каскадные FK
 	db = db.Set("gorm:foreignKeyConstraints", true)
 
-	// Настройка пула соединений
+	// берем *sql.DB для raw запросов
 	sqlDB, err := db.DB()
 	if err != nil {
 		log.Fatal("Failed to get *sql.DB from GORM:", err)
 	}
 
-	// Настройки пула
-	sqlDB.SetMaxOpenConns(50)           // максимум открытых соединений
-	sqlDB.SetMaxIdleConns(10)           // максимум неиспользуемых соединений
-	sqlDB.SetConnMaxLifetime(time.Hour) // максимальное время жизни соединения
+	// пул соединений
+	sqlDB.SetMaxOpenConns(50)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	// инициализация через init.sql
+	initSQL(sqlDB)
 
 	return db
+}
+
+func initSQL(db *sql.DB) {
+	script, err := ioutil.ReadFile("init.sql") // файл лежит рядом с бинарником
+	if err != nil {
+		log.Fatalf("Ошибка чтения init.sql: %v", err)
+	}
+
+	// разбиваем по `;`, чтобы выполнить по отдельности
+	queries := strings.Split(string(script), ";")
+	for _, q := range queries {
+		q = strings.TrimSpace(q)
+		if q == "" {
+			continue
+		}
+		_, err := db.Exec(q)
+		if err != nil {
+			log.Fatalf("Ошибка выполнения запроса [%s]: %v", q, err)
+		}
+	}
+
+	log.Println("init.sql успешно выполнен")
 }

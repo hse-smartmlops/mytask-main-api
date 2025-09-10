@@ -23,5 +23,6 @@ WORKDIR /app
 
 COPY --from=builder /app/server ./
 COPY --from=builder /app/.env ./
+COPY init.sql /app/init.sql
 
 CMD ["./server"]
