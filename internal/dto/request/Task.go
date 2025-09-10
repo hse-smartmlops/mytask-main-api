@@ -23,7 +23,7 @@ type TaskUpdateRequest struct {
 	Deadline      *time.Time `json:"deadline"`
 	StartDate     *time.Time `json:"start_date"`
 	GitlabIssueID *int       `json:"gitlab_issue_id"`
-	Category     *bool      `json:"category"`
+	Category     *int8      `json:"category"`
 }
 
 type TaskListRequest struct {

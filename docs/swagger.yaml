@@ -119,13 +119,10 @@ definitions:
         maxLength: 100
         minLength: 3
         type: string
-      status:
-        type: string
     required:
     - gitlab_project_id
     - gitlab_url
     - name
-    - status
     type: object
   request.CreateStatusRequest:
     properties:
@@ -264,8 +261,6 @@ definitions:
         type: array
       report_date:
         type: string
-      status:
-        type: string
       task_id:
         type: string
       user_id:
@@ -276,6 +271,11 @@ definitions:
       report_date:
         type: string
       user_id:
+        type: string
+    type: object
+  request.RestoreUserRequest:
+    properties:
+      email:
         type: string
     type: object
   request.RoleCreateRequest:
@@ -349,7 +349,7 @@ definitions:
       assigned_to:
         type: string
       category:
-        type: boolean
+        type: integer
       deadline:
         type: string
       description:
@@ -438,8 +438,6 @@ definitions:
       gitlab_url:
         type: string
       name:
-        type: string
-      status:
         type: string
     type: object
   request.UpdateStatusRequest:
@@ -904,8 +902,6 @@ definitions:
         type: string
       name:
         type: string
-      status:
-        type: string
       updated_at:
         type: string
     type: object
@@ -992,8 +988,6 @@ definitions:
           $ref: '#/definitions/response.ProblemResponse'
         type: array
       report_date:
-        type: string
-      status:
         type: string
       task_id:
         type: string
@@ -2291,7 +2285,7 @@ paths:
       summary: Получение списка всех сообщений форума
       tags:
       - ForumMessages
-  /forum-messages/problem/{id}:
+  /forum-messages/problem/{id}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -2303,15 +2297,15 @@ paths:
         name: id
         required: true
         type: string
-      - default: 1
-        description: Номер страницы
-        in: query
+      - description: Номер страницы
+        in: path
         name: page
+        required: true
         type: integer
-      - default: 10
-        description: Размер страницы
-        in: query
-        name: pageSize
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
         type: integer
       produces:
       - application/json
@@ -5012,8 +5006,7 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Логическое удаление пользователя по ID, включая связанные данные
-        (поле deleted = true)
+      description: Логическое удаление пользователя по ID
       parameters:
       - description: ID пользователя
         in: path
@@ -5047,7 +5040,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Удаление пользователя
+      summary: Ban пользователя
       tags:
       - Users
     get:
@@ -5187,6 +5180,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех пользователей
+      tags:
+      - Users
+  /user/restore:
+    post:
+      consumes:
+      - application/json
+      description: Восстанавливает пользователя по email (логическое удаление снимается)
+      parameters:
+      - description: Email пользователя для восстановления
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.RestoreUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно восстановлен
+          schema:
+            $ref: '#/definitions/response.UserUniversalResponse'
+        "400":
+          description: Неверный запрос или пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при восстановлении пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Восстановление пользователя
       tags:
       - Users
   /user/role:

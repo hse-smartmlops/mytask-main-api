@@ -19,7 +19,6 @@ type ReportCreateRequest struct {
 	UserId       string           `json:"user_id"`
 	TaskId       string           `json:"task_id"`
 	ReportDate   *time.Time       `json:"report_date"`
-	Status       *string          `json:"status"`
 	CompleteWork *[]ProjectReport `json:"complete_work"`
 	PlanTomorrow *[]ProjectReport `json:"plan_tomorrow"`
 	Problems     *[]Problem      `json:"problems"`

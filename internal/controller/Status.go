@@ -87,7 +87,7 @@ func getAllStatuses(c echo.Context) error{
 	}
 
 	var statuses []models.Status
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Status{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&statuses).Error; err != nil {
@@ -148,7 +148,7 @@ func getStatusesByBoardId(c echo.Context) error {
 
     // Fetch all StatusBoard entries with preloaded Status in one query
     var statusBoards []models.StatusBoard
-    if err := dbConn.
+    if err := dbConn.Model(models.StatusBoard{}).
         Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
         Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, boardUUID).
         Find(&statusBoards).Error; err != nil {
@@ -211,7 +211,7 @@ func getStatusesByTaskId(c echo.Context) error {
 
     // Fetch all StatusTask entries with preloaded Status in one query
     var statusTasks []models.StatusTask
-    if err := dbConn.Session(&gorm.Session{}).
+    if err := dbConn.Session(&gorm.Session{}).Model(models.StatusTask{}).
         Preload("Status", "deleted = ?", false).
         Where("deleted = ? AND task_id = ?", false, taskUUID).
         Find(&statusTasks).Error; err != nil {
@@ -272,7 +272,7 @@ func getStatusByID(c echo.Context) error{
 	}
 
 	var status models.Status
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ? and id = ?", false, statusID).First(&status)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Status{}).Where("deleted = ? and id = ?", false, statusID).First(&status)
 	if result.Error != nil{
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -345,7 +345,7 @@ func createStatus(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		if res := tx.Create(&status); res.Error != nil{
+		if res := tx.Session(&gorm.Session{}).Model(models.Status{}).Create(&status); res.Error != nil{
 			log.Printf("DB error (create status): %v", res.Error)
 			return res.Error
 		}
@@ -426,7 +426,7 @@ func updateStatus(c echo.Context) error{
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		res := tx.Model(&models.Status{}).Where("id = ? and deleted = ?", statusID, false).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(&models.Status{}).Where("id = ? and deleted = ?", statusID, false).Updates(updateData)
 		if res.Error != nil{
 			log.Printf("DB error (update status): %v", res.Error)
 			return res.Error
@@ -481,7 +481,7 @@ func deleteStatus(c echo.Context) error{
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		res := tx.Model(&models.Status{}).Where("id = ?", statusID).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(&models.Status{}).Where("id = ?", statusID).Updates(updateData)
 		if res.Error != nil{
 			log.Printf("DB error (delete status): %v", res.Error)
 			return res.Error
@@ -491,11 +491,11 @@ func deleteStatus(c echo.Context) error{
 				"error": "Ничего не найдено для удаления",
 			})
 		}
-		if res = tx.Model(models.StatusBoard{}).Where("status_id = ?", statusID).Updates(updateData); res.Error != nil{
+		if res = tx.Session(&gorm.Session{}).Model(models.StatusBoard{}).Where("status_id = ?", statusID).Updates(updateData); res.Error != nil{
 			log.Printf("DB error (delete status_board): %v", res.Error)
 			return res.Error
 		}
-		if res = tx.Model(models.StatusTask{}).Where("status_id = ?", statusID).Updates(updateData); res.Error != nil{
+		if res = tx.Session(&gorm.Session{}).Model(models.StatusTask{}).Where("status_id = ?", statusID).Updates(updateData); res.Error != nil{
 			log.Printf("DB error (delete status_task): %v", res.Error)
 			return res.Error
 		}
@@ -571,7 +571,7 @@ func addStatusToTask(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		if res := tx.Create(&statusTask); res.Error != nil{
+		if res := tx.Session(&gorm.Session{}).Model(models.StatusTask{}).Create(&statusTask); res.Error != nil{
 			log.Printf("DB error (add status to task): %v", res.Error)
 			return res.Error
 		}
@@ -644,7 +644,7 @@ func addStatusToBoard(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		if res := tx.Create(&statusBoard); res.Error != nil{
+		if res := tx.Session(&gorm.Session{}).Model(models.StatusBoard{}).Create(&statusBoard); res.Error != nil{
 			log.Printf("DB error (add status to board): %v", res.Error)
 			return res.Error
 		}

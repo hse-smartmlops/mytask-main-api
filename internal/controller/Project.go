@@ -84,7 +84,7 @@ func getAllProjects(c echo.Context) error {
 
 	// Получаем список проектов с пагинацией
 	var projects []models.Project
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Project{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&projects).Error; err != nil {
@@ -143,7 +143,7 @@ func getProjectByID(c echo.Context) error {
 	}
 
 	var project models.Project
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).First(&project, "id = ?", projectId)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Project{}).Where("deleted = ?", false).First(&project, "id = ?", projectId)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -210,7 +210,7 @@ func createProject(c echo.Context) error {
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&project); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Project{}).Create(&project); res.Error != nil {
 			log.Printf("DB error (create project): %v", res.Error)
 			return res.Error
 		}
@@ -273,9 +273,6 @@ func updateProject(c echo.Context) error {
 	if req.Description != nil {
 		updateData["description"] = *req.Description
 	}
-	if req.Status != nil {
-		updateData["status"] = *req.Status
-	}
 	if req.GitlabProjectId != nil {
 		updateData["gitlab_project_id"] = *req.GitlabProjectId
 	}
@@ -294,7 +291,7 @@ func updateProject(c echo.Context) error {
 
 	// Выполняем обновление только указанных полей
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Project{}).Where("id = ? AND deleted = ?", projectId, false).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Project{}).Where("id = ? AND deleted = ?", projectId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update project): %v", res.Error)
 			return res.Error
@@ -346,7 +343,7 @@ func deleteProject(c echo.Context) error {
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Project{}).Where("id = ?", projectId).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Project{}).Where("id = ?", projectId).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete project): %v", res.Error)
 			return res.Error
@@ -355,17 +352,17 @@ func deleteProject(c echo.Context) error {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(models.Task{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.Task{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete project - tasks): %v", res.Error)
 			return res.Error
 		}
 
-		if res = tx.Model(models.Board{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.Board{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete project - boards): %v", res.Error)
 			return res.Error
 		}
 
-		if res = tx.Model(models.ProjectTeam{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete project - project_teams): %v", res.Error)
 			return res.Error
 		}

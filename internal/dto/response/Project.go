@@ -8,7 +8,6 @@ type ProjectResponse struct {
 	ID              string    `json:"id"`
 	Name            string    `json:"name"`
 	Description     string    `json:"descroption"`
-	Status          string    `json:"status"`
 	GitlabProjectId int    	  `json:"gitlab_project_id"`
 	GitlabUrl       string    `json:"gitlab_url"`
 	CreatedAt       time.Time `json:"created_at"`

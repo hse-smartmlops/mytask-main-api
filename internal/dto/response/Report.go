@@ -16,7 +16,6 @@ type ReportResponse struct {
 	CompletedWork []WorkItem        `json:"completed_work"`
 	PlanTomorrow  []WorkItem        `json:"plan_tomorrow"`
 	HelpRequest   HelpRequestItem   `json:"help_request,omitempty"`
-	Status        string            `json:"status"`
 	TaskId        string            `json:"task_id"`
 	CreatedAt     time.Time         `json:"created_at"`
 	UpdatedAt     time.Time         `json:"updated_at"`

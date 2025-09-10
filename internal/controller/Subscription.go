@@ -83,7 +83,7 @@ func getAllSubscriptions(c echo.Context) error{
 	}
 
 	var subs []models.Subscription
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Subscription{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
@@ -182,7 +182,7 @@ func getSubscriptionsByUserId(c echo.Context) error{
 	}
 
 	var subs []models.Subscription
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and user_id = ?", false, userId).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Subscription{}).Where("deleted = ? and user_id = ?", false, userId).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
@@ -294,7 +294,7 @@ func getSubscriptionBySubObject(c echo.Context) error{
 	}
 
 	var subs []models.Subscription
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ? and subscription_id = ? and type_id = ?", false, subId, typeId).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Subscription{}).Where("deleted = ? and subscription_id = ? and type_id = ?", false, subId, typeId).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil{
@@ -361,7 +361,7 @@ func getSubscriptionById(c echo.Context) error{
 	}
 
 	var subscription models.Subscription
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ? and id = ?", false, subId).First(&subscription)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Subscription{}).Where("deleted = ? and id = ?", false, subId).First(&subscription)
 	if result.Error != nil{
 		if errors.Is(result.Error, gorm.ErrRecordNotFound){
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -444,9 +444,9 @@ func createSubscription(c echo.Context) error{
 	switch typeId{
 	case 0:
 		var task models.Task
-		result := dbConn.Session(&gorm.Session{}).First(&task, "id = ? AND deleted = ?", subId, false)
+		result := dbConn.Session(&gorm.Session{}).Model(models.Task{}).First(&task, "id = ? AND deleted = ?", subId, false)
 		if result.Error != nil {
-			log.Printf("DB error %v", err)
+			log.Printf("DB error %v", result.Error)
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				return c.JSON(http.StatusNotFound, map[string]string{
 					"error": "Задача не найдена",
@@ -459,8 +459,9 @@ func createSubscription(c echo.Context) error{
 		}
 	case 1:
 		var  problem models.Problem
-		result := dbConn.Session(&gorm.Session{}).First(&problem, "id = ? AND deleted = ?", subId, false)
+		result := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).First(&problem, "id = ? AND deleted = ?", subId, false)
 		if result.Error != nil{
+			log.Printf("DB error %v", result.Error)
 			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 				return c.JSON(http.StatusNotFound, map[string]string{
 					"error": "Проблема не найдена",
@@ -488,7 +489,7 @@ func createSubscription(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&sub); res.Error != nil{
+		if res := tx.Session(&gorm.Session{}).Model(models.Subscription{}).Create(&sub); res.Error != nil{
 			log.Printf("DB error(create subscription)")
 		}
 		return nil
@@ -535,7 +536,7 @@ func deleteSubscription(c echo.Context) error {
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Subscription{}).Where("id = ?", subId).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Subscription{}).Where("id = ?", subId).Updates(updateData)
 		if res.Error != nil{
 			log.Printf("DB error (delete subscription): %v", res.Error)
 			return res.Error

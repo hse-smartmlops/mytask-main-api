@@ -1327,7 +1327,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/forum-messages/problem/{id}": {
+        "/forum-messages/problem/{id}/{page}/{pagesize}": {
             "get": {
                 "security": [
                     {
@@ -1355,17 +1355,17 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
-                        "in": "query"
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "type": "integer",
-                        "default": 10,
                         "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -5793,6 +5793,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Восстанавливает пользователя по email (логическое удаление снимается)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Восстановление пользователя",
+                "parameters": [
+                    {
+                        "description": "Email пользователя для восстановления",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.RestoreUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Пользователь успешно восстановлен",
+                        "schema": {
+                            "$ref": "#/definitions/response.UserUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный запрос или пользователь не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при восстановлении пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/user/role": {
             "post": {
                 "security": [
@@ -6081,7 +6147,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)",
+                "description": "Логическое удаление пользователя по ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -6091,7 +6157,7 @@ const docTemplate = `{
                 "tags": [
                     "Users"
                 ],
-                "summary": "Удаление пользователя",
+                "summary": "Ban пользователя",
                 "parameters": [
                     {
                         "type": "string",
@@ -6307,8 +6373,7 @@ const docTemplate = `{
             "required": [
                 "gitlab_project_id",
                 "gitlab_url",
-                "name",
-                "status"
+                "name"
             ],
             "properties": {
                 "description": {
@@ -6325,9 +6390,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 3
-                },
-                "status": {
-                    "type": "string"
                 }
             }
         },
@@ -6540,9 +6602,6 @@ const docTemplate = `{
                 "report_date": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
-                },
                 "task_id": {
                     "type": "string"
                 },
@@ -6558,6 +6617,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.RestoreUserRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
                     "type": "string"
                 }
             }
@@ -6666,7 +6733,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "category": {
-                    "type": "boolean"
+                    "type": "integer"
                 },
                 "deadline": {
                     "type": "string"
@@ -6801,9 +6868,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 }
             }
@@ -7517,9 +7581,6 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
-                },
                 "updated_at": {
                     "type": "string"
                 }
@@ -7652,9 +7713,6 @@ const docTemplate = `{
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 },
                 "task_id": {

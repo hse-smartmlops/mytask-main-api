@@ -60,33 +60,33 @@ func getAllBoards(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var total int64
-	if err := dbConn.Model(&models.Board{}).Where("deleted = ?", false).Count(&total).Error; err != nil {
+	if err := dbConn.Model(&models.Board{}).Session(&gorm.Session{}).Where("deleted = ?", false).Count(&total).Error; err != nil {
 		log.Printf("DB error (count boards): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте досок"})
 	}
 
 	var boards []models.Board
-	if err := dbConn.Where("deleted = ?", false).Limit(pageSize).Offset(offset).Find(&boards).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Board{}).Where("deleted = ?", false).Limit(pageSize).Offset(offset).Find(&boards).Error; err != nil {
 		log.Printf("DB error (find boards): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении досок"})
 	}
 
-	// Собираем все board IDs
 	boardIDs := make([]uuid.UUID, 0, len(boards))
 	for _, b := range boards {
 		boardIDs = append(boardIDs, b.ID)
 	}
 
-	// Подгружаем все StatusBoard с Status для этих досок одним запросом
 	var statusBoards []models.StatusBoard
-	if err := dbConn.Preload("Status", "deleted = ?", false).Session(&gorm.Session{}).
-		Where("board_id IN (?) AND deleted = ?", boardIDs, false).
-		Find(&statusBoards).Error; err != nil {
-		log.Printf("DB error (find statusBoards): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов"})
+	if len(boardIDs) > 0 {
+    if err := dbConn.Model(&models.StatusBoard{}).Session(&gorm.Session{}).
+        Preload("Status", "deleted = ?", false).
+        Where("board_id IN ?", boardIDs). 
+        Find(&statusBoards).Error; err != nil {
+        log.Printf("DB error (find statusBoards): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов"})
+    	}
 	}
 
-	// Группируем статус по boardID
 	statusMap := make(map[uuid.UUID][]response.StatusResponse)
 	for _, sb := range statusBoards {
 		if sb.Status != nil {
@@ -155,7 +155,7 @@ func getBoardById(c echo.Context) error {
 	}
 
 	var board models.Board
-	result := dbConn.Session(&gorm.Session{}).First(&board, "id = ? and deleted = ?", boardId, false)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Board{}).First(&board, "id = ? and deleted = ?", boardId, false)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -185,7 +185,7 @@ func getBoardById(c echo.Context) error {
 
 	// Fetch all StatusBoard entries with preloaded Status in one query
     var statusBoards []models.StatusBoard
-    if err := dbConn.
+    if err := dbConn.Model(models.StatusBoard{}).
         Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
         Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
         Find(&statusBoards).Error; err != nil {
@@ -244,7 +244,7 @@ func getBoardByProjectId(c echo.Context) error {
 
 	// Загружаем доски проекта с предзагрузкой статусов
 	var boards []models.Board
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Board{}).
 		Preload("StatusBoards", "deleted = ?", false).
 		Preload("StatusBoards.Status", "deleted = ?", false).
 		Where("project_id = ? AND deleted = ?", projectUUID, false).
@@ -347,7 +347,7 @@ func createBoard(c echo.Context) error {
 
 	// create inside a transaction
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Create(&board)
+		res := tx.Session(&gorm.Session{}).Model(models.Board{}).Create(&board)
 		if res.Error != nil {
 			log.Printf("DB error (create board): %v", res.Error)
 			return res.Error
@@ -422,7 +422,7 @@ func updateBoard(c echo.Context) error {
 
 	// update inside a transaction
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Board{}).Where("id = ? AND deleted = ?", boardId, false).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Board{}).Where("id = ? AND deleted = ?", boardId, false).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update board): %v", res.Error)
 			return res.Error
@@ -467,7 +467,7 @@ func deleteBoard(c echo.Context) error {
 	updateData["updated_at"] = time.Now()
 	// logical delete inside a transaction
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Board{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Board{}).Where("id = ?", id).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete board): %v", res.Error)
 			return res.Error
@@ -475,7 +475,7 @@ func deleteBoard(c echo.Context) error {
 		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		if res = tx.Model(models.StatusBoard{}).Where("board_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.StatusBoard{}).Where("board_id = ?", id).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete status_board): %v", res.Error)
 			return res.Error
 		}
