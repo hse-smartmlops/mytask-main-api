@@ -250,7 +250,7 @@ type Subscription struct {
 }
 
 type Status struct {
-	ID        *uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Key       *string    `gorm:"type:varchar(8);uniqueIndex"`
 	Name      *string    `gorm:"type:varchar(50)"`
 	Color     *string    `gorm:"type:varchar(16)"`

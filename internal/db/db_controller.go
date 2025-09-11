@@ -1,12 +1,10 @@
 package db
 
 import (
-	"database/sql"
+	models "emplacc-api/internal/domain"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -58,30 +56,18 @@ func getDBConnection() *gorm.DB {
 	sqlDB.SetMaxIdleConns(10)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// инициализация через init.sql
-	initSQL(sqlDB)
+	if err := db.AutoMigrate(
+		&models.User{}, &models.Role{}, &models.UserRole{},
+		&models.Project{}, &models.Board{}, &models.Task{},
+		&models.Team{}, &models.TeamMember{}, &models.ProjectTeam{},
+		&models.Attendance{}, &models.DailyReport{},
+		&models.Problem{}, &models.ForumMessage{}, &models.ReportProblem{},
+		&models.HelpRequest{}, &models.CompletedWork{}, &models.TomorrowPlans{},
+		&models.Subscription{},
+		&models.Status{}, &models.StatusBoard{}, &models.StatusTask{},
+	); err != nil {
+		log.Fatal("AutoMigrate failed:", err)
+	}
 
 	return db
-}
-
-func initSQL(db *sql.DB) {
-	script, err := ioutil.ReadFile("init.sql") // файл лежит рядом с бинарником
-	if err != nil {
-		log.Fatalf("Ошибка чтения init.sql: %v", err)
-	}
-
-	// разбиваем по `;`, чтобы выполнить по отдельности
-	queries := strings.Split(string(script), ";")
-	for _, q := range queries {
-		q = strings.TrimSpace(q)
-		if q == "" {
-			continue
-		}
-		_, err := db.Exec(q)
-		if err != nil {
-			log.Fatalf("Ошибка выполнения запроса [%s]: %v", q, err)
-		}
-	}
-
-	log.Println("init.sql успешно выполнен")
 }
