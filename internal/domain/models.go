@@ -156,6 +156,7 @@ type DailyReport struct {
 	User          *User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
 	TaskID        *uuid.UUID `gorm:"type:uuid;index"`
 	Task          *Task      `gorm:"foreignKey:TaskID;references:ID"`
+	Checked       *int8	 `gorm:"type:int8"`
 	ReportDate    *time.Time `gorm:"type:date"`
 	CreatedAt     *time.Time `gorm:"type:date"`
 	UpdatedAt     *time.Time `gorm:"type:date"`
@@ -250,7 +251,7 @@ type Subscription struct {
 }
 
 type Status struct {
-	ID        *uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4();primaryKey"`
+	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Key       *string    `gorm:"type:varchar(8);uniqueIndex"`
 	Name      *string    `gorm:"type:varchar(50)"`
 	Color     *string    `gorm:"type:varchar(16)"`

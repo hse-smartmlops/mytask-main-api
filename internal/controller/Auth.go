@@ -403,8 +403,8 @@ func refreshToken(c echo.Context) error {
     newTokens := response.RefreshResponse{
         AccessToken:  token.AccessToken,
         RefreshToken: token.RefreshToken,
-        ExpiresIn:    300,
-        RefreshExp:   1800,
+        ExpiresIn:    token.ExpiresIn,
+        RefreshExp:   token.RefreshExpiresIn,
         TokenType:    "Bearer",
         ExpiresAt:    now.Add(time.Duration(300) * time.Second),
     }

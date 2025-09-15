@@ -6613,6 +6613,9 @@ const docTemplate = `{
         "request.ReportUpdateRequest": {
             "type": "object",
             "properties": {
+                "checked": {
+                    "type": "integer"
+                },
                 "report_date": {
                     "type": "string"
                 },
@@ -7685,6 +7688,9 @@ const docTemplate = `{
         "response.ReportResponse": {
             "type": "object",
             "properties": {
+                "checked": {
+                    "type": "integer"
+                },
                 "completed_work": {
                     "type": "array",
                     "items": {
