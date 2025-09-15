@@ -20,6 +20,7 @@ type ReportResponse struct {
 	CreatedAt     time.Time         `json:"created_at"`
 	UpdatedAt     time.Time         `json:"updated_at"`
 	UserInfo      UserShort         `json:"user_info"`
+	Checked	   	int8           `json:"checked"`
 	Problems      []ProblemResponse `json:"problem"`
 }
 

@@ -170,6 +170,7 @@ func getAllReports(c echo.Context) error {
 			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
+			Checked: 	utils.GetInt8(report.Checked),
 		}
 
 		reportList.Reports = append(reportList.Reports, resp)
@@ -291,6 +292,7 @@ func getReport(c echo.Context) error {
 		UpdatedAt:     utils.GetTime(report.UpdatedAt),
 		UserInfo:      userInfo,
 		Problems:      problemsResp,
+		Checked: 	utils.GetInt8(report.Checked),
 	}
 
 	return c.JSON(http.StatusOK, resp)
@@ -407,6 +409,7 @@ func getReportsByTaskId(c echo.Context) error {
 			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
+			Checked: 	utils.GetInt8(report.Checked),
 		}
 
 		reportList.Reports = append(reportList.Reports, resp)
@@ -524,6 +527,7 @@ func getReportsByProjectId(c echo.Context) error {
 			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
+			Checked: 	utils.GetInt8(report.Checked),
 		})
 	}
 
@@ -581,6 +585,8 @@ func createReport(c echo.Context) error {
 
 	del := false
 
+	var zero int8 = 0
+
 	report := models.DailyReport{
 		ID:         newUUID,
 		UserID:     userId,
@@ -588,6 +594,7 @@ func createReport(c echo.Context) error {
 		ReportDate: req.ReportDate,
 		CreatedAt:  &now,
 		Deleted: &del,
+		Checked:  &zero,
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Create(&report)
@@ -745,6 +752,9 @@ func updateReport(c echo.Context) error {
 	}
 	if req.ReportDate != nil{
 		updateData["report_date"] = *req.ReportDate
+	}
+	if req.Checked != nil{
+		updateData["checked"] = *req.Checked
 	}
 	updateData["updated_at"] = time.Now()
 

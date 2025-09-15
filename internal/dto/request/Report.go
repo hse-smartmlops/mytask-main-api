@@ -28,6 +28,7 @@ type ReportCreateRequest struct {
 type ReportUpdateRequest struct {
 	UserId     *string    `json:"user_id"`
 	ReportDate *time.Time `json:"report_date"`
+	Checked	*int8      `json:"checked"`
 }
 
 type HelpRequestUpdateRequest struct{
