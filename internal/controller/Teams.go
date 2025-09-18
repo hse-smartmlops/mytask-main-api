@@ -50,11 +50,11 @@ func getTeams(c echo.Context) error {
 		return err
 	}
 
-	// Загружаем команды вместе с участниками и пользователями
 	var teams []models.Team
 	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).
-		Preload("TeamMembers.User").
-		Where("deleted = ?", false).
+		Preload("TeamMembers", "deleted = FALSE").
+		Preload("TeamMembers.User", "deleted = FALSE").
+		Where("deleted = FALSE").
 		Find(&teams).Error; err != nil {
 		log.Printf("DB error (find teams with preload): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -66,15 +66,14 @@ func getTeams(c echo.Context) error {
 	for _, team := range teams {
 		members := make([]response.TeamMemberResponse, 0, len(team.TeamMembers))
 		for _, tm := range team.TeamMembers {
+			// уже фильтруется в Preload, проверка остаётся на всякий
 			if tm.Deleted != nil && *tm.Deleted {
 				continue
 			}
 			if tm.User == nil || (tm.User.Deleted != nil && *tm.User.Deleted) {
 				continue
 			}
-
 			user := tm.User
-
 			members = append(members, response.TeamMemberResponse{
 				UserID:         user.ID.String(),
 				Specialization: utils.GetString(user.Profession),
@@ -89,7 +88,7 @@ func getTeams(c echo.Context) error {
 			Name:        utils.GetString(team.Name),
 			Description: utils.GetString(team.Description),
 			UpdatedAt:   utils.GetTime(team.UpdatedAt),
-			CreatedAt: utils.GetTime(team.CreatedAt),
+			CreatedAt:   utils.GetTime(team.CreatedAt),
 			Members:     members,
 		})
 	}
@@ -124,11 +123,10 @@ func getProjectTeams(c echo.Context) error {
 		})
 	}
 
-	// Получаем связи проект-команда
 	var projectTeams []models.ProjectTeam
 	if err := dbConn.
 		Session(&gorm.Session{}).Model(models.ProjectTeam{}).
-		Where("project_id = ? AND deleted = ?", projectID, false).
+		Where("project_id = ? AND deleted = FALSE", projectID).
 		Find(&projectTeams).Error; err != nil {
 		log.Printf("DB error (find projectTeams): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -142,17 +140,15 @@ func getProjectTeams(c echo.Context) error {
 		})
 	}
 
-	// Собираем teamIDs
 	teamIDs := make([]uuid.UUID, 0, len(projectTeams))
 	for _, pt := range projectTeams {
 		teamIDs = append(teamIDs, pt.TeamID)
 	}
 
-	// Получаем команды
 	var teams []models.Team
 	if err := dbConn.Model(models.Team{}).
 		Session(&gorm.Session{}).
-		Where("id IN ? AND deleted = ?", teamIDs, false).
+		Where("id IN ? AND deleted = FALSE", teamIDs).
 		Find(&teams).Error; err != nil {
 		log.Printf("DB error (find teams): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -160,11 +156,10 @@ func getProjectTeams(c echo.Context) error {
 		})
 	}
 
-	// Получаем участников команд
 	var teamMembers []models.TeamMember
 	if err := dbConn.Model(models.TeamMember{}).
 		Session(&gorm.Session{}).
-		Where("team_id IN ? AND deleted = ?", teamIDs, false).
+		Where("team_id IN ? AND deleted = FALSE", teamIDs).
 		Find(&teamMembers).Error; err != nil {
 		log.Printf("DB error (find team members): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -172,19 +167,17 @@ func getProjectTeams(c echo.Context) error {
 		})
 	}
 
-	// Собираем userIDs
 	userIDs := make([]uuid.UUID, 0, len(teamMembers))
 	for _, tm := range teamMembers {
 		userIDs = append(userIDs, tm.UserID)
 	}
 
-	// Загружаем пользователей
 	var users []models.User
 	if len(userIDs) > 0 {
 		if err := dbConn.Model(models.User{}).
 			Session(&gorm.Session{}).
 			Select("id, profession, first_name, last_name, email").
-			Where("id IN ? AND deleted = ?", userIDs, false).
+			Where("id IN ? AND deleted = FALSE", userIDs).
 			Find(&users).Error; err != nil {
 			log.Printf("DB error (find users): %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -198,7 +191,6 @@ func getProjectTeams(c echo.Context) error {
 		userMap[u.ID] = u
 	}
 
-	// Формируем ответ
 	teamInfo := make(map[uuid.UUID]response.TeamResponse, len(teams))
 	for _, team := range teams {
 		teamInfo[team.ID] = response.TeamResponse{
@@ -206,7 +198,7 @@ func getProjectTeams(c echo.Context) error {
 			Name:        utils.GetString(team.Name),
 			Description: utils.GetString(team.Description),
 			UpdatedAt:   utils.GetTime(team.UpdatedAt),
-			CreatedAt: utils.GetTime(team.CreatedAt),
+			CreatedAt:   utils.GetTime(team.CreatedAt),
 		}
 	}
 
@@ -224,7 +216,6 @@ func getProjectTeams(c echo.Context) error {
 		}
 	}
 
-	// Итоговый список
 	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0, len(teams))}
 	for id, info := range teamInfo {
 		info.Members = teamAndMembers[id]
@@ -233,8 +224,6 @@ func getProjectTeams(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, teamListResponse)
 }
-
-
 
 // getTeamByID godoc
 // @Summary Получение команды по ID
@@ -261,35 +250,28 @@ func getTeamByID(c echo.Context) error {
 	}
 
 	var team models.Team
-	result := dbConn.Session(&gorm.Session{}).Model(models.Team{}).First(&team, "id = ?", teamUUID)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).
+		Where("id = ? AND deleted = FALSE", teamUUID).
+		First(&team).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Команда не найдена"})
 		}
-		log.Printf("DB error (get team): %v", result.Error)
+		log.Printf("DB error (get team): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении данных команды",
 		})
 	}
 
-	if team.Deleted != nil {
-		if *team.Deleted {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"message": "Команда не найдена",
-			})
-		}
-	}
-
 	var teamMembers []models.TeamMember
-	resultTM := dbConn.Session(&gorm.Session{}).Model(models.TeamMember{}).Where("team_id = ? AND deleted = ?", teamUUID, false).Find(&teamMembers)
-	if resultTM.Error != nil {
-		log.Printf("DB error (get team members): %v", resultTM.Error)
+	if err := dbConn.Session(&gorm.Session{}).Model(models.TeamMember{}).
+		Where("team_id = ? AND deleted = FALSE", teamUUID).
+		Find(&teamMembers).Error; err != nil {
+		log.Printf("DB error (get team members): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении участников команды",
 		})
 	}
 
-	// Получаем пользователей одним запросом
 	userIDs := make([]uuid.UUID, 0, len(teamMembers))
 	for _, tm := range teamMembers {
 		userIDs = append(userIDs, tm.UserID)
@@ -297,21 +279,20 @@ func getTeamByID(c echo.Context) error {
 
 	var members []models.User
 	if len(userIDs) > 0 {
-		err = dbConn.Session(&gorm.Session{}).Model(models.User{}).Select("id, profession, first_name, last_name, email").
-			Where("id IN (?) AND deleted = ?", userIDs, false).
+		err = dbConn.Session(&gorm.Session{}).Model(models.User{}).
+			Select("id, profession, first_name, last_name, email").
+			Where("id IN (?) AND deleted = FALSE", userIDs).
 			Find(&members).Error
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, err)
 		}
 	}
 
-	// Преобразуем в map для быстрого доступа
 	memberMap := make(map[uuid.UUID]models.User, len(members))
 	for _, m := range members {
 		memberMap[m.ID] = m
 	}
 
-	// Формируем список участников ответа
 	membersResp := make([]response.TeamMemberResponse, 0, len(teamMembers))
 	for _, tm := range teamMembers {
 		user := memberMap[tm.UserID]
@@ -324,14 +305,13 @@ func getTeamByID(c echo.Context) error {
 		})
 	}
 
-	// Формируем итоговый ответ
 	teamResponse := response.TeamResponse{
 		ID:          team.ID.String(),
 		Name:        utils.GetString(team.Name),
 		Description: utils.GetString(team.Description),
 		UpdatedAt:   utils.GetTime(team.UpdatedAt),
-		CreatedAt: utils.GetTime(team.CreatedAt),
-		Members: membersResp,
+		CreatedAt:   utils.GetTime(team.CreatedAt),
+		Members:     membersResp,
 	}
 
 	return c.JSON(http.StatusOK, teamResponse)
@@ -366,21 +346,20 @@ func createTeam(c echo.Context) error {
 	if req.Name != "" {
 		name = &req.Name
 	}
-
 	var description *string
 	if req.Description != "" {
 		description = &req.Description
 	}
 
 	del := false
-
 	now := time.Now()
 
 	team := models.Team{
-		ID: newUUID, 
-		Name: name, 
-		Description: description, 
-		Deleted: &del, CreatedAt: &now,
+		ID:          newUUID,
+		Name:        name,
+		Description: description,
+		Deleted:     &del,
+		CreatedAt:   &now,
 	}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Session(&gorm.Session{}).Model(models.Team{}).Omit(clause.Associations).Create(&team); res.Error != nil {
@@ -424,7 +403,7 @@ func updateTeam(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор команды"})
 	}
-	// Привязка данных запроса
+
 	var req request.TeamUpdateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -433,7 +412,6 @@ func updateTeam(c echo.Context) error {
 		})
 	}
 
-	// Формируем карту только для указанных полей
 	updateData := make(map[string]interface{})
 	if req.Name != nil {
 		updateData["name"] = *req.Name
@@ -441,34 +419,32 @@ func updateTeam(c echo.Context) error {
 	if req.Description != nil {
 		updateData["description"] = *req.Description
 	}
-
-	// Проверяем, есть ли поля для обновления
 	if len(updateData) == 0 {
 		log.Printf("No fields provided for update")
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Не указаны поля для обновления",
 		})
 	}
-
 	updateData["updated_at"] = time.Now()
 
-	// Проверка существования команды
+	// существует и не удалена
 	var team models.Team
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ? AND deleted = ?", teamUUID, false).First(&team).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).
+		Where("id = ? AND deleted = FALSE", teamUUID).
+		First(&team).Error; err != nil {
 		log.Printf("Team not found: %v", err)
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "Команда не найдена",
 		})
 	}
 
-	// Выполняем обновление только указанных полей
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).Model(&models.Team{}).Where("id = ?", teamUUID).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update team): %v", res.Error)
 			return res.Error
 		}
-		if res.RowsAffected == 0{
+		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
@@ -477,7 +453,6 @@ func updateTeam(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении команды"})
 	}
 
-	// Формируем ответ
 	updateResponse := response.TeamUniversalResponse{
 		ID:      teamIDParam,
 		Message: "Команда обновлена",
@@ -504,8 +479,8 @@ func deleteTeam(c echo.Context) error {
 		return err
 	}
 	teamIDParam := c.Param("id")
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
+	updateData := map[string]interface{}{"deleted": true}
+
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
 		if res.Error != nil {
@@ -520,7 +495,6 @@ func deleteTeam(c echo.Context) error {
 			log.Printf("DB error (delete team_member connections): %v", res.Error)
 			return res.Error
 		}
-
 		if res = tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Where("team_id = ?", teamIDParam).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete project_team connections): %v", res.Error)
 			return res.Error
@@ -568,7 +542,10 @@ func addUserToTeam(c echo.Context) error {
 	}
 
 	var user models.User
-	if err := dbConn.Session(&gorm.Session{}).Model(models.User{}).Select("id, profession").Where("id = ? AND deleted = ?", req.UserID, false).First(&user).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.User{}).
+		Select("id, profession").
+		Where("id = ? AND deleted = FALSE", req.UserID).
+		First(&user).Error; err != nil {
 		log.Printf("DB error (select profession): %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Ошибка при получении данных пользователя",
@@ -576,7 +553,9 @@ func addUserToTeam(c echo.Context) error {
 	}
 
 	var team models.Team
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ? AND deleted = ?", req.TeamID, false).First(&team).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).
+		Where("id = ? AND deleted = FALSE", req.TeamID).
+		First(&team).Error; err != nil {
 		log.Printf("DB error (select team): %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Ошибка при получении команды",
@@ -584,12 +563,11 @@ func addUserToTeam(c echo.Context) error {
 	}
 
 	del := false
-
 	teamMember := models.TeamMember{
 		UserID:         user.ID,
 		TeamID:         team.ID,
 		Specialization: user.Profession,
-		Deleted: &del,
+		Deleted:        &del,
 	}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).Create(&teamMember); res.Error != nil {
@@ -638,7 +616,9 @@ func deleteUserFromTeam(c echo.Context) error {
 	}
 
 	var team models.Team
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ? AND deleted = ?", req.TeamID, false).First(&team).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).
+		Where("id = ? AND deleted = FALSE", req.TeamID).
+		First(&team).Error; err != nil {
 		log.Printf("DB error (select team): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении команды",
@@ -646,16 +626,19 @@ func deleteUserFromTeam(c echo.Context) error {
 	}
 
 	var user models.User
-	if err := dbConn.Session(&gorm.Session{}).Model(models.User{}).Where("id = ? AND deleted = ?", req.UserID, false).First(&user).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.User{}).
+		Where("id = ? AND deleted = FALSE", req.UserID).
+		First(&user).Error; err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении пользователя",
 		})
 	}
 
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
+	updateData := map[string]interface{}{"deleted": true}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).Where("user_id = ? AND team_id = ?", user.ID, team.ID).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).
+			Where("user_id = ? AND team_id = ?", user.ID, team.ID).
+			Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete team member): %v", res.Error)
 			return res.Error
@@ -707,7 +690,9 @@ func addProjectToTeam(c echo.Context) error {
 	}
 
 	var team models.Team
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ? AND deleted = ?", req.TeamID, false).First(&team).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Team{}).
+		Where("id = ? AND deleted = FALSE", req.TeamID).
+		First(&team).Error; err != nil {
 		log.Printf("DB error (select team): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении команды",
@@ -715,7 +700,9 @@ func addProjectToTeam(c echo.Context) error {
 	}
 
 	var project models.Project
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Project{}).Where("id = ? AND deleted = ?", req.ProjectID, false).First(&project).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Project{}).
+		Where("id = ? AND deleted = FALSE", req.ProjectID).
+		First(&project).Error; err != nil {
 		log.Printf("DB error (select project): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении проекта",
@@ -723,11 +710,10 @@ func addProjectToTeam(c echo.Context) error {
 	}
 
 	del := false
-
 	projectTeam := models.ProjectTeam{
 		ProjectID: project.ID,
 		TeamID:    team.ID,
-		Deleted: &del,
+		Deleted:   &del,
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
@@ -791,12 +777,15 @@ func deleteProjectFromTeam(c echo.Context) error {
 		})
 	}
 
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
-	updateData["updated_at"] = time.Now()
+	updateData := map[string]interface{}{
+		"deleted":    true,
+		"updated_at": time.Now(),
+	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Where("team_id = ? AND project_id = ?", teamID, projectID).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).
+			Where("team_id = ? AND project_id = ?", teamID, projectID).
+			Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete project from team): %v", res.Error)
 			return res.Error

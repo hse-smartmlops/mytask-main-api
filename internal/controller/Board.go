@@ -19,7 +19,6 @@ import (
 
 func RegisterBoardRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/boards")
-	// apply Keycloak auth middleware to all board routes
 	projectGroup.Use(KeycloakAuthMiddleware)
 	{
 		projectGroup.GET("/all/:page/:pagesize", getAllBoards)
@@ -61,13 +60,21 @@ func getAllBoards(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var total int64
-	if err := dbConn.Model(&models.Board{}).Session(&gorm.Session{}).Where("deleted = ?", false).Count(&total).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Board{}).
+		Where("deleted = FALSE").
+		Count(&total).Error; err != nil {
 		log.Printf("DB error (count boards): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте досок"})
 	}
 
 	var boards []models.Board
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Board{}).Where("deleted = ?", false).Limit(pageSize).Offset(offset).Find(&boards).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Board{}).
+		Where("deleted = FALSE").
+		Order("created_at DESC NULLS LAST").
+		Limit(pageSize).Offset(offset).
+		Find(&boards).Error; err != nil {
 		log.Printf("DB error (find boards): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении досок"})
 	}
@@ -79,20 +86,20 @@ func getAllBoards(c echo.Context) error {
 
 	var statusBoards []models.StatusBoard
 	if len(boardIDs) > 0 {
-    if err := dbConn.Model(&models.StatusBoard{}).Session(&gorm.Session{}).
-        Preload("Status", "deleted = ?", false).
-        Where("board_id IN ?", boardIDs). 
-        Find(&statusBoards).Error; err != nil {
-        log.Printf("DB error (find statusBoards): %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов"})
-    	}
+		if err := dbConn.Session(&gorm.Session{}).
+			Model(&models.StatusBoard{}).
+			Preload("Status", "deleted = FALSE").
+			Where("deleted = FALSE AND board_id IN ?", boardIDs).
+			Find(&statusBoards).Error; err != nil {
+			log.Printf("DB error (find statusBoards): %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов"})
+		}
 	}
 
 	statusMap := make(map[uuid.UUID][]response.StatusResponse)
 	for _, sb := range statusBoards {
 		if sb.Status != nil {
-			boardID := sb.BoardID 
-			statusMap[boardID] = append(statusMap[boardID], response.StatusResponse{
+			statusMap[sb.BoardID] = append(statusMap[sb.BoardID], response.StatusResponse{
 				ID:        sb.Status.ID.String(),
 				Key:       utils.GetString(sb.Status.Key),
 				Name:      utils.GetString(sb.Status.Name),
@@ -123,7 +130,6 @@ func getAllBoards(c echo.Context) error {
 			Statuses:    statusMap[board.ID],
 		})
 	}
-
 	return c.JSON(http.StatusOK, boardList)
 }
 
@@ -146,33 +152,22 @@ func getBoardById(c echo.Context) error {
 		return err
 	}
 
-	id := c.Param("id")
-	boardId, err := uuid.Parse(id)
+	boardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор доски"})
 	}
 
 	var board models.Board
-	result := dbConn.Session(&gorm.Session{}).Model(models.Board{}).First(&board, "id = ? and deleted = ?", boardId, false)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Доска не найден",
-			})
+	res := dbConn.Session(&gorm.Session{}).
+		Model(&models.Board{}).
+		First(&board, "id = ? AND deleted = FALSE", boardID)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Доска не найдена"})
 		}
-		log.Printf("DB error (find project by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении доски из базы данных",
-		})
-	}
-
-	if result.RowsAffected == 0{
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Доска не найдена",
-		})
+		log.Printf("DB error (find board by id): %v", res.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении доски"})
 	}
 
 	boardResponse := response.BoardResponse{
@@ -181,24 +176,21 @@ func getBoardById(c echo.Context) error {
 		Name:        utils.GetString(board.Name),
 		Description: utils.GetString(board.Description),
 		UpdatedAt:   utils.GetTime(board.UpdatedAt),
-		CreatedAt: utils.GetTime(board.CreatedAt),
+		CreatedAt:   utils.GetTime(board.CreatedAt),
 	}
 
-	// Fetch all StatusBoard entries with preloaded Status in one query
-    var statusBoards []models.StatusBoard
-    if err := dbConn.Model(models.StatusBoard{}).
-        Preload("Status",    "deleted = ?", false).Session(&gorm.Session{}).
-        Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
-        Find(&statusBoards).Error; err != nil {
-        log.Printf("failed to get statuses for board %s: %v", boardId, err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{
-            "error": "Ошибка при получении статусов для доски",
-        })
-    }
-
-    for _, sb := range statusBoards {
-        if sb.Status != nil {
-            boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
+	var statusBoards []models.StatusBoard
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.StatusBoard{}).
+		Preload("Status", "deleted = FALSE").
+		Where("deleted = FALSE AND board_id = ?", board.ID).
+		Find(&statusBoards).Error; err != nil {
+		log.Printf("DB error (statuses for board %s): %v", boardID, err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов для доски"})
+	}
+	for _, sb := range statusBoards {
+		if sb.Status != nil {
+			boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
 				ID:        sb.Status.ID.String(),
 				Key:       utils.GetString(sb.Status.Key),
 				Name:      utils.GetString(sb.Status.Name),
@@ -208,10 +200,9 @@ func getBoardById(c echo.Context) error {
 				IsOpen:    utils.GetBool(sb.Status.IsOpen),
 				CreatedAt: utils.GetTime(sb.Status.CreatedAt),
 				UpdatedAt: utils.GetTime(sb.Status.UpdatedAt),
-            })
-        }
-    }
-
+			})
+		}
+	}
 	return c.JSON(http.StatusOK, boardResponse)
 }
 
@@ -234,34 +225,27 @@ func getBoardByProjectId(c echo.Context) error {
 		return err
 	}
 
-	projectID := c.Param("projectId")
-	projectUUID, err := uuid.Parse(projectID)
+	projectUUID, err := uuid.Parse(c.Param("projectId"))
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
 	}
 
-	// Загружаем доски проекта с предзагрузкой статусов
 	var boards []models.Board
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Board{}).
-		Preload("StatusBoards", "deleted = ?", false).
-		Preload("StatusBoards.Status", "deleted = ?", false).
-		Where("project_id = ? AND deleted = ?", projectUUID, false).
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Board{}).
+		Preload("StatusBoards", "deleted = FALSE").
+		Preload("StatusBoards.Status", "deleted = FALSE").
+		Where("project_id = ? AND deleted = FALSE", projectUUID).
+		Order("created_at DESC NULLS LAST").
 		Find(&boards).Error; err != nil {
 		log.Printf("DB error (find boards by project id): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении досок из базы данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении досок"})
 	}
 
-	projectResponse := response.BoardForProjectResponse{
-		ProjectId: projectID,
-	}
-
+	projectResponse := response.BoardForProjectResponse{ProjectId: projectUUID.String()}
 	for _, board := range boards {
-		boardResponse := response.BoardResponse{
+		br := response.BoardResponse{
 			Id:          board.ID.String(),
 			ProjectId:   board.ProjectID.String(),
 			Name:        utils.GetString(board.Name),
@@ -269,11 +253,9 @@ func getBoardByProjectId(c echo.Context) error {
 			CreatedAt:   utils.GetTime(board.CreatedAt),
 			UpdatedAt:   utils.GetTime(board.UpdatedAt),
 		}
-
-		// Добавляем статусы из предзагрузки
 		for _, sb := range board.StatusBoards {
 			if sb.Status != nil {
-				boardResponse.Statuses = append(boardResponse.Statuses, response.StatusResponse{
+				br.Statuses = append(br.Statuses, response.StatusResponse{
 					ID:        sb.Status.ID.String(),
 					Key:       utils.GetString(sb.Status.Key),
 					Name:      utils.GetString(sb.Status.Name),
@@ -286,10 +268,8 @@ func getBoardByProjectId(c echo.Context) error {
 				})
 			}
 		}
-
-		projectResponse.Boards = append(projectResponse.Boards, boardResponse)
+		projectResponse.Boards = append(projectResponse.Boards, br)
 	}
-
 	return c.JSON(http.StatusOK, projectResponse)
 }
 
@@ -314,41 +294,36 @@ func createBoard(c echo.Context) error {
 	var req request.BoardCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	newUUID := uuid.New()
-
-	var projectId uuid.UUID
+	var projectID uuid.UUID
 	if req.ProjectID != nil {
-		projectID, err := uuid.Parse(*req.ProjectID)
-		projectId = projectID
+		parsed, err := uuid.Parse(*req.ProjectID)
 		if err != nil {
-			log.Printf("UUID parse error: %v", err)
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"error": "Некорректный идентификатор проекта",
-			})
+			log.Printf("UUID parse error (project_id): %v", err)
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
 		}
+		projectID = parsed
 	}
-
-	del := false
 
 	now := time.Now()
+	del := false
 
 	board := models.Board{
-		ID:          newUUID,
+		ID:          uuid.New(),
+		ProjectID:   projectID,
 		Name:        req.Name,
 		Description: req.Description,
-		ProjectID:   projectId,
-		Deleted: 		&del,
-		CreatedAt: &now,
+		Deleted:     &del,
+		CreatedAt:   &now,
 	}
 
-	// create inside a transaction
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Board{}).Omit(clause.Associations).Create(&board)
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Board{}).
+			Omit(clause.Associations).
+			Create(&board)
 		if res.Error != nil {
 			log.Printf("DB error (create board): %v", res.Error)
 			return res.Error
@@ -359,11 +334,10 @@ func createBoard(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании доски"})
 	}
 
-	createResponse := response.BoardUniversalResponse{
-		Id:      newUUID.String(),
+	return c.JSON(http.StatusCreated, response.BoardUniversalResponse{
+		Id:      board.ID.String(),
 		Message: "Доска успешно создана",
-	}
-	return c.JSON(http.StatusCreated, createResponse)
+	})
 }
 
 // updateBoard godoc
@@ -385,45 +359,39 @@ func updateBoard(c echo.Context) error {
 		return err
 	}
 
-	id := c.Param("id")
-	boardId, err := uuid.Parse(id)
+	boardID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор доски",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор доски"})
 	}
 
 	var req request.BoardUpdateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := make(map[string]interface{})
+	updateData := make(map[string]any)
 	if req.Name != nil {
-    	updateData["name"] = req.Name
+		updateData["name"] = req.Name
 	}
-	if req.Description != nil{
+	if req.Description != nil {
 		updateData["description"] = req.Description
 	}
-	if req.Filter != nil{
-		updateData["filter"] = req.Filter
-	}
+	// В модели Board нет поля filter — не апдейтим его.
 
 	if len(updateData) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не указаны поля для обновления",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
 	}
 
-	updateData["updated_at"] = time.Now()
+	now := time.Now()
+	updateData["updated_at"] = &now
 
-	// update inside a transaction
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Board{}).Where("id = ? AND deleted = ?", boardId, false).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Board{}).
+			Where("id = ? AND deleted = FALSE", boardID).
+			Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (update board): %v", res.Error)
 			return res.Error
@@ -437,11 +405,10 @@ func updateBoard(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении доски"})
 	}
 
-	updateReponse := response.BoardUniversalResponse{
-		Id:      id,
+	return c.JSON(http.StatusOK, response.BoardUniversalResponse{
+		Id:      boardID.String(),
 		Message: "Доска успешно обновлена",
-	}
-	return c.JSON(http.StatusOK, updateReponse)
+	})
 }
 
 // deleteBoard godoc
@@ -462,21 +429,37 @@ func deleteBoard(c echo.Context) error {
 		return err
 	}
 
-	id := c.Param("id")
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
-	updateData["updated_at"] = time.Now()
-	// logical delete inside a transaction
+	boardID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор доски"})
+	}
+
+	now := time.Now()
+	del := true
+	updateData := map[string]any{
+		"deleted":    &del,
+		"updated_at": &now,
+	}
+
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Board{}).Where("id = ?", id).Updates(updateData)
+		// помечаем саму доску
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Board{}).
+			Where("id = ? AND deleted = FALSE", boardID).
+			Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete board): %v", res.Error)
 			return res.Error
 		}
 		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Доска не найдена или уже удалена"})
 		}
-		if res = tx.Session(&gorm.Session{}).Model(models.StatusBoard{}).Where("board_id = ?", id).Updates(updateData); res.Error != nil {
+		// помечаем связи статусов
+		if res = tx.Session(&gorm.Session{}).
+			Model(&models.StatusBoard{}).
+			Where("board_id = ? AND deleted = FALSE", boardID).
+			Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete status_board): %v", res.Error)
 			return res.Error
 		}
@@ -489,10 +472,8 @@ func deleteBoard(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении доски"})
 	}
 
-	deleteResponse := response.BoardUniversalResponse{
-		Id:      id,
-		Message: "Доска с ID " + id + " удален",
-	}
-
-	return c.JSON(http.StatusOK, deleteResponse)
+	return c.JSON(http.StatusOK, response.BoardUniversalResponse{
+		Id:      boardID.String(),
+		Message: "Доска удалена",
+	})
 }

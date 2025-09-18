@@ -85,9 +85,18 @@ definitions:
       name:
         type: string
     type: object
+  request.CompletedWorkCreateRequest:
+    properties:
+      description:
+        type: string
+      task_id:
+        type: string
+    type: object
   request.CompletedWorkUpdateRequest:
     properties:
       description:
+        type: string
+      task_id:
         type: string
     type: object
   request.CreateForumMessageRequest:
@@ -152,12 +161,16 @@ definitions:
         type: string
       helper_id:
         type: string
+      status:
+        type: string
     type: object
   request.HelpRequestUpdateRequest:
     properties:
       description:
         type: string
       helper_id:
+        type: string
+      status:
         type: string
     type: object
   request.LoginRequest:
@@ -212,11 +225,6 @@ definitions:
           type: string
         type: array
     type: object
-  request.ProjectReport:
-    properties:
-      description:
-        type: string
-    type: object
   request.RefreshRequest:
     properties:
       refresh_token:
@@ -253,21 +261,21 @@ definitions:
     properties:
       complete_work:
         items:
-          $ref: '#/definitions/request.ProjectReport'
+          $ref: '#/definitions/request.CompletedWorkCreateRequest'
         type: array
       help:
-        $ref: '#/definitions/request.HelpRequest'
+        items:
+          $ref: '#/definitions/request.HelpRequest'
+        type: array
       plan_tomorrow:
         items:
-          $ref: '#/definitions/request.ProjectReport'
+          $ref: '#/definitions/request.TomorrowPlanCreateRequest'
         type: array
       problems:
         items:
           $ref: '#/definitions/request.Problem'
         type: array
       report_date:
-        type: string
-      task_id:
         type: string
       user_id:
         type: string
@@ -418,6 +426,11 @@ definitions:
       description:
         type: string
       name:
+        type: string
+    type: object
+  request.TomorrowPlanCreateRequest:
+    properties:
+      description:
         type: string
     type: object
   request.TomorrowPlansUpdateRequest:
@@ -666,6 +679,15 @@ definitions:
       message:
         type: string
     type: object
+  response.CompletedWork:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+    type: object
   response.ForumMessageListByProblemIdResponse:
     properties:
       messages:
@@ -832,6 +854,8 @@ definitions:
         type: string
       id:
         type: string
+      status:
+        type: string
     type: object
   response.ProblemListResponse:
     properties:
@@ -994,25 +1018,25 @@ definitions:
         type: integer
       completed_work:
         items:
-          $ref: '#/definitions/response.WorkItem'
+          $ref: '#/definitions/response.CompletedWork'
         type: array
       created_at:
         type: string
-      help_request:
-        $ref: '#/definitions/response.HelpRequestItem'
+      help_requests:
+        items:
+          $ref: '#/definitions/response.HelpRequestItem'
+        type: array
       id:
         type: string
       plan_tomorrow:
         items:
-          $ref: '#/definitions/response.WorkItem'
+          $ref: '#/definitions/response.TomorrowPlans'
         type: array
       problem:
         items:
           $ref: '#/definitions/response.ProblemResponse'
         type: array
       report_date:
-        type: string
-      task_id:
         type: string
       updated_at:
         type: string
@@ -1270,6 +1294,13 @@ definitions:
         description: '"Token is valid" или описание ошибки'
         type: string
     type: object
+  response.TomorrowPlans:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+    type: object
   response.UserInfo:
     description: Структура с информацией о пользователе из Keycloak
     properties:
@@ -1309,13 +1340,6 @@ definitions:
       id:
         type: string
       message:
-        type: string
-    type: object
-  response.WorkItem:
-    properties:
-      description:
-        type: string
-      id:
         type: string
     type: object
 info:
@@ -4204,7 +4228,7 @@ paths:
       summary: Получение всех подписок
       tags:
       - Subscriptions
-  /subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}:
+  /subscription/sub-object/{id}/{type}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -4223,12 +4247,12 @@ paths:
         type: integer
       - description: UUID объекта подписки
         in: path
-        name: subId
+        name: id
         required: true
         type: string
       - description: Тип объекта подписки
         in: path
-        name: typeId
+        name: type
         required: true
         type: integer
       produces:

@@ -4321,7 +4321,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}": {
+        "/subscription/sub-object/{id}/{type}/{page}/{pagesize}": {
             "get": {
                 "security": [
                     {
@@ -4357,14 +4357,14 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "UUID объекта подписки",
-                        "name": "subId",
+                        "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "integer",
                         "description": "Тип объекта подписки",
-                        "name": "typeId",
+                        "name": "type",
                         "in": "path",
                         "required": true
                     }
@@ -6486,10 +6486,24 @@ const docTemplate = `{
                 }
             }
         },
+        "request.CompletedWorkCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.CompletedWorkUpdateRequest": {
             "type": "object",
             "properties": {
                 "description": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }
@@ -6582,6 +6596,9 @@ const docTemplate = `{
                 },
                 "helper_id": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -6592,6 +6609,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "helper_id": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -6676,14 +6696,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.ProjectReport": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                }
-            }
-        },
         "request.RefreshRequest": {
             "type": "object",
             "required": [
@@ -6738,16 +6750,19 @@ const docTemplate = `{
                 "complete_work": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ProjectReport"
+                        "$ref": "#/definitions/request.CompletedWorkCreateRequest"
                     }
                 },
                 "help": {
-                    "$ref": "#/definitions/request.HelpRequest"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.HelpRequest"
+                    }
                 },
                 "plan_tomorrow": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ProjectReport"
+                        "$ref": "#/definitions/request.TomorrowPlanCreateRequest"
                     }
                 },
                 "problems": {
@@ -6757,9 +6772,6 @@ const docTemplate = `{
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 },
                 "user_id": {
@@ -6985,6 +6997,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.TomorrowPlanCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
                     "type": "string"
                 }
             }
@@ -7365,6 +7385,20 @@ const docTemplate = `{
                 }
             }
         },
+        "response.CompletedWork": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
         "response.ForumMessageListByProblemIdResponse": {
             "type": "object",
             "properties": {
@@ -7620,6 +7654,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -7871,14 +7908,17 @@ const docTemplate = `{
                 "completed_work": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WorkItem"
+                        "$ref": "#/definitions/response.CompletedWork"
                     }
                 },
                 "created_at": {
                     "type": "string"
                 },
-                "help_request": {
-                    "$ref": "#/definitions/response.HelpRequestItem"
+                "help_requests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HelpRequestItem"
+                    }
                 },
                 "id": {
                     "type": "string"
@@ -7886,7 +7926,7 @@ const docTemplate = `{
                 "plan_tomorrow": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WorkItem"
+                        "$ref": "#/definitions/response.TomorrowPlans"
                     }
                 },
                 "problem": {
@@ -7896,9 +7936,6 @@ const docTemplate = `{
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -8296,6 +8333,17 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TomorrowPlans": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "response.UserInfo": {
             "description": "Структура с информацией о пользователе из Keycloak",
             "type": "object",
@@ -8351,17 +8399,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "response.WorkItem": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "id": {
                     "type": "string"
                 }
             }
