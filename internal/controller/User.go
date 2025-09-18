@@ -263,16 +263,44 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		Deleted:       &del,
 	}
 
+	// Логируем входные данные (без чувствительных полей)
+	log.Printf("CreateUserWithIdFunc: start create user id=%s email=%v", user.ID, user.Email)
+
 	if err := dbConn.Transaction(func(tx *gorm.DB) error {
-		return tx.
+		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
+
+		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
+		res := tx.
 			Omit(clause.Associations).
-			Create(&user).Error
+			Create(&user)
+
+		// Лог ошибки, если она есть
+		if res.Error != nil {
+			log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", user.ID, res.Error)
+			// Если доступен Statement — логируем SQL и переменные (поможет диагностике)
+			if res.Statement != nil {
+				log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
+				log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
+			}
+			return res.Error
+		}
+
+		// Успешно создались — логируем результат
+		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d user=%+v", user.ID, res.RowsAffected, user)
+		if res.Statement != nil {
+			log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
+			log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
+		}
+
+		return nil
 	}); err != nil {
 		log.Printf("DB transaction error (create user with id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при создании пользователя",
 		})
 	}
+
+	log.Printf("CreateUserWithIdFunc: finished create user id=%s", user.ID)
 	return nil
 }
 
