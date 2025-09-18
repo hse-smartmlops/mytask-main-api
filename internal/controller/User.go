@@ -226,6 +226,7 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error{
 		LastName:       req.LastName,
 		LastLogin:      req.LastLogin,
 		Deleted: &del,
+		Roles: []models.Role{},
 	}
 
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
@@ -264,6 +265,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		FirstName:      req.FirstName,
 		LastName:       req.LastName,
 		Deleted: &del,
+		Roles: []models.Role{},
 	}
 
 	err := dbConn.Transaction(func(tx *gorm.DB) error {

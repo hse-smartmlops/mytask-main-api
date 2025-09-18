@@ -380,6 +380,8 @@ func createTeam(c echo.Context) error {
 		Name: name, 
 		Description: description, 
 		Deleted: &del, CreatedAt: &now,
+		TeamMembers: []models.TeamMember{},
+		ProjectTeams: []models.ProjectTeam{},
 	}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Session(&gorm.Session{}).Model(models.Team{}).Create(&team); res.Error != nil {
