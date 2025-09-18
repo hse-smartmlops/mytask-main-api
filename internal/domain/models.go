@@ -21,7 +21,7 @@ type User struct {
 	FirstName      *string    `gorm:"size:50"`
 	LastName       *string    `gorm:"size:50"`
 	LastLogin      *time.Time
-	Roles          []Role        `gorm:"many2many:user_roles;joinForeignKey:UserID;JoinReferences:RoleID"`
+	Roles []Role `gorm:"many2many:user_roles;joinForeignKey:UserID;joinReferences:RoleID"`
 	Deleted        *bool         `gorm:"type:boolean"`
 	UpdatedAt      *time.Time `gorm:"type:timestamp"`
 }
@@ -30,7 +30,7 @@ type Role struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name        *string   `gorm:"size:50"`
 	Description *string   `gorm:"size:200"`
-	Users       []User    `gorm:"many2many:user_roles;joinForeignKey:RoleID;JoinReferences:UserID"`
+	Users []User `gorm:"many2many:user_roles;joinForeignKey:RoleID;joinReferences:UserID"`
 	Deleted     *bool     `gorm:"type:boolean"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
@@ -63,7 +63,7 @@ type Project struct {
 	Deleted         *bool         `gorm:"type:boolean"`
 	UpdatedAt       *time.Time    `gorm:"type:timestamp"`
 
-	CreatedByUser  *User `gorm:"foreignKey:CreatedBy"`
+	CreatedByUser *User `gorm:"foreignKey:CreatedBy;references:ID"`
 }
 
 type Board struct {
@@ -90,15 +90,15 @@ type Task struct {
 	StartDate     *time.Time
 	GitlabIssueID *int
 	ProjectID     uuid.UUID  `gorm:"type:uuid;index"`
-	Project       *Project   `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
+	Project       *Project   `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
 	Category      *int8
 	Deleted       *bool `gorm:"type:boolean"`
 	CreatedAt     *time.Time `gorm:"type:timestamp"`
 	UpdatedAt     *time.Time `gorm:"type:timestamp"`
 
 	StatusTasks []StatusTask `gorm:"foreignKey:TaskID"`
-	CreatedByUser  *User `gorm:"foreignKey:CreatedBy"`
-    AssignedToUser *User `gorm:"foreignKey:AssignedTo"`
+	CreatedByUser  *User `gorm:"foreignKey:CreatedBy;references:ID"`
+	AssignedToUser *User `gorm:"foreignKey:AssignedTo;references:ID"`
 }
 
 // ===== Teams =====
@@ -118,8 +118,8 @@ type TeamMember struct {
 	UserID         uuid.UUID `gorm:"type:uuid;primaryKey;index"`
 	TeamID         uuid.UUID `gorm:"type:uuid;primaryKey;index"`
 	Specialization *string   `gorm:"size:50"`
-	User           *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE;"`
-	Team           *Team     `gorm:"foreignKey:TeamID;references:ID;constraint:OnDelete:CASCADE;"`
+	User *User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE;"`
+	Team *Team `gorm:"foreignKey:TeamID;references:ID;constraint:OnDelete:CASCADE;"`
 	Deleted        *bool     `gorm:"type:boolean"`
 	CreatedAt      *time.Time `gorm:"type:timestamp"`
 	UpdatedAt      *time.Time `gorm:"type:timestamp"`
@@ -128,8 +128,8 @@ type TeamMember struct {
 type ProjectTeam struct {
 	ProjectID uuid.UUID `gorm:"type:uuid;primaryKey;index"`
 	TeamID    uuid.UUID `gorm:"type:uuid;primaryKey;index"`
-	Project   *Project  `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
-	Team      *Team     `gorm:"foreignKey:TeamID;references:ID;constraint:OnDelete:CASCADE;"`
+	Project *Project `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE;"`
+	Team    *Team    `gorm:"foreignKey:TeamID;references:ID;constraint:OnDelete:CASCADE;"`
 	Deleted   *bool     `gorm:"type:boolean"`
 	CreatedAt *time.Time `gorm:"type:timestamp"`
 	UpdatedAt *time.Time `gorm:"type:timestamp"`
@@ -178,7 +178,7 @@ type Problem struct {
 	CreatorID   *uuid.UUID `gorm:"type:uuid;index"`
 	Name        *string    `gorm:"type:varchar(255)"`
 
-	User        *User      `gorm:"foreignKey:CreatorID;references:ID;constraint:OnDelete:CASCADE;"`
+	User *User `gorm:"foreignKey:CreatorID;references:ID;constraint:OnDelete:CASCADE;"`
 
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
@@ -192,7 +192,7 @@ type ForumMessage struct {
 	Problem     *Problem   `gorm:"foreignKey:ProblemID;constraint:OnDelete:CASCADE;"`
 	Description pq.StringArray  `gorm:"type:varchar(255)[]"`
 	CreatorID   *uuid.UUID `gorm:"type:uuid;index"`
-	User        *User      `gorm:"foreignKey:CreatorID;references:ID;constraint:OnDelete:CASCADE;"`
+	User *User `gorm:"foreignKey:CreatorID;references:ID;constraint:OnDelete:CASCADE;"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	Deleted     *bool      `gorm:"type:boolean"`
@@ -215,10 +215,10 @@ type HelpRequest struct {
 	HelperID    *uuid.UUID  `gorm:"type:uuid"`
 	Description *string     `gorm:"type:varchar(255)"`
 	Deleted     *bool       `gorm:"default:false"`
-	Helper      *User       `gorm:"foreignKey:HelperID;references:ID"`
+	Helper *User `gorm:"foreignKey:HelperID;references:ID"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
 	Status      *string     `gorm:"type:varchar(30)"`
-	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Report *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	CreatedAt       *time.Time `gorm:"type:timestamp"`
 }
@@ -228,9 +228,9 @@ type CompletedWork struct {
 	Description *string     `gorm:"type:text"`
 	Deleted     *bool       `gorm:"default:false"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
-	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Report *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 	TaskID      *uuid.UUID  `gorm:"type:uuid"`
-	Task        *Task       `gorm:"foreignKey:TaskID;references:ID"`
+	Task   *Task        `gorm:"foreignKey:TaskID;references:ID"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 }
@@ -240,7 +240,7 @@ type TomorrowPlans struct {
 	Description *string     `gorm:"type:text"`
 	Deleted     *bool       `gorm:"default:false"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
-	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Report *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	CreatedAt       *time.Time `gorm:"type:timestamp"`
 }
@@ -269,7 +269,7 @@ type Status struct {
 
 	// Relations
 	Boards []*Board `gorm:"many2many:status_boards;joinForeignKey:StatusID;joinReferences:BoardID"`
-	Tasks []*Task `gorm:"many2many:status_tasks;joinForeignKey:StatusID;joinReferences:TaskID"`
+Tasks  []*Task  `gorm:"many2many:status_tasks;joinForeignKey:StatusID;joinReferences:TaskID"`
 }
 
 type StatusBoard struct {
