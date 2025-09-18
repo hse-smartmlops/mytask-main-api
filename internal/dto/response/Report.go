@@ -13,10 +13,9 @@ type ReportResponse struct {
 	ID            string            `json:"id"`
 	UserID        string            `json:"user_id"`
 	ReportDate    time.Time         `json:"report_date"`
-	CompletedWork []WorkItem        `json:"completed_work"`
-	PlanTomorrow  []WorkItem        `json:"plan_tomorrow"`
-	HelpRequest   HelpRequestItem   `json:"help_request,omitempty"`
-	TaskId        string            `json:"task_id"`
+	CompletedWork []CompletedWork      `json:"completed_work"`
+	PlanTomorrow  []TomorrowPlans        `json:"plan_tomorrow"`
+	HelpRequest   []HelpRequestItem   `json:"help_requests,omitempty"`
 	CreatedAt     time.Time         `json:"created_at"`
 	UpdatedAt     time.Time         `json:"updated_at"`
 	UserInfo      UserShort         `json:"user_info"`
@@ -33,14 +32,21 @@ type ProblemResponse struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-type WorkItem struct {
+type TomorrowPlans struct {
 	ID          string `json:"id"`
 	Description string `json:"description"`
+}
+
+type CompletedWork struct{
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	TaskId        string            `json:"task_id"`
 }
 
 type HelpRequestItem struct {
 	ID          string `json:"id"`
 	HelperID    string `json:"helper_id"`
+	Status      string     `json:"status"`
 	Description string `json:"description"`
 }
 

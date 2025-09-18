@@ -21,7 +21,7 @@ type User struct {
 	FirstName      *string    `gorm:"size:50"`
 	LastName       *string    `gorm:"size:50"`
 	LastLogin      *time.Time
-	Roles          []Role        `gorm:"many2many:user_role;joinForeignKey:UserID;JoinReferences:RoleID"`
+	Roles          []Role        `gorm:"many2many:user_roles;joinForeignKey:UserID;JoinReferences:RoleID"`
 	Deleted        *bool         `gorm:"type:boolean"`
 	UpdatedAt      *time.Time `gorm:"type:timestamp"`
 }
@@ -30,7 +30,7 @@ type Role struct {
 	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Name        *string   `gorm:"size:50"`
 	Description *string   `gorm:"size:200"`
-	Users       []User    `gorm:"many2many:user_role;joinForeignKey:RoleID;JoinReferences:UserID"`
+	Users       []User    `gorm:"many2many:user_roles;joinForeignKey:RoleID;JoinReferences:UserID"`
 	Deleted     *bool     `gorm:"type:boolean"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
@@ -55,11 +55,15 @@ type Project struct {
 	CreatedAt       *time.Time `gorm:"type:timestamp"`
 	GitlabProjectID *int
 	GitlabURL       *string    `gorm:"size:255"`
+	CreatedBy       *uuid.UUID `gorm:"type:uuid"`
+	Status          *string    `gorm:"type:varchar(50)"`
 	Boards          []Board       `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Tasks           []Task        `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	ProjectTeams    []ProjectTeam `gorm:"foreignKey:ProjectID;constraint:OnDelete:CASCADE;"`
 	Deleted         *bool         `gorm:"type:boolean"`
 	UpdatedAt       *time.Time    `gorm:"type:timestamp"`
+
+	CreatedByUser  *User `gorm:"foreignKey:CreatedBy"`
 }
 
 type Board struct {
@@ -154,7 +158,6 @@ type DailyReport struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	UserID        uuid.UUID  `gorm:"type:uuid;index"`
 	User          *User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
-	TaskID        *uuid.UUID `gorm:"type:uuid;index"`
 	Task          *Task      `gorm:"foreignKey:TaskID;references:ID"`
 	Checked       *int8	 `gorm:"type:int8"`
 	ReportDate    *time.Time `gorm:"type:date"`
@@ -215,6 +218,7 @@ type HelpRequest struct {
 	Deleted     *bool       `gorm:"default:false"`
 	Helper      *User       `gorm:"foreignKey:HelperID;references:ID"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
+	Status      *string     `gorm:"type:varchar(30)"`
 	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	CreatedAt       *time.Time `gorm:"type:timestamp"`
@@ -226,6 +230,8 @@ type CompletedWork struct {
 	Deleted     *bool       `gorm:"default:false"`
 	ReportID    *uuid.UUID  `gorm:"type:uuid"`
 	Report      *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	TaskID      *uuid.UUID  `gorm:"type:uuid"`
+	Task        *Task       `gorm:"foreignKey:TaskID;references:ID"`
 	UpdatedAt   *time.Time `gorm:"type:timestamp"`
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 }

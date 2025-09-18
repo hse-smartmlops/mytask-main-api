@@ -108,6 +108,8 @@ definitions:
     type: object
   request.CreateProjectRequest:
     properties:
+      created_by:
+        type: string
       description:
         maxLength: 500
         type: string
@@ -119,7 +121,11 @@ definitions:
         maxLength: 100
         minLength: 3
         type: string
+      status:
+        maxLength: 50
+        type: string
     required:
+    - created_by
     - gitlab_project_id
     - gitlab_url
     - name
@@ -440,6 +446,8 @@ definitions:
       gitlab_url:
         type: string
       name:
+        type: string
+      status:
         type: string
     type: object
   request.UpdateStatusRequest:
@@ -877,6 +885,13 @@ definitions:
       user_id:
         type: string
     type: object
+  response.ProjectByTeamResponse:
+    properties:
+      projects:
+        items:
+          $ref: '#/definitions/response.ProjectResponse'
+        type: array
+    type: object
   response.ProjectListResponse:
     properties:
       page:
@@ -894,7 +909,9 @@ definitions:
     properties:
       created_at:
         type: string
-      descroption:
+      created_by:
+        type: string
+      description:
         type: string
       gitlab_project_id:
         type: integer
@@ -903,6 +920,8 @@ definitions:
       id:
         type: string
       name:
+        type: string
+      status:
         type: string
       updated_at:
         type: string
@@ -2829,6 +2848,103 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех проектов
+      tags:
+      - Projects
+  /project/team/{team_id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех проектов, связанных с командой, по team_id
+      parameters:
+      - description: ID команды
+        in: path
+        name: team_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список проектов успешно получен
+          schema:
+            $ref: '#/definitions/response.ProjectByTeamResponse'
+        "400":
+          description: Некорректный team_id
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Команда или проекты не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проектов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение списка проектов команды
+      tags:
+      - Teams
+  /project/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список проектов, в которых участвует пользователь через
+        команды
+      parameters:
+      - description: Идентификатор пользователя (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список проектов успешно получен
+          schema:
+            items:
+              $ref: '#/definitions/response.ProjectResponse'
+            type: array
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Проекты не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении проектов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение проектов пользователя
       tags:
       - Projects
   /report:
