@@ -1,0 +1,38 @@
+services:
+  postgres_new:
+    image: postgres:15
+    container_name: postgres_new
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: postgres
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_new_data:/var/lib/postgresql/data
+    networks:
+      - emplacc-net
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: server
+    hostname: emplacc-api
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres_new
+    command: /app/server
+    networks:
+      - emplacc-net
+
+networks:
+  emplacc-net:
+
+volumes:
+  postgres_new_data:

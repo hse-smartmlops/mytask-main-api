@@ -43,3 +43,7 @@ type RemoveRoleUserRequest struct {
 	RoleId string `json:"role_id"`
 	UserId string `json:"user_id"`
 }
+
+type RestoreUserRequest struct {
+	Email          *string    `json:"email"`
+}

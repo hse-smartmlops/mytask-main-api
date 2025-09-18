@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -18,17 +19,18 @@ import (
 
 func RegisterProblemRoutes(e *echo.Echo){
 	problemGroup := e.Group("/problem")
+	problemGroup.Use(KeycloakAuthMiddleware)
 	{
-		problemGroup.GET("/all/:page/:pagesize", GetAllProblems)
-		problemGroup.GET("/:id", GetProblemByID)
-		problemGroup.GET("/user/:id/:page/:pagesize", GetProblemsByUserId)
-		problemGroup.POST("", CreateProblem)
-		problemGroup.PATCH("/:id", UpdateProblem)
-		problemGroup.DELETE("/:id", DeleteProblem)
+		problemGroup.GET("/all/:page/:pagesize", getAllProblems)
+		problemGroup.GET("/:id", getProblemByID)
+		problemGroup.GET("/user/:id/:page/:pagesize", getProblemsByUserId)
+		problemGroup.POST("", createProblem)
+		problemGroup.PATCH("/:id", updateProblem)
+		problemGroup.DELETE("/:id", deleteProblem)
 	}
 }
 
-// GetAllProblems godoc
+// getAllProblems godoc
 // @Summary Получение списка всех проблем
 // @Description Получает список всех проблем с учетом пагинации, исключая удаленные
 // @Tags Problems
@@ -36,11 +38,16 @@ func RegisterProblemRoutes(e *echo.Echo){
 // @Produce json
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemListResponse "Список проблем успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/all/{page}/{pagesize} [get]
-func GetAllProblems(c echo.Context) error{
+func getAllProblems(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 	// Значения по умолчанию
@@ -77,7 +84,7 @@ func GetAllProblems(c echo.Context) error{
 	}
 
 	var problems []models.Problem
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&problems).Error; err != nil{
@@ -101,32 +108,20 @@ func GetAllProblems(c echo.Context) error{
 		if problem.CreatorID != nil{
 			creatorID = problem.CreatorID.String()
 		} 
-		var name string
-		if problem.Name != nil{
-			name = *problem.Name
-		}
-		var createdAt time.Time
-		if problem.CreatedAt != nil{
-			createdAt = *problem.CreatedAt
-		}
-		var updatedAt time.Time
-		if problem.UpdatedAt != nil{
-			updatedAt = *problem.UpdatedAt
-		}
 
 		problemList.Problems = append(problemList.Problems, response.ProblemResponse{
 			ID: problemID,
-			Name: name,
+			Name: utils.GetString(problem.Name),
 			Description: description,
 			CreatorId: creatorID,
-			CreatedAt: createdAt,
-			UpdatedAt: updatedAt,
+			CreatedAt: utils.GetTime(problem.CreatedAt),
+			UpdatedAt: utils.GetTime(problem.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, problemList)
 }
 
-// GetProblemsByUserId godoc
+// getProblemsByUserId godoc
 // @Summary Получение проблем по ID пользователя
 // @Description Получает список проблем, созданных указанным пользователем, с учетом пагинации
 // @Tags Problems
@@ -135,11 +130,16 @@ func GetAllProblems(c echo.Context) error{
 // @Param id path string true "ID пользователя"
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemsByUserId "Список проблем успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/user/{id}/{page}/{pagesize} [get]
-func GetProblemsByUserId(c echo.Context) error{
+func getProblemsByUserId(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
@@ -177,13 +177,20 @@ func GetProblemsByUserId(c echo.Context) error{
 	}
 
 	var problems []models.Problem
-	if err := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).
+	newResult := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("deleted = ?", false).
 		Limit(pageSize).
 		Offset(offset).
-		Find(&problems).Error; err != nil{
-		log.Printf("DB error (find projects): %v", err)
+		Where("creator_id = ? and deleted = ?", id, false).Find(&problems)
+	if newResult.Error != nil {
+		log.Printf("DB error (find problem): %v", newResult.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проектов из базы данных",
+			"error": "Ошибка при получении проблем из базы данных",
+		})
+	}
+	if newResult.RowsAffected == 0{
+		log.Printf("DB error (no problems finded): %v", newResult.Error)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Не найдены проблемы в базе данных",
 		})
 	}
 
@@ -196,61 +203,54 @@ func GetProblemsByUserId(c echo.Context) error{
 
 	for _, problem := range problems{
 		var problemID string = problem.ID.String()
+		var description []string = []string(problem.Description) 
 
-		var description []string = []string(problem.Description)
 		var creatorID string
 		if problem.CreatorID != nil{
 			creatorID = problem.CreatorID.String()
 		} 
-		var name string
-		if problem.Name != nil{
-			name = *problem.Name
-		}
-		var createdAt time.Time
-		if problem.CreatedAt != nil{
-			createdAt = *problem.CreatedAt
-		}
-		var updatedAt time.Time
-		if problem.UpdatedAt != nil{
-			updatedAt = *problem.UpdatedAt
-		}
 
 		problemList.Problems = append(problemList.Problems, response.ProblemResponse{
 			ID: problemID,
-			Name: name,
+			Name: utils.GetString(problem.Name),
 			Description: description,
 			CreatorId: creatorID,
-			CreatedAt: createdAt,
-			UpdatedAt: updatedAt,
+			CreatedAt: utils.GetTime(problem.CreatedAt),
+			UpdatedAt: utils.GetTime(problem.UpdatedAt),
 		})
 	}
 	return c.JSON(http.StatusOK, problemList)
 }
 
-// GetProblemByID godoc
+// getProblemByID godoc
 // @Summary Получение проблемы по ID
 // @Description Получает данные проблемы по её уникальному идентификатору
 // @Tags Problems
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проблемы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemResponse "Проблема успешно получена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы"
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблемы"
 // @Router /problem/{id} [get]
-func GetProblemByID(c echo.Context) error{
+func getProblemByID(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	problemId, err := uuid.Parse(id)
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
+			"error": "Некорректный идентификатор проблемы",
 		})
 	}
 
 	var  problem models.Problem
-	result := dbConn.Session(&gorm.Session{}).Where("deleted = ?", false).First(&problem, "id = ?", problemId)
+	result := dbConn.Session(&gorm.Session{}).Model(models.Problem{}).Where("deleted = ?", false).First(&problem, "id = ?", problemId)
 	if result.Error != nil{
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -263,49 +263,43 @@ func GetProblemByID(c echo.Context) error{
 		})
 	}
 
-	var description []string = []string(problem.Description)
-	var creatorId string
-	if problem.CreatorID != nil{
-		creatorId = problem.CreatorID.String()
-	}
-	var name string
-	if problem.Name != nil{
-		name = *problem.Name
-	}
+	var problemID string = problem.ID.String()
+	var description []string = []string(problem.Description) 
 
-	var createdAt time.Time
-	if problem.CreatedAt != nil{
-		createdAt = *problem.CreatedAt
-	}
-	var updatedAt time.Time
-	if problem.UpdatedAt != nil{
-		updatedAt = *problem.UpdatedAt
-	}
+	var creatorID string
+	if problem.CreatorID != nil{
+		creatorID = problem.CreatorID.String()
+	} 
 
 	problemResponse := response.ProblemResponse{
-		ID: id,
+		ID: problemID,
+		Name: utils.GetString(problem.Name),
 		Description: description,
-		Name: name,
-		CreatorId: creatorId,
-		CreatedAt: createdAt,
-		UpdatedAt: updatedAt,
+		CreatorId: creatorID,
+		CreatedAt: utils.GetTime(problem.CreatedAt),
+		UpdatedAt: utils.GetTime(problem.UpdatedAt),
 	}
 
 	return c.JSON(http.StatusOK, problemResponse)
 }
 
-// CreateProblem godoc
+// createProblem godoc
 // @Summary Создание новой проблемы
 // @Description Создает новую проблему с указанными параметрами
 // @Tags Problems
 // @Accept json
 // @Produce json
 // @Param problem body request.ProblemCreateRequest true "Данные для создания проблемы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.ProblemUniversalResponse "Проблема успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор пользователя"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проблемы"
 // @Router /problem [post]
-func CreateProblem(c echo.Context) error{
+func createProblem(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	var req request.ProblemCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -345,7 +339,7 @@ func CreateProblem(c echo.Context) error{
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Create(&problem); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Problem{}).Create(&problem); res.Error != nil {
 			log.Printf("DB error (create problem): %v", res.Error)
 			return res.Error
 		}
@@ -363,7 +357,7 @@ func CreateProblem(c echo.Context) error{
 	return c.JSON(http.StatusCreated, createResponse)
 }
 
-// UpdateProblem godoc
+// updateProblem godoc
 // @Summary Обновление проблемы
 // @Description Обновляет данные проблемы по её ID
 // @Tags Problems
@@ -371,11 +365,16 @@ func CreateProblem(c echo.Context) error{
 // @Produce json
 // @Param id path string true "ID проблемы"
 // @Param problem body request.ProblemUpdateRequest true "Данные для обновления проблемы"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проблемы"
 // @Router /problem/{id} [patch]
-func UpdateProblem(c echo.Context) error{
+func updateProblem(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
 	problemId, err := uuid.Parse(id)
 	if err != nil {
@@ -393,9 +392,16 @@ func UpdateProblem(c echo.Context) error{
 		})
 	}
 
+	var description pq.StringArray
+	if req.Description != nil{
+		description = pq.StringArray(*req.Description)
+	}else{
+		description = pq.StringArray{}
+	}
+
 	updateData := make(map[string]interface{})
 	if req.Description != nil{
-		updateData["description"] = *req.Description
+		updateData["description"] = description
 	}
 
 	if len(updateData) == 0{
@@ -407,9 +413,13 @@ func UpdateProblem(c echo.Context) error{
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData); res.Error != nil {
+		res := tx.Session(&gorm.Session{}).Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData)
+		if res.Error != nil {
 			log.Printf("DB error (update problem): %v", res.Error)
 			return res.Error
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
 	}); txErr != nil {
@@ -419,29 +429,40 @@ func UpdateProblem(c echo.Context) error{
 
 	updateReponse := response.ProblemUniversalResponse{
 		ID: id,
-		Message: "Проблема успешно создана",
+		Message: "Проблема успешно обновлена",
 	}
 
 	return c.JSON(http.StatusOK, updateReponse)
 }
 
-// DeleteProblem godoc
+// deleteProblem godoc
 // @Summary Удаление проблемы
 // @Description Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)
 // @Tags Problems
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проблемы"
+// @Security BearerAuth
 // @Success 200 {object} response.ProblemUniversalResponse "Проблема успешно удалена"
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проблемы"
 // @Router /problem/{id} [delete]
-func DeleteProblem(c echo.Context) error{
+func deleteProblem(c echo.Context) error{
+	if err := authorize(c); err != nil {
+		return err
+	}
 	id := c.Param("id")
+	problemId, err := uuid.Parse(id)
+	if err != nil {
+		log.Printf("UUID parse error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор проблемы",
+		})
+	}
 	updateData := make(map[string]interface{})
 	updateData["deleted"] = true
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(models.Problem{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(models.Problem{}).Where("id = ?", problemId).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete problem): %v", res.Error)
 			return res.Error
@@ -450,12 +471,12 @@ func DeleteProblem(c echo.Context) error{
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		if res = tx.Model(models.ForumMessage{}).Where("problem_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.ForumMessage{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete problem - forum messages): %v", res.Error)
 			return res.Error
 		}
 
-		if res = tx.Model(models.ReportProblem{}).Where("problem_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(models.ReportProblem{}).Where("problem_id = ?", problemId).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete problem - report_problem): %v", res.Error)
 			return res.Error
 		}

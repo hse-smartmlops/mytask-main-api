@@ -10,7 +10,6 @@ type GetTaskByIDResponse struct {
 	ProjectID     string    `json:"project_id"`
 	Name          string    `json:"name"`
 	Description   string    `json:"description"`
-	Status        string    `json:"status"`
 	Priority      int16     `json:"priority"`
 	CreatedBy     UserShort `json:"created_by"`            // Связь с users
 	AssignedTo    UserShort `json:"assigned_to,omitempty"` // Связь с users
@@ -20,6 +19,8 @@ type GetTaskByIDResponse struct {
 	GitlabIssueID int       `json:"gitlab_issue_id,omitempty"`
 	Category      int8      `json:"community"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at"`
+	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 
 // Краткая информация о задаче (для списков)
@@ -27,11 +28,12 @@ type TaskShort struct {
 	ID        string    `json:"id"`
 	ProjectID string    `json:"project_id"`
 	Name      string    `json:"name"`
-	Status    string    `json:"status"`
 	Priority  int16     `json:"priority"`
 	StartDate time.Time `json:"start_date"`
 	Deadline  time.Time `json:"deadline,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at"`
+	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 
 // Ответ для списка задач с пагинацией

@@ -13,13 +13,12 @@ type ProjectReport struct {
 type HelpRequest struct {
 	HelperID    string `json:"helper_id"`
 	Description string `json:"description"`
+	Status      *string     `json:"status"`
 }
 
 type ReportCreateRequest struct {
 	UserId       string           `json:"user_id"`
-	TaskId       string           `json:"task_id"`
 	ReportDate   *time.Time       `json:"report_date"`
-	Status       *string          `json:"status"`
 	CompleteWork *[]ProjectReport `json:"complete_work"`
 	PlanTomorrow *[]ProjectReport `json:"plan_tomorrow"`
 	Problems     *[]Problem      `json:"problems"`
@@ -29,15 +28,18 @@ type ReportCreateRequest struct {
 type ReportUpdateRequest struct {
 	UserId     *string    `json:"user_id"`
 	ReportDate *time.Time `json:"report_date"`
+	Checked	*int8      `json:"checked"`
 }
 
 type HelpRequestUpdateRequest struct{
 	HelperID    *string     `json:"helper_id"`
 	Description *string     `json:"description"`
+	Status      *string     `json:"status"`
 }
 
 type CompletedWorkUpdateRequest struct{
 	Description  *string   `json:"description"`
+	TaskId       string    `json:"task_id"`
 }
 
 type TomorrowPlansUpdateRequest struct{

@@ -4,7 +4,6 @@ type BoardCreateRequest struct {
 	ProjectID   *string `json:"project_id"`
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
-	Filter      *string `json:"filter"`
 }
 
 type BoardUpdateRequest struct {
