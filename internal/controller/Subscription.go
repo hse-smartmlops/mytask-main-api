@@ -100,17 +100,13 @@ func getAllSubscriptions(c echo.Context) error{
 	}
 
 	for _, subscription := range subs{
-		var userId string
-		if subscription.UserID != nil{
-			userId = subscription.UserID.String()
-		}
 		var subscriptionId string
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
-			UserId: userId,
+			UserId: subscription.UserID.String(),
 			SubscriptionId: subscriptionId,
 			TypeId: utils.GetInt8(subscription.TypeID),
 			CreatedAt: utils.GetTime(subscription.CreatedAt),	
@@ -200,17 +196,13 @@ func getSubscriptionsByUserId(c echo.Context) error{
 	}
 
 	for _, subscription := range subs{
-		var userId string
-		if subscription.UserID != nil{
-			userId = subscription.UserID.String()
-		}
 		var subscriptionId string
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
-			UserId: userId,
+			UserId: subscription.UserID.String(),
 			SubscriptionId: subscriptionId,
 			TypeId: utils.GetInt8(subscription.TypeID),
 			CreatedAt: utils.GetTime(subscription.CreatedAt),	
@@ -313,17 +305,13 @@ func getSubscriptionBySubObject(c echo.Context) error{
 	}
 
 	for _, subscription := range subs{
-		var userId string
-		if subscription.UserID != nil{
-			userId = subscription.UserID.String()
-		}
 		var subscriptionId string
 		if subscription.SubscriptionId != nil{
 			subscriptionId = subscription.SubscriptionId.String()
 		}
 		subsList.Subscriptions = append(subsList.Subscriptions, response.SubscriptionResponse{
 			ID: subscription.ID.String(),
-			UserId: userId,
+			UserId: subscription.UserID.String(),
 			SubscriptionId: subscriptionId,
 			TypeId: utils.GetInt8(subscription.TypeID),
 			CreatedAt: utils.GetTime(subscription.CreatedAt),	
@@ -374,17 +362,13 @@ func getSubscriptionById(c echo.Context) error{
 		})
 	}
 
-	var userId string
-	if subscription.UserID != nil{
-		userId = subscription.UserID.String()
-	}
 	var subscriptionId string
 	if subscription.SubscriptionId != nil{
 		subscriptionId = subscription.SubscriptionId.String()
 	}
 	subResponse := response.SubscriptionResponse{
 		ID: subscription.ID.String(),
-		UserId: userId,
+		UserId: subscription.UserID.String(),
 		SubscriptionId: subscriptionId,
 		TypeId: utils.GetInt8(subscription.TypeID),
 		CreatedAt: utils.GetTime(subscription.CreatedAt),	
@@ -480,8 +464,8 @@ func createSubscription(c echo.Context) error{
 	}
  
 	sub := models.Subscription{
-		ID: &newUUID,
-		UserID: &userId,
+		ID: newUUID,
+		UserID: userId,
 		SubscriptionId: &subId,
 		TypeID: req.TypeId,
 		CreatedAt: &now,

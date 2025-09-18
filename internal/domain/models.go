@@ -246,8 +246,8 @@ type TomorrowPlans struct {
 }
 
 type Subscription struct {
-	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID    *uuid.UUID `gorm:"type:uuid;index"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	UserID    uuid.UUID `gorm:"type:uuid;index"`
 	User      *User     `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE;"`
 	SubscriptionId *uuid.UUID  `gorm:"type:uuid"`
 	TypeID    *int8     `gorm:"type:int8"`
@@ -256,7 +256,7 @@ type Subscription struct {
 }
 
 type Status struct {
-	ID        *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Key       *string    `gorm:"type:varchar(8);uniqueIndex"`
 	Name      *string    `gorm:"type:varchar(50)"`
 	Color     *string    `gorm:"type:varchar(16)"`
@@ -273,8 +273,8 @@ type Status struct {
 }
 
 type StatusBoard struct {
-	StatusID *uuid.UUID `gorm:"type:uuid;primaryKey"`
-	BoardID  *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	StatusID uuid.UUID `gorm:"type:uuid;primaryKey"`
+	BoardID  uuid.UUID `gorm:"type:uuid;primaryKey"`
 
 	CreatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
 	UpdatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
@@ -286,8 +286,8 @@ type StatusBoard struct {
 }
 
 type StatusTask struct {
-	StatusID *uuid.UUID `gorm:"type:uuid;primaryKey"`
-	TaskID   *uuid.UUID `gorm:"type:uuid;primaryKey"`
+	StatusID uuid.UUID `gorm:"type:uuid;primaryKey"`
+	TaskID   uuid.UUID `gorm:"type:uuid;primaryKey"`
 
 	CreatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
 	UpdatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
