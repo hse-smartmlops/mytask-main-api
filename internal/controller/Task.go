@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/labstack/echo/v4"
 )
@@ -456,12 +457,10 @@ func createTask(c echo.Context) error {
 		Category:      category,
 		Deleted: &del,
 		CreatedAt: &now,
-		StatusTasks: []models.StatusTask{},
-		Statuses: []models.Status{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.Task{}).Create(&task); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Task{}).Omit(clause.Associations).Create(&task); res.Error != nil {
 			log.Printf("DB error (create task): %v", res.Error)
 			return res.Error
 		}

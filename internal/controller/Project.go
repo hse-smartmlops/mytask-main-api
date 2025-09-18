@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterProjectRoutes(e *echo.Echo) {
@@ -383,13 +384,10 @@ func createProject(c echo.Context) error {
 		GitlabProjectID: req.Gitlab_project_id,
 		GitlabURL:       req.Gitlab_url,
 		Deleted: &del,
-		Boards: []models.Board{},
-		Tasks: []models.Task{},
-		ProjectTeams: []models.ProjectTeam{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.Project{}).Create(&project); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Project{}).Omit(clause.Associations).Create(&project); res.Error != nil {
 			log.Printf("DB error (create project): %v", res.Error)
 			return res.Error
 		}
