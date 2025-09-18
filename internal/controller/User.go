@@ -230,7 +230,16 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error{
 	}
 
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).Model(models.User{}).Omit(clause.Associations).Create(&user).Error; err != nil {
+		err := dbConn.Transaction(func(tx *gorm.DB) error {
+			return tx.
+				Omit(clause.Associations).              // не трогать связи
+				Model(&models.User{}).
+				Select("ID","Email","IsActive","CreatedAt","UpdatedAt",
+					"TgID","TgUserID","Profession","EmailVerified",
+					"FirstName","LastName","LastLogin","Deleted").
+				Create(&user).Error
+		})
+		if err != nil {
 			return err
 		}
 		return nil
@@ -268,7 +277,16 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	}
 
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).Omit(clause.Associations).Create(&user).Error; err != nil {
+		err := dbConn.Transaction(func(tx *gorm.DB) error {
+			return tx.
+				Omit(clause.Associations).              // не трогать связи
+				Model(&models.User{}).
+				Select("ID","Email","IsActive","CreatedAt","UpdatedAt",
+					"TgID","TgUserID","Profession","EmailVerified",
+					"FirstName","LastName","LastLogin","Deleted").
+				Create(&user).Error
+		})
+		if err != nil {
 			return err
 		}
 		return nil
