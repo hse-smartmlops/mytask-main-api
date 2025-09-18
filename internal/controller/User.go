@@ -206,99 +206,76 @@ func createUser(c echo.Context) error {
 	
 }
 
-func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error{
-	newUUID := uuid.New()
+func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
+    newUUID := uuid.New()
+    now := time.Now()
+    del := false
 
-	now := time.Now()
+    user := models.User{
+        ID:            newUUID,
+        Email:         req.Email,
+        IsActive:      req.IsActive,
+        CreatedAt:     &now,
+        UpdatedAt:     &now,
+        TgID:          req.TgId,
+        TgUserID:      req.TgUserId,
+        Profession:    req.Profession,
+        EmailVerified: req.EmailVerified,
+        FirstName:     req.FirstName,
+        LastName:      req.LastName,
+        LastLogin:     req.LastLogin,
+        Deleted:       &del,
+    }
 
-	del := false
+    if err := dbConn.Transaction(func(tx *gorm.DB) error {
+        return tx.
+            Omit(clause.Associations).
+            Create(&user).Error
+    }); err != nil {
+        log.Printf("DB transaction error (create user): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{
+            "error": "Ошибка при создании пользователя",
+        })
+    }
 
-	user := models.User{
-		ID:             newUUID,
-		Email:          req.Email,
-		IsActive:       req.IsActive,
-		CreatedAt:      &now,
-		UpdatedAt:      &now,
-		TgID:           req.TgId,
-		TgUserID:       req.TgUserId,
-		Profession:     req.Profession,
-		EmailVerified:  req.EmailVerified,
-		FirstName:      req.FirstName,
-		LastName:       req.LastName,
-		LastLogin:      req.LastLogin,
-		Deleted: &del,
-	}
-
-	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		err := dbConn.Transaction(func(tx *gorm.DB) error {
-			return tx.
-				Omit(clause.Associations).              // не трогать связи
-				Model(&models.User{}).
-				Select("ID","Email","IsActive","CreatedAt","UpdatedAt",
-					"TgID","TgUserID","Profession","EmailVerified",
-					"FirstName","LastName","LastLogin","Deleted").
-				Create(&user).Error
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if err != nil {
-		log.Printf("DB transaction error (create user): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании пользователя",
-		})
-	}
-
-	createResponse := response.UserUniversalResponse{
-		ID:      newUUID.String(),
-		Message: "Пользователь успешно создан",
-	}
-	return c.JSON(http.StatusCreated, createResponse)
+    return c.JSON(http.StatusCreated, response.UserUniversalResponse{
+        ID:      newUUID.String(),
+        Message: "Пользователь успешно создан",
+    })
 }
 
-func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error{
-	now := time.Now()
+func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
+    now := time.Now()
+    del := false
 
-	del := false
+    user := models.User{
+        ID:            id,
+        Email:         req.Email,
+        IsActive:      req.IsActive,
+        CreatedAt:     &now,
+        UpdatedAt:     &now,
+        EmailVerified: req.EmailVerified,
+        FirstName:     req.FirstName,
+        LastName:      req.LastName,
+        // При желании добавьте и остальные поля из req:
+        TgID:       req.TgId,
+        TgUserID:   req.TgUserId,
+        Profession: req.Profession,
+        LastLogin:  req.LastLogin,
+        Deleted:    &del,
+    }
 
-	user := models.User{
-		ID:             id,
-		Email:          req.Email,
-		IsActive:       req.IsActive,
-		CreatedAt:      &now,
-		UpdatedAt:      &now,
-		EmailVerified:  req.EmailVerified,
-		FirstName:      req.FirstName,
-		LastName:       req.LastName,
-		Deleted: &del,
-	}
-
-	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		err := dbConn.Transaction(func(tx *gorm.DB) error {
-			return tx.
-				Omit(clause.Associations).              // не трогать связи
-				Model(&models.User{}).
-				Select("ID","Email","IsActive","CreatedAt","UpdatedAt",
-					"TgID","TgUserID","Profession","EmailVerified",
-					"FirstName","LastName","LastLogin","Deleted").
-				Create(&user).Error
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if err != nil {
-		log.Printf("DB transaction error (create user with id): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании пользователя",
-		})
-	}
-	return nil
+    if err := dbConn.Transaction(func(tx *gorm.DB) error {
+        return tx.
+            Omit(clause.Associations).
+            Create(&user).Error
+    }); err != nil {
+        log.Printf("DB transaction error (create user with id): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{
+            "error": "Ошибка при создании пользователя",
+        })
+    }
+    return nil
 }
 
 // updateUser godoc
