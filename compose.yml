@@ -21,6 +21,7 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: server
+    hostname: emplacc-api
     restart: always
     env_file:
       - .env
