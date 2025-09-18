@@ -15,6 +15,360 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/attendance": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание нового посещения",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Создание посещения",
+                "parameters": [
+                    {
+                        "description": "Данные для создания посещения",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AttendanceCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Посещение успешно создано",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendanceUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные запроса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при создании посещения",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/all/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка всех посещений с пагинацией (логически не удаленных)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Получение всех посещений",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список посещений успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendancesListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров пагинации",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении посещений",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/user/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка посещений для конкретного пользователя (логически не удаленных)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Получение посещений по ID пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список посещений пользователя успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendancesByUserId"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении посещений",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление посещения по ID (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Удаление посещения",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID посещения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Посещение успешно удалено",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendanceUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Посещение не найдено",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении посещения",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновление полей посещения по ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Обновление посещения",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID посещения",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления посещения",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AttendanceUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Посещение успешно обновлено",
+                        "schema": {
+                            "$ref": "#/definitions/response.AttendanceUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные данные запроса или ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Посещение не найдено",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при обновлении посещения",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Аутентифицирует пользователя по email и паролю через Keycloak",
@@ -69,6 +423,11 @@ const docTemplate = `{
         },
         "/auth/logout": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Выполняет выход пользователя из системы, завершая сессию в Keycloak",
                 "consumes": [
                     "application/json"
@@ -122,6 +481,11 @@ const docTemplate = `{
         },
         "/auth/me": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Возвращает информацию о пользователе на основе переданного токена",
                 "consumes": [
                     "application/json"
@@ -412,6 +776,11 @@ const docTemplate = `{
         },
         "/boards": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую доску с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -420,7 +789,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Создание новой доски",
                 "parameters": [
@@ -450,6 +819,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании доски",
                         "schema": {
@@ -462,8 +840,84 @@ const docTemplate = `{
                 }
             }
         },
+        "/boards/all/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список всех досок с учетом пагинации, исключая удаленные.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Boards"
+                ],
+                "summary": "Получение списка всех досок",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список досок успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.BoardListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении досок",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/boards/project/{projectId}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список досок, связанных с указанным проектом",
                 "consumes": [
                     "application/json"
@@ -472,7 +926,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Получение досок по ID проекта",
                 "parameters": [
@@ -493,6 +947,15 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Некорректный идентификатор проекта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -523,6 +986,11 @@ const docTemplate = `{
         },
         "/boards/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные доски по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -531,7 +999,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Получение доски по ID",
                 "parameters": [
@@ -552,6 +1020,15 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Некорректный идентификатор",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -580,6 +1057,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление доски по ID (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -588,7 +1070,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Удаление доски",
                 "parameters": [
@@ -605,6 +1087,15 @@ const docTemplate = `{
                         "description": "Доска успешно удалена",
                         "schema": {
                             "$ref": "#/definitions/response.BoardUniversalResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
@@ -628,6 +1119,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные доски по её ID",
                 "consumes": [
                     "application/json"
@@ -636,7 +1132,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "boards"
+                    "Boards"
                 ],
                 "summary": "Обновление доски",
                 "parameters": [
@@ -673,6 +1169,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении доски",
                         "schema": {
@@ -687,6 +1192,11 @@ const docTemplate = `{
         },
         "/forum-messages": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новое сообщение форума с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -725,6 +1235,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании сообщения форума",
                         "schema": {
@@ -739,6 +1258,11 @@ const docTemplate = `{
         },
         "/forum-messages/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех сообщений форума с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -782,6 +1306,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении сообщений форума",
                         "schema": {
@@ -794,8 +1327,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/forum-messages/problem/{id}": {
+        "/forum-messages/problem/{id}/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список сообщений форума, связанных с указанной проблемой, с учетом пагинации",
                 "consumes": [
                     "application/json"
@@ -817,17 +1355,17 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
-                        "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
-                        "in": "query"
+                        "in": "path",
+                        "required": true
                     },
                     {
                         "type": "integer",
-                        "default": 10,
                         "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -839,6 +1377,15 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Некорректный идентификатор проблемы или ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -860,6 +1407,11 @@ const docTemplate = `{
         },
         "/forum-messages/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные сообщения форума по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -896,6 +1448,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Сообщение форума не найдено",
                         "schema": {
@@ -917,6 +1478,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление сообщения форума по ID (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -944,6 +1510,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.ForumMessageUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Сообщение форума не найдено",
                         "schema": {
@@ -965,6 +1540,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные сообщения форума по его ID",
                 "consumes": [
                     "application/json"
@@ -1010,6 +1590,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении сообщения форума",
                         "schema": {
@@ -1024,6 +1613,11 @@ const docTemplate = `{
         },
         "/problem": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую проблему с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -1062,6 +1656,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании проблемы",
                         "schema": {
@@ -1076,6 +1679,11 @@ const docTemplate = `{
         },
         "/problem/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех проблем с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -1119,6 +1727,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении проблем",
                         "schema": {
@@ -1133,6 +1750,11 @@ const docTemplate = `{
         },
         "/problem/user/{id}/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список проблем, созданных указанным пользователем, с учетом пагинации",
                 "consumes": [
                     "application/json"
@@ -1183,6 +1805,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении проблем",
                         "schema": {
@@ -1197,6 +1828,11 @@ const docTemplate = `{
         },
         "/problem/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные проблемы по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -1233,6 +1869,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Проблема не найдена",
                         "schema": {
@@ -1254,6 +1899,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -1302,6 +1952,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные проблемы по её ID",
                 "consumes": [
                     "application/json"
@@ -1347,6 +2002,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении проблемы",
                         "schema": {
@@ -1361,6 +2025,11 @@ const docTemplate = `{
         },
         "/project": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новый проект с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -1399,6 +2068,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании проекта",
                         "schema": {
@@ -1413,6 +2091,11 @@ const docTemplate = `{
         },
         "/project/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех проектов с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -1456,6 +2139,164 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении проектов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/project/team/{team_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список всех проектов, связанных с командой, по team_id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Teams"
+                ],
+                "summary": "Получение списка проектов команды",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID команды",
+                        "name": "team_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список проектов успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProjectByTeamResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный team_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Команда или проекты не найдены",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении проектов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/project/user/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список проектов, в которых участвует пользователь через команды",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Получение проектов пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Идентификатор пользователя (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список проектов успешно получен",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/response.ProjectResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Проекты не найдены",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении проектов",
                         "schema": {
@@ -1470,6 +2311,11 @@ const docTemplate = `{
         },
         "/project/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные проекта по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -1506,6 +2352,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Проект не найден",
                         "schema": {
@@ -1527,6 +2382,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление проекта по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -1554,6 +2414,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.ProjectUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Проект не найден",
                         "schema": {
@@ -1575,6 +2444,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные проекта по его ID",
                 "consumes": [
                     "application/json"
@@ -1620,6 +2494,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении проекта",
                         "schema": {
@@ -1634,6 +2517,11 @@ const docTemplate = `{
         },
         "/report": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новый отчет с указанными параметрами, включая выполненную работу, планы на завтра, проблемы и запрос на помощь",
                 "consumes": [
                     "application/json"
@@ -1672,6 +2560,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании отчета",
                         "schema": {
@@ -1686,6 +2583,11 @@ const docTemplate = `{
         },
         "/report/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех отчетов с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -1729,6 +2631,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -1752,6 +2663,11 @@ const docTemplate = `{
         },
         "/report/completed-work/{id}": {
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные выполненной работы по ее ID",
                 "consumes": [
                     "application/json"
@@ -1797,6 +2713,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении выполненной работы",
                         "schema": {
@@ -1811,6 +2736,11 @@ const docTemplate = `{
         },
         "/report/help-request/{id}": {
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные запроса на помощь по его ID",
                 "consumes": [
                     "application/json"
@@ -1856,6 +2786,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении запроса на помощь",
                         "schema": {
@@ -1870,6 +2809,11 @@ const docTemplate = `{
         },
         "/report/project/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список отчетов, связанных с задачами указанного проекта",
                 "consumes": [
                     "application/json"
@@ -1906,6 +2850,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -1929,6 +2882,11 @@ const docTemplate = `{
         },
         "/report/task/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список отчетов, связанных с указанной задачей",
                 "consumes": [
                     "application/json"
@@ -1965,6 +2923,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -1988,6 +2955,11 @@ const docTemplate = `{
         },
         "/report/tomorrow-plans/{id}": {
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные планов на завтра по их ID",
                 "consumes": [
                     "application/json"
@@ -2033,6 +3005,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении планов на завтра",
                         "schema": {
@@ -2047,6 +3028,11 @@ const docTemplate = `{
         },
         "/report/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные отчета по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -2083,6 +3069,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
                         "schema": {
@@ -2104,6 +3099,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -2131,6 +3131,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.ReportUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Отчет не найден",
                         "schema": {
@@ -2152,6 +3161,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные отчета по его ID",
                 "consumes": [
                     "application/json"
@@ -2197,6 +3211,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении отчета",
                         "schema": {
@@ -2211,6 +3234,11 @@ const docTemplate = `{
         },
         "/role": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую роль с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -2237,11 +3265,20 @@ const docTemplate = `{
                     "201": {
                         "description": "Роль успешно создана",
                         "schema": {
-                            "$ref": "#/definitions/response.RoleUniversalReport"
+                            "$ref": "#/definitions/response.RoleUniversalResponse"
                         }
                     },
                     "400": {
                         "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2263,6 +3300,11 @@ const docTemplate = `{
         },
         "/role/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех ролей с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -2306,6 +3348,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении ролей",
                         "schema": {
@@ -2320,6 +3371,11 @@ const docTemplate = `{
         },
         "/role/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные роли по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -2356,6 +3412,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Роль не найдена",
                         "schema": {
@@ -2377,6 +3442,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление роли по ID, включая связанные данные (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -2401,7 +3471,16 @@ const docTemplate = `{
                     "200": {
                         "description": "Роль успешно удалена",
                         "schema": {
-                            "$ref": "#/definitions/response.ProjectUniversalResponse"
+                            "$ref": "#/definitions/response.RoleUniversalResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
@@ -2425,6 +3504,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные роли по её ID",
                 "consumes": [
                     "application/json"
@@ -2458,11 +3542,20 @@ const docTemplate = `{
                     "200": {
                         "description": "Роль успешно обновлена",
                         "schema": {
-                            "$ref": "#/definitions/response.RoleUniversalReport"
+                            "$ref": "#/definitions/response.RoleUniversalResponse"
                         }
                     },
                     "400": {
                         "description": "Некорректный идентификатор или ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2482,8 +3575,1057 @@ const docTemplate = `{
                 }
             }
         },
+        "/status": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание нового статуса",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Создание статуса",
+                "parameters": [
+                    {
+                        "description": "Данные для создания статуса",
+                        "name": "/status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.CreateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Статус успешно создан",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при привязке данных",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при создании статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/add-to-board": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание связи между статусом и доской",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Добавление статуса к доске",
+                "parameters": [
+                    {
+                        "description": "Данные для добавления статуса к доске",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AddStatusToBoardRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Статус успешно добавлен к доске",
+                        "schema": {
+                            "$ref": "#/definitions/response.AddStatusToBoardResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при привязке данных или парсинге UUID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при добавлении статуса к доске",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/add-to-task": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание связи между статусом и задачей",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Добавление статуса к задаче",
+                "parameters": [
+                    {
+                        "description": "Данные для добавления статуса к задаче",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.AddStatusToTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Статус успешно добавлен к задаче",
+                        "schema": {
+                            "$ref": "#/definitions/response.AddStatusToTaskResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при привязке данных или парсинге UUID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при добавлении статуса к задаче",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/all/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка всех статусов с пагинацией (только неудаленные)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение всех статусов",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список статусов",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статусов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/project/{board_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка статусов, связанных с доской по ее ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение статусов по ID доски",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID доски",
+                        "name": "board_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список статусов для доски",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusByBoardIdResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге ID доски",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статусов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/task/{task_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка статусов, связанных с задачей по ее ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение статусов по ID задачи",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID задачи",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список статусов для задачи",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusByTaskIdResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге ID задачи",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статусов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/status/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение информации о статусе по его ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение статуса по ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о статусе",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Статус не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление статуса по ID, включая связанные данные (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Удаление статуса",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Статус успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Статус не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновление информации о статусе по ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Обновление статуса",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления статуса",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UpdateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Статус успешно обновлен",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Нет данных для обновления или некорректный ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Статус не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при обновлении статуса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создание новой подписки с указанными данными",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Создание подписки",
+                "parameters": [
+                    {
+                        "description": "Данные для создания подписки",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.SubscriptionCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Подписка успешно создана",
+                        "schema": {
+                            "$ref": "#/definitions/response.SubscriptionUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге данных запроса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при создании подписки",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/all/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка всех подписок с пагинацией (deleted = false)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Получение всех подписок",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список подписок успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.SubscriptionListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении подписок",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка подписок для конкретного объекта подписки и типа с пагинацией (deleted = false)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Получение подписок по объекту подписки",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID объекта подписки",
+                        "name": "subId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Тип объекта подписки",
+                        "name": "typeId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список подписок успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.SubscriptionListBySubObjectResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров или данных запроса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении подписок",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/user/{id}/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка подписок для конкретного пользователя с пагинацией (deleted = false)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Получение подписок по ID пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "user_id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список подписок успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.SubscriptionListByUserIdResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров или данных запроса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении подписок",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение детальной информации о подписке по её ID (deleted = false)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Получение подписки по ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID подписки",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Подписка успешно получена",
+                        "schema": {
+                            "$ref": "#/definitions/response.SubscriptionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID подписки",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Подписка не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении подписки",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление подписки по ID (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Subscriptions"
+                ],
+                "summary": "Удаление подписки",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID подписки",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Подписка успешно удалена",
+                        "schema": {
+                            "$ref": "#/definitions/response.SubscriptionUniversalResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Подписка не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении подписки",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/task": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую задачу с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -2522,6 +4664,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Исполнитель или поручитель не найден",
                         "schema": {
@@ -2545,6 +4696,11 @@ const docTemplate = `{
         },
         "/task/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех задач с учетом пагинации, исключая удаленные",
                 "consumes": [
                     "application/json"
@@ -2588,92 +4744,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "500": {
-                        "description": "Ошибка сервера при получении задач",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/task/filter": {
-            "get": {
-                "description": "Получает список задач, соответствующих указанным фильтрам",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tasks"
-                ],
-                "summary": "Получение задач по фильтру",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Статус задачи",
-                        "name": "status",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Приоритет задачи",
-                        "name": "priority",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ID исполнителя",
-                        "name": "assignedTo",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ID создателя",
-                        "name": "createdBy",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Дата начала (YYYY-MM-DD)",
-                        "name": "startDate",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Дедлайн (YYYY-MM-DD)",
-                        "name": "deadline",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "default": 10,
-                        "description": "Размер страницы",
-                        "name": "pageSize",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список задач успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.TaskListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2693,8 +4765,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/task/project/{projectId}": {
+        "/task/project/{projectId}/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список задач, связанных с указанным проектом",
                 "consumes": [
                     "application/json"
@@ -2713,6 +4790,20 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -2724,6 +4815,93 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Некорректный идентификатор проекта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении задач",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/task/user/{id}/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка задач, назначенных на конкретного пользователя, с пагинацией (deleted = false)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Получение задач по ID пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список задач успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.TaskListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров или некорректный ID пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2745,6 +4923,11 @@ const docTemplate = `{
         },
         "/task/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные задачи по её уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -2781,6 +4964,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Задача не найдена",
                         "schema": {
@@ -2802,6 +4994,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -2829,6 +5026,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.TaskUniversaResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Задача не найдена",
                         "schema": {
@@ -2850,6 +5056,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные задачи по её ID",
                 "consumes": [
                     "application/json"
@@ -2895,6 +5106,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Задача не найдена",
                         "schema": {
@@ -2918,6 +5138,11 @@ const docTemplate = `{
         },
         "/team": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает новую команду с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -2956,6 +5181,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании команды",
                         "schema": {
@@ -2970,6 +5204,11 @@ const docTemplate = `{
         },
         "/team/all": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех команд с их участниками",
                 "consumes": [
                     "application/json"
@@ -2988,6 +5227,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.TeamsListResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении команд",
                         "schema": {
@@ -3002,6 +5250,11 @@ const docTemplate = `{
         },
         "/team/project": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Привязывает проект к указанной команде",
                 "consumes": [
                     "application/json"
@@ -3040,6 +5293,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при добавлении проекта в команду",
                         "schema": {
@@ -3052,6 +5314,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логически удаляет привязку проекта к команде (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -3090,6 +5357,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Ничего не удалено",
                         "schema": {
@@ -3111,8 +5387,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/team/project/{project_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список всех команд, связанных с проектом, по project_id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Получение списка команд проекта",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID проекта",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список команд успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.TeamsListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный project_id",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Проект или команды не найдены",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении команд",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/team/user": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Добавляет пользователя в указанную команду",
                 "consumes": [
                     "application/json"
@@ -3151,6 +5505,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при добавлении пользователя в команду",
                         "schema": {
@@ -3163,6 +5526,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логически удаляет пользователя из команды (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -3201,6 +5569,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Ничего не удалено",
                         "schema": {
@@ -3224,6 +5601,11 @@ const docTemplate = `{
         },
         "/team/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные команды по её уникальному идентификатору, включая участников",
                 "consumes": [
                     "application/json"
@@ -3260,6 +5642,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Команда не найдена",
                         "schema": {
@@ -3281,6 +5672,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Логическое удаление команды по ID (поле deleted = true)",
                 "consumes": [
                     "application/json"
@@ -3308,6 +5704,15 @@ const docTemplate = `{
                             "$ref": "#/definitions/response.TeamUniversalResponse"
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Команда не найдена",
                         "schema": {
@@ -3329,6 +5734,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные команды по её ID",
                 "consumes": [
                     "application/json"
@@ -3374,6 +5784,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении команды",
                         "schema": {
@@ -3388,6 +5807,11 @@ const docTemplate = `{
         },
         "/user": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Создает нового пользователя с указанными параметрами",
                 "consumes": [
                     "application/json"
@@ -3426,6 +5850,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при создании пользователя",
                         "schema": {
@@ -3440,6 +5873,11 @@ const docTemplate = `{
         },
         "/user/all/{page}/{pagesize}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает список всех пользователей с учетом пагинации, исключая удаленных",
                 "consumes": [
                     "application/json"
@@ -3483,6 +5921,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при получении пользователей",
                         "schema": {
@@ -3495,8 +5942,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/restore": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Восстанавливает пользователя по email (логическое удаление снимается)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Восстановление пользователя",
+                "parameters": [
+                    {
+                        "description": "Email пользователя для восстановления",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.RestoreUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Пользователь успешно восстановлен",
+                        "schema": {
+                            "$ref": "#/definitions/response.UserUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный запрос или пользователь не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при восстановлении пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/user/role": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Добавляет роль указанному пользователю",
                 "consumes": [
                     "application/json"
@@ -3535,6 +6053,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при добавлении роли",
                         "schema": {
@@ -3547,6 +6074,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Удаляет роль у указанного пользователя",
                 "consumes": [
                     "application/json"
@@ -3585,6 +6117,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Ничего не удалено",
                         "schema": {
@@ -3608,6 +6149,11 @@ const docTemplate = `{
         },
         "/user/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Получает данные пользователя по его уникальному идентификатору",
                 "consumes": [
                     "application/json"
@@ -3644,6 +6190,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "404": {
                         "description": "Пользователь не найден",
                         "schema": {
@@ -3665,6 +6220,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Обновляет данные пользователя по его ID",
                 "consumes": [
                     "application/json"
@@ -3710,6 +6270,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Ошибка сервера при обновлении пользователя",
                         "schema": {
@@ -3722,7 +6291,12 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление пользователя по ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -3732,7 +6306,7 @@ const docTemplate = `{
                 "tags": [
                     "Users"
                 ],
-                "summary": "Удаление пользователя",
+                "summary": "Ban пользователя",
                 "parameters": [
                     {
                         "type": "string",
@@ -3747,6 +6321,15 @@ const docTemplate = `{
                         "description": "Пользователь успешно удален",
                         "schema": {
                             "$ref": "#/definitions/response.UserUniversalResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "404": {
@@ -3786,13 +6369,99 @@ const docTemplate = `{
                 }
             }
         },
+        "request.AddStatusToBoardRequest": {
+            "type": "object",
+            "properties": {
+                "board_id": {
+                    "type": "string"
+                },
+                "status_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.AddStatusToTaskRequest": {
+            "type": "object",
+            "properties": {
+                "status_id": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.AttendanceCreateRequest": {
+            "type": "object",
+            "properties": {
+                "actual_start": {
+                    "type": "string"
+                },
+                "code_reviews": {
+                    "type": "integer"
+                },
+                "commits": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "end_work": {
+                    "type": "string"
+                },
+                "merge_requests": {
+                    "type": "integer"
+                },
+                "planned_start": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "workday_hours": {
+                    "type": "integer"
+                }
+            }
+        },
+        "request.AttendanceUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "actual_start": {
+                    "type": "string"
+                },
+                "code_reviews": {
+                    "type": "integer"
+                },
+                "commits": {
+                    "type": "integer"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "end_work": {
+                    "type": "string"
+                },
+                "merge_requests": {
+                    "type": "integer"
+                },
+                "planned_start": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "workday_hours": {
+                    "type": "integer"
+                }
+            }
+        },
         "request.BoardCreateRequest": {
             "type": "object",
             "properties": {
                 "description": {
-                    "type": "string"
-                },
-                "filter": {
                     "type": "string"
                 },
                 "name": {
@@ -3851,13 +6520,15 @@ const docTemplate = `{
         "request.CreateProjectRequest": {
             "type": "object",
             "required": [
+                "created_by",
                 "gitlab_project_id",
                 "gitlab_url",
-                "name",
-                "priority",
-                "status"
+                "name"
             ],
             "properties": {
+                "created_by": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string",
                     "maxLength": 500
@@ -3873,10 +6544,32 @@ const docTemplate = `{
                     "maxLength": 100,
                     "minLength": 3
                 },
-                "priority": {
-                    "type": "integer"
-                },
                 "status": {
+                    "type": "string",
+                    "maxLength": 50
+                }
+            }
+        },
+        "request.CreateStatusRequest": {
+            "type": "object",
+            "required": [
+                "color",
+                "name"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "is_open": {
+                    "type": "boolean"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -4066,9 +6759,6 @@ const docTemplate = `{
                 "report_date": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
-                },
                 "task_id": {
                     "type": "string"
                 },
@@ -4080,10 +6770,21 @@ const docTemplate = `{
         "request.ReportUpdateRequest": {
             "type": "object",
             "properties": {
+                "checked": {
+                    "type": "integer"
+                },
                 "report_date": {
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.RestoreUserRequest": {
+            "type": "object",
+            "properties": {
+                "email": {
                     "type": "string"
                 }
             }
@@ -4110,6 +6811,20 @@ const docTemplate = `{
                 }
             }
         },
+        "request.SubscriptionCreateRequest": {
+            "type": "object",
+            "properties": {
+                "subscription_id": {
+                    "type": "string"
+                },
+                "type_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.TOTPRequest": {
             "type": "object",
             "properties": {
@@ -4131,8 +6846,7 @@ const docTemplate = `{
                 "name",
                 "priority",
                 "project_id",
-                "start_date",
-                "status"
+                "start_date"
             ],
             "properties": {
                 "assigned_to": {
@@ -4169,14 +6883,6 @@ const docTemplate = `{
                 },
                 "start_date": {
                     "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "todo",
-                        "in_progress",
-                        "done"
-                    ]
                 }
             }
         },
@@ -4187,7 +6893,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "category": {
-                    "type": "boolean"
+                    "type": "integer"
                 },
                 "deadline": {
                     "type": "string"
@@ -4211,14 +6917,6 @@ const docTemplate = `{
                 },
                 "start_date": {
                     "type": "string"
-                },
-                "status": {
-                    "type": "string",
-                    "enum": [
-                        "todo",
-                        "in_progress",
-                        "done"
-                    ]
                 }
             }
         },
@@ -4332,10 +7030,27 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "priority": {
-                    "type": "integer"
-                },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.UpdateStatusRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "is_open": {
+                    "type": "boolean"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -4424,6 +7139,126 @@ const docTemplate = `{
                 }
             }
         },
+        "response.AddStatusToBoardResponse": {
+            "type": "object",
+            "properties": {
+                "board_id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "status_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AddStatusToTaskResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "status_id": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AttendanceResponse": {
+            "type": "object",
+            "properties": {
+                "actual_start": {
+                    "type": "string"
+                },
+                "code_reviews": {
+                    "type": "integer"
+                },
+                "commits": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "end_work": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "merge_requests": {
+                    "type": "integer"
+                },
+                "planned_start": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "workday_hours": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.AttendanceUniversalResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AttendancesByUserId": {
+            "type": "object",
+            "properties": {
+                "attendances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AttendanceResponse"
+                    }
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.AttendancesListResponse": {
+            "type": "object",
+            "properties": {
+                "attendances": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.AttendanceResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "response.AuthResponse": {
             "type": "object",
             "properties": {
@@ -4493,10 +7328,10 @@ const docTemplate = `{
         "response.BoardResponse": {
             "type": "object",
             "properties": {
-                "descroption": {
+                "created_at": {
                     "type": "string"
                 },
-                "filter": {
+                "descroption": {
                     "type": "string"
                 },
                 "id": {
@@ -4507,6 +7342,12 @@ const docTemplate = `{
                 },
                 "project_id": {
                     "type": "string"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
                 },
                 "updated_at": {
                     "type": "string"
@@ -4647,6 +7488,9 @@ const docTemplate = `{
         "response.GetRoleResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -4674,6 +7518,9 @@ const docTemplate = `{
                 },
                 "community": {
                     "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
                 },
                 "created_by": {
                     "description": "Связь с users",
@@ -4709,8 +7556,11 @@ const docTemplate = `{
                     "description": "DATE в БД",
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
                 },
                 "time_spent": {
                     "description": "INTERVAL в БД",
@@ -4853,6 +7703,17 @@ const docTemplate = `{
                 }
             }
         },
+        "response.ProjectByTeamResponse": {
+            "type": "object",
+            "properties": {
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ProjectResponse"
+                    }
+                }
+            }
+        },
         "response.ProjectListResponse": {
             "type": "object",
             "properties": {
@@ -4879,11 +7740,14 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "descroption": {
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
                     "type": "string"
                 },
                 "gitlab_project_id": {
-                    "type": "string"
+                    "type": "integer"
                 },
                 "gitlab_url": {
                     "type": "string"
@@ -4893,9 +7757,6 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
-                },
-                "priority": {
-                    "type": "integer"
                 },
                 "status": {
                     "type": "string"
@@ -5004,6 +7865,9 @@ const docTemplate = `{
         "response.ReportResponse": {
             "type": "object",
             "properties": {
+                "checked": {
+                    "type": "integer"
+                },
                 "completed_work": {
                     "type": "array",
                     "items": {
@@ -5034,9 +7898,6 @@ const docTemplate = `{
                 "report_date": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
-                },
                 "task_id": {
                     "type": "string"
                 },
@@ -5062,7 +7923,198 @@ const docTemplate = `{
                 }
             }
         },
-        "response.RoleUniversalReport": {
+        "response.RoleUniversalResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.StatusByBoardIdResponse": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
+                }
+            }
+        },
+        "response.StatusByTaskIdResponse": {
+            "type": "object",
+            "properties": {
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.StatusListResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "is_open": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.StatusUniversalResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SubscriptionListBySubObjectResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "subscription_id": {
+                    "type": "string"
+                },
+                "subscriptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.SubscriptionResponse"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "type_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.SubscriptionListByUserIdResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "subscriptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.SubscriptionResponse"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SubscriptionListResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "subscriptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.SubscriptionResponse"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.SubscriptionResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "type": "string"
+                },
+                "type_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.SubscriptionUniversalResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -5096,6 +8148,9 @@ const docTemplate = `{
         "response.TaskShort": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "deadline": {
                     "type": "string"
                 },
@@ -5114,8 +8169,11 @@ const docTemplate = `{
                 "start_date": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.StatusResponse"
+                    }
                 },
                 "updated_at": {
                     "type": "string"
@@ -5156,6 +8214,9 @@ const docTemplate = `{
         "response.TeamResponse": {
             "type": "object",
             "properties": {
+                "created_at": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },

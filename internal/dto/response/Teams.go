@@ -15,6 +15,7 @@ type TeamResponse struct {
 	Name        string               `json:"name"`
 	Description string               `json:"description"`
 	UpdatedAt   time.Time            `json:"updated_at"`
+	CreatedAt   time.Time            `json:"created_at"`
 	Members     []TeamMemberResponse `json:"members"`
 }
 

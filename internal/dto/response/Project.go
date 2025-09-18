@@ -7,13 +7,13 @@ import (
 type ProjectResponse struct {
 	ID              string    `json:"id"`
 	Name            string    `json:"name"`
-	Description     string    `json:"descroption"`
-	Status          string    `json:"status"`
-	GitlabProjectId string    `json:"gitlab_project_id"`
+	Description     string    `json:"description"`
+	GitlabProjectId int    	  `json:"gitlab_project_id"`
 	GitlabUrl       string    `json:"gitlab_url"`
 	CreatedAt       time.Time `json:"created_at"`
-	Priority        int16     `json:"priority"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	CreatedBy       string    `json:"created_by"`
+	Status          string    `json:"status"`
 }
 
 type ProjectListResponse struct {
@@ -21,6 +21,10 @@ type ProjectListResponse struct {
 	TotalCount int64             `json:"total_count"`
 	Page       int               `json:"page"`
 	PageSize   int               `json:"page_size"`
+}
+
+type ProjectByTeamResponse struct{
+	Projects   []ProjectResponse `json:"projects"`
 }
 
 type ProjectUniversalResponse struct {

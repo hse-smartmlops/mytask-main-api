@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -26,14 +26,14 @@ import (
 
 func RegisterAuthRoutes(e *echo.Echo) {
 	authGroup := e.Group("/auth")
-	authGroup.POST("/login", Login)
-	authGroup.POST("/logout", Logout)
-	authGroup.POST("/register", Register)
-	authGroup.GET("/me", Me)
-	authGroup.POST("/oauth", OAuth)
-	authGroup.POST("/totp", TOTP)
-	authGroup.GET("/validate", ValidateToken)
-	authGroup.POST("/refresh", RefreshToken)
+	authGroup.POST("/login", login)
+	authGroup.POST("/logout", logout)
+	authGroup.POST("/register", register)
+	authGroup.GET("/me", me)
+	authGroup.POST("/oauth", oAuth)
+	authGroup.POST("/totp", tOTP)
+	authGroup.GET("/validate", validateToken)
+	authGroup.POST("/refresh", refreshToken)
 }
 
 var (
@@ -75,7 +75,7 @@ func ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, er
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("token exchange failed: %s", body)
 	}
@@ -88,7 +88,7 @@ func ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, er
 	return &tokenResp, nil
 }
 
-// Login godoc
+// login godoc
 // @Summary Аутентификация пользователя
 // @Description Аутентифицирует пользователя по email и паролю через Keycloak
 // @Tags Auth
@@ -99,7 +99,7 @@ func ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, er
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 401 {object} map[string]string "Неверные учетные данные"
 // @Router /auth/login [post]
-func Login(c echo.Context) error {
+func login(c echo.Context) error {
 	var req request.LoginRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -146,7 +146,7 @@ func Login(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 401 {object} map[string]string "Ошибка OAuth аутентификации"
 // @Router /auth/oauth [post]
-func OAuth(c echo.Context) error {
+func oAuth(c echo.Context) error {
 	var req request.OAuthRequest
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -198,7 +198,7 @@ func OAuth(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 401 {object} map[string]string "Неверные учетные данные или TOTP код"
 // @Router /auth/totp [post]
-func TOTP(c echo.Context) error {
+func tOTP(c echo.Context) error {
 	var req request.TOTPRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("TOTP error: %v", err)
@@ -241,18 +241,19 @@ func TOTP(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// Logout godoc
+// logout godoc
 // @Summary Выход из системы
 // @Description Выполняет выход пользователя из системы, завершая сессию в Keycloak
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Refresh token"
+// @Security BearerAuth
 // @Success 200 {object} map[string]string "Успешный выход из системы"
 // @Failure 400 {object} map[string]string "Отсутствует токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при выходе"
 // @Router /auth/logout [post]
-func Logout(c echo.Context) error {
+func logout(c echo.Context) error {
 	auth := c.Request().Header.Get("Authorization")
 	if auth == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "missing token"})
@@ -267,7 +268,7 @@ func Logout(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": "logout successful"})
 }
 
-// Register godoc
+// register godoc
 // @Summary Регистрация нового пользователя
 // @Description Создает нового пользователя в Keycloak с указанным email
 // @Tags Auth
@@ -278,7 +279,7 @@ func Logout(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании пользователя"
 // @Router /auth/register [post]
-func Register(c echo.Context) error {
+func register(c echo.Context) error {
 	var req request.RegisterRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Register error: %v", err)
@@ -312,17 +313,18 @@ func Register(c echo.Context) error {
 	return c.JSON(http.StatusOK, map[string]string{"message": "user registered"})
 }
 
-// Me godoc
+// me godoc
 // @Summary Получение информации о текущем пользователе
 // @Description Возвращает информацию о пользователе на основе переданного токена
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer access token, например: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+// @Security BearerAuth
 // @Success 200 {object} response.UserInfo "Информация о пользователе"
 // @Failure 401 {object} map[string]string "Отсутствует или неверный токен"
 // @Router /auth/me [get]
-func Me(c echo.Context) error {
+func me(c echo.Context) error {
 	auth := c.Request().Header.Get("Authorization")
 	if auth == "" {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing token"})
@@ -367,7 +369,7 @@ func Me(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// RefreshToken godoc
+// refreshToken godoc
 // @Summary Обновление access токена
 // @Description Получение нового access_token и refresh_token на основе существующего refresh_token
 // @Tags Auth
@@ -378,7 +380,7 @@ func Me(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Неверный формат запроса"
 // @Failure 401 {object} map[string]string "Неверный или истёкший refresh_token"
 // @Router /auth/refresh [post]
-func RefreshToken(c echo.Context) error {
+func refreshToken(c echo.Context) error {
     var req request.RefreshRequest
     if err := c.Bind(&req); err != nil {
         return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
@@ -401,8 +403,8 @@ func RefreshToken(c echo.Context) error {
     newTokens := response.RefreshResponse{
         AccessToken:  token.AccessToken,
         RefreshToken: token.RefreshToken,
-        ExpiresIn:    300,
-        RefreshExp:   1800,
+        ExpiresIn:    token.ExpiresIn,
+        RefreshExp:   token.RefreshExpiresIn,
         TokenType:    "Bearer",
         ExpiresAt:    now.Add(time.Duration(300) * time.Second),
     }
@@ -410,7 +412,7 @@ func RefreshToken(c echo.Context) error {
     return c.JSON(http.StatusOK, newTokens)
 }
 
-// ValidateToken godoc
+// validateToken godoc
 // @Summary Проверка access_token
 // @Description Проверяет валидность токена через Keycloak
 // @Tags Auth
@@ -420,7 +422,7 @@ func RefreshToken(c echo.Context) error {
 // @Success 200 {object} response.TokenValidationResponse "Токен валиден"
 // @Failure 401 {object} response.TokenValidationResponse "Невалидный или отсутствующий токен"
 // @Router /auth/validate [get]
-func ValidateToken(c echo.Context) error {
+func validateToken(c echo.Context) error {
 	authHeader := c.Request().Header.Get("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Invalid Authorization header"})
@@ -475,7 +477,7 @@ func ValidateToken(c echo.Context) error {
 
 	var user models.User
 
-	dbResult := dbConn.Session(&gorm.Session{}).First(&user, "email = ?", strPtrToVal(userInfo.PreferredUsername))
+	dbResult := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&user, "id = ? and deleted = ?", userId, false)
 	if dbResult.Error != nil {
 		if errors.Is(dbResult.Error, gorm.ErrRecordNotFound) {
 			temp := true
@@ -487,6 +489,7 @@ func ValidateToken(c echo.Context) error {
 				IsActive: &temp,
 				LastLogin: &now,
 				CreatedAt: &now,
+				EmailVerified: userInfo.EmailVerified,
 			}
 			err = CreateUserWithIdFunc(userCreateReq, c, userId)
 			if err != nil{
