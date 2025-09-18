@@ -268,8 +268,8 @@ type Status struct {
 	Deleted   *bool      `gorm:"default:false"`
 
 	// Relations
-	Boards []*Board `gorm:"many2many:status_boards;joinForeignKey:StatusID;joinReferences:BoardID"`
-Tasks  []*Task  `gorm:"many2many:status_tasks;joinForeignKey:StatusID;joinReferences:TaskID"`
+	Boards []Board `gorm:"many2many:status_boards;joinForeignKey:StatusID;joinReferences:BoardID"`
+	Tasks  []Task  `gorm:"many2many:status_tasks;joinForeignKey:StatusID;joinReferences:TaskID"`
 }
 
 type StatusBoard struct {
