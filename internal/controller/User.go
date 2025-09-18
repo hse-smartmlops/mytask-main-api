@@ -259,9 +259,6 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		EmailVerified: req.EmailVerified,
 		FirstName:     req.FirstName,
 		LastName:      req.LastName,
-		TgID:          req.TgId,
-		TgUserID:      req.TgUserId,
-		Profession:    req.Profession,
 		LastLogin:     req.LastLogin,
 		Deleted:       &del,
 	}
