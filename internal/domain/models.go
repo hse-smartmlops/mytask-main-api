@@ -158,7 +158,6 @@ type DailyReport struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	UserID        uuid.UUID  `gorm:"type:uuid;index"`
 	User          *User      `gorm:"foreignKey:UserID;constraint:OnDelete:CASCADE;"`
-	Task          *Task      `gorm:"foreignKey:TaskID;references:ID"`
 	Checked       *int8	 `gorm:"type:int8"`
 	ReportDate    *time.Time `gorm:"type:date"`
 	CreatedAt     *time.Time `gorm:"type:date"`
