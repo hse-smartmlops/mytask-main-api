@@ -333,7 +333,7 @@ func createStatus(c echo.Context) error{
 	key := hex.EncodeToString(h[:])[:8]
 
 	status := models.Status{
-		ID: &newUUID,
+		ID: newUUID,
 		Key: &key,
 		Name: &req.Name,
 		Color: &req.Color,
@@ -564,8 +564,8 @@ func addStatusToTask(c echo.Context) error{
 	now := time.Now()
 
 	statusTask := models.StatusTask{
-		TaskID: &taskID,
-		StatusID: &statusID,
+		TaskID: taskID,
+		StatusID: statusID,
 		Deleted: &del,
 		CreatedAt: &now,
 	}
@@ -637,8 +637,8 @@ func addStatusToBoard(c echo.Context) error{
 	now := time.Now()
 
 	statusBoard := models.StatusBoard{
-		BoardID: &boardID,
-		StatusID: &statusID,
+		BoardID: boardID,
+		StatusID: statusID,
 		Deleted: &del,
 		CreatedAt: &now,
 	}
