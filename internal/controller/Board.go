@@ -79,7 +79,7 @@ func getAllBoards(c echo.Context) error {
 	var statusBoards []models.StatusBoard
 	if len(boardIDs) > 0 {
     if err := dbConn.Model(&models.StatusBoard{}).Session(&gorm.Session{}).
-        Preload("Status", "deleted = ?", false).
+        Preload("Statuses", "deleted = ?", false).
         Where("board_id IN ?", boardIDs). 
         Find(&statusBoards).Error; err != nil {
         log.Printf("DB error (find statusBoards): %v", err)
@@ -186,7 +186,7 @@ func getBoardById(c echo.Context) error {
 	// Fetch all StatusBoard entries with preloaded Status in one query
     var statusBoards []models.StatusBoard
     if err := dbConn.Model(models.StatusBoard{}).
-        Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
+        Preload("Statuses", "statuses.deleted = ?", false).Session(&gorm.Session{}).
         Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, board.ID).
         Find(&statusBoards).Error; err != nil {
         log.Printf("failed to get statuses for board %s: %v", boardId, err)
