@@ -12,7 +12,7 @@ type TomorrowPlanCreateRequest struct {
 
 type CompletedWorkCreateRequest struct{
 	Description string `json:"description"`
-	TaskID string `json:"task_id"`
+	TaskID *string `json:"task_id"`
 }
 
 type HelpRequest struct {
@@ -27,7 +27,7 @@ type ReportCreateRequest struct {
 	CompleteWork *[]CompletedWorkCreateRequest `json:"complete_work"`
 	PlanTomorrow *[]TomorrowPlanCreateRequest `json:"plan_tomorrow"`
 	Problems     *[]Problem      `json:"problems"`
-	Help         *HelpRequest     `json:"help"`
+	Helps        *[]HelpRequest     `json:"help"`
 }
 
 type ReportUpdateRequest struct {

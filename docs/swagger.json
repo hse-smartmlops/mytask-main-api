@@ -4314,7 +4314,7 @@
                 }
             }
         },
-        "/subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}": {
+        "/subscription/sub-object/{id}/{type}/{page}/{pagesize}": {
             "get": {
                 "security": [
                     {
@@ -4350,14 +4350,14 @@
                     {
                         "type": "string",
                         "description": "UUID объекта подписки",
-                        "name": "subId",
+                        "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "integer",
                         "description": "Тип объекта подписки",
-                        "name": "typeId",
+                        "name": "type",
                         "in": "path",
                         "required": true
                     }
@@ -6479,10 +6479,24 @@
                 }
             }
         },
+        "request.CompletedWorkCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.CompletedWorkUpdateRequest": {
             "type": "object",
             "properties": {
                 "description": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }
@@ -6575,6 +6589,9 @@
                 },
                 "helper_id": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -6585,6 +6602,9 @@
                     "type": "string"
                 },
                 "helper_id": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -6669,14 +6689,6 @@
                 }
             }
         },
-        "request.ProjectReport": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                }
-            }
-        },
         "request.RefreshRequest": {
             "type": "object",
             "required": [
@@ -6731,16 +6743,19 @@
                 "complete_work": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ProjectReport"
+                        "$ref": "#/definitions/request.CompletedWorkCreateRequest"
                     }
                 },
                 "help": {
-                    "$ref": "#/definitions/request.HelpRequest"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.HelpRequest"
+                    }
                 },
                 "plan_tomorrow": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ProjectReport"
+                        "$ref": "#/definitions/request.TomorrowPlanCreateRequest"
                     }
                 },
                 "problems": {
@@ -6750,9 +6765,6 @@
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 },
                 "user_id": {
@@ -6978,6 +6990,14 @@
                     "type": "string"
                 },
                 "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.TomorrowPlanCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
                     "type": "string"
                 }
             }
@@ -7358,6 +7378,20 @@
                 }
             }
         },
+        "response.CompletedWork": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
         "response.ForumMessageListByProblemIdResponse": {
             "type": "object",
             "properties": {
@@ -7613,6 +7647,9 @@
                 },
                 "id": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -7864,14 +7901,17 @@
                 "completed_work": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WorkItem"
+                        "$ref": "#/definitions/response.CompletedWork"
                     }
                 },
                 "created_at": {
                     "type": "string"
                 },
-                "help_request": {
-                    "$ref": "#/definitions/response.HelpRequestItem"
+                "help_requests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HelpRequestItem"
+                    }
                 },
                 "id": {
                     "type": "string"
@@ -7879,7 +7919,7 @@
                 "plan_tomorrow": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WorkItem"
+                        "$ref": "#/definitions/response.TomorrowPlans"
                     }
                 },
                 "problem": {
@@ -7889,9 +7929,6 @@
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -8289,6 +8326,17 @@
                 }
             }
         },
+        "response.TomorrowPlans": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "response.UserInfo": {
             "description": "Структура с информацией о пользователе из Keycloak",
             "type": "object",
@@ -8344,17 +8392,6 @@
                     "type": "string"
                 },
                 "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "response.WorkItem": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "id": {
                     "type": "string"
                 }
             }

@@ -77,10 +77,10 @@ func getAllTasks(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
-		Preload("StatusTasks", "deleted = ?", false).
-		Preload("StatusTasks.Status", "deleted = ?", false).
-		Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+		Preload("StatusTasks", "deleted = FALSE").
+		Preload("StatusTasks.Status", "deleted = FALSE").
+		Where("deleted = FALSE").
 		Limit(pageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
@@ -91,7 +91,7 @@ func getAllTasks(c echo.Context) error {
 	}
 
 	var totalCount int64
-	result := dbConn.Session(&gorm.Session{}).Model(models.Task{}).Where("deleted = ?", false).Count(&totalCount)
+	result := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).Where("deleted = FALSE").Count(&totalCount)
 	if result.Error != nil {
 		log.Printf("DB error (count tasks): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -106,34 +106,34 @@ func getAllTasks(c echo.Context) error {
 	}
 
 	for _, task := range tasks {
-    taskResponse := response.TaskShort{
-        ID:        task.ID.String(),
-        Name:      utils.GetString(task.Name),
-        ProjectID: task.ProjectID.String(),
-        Priority:  utils.GetInt16(task.Priority),
-        StartDate: utils.GetTime(task.StartDate),
-        Deadline:  utils.GetTime(task.Deadline),
-        UpdatedAt: utils.GetTime(task.UpdatedAt),
-    }
+		taskResponse := response.TaskShort{
+			ID:        task.ID.String(),
+			Name:      utils.GetString(task.Name),
+			ProjectID: task.ProjectID.String(),
+			Priority:  utils.GetInt16(task.Priority),
+			StartDate: utils.GetTime(task.StartDate),
+			Deadline:  utils.GetTime(task.Deadline),
+			UpdatedAt: utils.GetTime(task.UpdatedAt),
+		}
 
-    for _, st := range task.StatusTasks {
-        if st.Status != nil {
-            taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
-                ID:        st.Status.ID.String(),
-                Key:       utils.GetString(st.Status.Key),
-                Name:      utils.GetString(st.Status.Name),
-                Color:     utils.GetString(st.Status.Color),
-                IsDefault: utils.GetBool(st.Status.IsDefault),
-                IsActive:  utils.GetBool(st.Status.IsActive),
-                IsOpen:    utils.GetBool(st.Status.IsOpen),
-                CreatedAt: utils.GetTime(st.Status.CreatedAt),
-                UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
-            })
-        }
-    }
+		for _, st := range task.StatusTasks {
+			if st.Status != nil {
+				taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
+					ID:        st.Status.ID.String(),
+					Key:       utils.GetString(st.Status.Key),
+					Name:      utils.GetString(st.Status.Name),
+					Color:     utils.GetString(st.Status.Color),
+					IsDefault: utils.GetBool(st.Status.IsDefault),
+					IsActive:  utils.GetBool(st.Status.IsActive),
+					IsOpen:    utils.GetBool(st.Status.IsOpen),
+					CreatedAt: utils.GetTime(st.Status.CreatedAt),
+					UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
+				})
+			}
+		}
 
-    taskList.Tasks = append(taskList.Tasks, taskResponse)
-}
+		taskList.Tasks = append(taskList.Tasks, taskResponse)
+	}
 	return c.JSON(http.StatusOK, taskList)
 }
 
@@ -165,12 +165,12 @@ func getTaskByID(c echo.Context) error {
 
     var task models.Task
     // Подгружаем статусы и пользователей сразу
-    if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
-        Preload("StatusTasks", "deleted = ?", false).
-        Preload("StatusTasks.Status", "deleted = ?", false).
-        Preload("CreatedByUser", "deleted = ?", false).
-        Preload("AssignedToUser", "deleted = ?", false).
-        Where("id = ? AND deleted = ?", taskID, false).
+    if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+        Preload("StatusTasks", "deleted = FALSE").
+        Preload("StatusTasks.Status", "deleted = FALSE").
+        Preload("CreatedByUser", "deleted = FALSE").
+        Preload("AssignedToUser", "deleted = FALSE").
+        Where("id = ? AND deleted = FALSE", taskID).
         First(&task).Error; err != nil {
         if errors.Is(err, gorm.ErrRecordNotFound) {
             return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
@@ -216,20 +216,20 @@ func getTaskByID(c echo.Context) error {
 	}
 
     taskResponse := response.GetTaskByIDResponse{
-        ID:         task.ID.String(),
-        ProjectID:  task.ProjectID.String(),
-        Name:       utils.GetString(task.Name),
-        Description: utils.GetString(task.Description),
-        Priority:   utils.GetInt16(task.Priority),
-        CreatedBy:  creatorInfo,
-        AssignedTo: assignerInfo,
-        Deadline:   utils.GetTime(task.Deadline),
-        StartDate:  utils.GetTime(task.StartDate),
-        TimeSpent:  utils.GetString(task.TimeSpent),
+        ID:           task.ID.String(),
+        ProjectID:    task.ProjectID.String(),
+        Name:         utils.GetString(task.Name),
+        Description:  utils.GetString(task.Description),
+        Priority:     utils.GetInt16(task.Priority),
+        CreatedBy:    creatorInfo,
+        AssignedTo:   assignerInfo,
+        Deadline:     utils.GetTime(task.Deadline),
+        StartDate:    utils.GetTime(task.StartDate),
+        TimeSpent:    utils.GetString(task.TimeSpent),
         GitlabIssueID: utils.GetInt(task.GitlabIssueID),
-        Category:   utils.GetInt8(task.Category),
-        UpdatedAt:  utils.GetTime(task.UpdatedAt),
-    	Statuses:      statuses,
+        Category:     utils.GetInt8(task.Category),
+        UpdatedAt:    utils.GetTime(task.UpdatedAt),
+    	Statuses:     statuses,
     }
 
     return c.JSON(http.StatusOK, taskResponse)
@@ -274,10 +274,10 @@ func getTasksByProjectID(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
-		Preload("StatusTasks", "deleted = ?", false).
-		Preload("StatusTasks.Status", "deleted = ?", false).
-		Where("project_id = ? AND deleted = ?", projectUUID, false).
+	if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+		Preload("StatusTasks", "deleted = FALSE").
+		Preload("StatusTasks.Status", "deleted = FALSE").
+		Where("project_id = ? AND deleted = FALSE", projectUUID).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
@@ -289,7 +289,7 @@ func getTasksByProjectID(c echo.Context) error {
 
 	var totalCount int64
 	if err := dbConn.Model(&models.Task{}).Session(&gorm.Session{}).
-		Where("project_id = ? AND deleted = ?", projectUUID, false).
+		Where("project_id = ? AND deleted = FALSE", projectUUID).
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count tasks): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -383,7 +383,7 @@ func createTask(c echo.Context) error {
 	assignerID := &assignerUUID
 
 	var assigner models.User
-	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&assigner, "id = ? AND deleted = ?", assignerUUID, false)
+	result := dbConn.Session(&gorm.Session{}).Model(&models.User{}).First(&assigner, "id = ? AND deleted = FALSE", assignerUUID)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -410,7 +410,7 @@ func createTask(c echo.Context) error {
 	}
 
 	var creator models.User
-	result = dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&creator, "id = ? AND deleted = ?", creatorUUID, false)
+	result = dbConn.Session(&gorm.Session{}).Model(&models.User{}).First(&creator, "id = ? AND deleted = FALSE", creatorUUID)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -424,7 +424,6 @@ func createTask(c echo.Context) error {
 	}
 
 	var creatorID *uuid.UUID = &creator.ID
-
 
 	// Валидируем идентификатор проекта
 	temp1, err := uuid.Parse(req.ProjectID)
@@ -440,7 +439,6 @@ func createTask(c echo.Context) error {
 	}
 
 	del := false
-
 	now := time.Now()
 
 	task := models.Task{
@@ -455,12 +453,12 @@ func createTask(c echo.Context) error {
 		GitlabIssueID: req.GitlabIssueID,
 		ProjectID:     temp1,
 		Category:      category,
-		Deleted: &del,
-		CreatedAt: &now,
+		Deleted:       &del,
+		CreatedAt:     &now,
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.Task{}).Omit(clause.Associations).Create(&task); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(&models.Task{}).Omit(clause.Associations).Create(&task); res.Error != nil {
 			log.Printf("DB error (create task): %v", res.Error)
 			return res.Error
 		}
@@ -551,7 +549,7 @@ func updateTask(c echo.Context) error {
 	updates["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Task{}).Where("id = ? and deleted = ?", taskID, false).Updates(updates)
+		res := tx.Session(&gorm.Session{}).Model(&models.Task{}).Where("id = ? AND deleted = FALSE", taskID).Updates(updates)
 		if res.Error != nil {
 			log.Printf("DB error (update task): %v", res.Error)
 			return res.Error
@@ -592,10 +590,9 @@ func deleteTask(c echo.Context) error {
 		return err
 	}
 	id := c.Param("id")
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
+	updateData := map[string]interface{}{"deleted": true}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Task{}).Where("id = ?", id).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Model(&models.Task{}).Where("id = ?", id).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete task): %v", res.Error)
 			return res.Error
@@ -603,7 +600,7 @@ func deleteTask(c echo.Context) error {
 		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		if res = tx.Session(&gorm.Session{}).Model(models.StatusTask{}).Where("task_id = ?", id).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{}).Model(&models.StatusTask{}).Where("task_id = ?", id).Updates(updateData); res.Error != nil {
 			log.Printf("DB error (delete status_task): %v", res.Error)
 			return res.Error
 		}
@@ -659,10 +656,10 @@ func getTasksByUserId(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).
-		Preload("StatusTasks", "deleted = ?", false).
-		Preload("StatusTasks.Status", "deleted = ?", false).
-		Where("assigned_to = ? AND deleted = ?", userUUID, false).
+	if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+		Preload("StatusTasks", "deleted = FALSE").
+		Preload("StatusTasks.Status", "deleted = FALSE").
+		Where("assigned_to = ? AND deleted = FALSE", userUUID).
 		Limit(pageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
@@ -674,7 +671,7 @@ func getTasksByUserId(c echo.Context) error {
 
 	var totalCount int64
 	if err := dbConn.Model(&models.Task{}).Session(&gorm.Session{}).
-		Where("assigned_to = ? AND deleted = ?", userUUID, false).
+		Where("assigned_to = ? AND deleted = FALSE", userUUID).
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count tasks): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
