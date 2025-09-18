@@ -116,18 +116,18 @@ func getAllReports(c echo.Context) error {
 		}
 
 		// Выполненная работа
-		var complWork []response.WorkItem
+		var complWork []response.CompletedWork
 		for _, workItem := range report.CompletedWork {
-			complWork = append(complWork, response.WorkItem{
+			complWork = append(complWork, response.CompletedWork{
 				ID:          workItem.ID.String(),
 				Description: utils.GetString(workItem.Description),
 			})
 		}
 
 		// План на завтра
-		var tomorrowPlans []response.WorkItem
+		var tomorrowPlans []response.TomorrowPlans
 		for _, plan := range report.TomorrowPlans {
-			tomorrowPlans = append(tomorrowPlans, response.WorkItem{
+			tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
 				ID:          plan.ID.String(),
 				Description: utils.GetString(plan.Description),
 			})
@@ -140,6 +140,7 @@ func getAllReports(c echo.Context) error {
 				ID:          report.HelpRequest.ID.String(),
 				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
 				Description: utils.GetString(report.HelpRequest.Description),
+				Status:      utils.GetString(report.HelpRequest.Status),
 			}
 		}
 
@@ -158,14 +159,16 @@ func getAllReports(c echo.Context) error {
 			}
 		}
 
+		helpResp := []response.HelpRequestItem{helpRequest}
+
+	// Формируем ответ
 		resp := response.ReportResponse{
 			ID:            report.ID.String(),
 			UserID:        report.UserID.String(),
 			ReportDate:    utils.GetTime(report.ReportDate),
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
-			HelpRequest:   helpRequest,
-			TaskId:        utils.GetUUIDString(report.TaskID),
+			HelpRequest:   helpResp,
 			CreatedAt:     utils.GetTime(report.CreatedAt),
 			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
@@ -234,18 +237,18 @@ func getReport(c echo.Context) error {
 	}
 
 	// Выполненная работа
-	var complWork []response.WorkItem
+	var complWork []response.CompletedWork
 	for _, work := range report.CompletedWork {
-		complWork = append(complWork, response.WorkItem{
+		complWork = append(complWork, response.CompletedWork{
 			ID:          work.ID.String(),
 			Description: utils.GetString(work.Description),
 		})
 	}
 
 	// План на завтра
-	var tomorrowPlans []response.WorkItem
+	var tomorrowPlans []response.TomorrowPlans
 	for _, plan := range report.TomorrowPlans {
-		tomorrowPlans = append(tomorrowPlans, response.WorkItem{
+		tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
 			ID:          plan.ID.String(),
 			Description: utils.GetString(plan.Description),
 		})
@@ -258,6 +261,7 @@ func getReport(c echo.Context) error {
 			ID:          report.HelpRequest.ID.String(),
 			HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
 			Description: utils.GetString(report.HelpRequest.Description),
+			Status:      utils.GetString(report.HelpRequest.Status),
 		}
 	}
 
@@ -276,8 +280,7 @@ func getReport(c echo.Context) error {
 		}
 	}
 
-	// TaskID (nullable)
-	taskID := utils.GetUUIDString(report.TaskID)
+	helpResp := []response.HelpRequestItem{helpRequest}
 
 	// Формируем ответ
 	resp := response.ReportResponse{
@@ -286,8 +289,7 @@ func getReport(c echo.Context) error {
 		ReportDate:    utils.GetTime(report.ReportDate),
 		CompletedWork: complWork,
 		PlanTomorrow:  tomorrowPlans,
-		HelpRequest:   helpRequest,
-		TaskId:        taskID,
+		HelpRequest:   helpResp,
 		CreatedAt:     utils.GetTime(report.CreatedAt),
 		UpdatedAt:     utils.GetTime(report.UpdatedAt),
 		UserInfo:      userInfo,
@@ -353,18 +355,18 @@ func getReportsByTaskId(c echo.Context) error {
 		}
 
 		// Выполненная работа
-		var complWork []response.WorkItem
+		var complWork []response.CompletedWork
 		for _, work := range report.CompletedWork {
-			complWork = append(complWork, response.WorkItem{
+			complWork = append(complWork, response.CompletedWork{
 				ID:          work.ID.String(),
 				Description: utils.GetString(work.Description),
 			})
 		}
 
 		// План на завтра
-		var tomorrowPlans []response.WorkItem
+		var tomorrowPlans []response.TomorrowPlans
 		for _, plan := range report.TomorrowPlans {
-			tomorrowPlans = append(tomorrowPlans, response.WorkItem{
+			tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
 				ID:          plan.ID.String(),
 				Description: utils.GetString(plan.Description),
 			})
@@ -377,6 +379,7 @@ func getReportsByTaskId(c echo.Context) error {
 				ID:          report.HelpRequest.ID.String(),
 				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
 				Description: utils.GetString(report.HelpRequest.Description),
+				Status:      utils.GetString(report.HelpRequest.Status),
 			}
 		}
 
@@ -395,7 +398,7 @@ func getReportsByTaskId(c echo.Context) error {
 			}
 		}
 
-		taskID := utils.GetUUIDString(report.TaskID)
+		helpResp := []response.HelpRequestItem{helpRequest}
 
 		resp := response.ReportResponse{
 			ID:            report.ID.String(),
@@ -403,8 +406,7 @@ func getReportsByTaskId(c echo.Context) error {
 			ReportDate:    utils.GetTime(report.ReportDate),
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
-			HelpRequest:   helpRequest,
-			TaskId:        taskID,
+			HelpRequest:   helpResp,
 			CreatedAt:     utils.GetTime(report.CreatedAt),
 			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
@@ -476,17 +478,17 @@ func getReportsByProjectId(c echo.Context) error {
 			LastName:  utils.GetString(report.User.LastName),
 		}
 
-		var complWork []response.WorkItem
+		var complWork []response.CompletedWork
 		for _, w := range report.CompletedWork {
-			complWork = append(complWork, response.WorkItem{
+			complWork = append(complWork, response.CompletedWork{
 				ID:          w.ID.String(),
 				Description: utils.GetString(w.Description),
 			})
 		}
 
-		var tomorrowPlans []response.WorkItem
+		var tomorrowPlans []response.TomorrowPlans
 		for _, t := range report.TomorrowPlans {
-			tomorrowPlans = append(tomorrowPlans, response.WorkItem{
+			tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
 				ID:          t.ID.String(),
 				Description: utils.GetString(t.Description),
 			})
@@ -498,6 +500,8 @@ func getReportsByProjectId(c echo.Context) error {
 				ID:          report.HelpRequest.ID.String(),
 				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
 				Description: utils.GetString(report.HelpRequest.Description),
+				Status:      utils.GetString(report.HelpRequest.Status),
+
 			}
 		}
 
@@ -515,14 +519,16 @@ func getReportsByProjectId(c echo.Context) error {
 			}
 		}
 
+		helpResp := []response.HelpRequestItem{helpRequest}
+
+
 		reportList.Reports = append(reportList.Reports, response.ReportResponse{
 			ID:            report.ID.String(),
 			UserID:        report.UserID.String(),
 			ReportDate:    utils.GetTime(report.ReportDate),
 			CompletedWork: complWork,
 			PlanTomorrow:  tomorrowPlans,
-			HelpRequest:   helpRequest,
-			TaskId:        utils.GetUUIDString(report.TaskID),
+			HelpRequest:   helpResp,
 			CreatedAt:     utils.GetTime(report.CreatedAt),
 			UpdatedAt:     utils.GetTime(report.UpdatedAt),
 			UserInfo:      userInfo,
@@ -574,15 +580,6 @@ func createReport(c echo.Context) error {
 		})
 	}
 
-	var taskId uuid.UUID
-	taskId, err = uuid.Parse(req.TaskId)
-	if err != nil {
-		log.Printf("ParseTaskId error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось распарсить taskId ",
-		})
-	}
-
 	del := false
 
 	var zero int8 = 0
@@ -590,7 +587,6 @@ func createReport(c echo.Context) error {
 	report := models.DailyReport{
 		ID:         newUUID,
 		UserID:     userId,
-		TaskID:     &taskId,
 		ReportDate: req.ReportDate,
 		CreatedAt:  &now,
 		Deleted: &del,
@@ -692,6 +688,7 @@ func createReport(c echo.Context) error {
 			ReportID:    &newUUID,
 			Deleted: &del,
 			CreatedAt: &now,
+			Status: req.Help.Status,
 		}
 
 		result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Create(&help)
@@ -894,6 +891,9 @@ func updateHelpRequest(c echo.Context) error{
 	}
 	if req.HelperID != nil{
 		updateData["helper_id"] = *req.HelperID
+	}
+	if req.Status != nil{
+		updateData["status"] = *req.Status
 	}
 
 	if len(updateData) == 0{

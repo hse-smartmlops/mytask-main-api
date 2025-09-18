@@ -5,6 +5,8 @@ type CreateProjectRequest struct {
 	Description       *string `json:"description" validate:"max=500"`
 	Gitlab_project_id *int    `json:"gitlab_project_id" validate:"required"`
 	Gitlab_url        *string `json:"gitlab_url" validate:"required"`
+	CreatedBy         *string `json:"created_by" validate:"required"`
+	Status            *string `json:"status" validate:"max=50"`
 }
 
 type UpdateProjectRequest struct {
@@ -12,6 +14,7 @@ type UpdateProjectRequest struct {
 	Description     *string `json:"description" validate:"omitempty"`
 	GitlabProjectId *int    `json:"gitlab_project_id" validate:"omitempty"`
 	GitlabUrl       *string `json:"gitlab_url" validate:"omitempty"`
+	Status          *string `json:"status" validate:"omitempty"`
 }
 
 type ProjectListRequest struct {
