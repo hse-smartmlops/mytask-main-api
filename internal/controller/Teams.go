@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterTeamRoutes(e *echo.Echo) {
@@ -380,11 +381,9 @@ func createTeam(c echo.Context) error {
 		Name: name, 
 		Description: description, 
 		Deleted: &del, CreatedAt: &now,
-		TeamMembers: []models.TeamMember{},
-		ProjectTeams: []models.ProjectTeam{},
 	}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.Team{}).Create(&team); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Team{}).Omit(clause.Associations).Create(&team); res.Error != nil {
 			log.Printf("DB error (create team): %v", res.Error)
 			return res.Error
 		}

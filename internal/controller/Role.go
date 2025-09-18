@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterRoleRoutes(e *echo.Echo) {
@@ -198,11 +199,10 @@ func createRole(c echo.Context) error {
 		Description: req.Description,
 		Deleted: &del,
 		CreatedAt: &now,
-		Users: []models.User{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.Role{}).Create(&role); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Model(models.Role{}).Omit(clause.Associations).Create(&role); res.Error != nil {
 			log.Printf("DB error (create role): %v", res.Error)
 			return res.Error
 		}
