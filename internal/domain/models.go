@@ -96,6 +96,7 @@ type Task struct {
 	CreatedAt     *time.Time `gorm:"type:timestamp"`
 	UpdatedAt     *time.Time `gorm:"type:timestamp"`
 
+	Statuses []Status `gorm:"many2many:status_tasks;foreignKey:ID;joinForeignKey:TaskID;References:ID;joinReferences:StatusID"`
 	StatusTasks []StatusTask `gorm:"foreignKey:TaskID"`
 	CreatedByUser  *User `gorm:"foreignKey:CreatedBy;references:ID"`
 	AssignedToUser *User `gorm:"foreignKey:AssignedTo;references:ID"`

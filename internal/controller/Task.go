@@ -457,6 +457,7 @@ func createTask(c echo.Context) error {
 		Deleted: &del,
 		CreatedAt: &now,
 		StatusTasks: []models.StatusTask{},
+		Statuses: []models.Status{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
