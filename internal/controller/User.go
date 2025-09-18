@@ -218,13 +218,9 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error{
 		IsActive:       req.IsActive,
 		CreatedAt:      &now,
 		UpdatedAt:      &now,
-		TgID:           req.TgId,
-		TgUserID:       req.TgUserId,
-		Profession:     req.Profession,
 		EmailVerified:  req.EmailVerified,
 		FirstName:      req.FirstName,
 		LastName:       req.LastName,
-		LastLogin:      req.LastLogin,
 		Deleted: &del,
 	}
 

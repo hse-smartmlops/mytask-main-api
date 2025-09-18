@@ -90,7 +90,7 @@ func getAllBoards(c echo.Context) error {
 	statusMap := make(map[uuid.UUID][]response.StatusResponse)
 	for _, sb := range statusBoards {
 		if sb.Status != nil {
-			boardID := *sb.BoardID 
+			boardID := sb.BoardID 
 			statusMap[boardID] = append(statusMap[boardID], response.StatusResponse{
 				ID:        sb.Status.ID.String(),
 				Key:       utils.GetString(sb.Status.Key),

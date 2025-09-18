@@ -6,8 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type ProjectReport struct {
+type TomorrowPlanCreateRequest struct {
 	Description string `json:"description"`
+}
+
+type CompletedWorkCreateRequest struct{
+	Description string `json:"description"`
+	TaskID string `json:"task_id"`
 }
 
 type HelpRequest struct {
@@ -19,8 +24,8 @@ type HelpRequest struct {
 type ReportCreateRequest struct {
 	UserId       string           `json:"user_id"`
 	ReportDate   *time.Time       `json:"report_date"`
-	CompleteWork *[]ProjectReport `json:"complete_work"`
-	PlanTomorrow *[]ProjectReport `json:"plan_tomorrow"`
+	CompleteWork *[]CompletedWorkCreateRequest `json:"complete_work"`
+	PlanTomorrow *[]TomorrowPlanCreateRequest `json:"plan_tomorrow"`
 	Problems     *[]Problem      `json:"problems"`
 	Help         *HelpRequest     `json:"help"`
 }
