@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterUserRoutes(e *echo.Echo) {
@@ -226,11 +227,10 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error{
 		LastName:       req.LastName,
 		LastLogin:      req.LastLogin,
 		Deleted: &del,
-		Roles: []models.Role{},
 	}
 
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).Model(models.User{}).Create(&user).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Model(models.User{}).Omit(clause.Associations).Create(&user).Error; err != nil {
 			return err
 		}
 		return nil
@@ -265,11 +265,10 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		FirstName:      req.FirstName,
 		LastName:       req.LastName,
 		Deleted: &del,
-		Roles: []models.Role{},
 	}
 
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).Create(&user).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Omit(clause.Associations).Create(&user).Error; err != nil {
 			return err
 		}
 		return nil
@@ -678,7 +677,7 @@ func addUserRole(c echo.Context) error {
 			AssignedBy: &assignerId,
 		}
 
-		if err := tx.Session(&gorm.Session{}).Create(&userRole).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Omit(clause.Associations).Create(&userRole).Error; err != nil {
 			return err
 		}
 

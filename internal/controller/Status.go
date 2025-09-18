@@ -149,7 +149,7 @@ func getStatusesByBoardId(c echo.Context) error {
     // Fetch all StatusBoard entries with preloaded Status in one query
     var statusBoards []models.StatusBoard
     if err := dbConn.Model(models.StatusBoard{}).
-        Preload("Statuses", "statuses.deleted = ?", false).Session(&gorm.Session{}).
+        Preload("Status",    "deleted = ?", false).Session(&gorm.Session{}).
         Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, boardUUID).
         Find(&statusBoards).Error; err != nil {
         log.Printf("failed to get statuses for board %s: %v", boardId, err)
@@ -212,7 +212,7 @@ func getStatusesByTaskId(c echo.Context) error {
     // Fetch all StatusTask entries with preloaded Status in one query
     var statusTasks []models.StatusTask
     if err := dbConn.Session(&gorm.Session{}).Model(models.StatusTask{}).
-        Preload("Statuses", "deleted = ?", false).
+        Preload("Status",    "deleted = ?", false).
         Where("deleted = ? AND task_id = ?", false, taskUUID).
         Find(&statusTasks).Error; err != nil {
         log.Printf("failed to get statuses for task %s: %v", taskId, err)
@@ -342,8 +342,6 @@ func createStatus(c echo.Context) error{
 		IsOpen: &req.IsOpen,
 		CreatedAt: &now,
 		Deleted: &del,
-		Boards: []models.Board{},
-		Tasks: []models.Task{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{

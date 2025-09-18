@@ -336,7 +336,6 @@ func createProblem(c echo.Context) error{
 		Name: req.Name,
 		CreatedAt: &now,
 		Deleted: &del,
-		Forum: []models.ForumMessage{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
