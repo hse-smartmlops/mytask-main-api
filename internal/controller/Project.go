@@ -383,6 +383,9 @@ func createProject(c echo.Context) error {
 		GitlabProjectID: req.Gitlab_project_id,
 		GitlabURL:       req.Gitlab_url,
 		Deleted: &del,
+		Boards: []models.Board{},
+		Tasks: []models.Task{},
+		ProjectTeams: []models.ProjectTeam{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {

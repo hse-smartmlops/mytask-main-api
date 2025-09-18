@@ -342,6 +342,8 @@ func createStatus(c echo.Context) error{
 		IsOpen: &req.IsOpen,
 		CreatedAt: &now,
 		Deleted: &del,
+		Boards: []models.Board{},
+		Tasks: []models.Task{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{

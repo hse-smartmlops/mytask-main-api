@@ -343,6 +343,7 @@ func createBoard(c echo.Context) error {
 		ProjectID:   projectId,
 		Deleted: 		&del,
 		CreatedAt: &now,
+		StatusBoards: []models.StatusBoard{},
 	}
 
 	// create inside a transaction

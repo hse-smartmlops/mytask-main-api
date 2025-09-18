@@ -198,6 +198,7 @@ func createRole(c echo.Context) error {
 		Description: req.Description,
 		Deleted: &del,
 		CreatedAt: &now,
+		Users: []models.User{},
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {

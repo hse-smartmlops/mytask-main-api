@@ -591,6 +591,9 @@ func createReport(c echo.Context) error {
 		CreatedAt:  &now,
 		Deleted: &del,
 		Checked:  &zero,
+		CompletedWork: []models.CompletedWork{},
+		TomorrowPlans: []models.TomorrowPlans{},
+		ReportProblems: []models.ReportProblem{},
 	}
 
 	result := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Create(&report)
