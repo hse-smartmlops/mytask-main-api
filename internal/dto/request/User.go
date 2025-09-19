@@ -3,29 +3,26 @@ package request
 import "time"
 
 type UserCreateRequest struct {
-	Email          *string    `json:"email"`
-	IsActive       *bool      `json:"is_active"`
-	CreatedAt      *time.Time `json:"created_at"`
-	TgId           *string    `json:"tg_id"`
-	TgUserId       *int64     `json:"tg_user_id"`
-	Profession     *string    `json:"profession"`
-	EmailVerified  *bool      `json:"email_verified"`
-	FirstName      *string    `json:"first_name"`
-	LastName       *string    `json:"last_name"`
-	LastLogin      *time.Time `json:"last_login"`
+	Email         *string `json:"email"`
+	IsActive      *bool   `json:"is_active"`
+	TgId          *string `json:"tg_id"`
+	TgUserId      *int64  `json:"tg_user_id"`
+	Profession    *string `json:"profession"`
+	EmailVerified *bool   `json:"email_verified"`
+	FirstName     *string `json:"first_name"`
+	LastName      *string `json:"last_name"`
 }
 
 type UpdateUserRequest struct {
-	Email          *string    `json:"email"`
-	IsActive       *bool      `json:"is_active"`
-	CreatedAt      *time.Time `json:"created_at"`
-	TgId           *string    `json:"tg_id"`
-	TgUserId       *int64     `json:"tg_user_id"`
-	Profession     *string    `json:"profession"`
-	EmailVerified  *bool      `json:"email_verified"`
-	FirstName      *string    `json:"first_name"`
-	LastName       *string    `json:"last_name"`
-	LastLogin      *time.Time `json:"last_login"`
+	Email         *string    `json:"email"`
+	IsActive      *bool      `json:"is_active"`
+	TgId          *string    `json:"tg_id"`
+	TgUserId      *int64     `json:"tg_user_id"`
+	Profession    *string    `json:"profession"`
+	EmailVerified *bool      `json:"email_verified"`
+	FirstName     *string    `json:"first_name"`
+	LastName      *string    `json:"last_name"`
+	LastLogin     *time.Time `json:"last_login"`
 }
 
 type GetAllUsersRequest struct {
@@ -34,8 +31,8 @@ type GetAllUsersRequest struct {
 }
 
 type AddRoleUserRequest struct {
-	RoleId string `json:"role_id"`
-	UserId string `json:"user_id"`
+	RoleId     string `json:"role_id"`
+	UserId     string `json:"user_id"`
 	AssignerId string `json:"assigner_id"`
 }
 
@@ -45,5 +42,5 @@ type RemoveRoleUserRequest struct {
 }
 
 type RestoreUserRequest struct {
-	Email          *string    `json:"email"`
+	Email *string `json:"email"`
 }
