@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterReportRoutes(e *echo.Echo) {
@@ -76,7 +77,7 @@ func getAllReports(c echo.Context) error {
 	if err := dbConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
-		Preload("HelpRequest", "deleted = FALSE").
+		Preload("HelpRequests", "deleted = FALSE").
 		Preload("CompletedWork", "deleted = FALSE").
 		Preload("TomorrowPlans", "deleted = FALSE").
 		Preload("ReportProblems", "deleted = FALSE").
@@ -133,12 +134,12 @@ func getAllReports(c echo.Context) error {
 		}
 
 		helpResp := []response.HelpRequestItem{}
-		if r.HelpRequest != nil {
+		for _, hr := range r.HelpRequests{
 			helpResp = append(helpResp, response.HelpRequestItem{
-				ID:          r.HelpRequest.ID.String(),
-				HelperID:    utils.GetUUIDString(r.HelpRequest.HelperID),
-				Description: utils.GetString(r.HelpRequest.Description),
-				Status:      utils.GetString(r.HelpRequest.Status),
+				ID:          hr.ID.String(),
+				HelperID:    utils.GetUUIDString(hr.HelperID),
+				Description: utils.GetString(hr.Description),
+				Status:      utils.GetString(hr.Status),
 			})
 		}
 
@@ -238,12 +239,12 @@ func getReport(c echo.Context) error {
 	}
 
 	helpResp := []response.HelpRequestItem{}
-	if r.HelpRequest != nil {
+	for _, hr := range r.HelpRequests{
 		helpResp = append(helpResp, response.HelpRequestItem{
-			ID:          r.HelpRequest.ID.String(),
-			HelperID:    utils.GetUUIDString(r.HelpRequest.HelperID),
-			Description: utils.GetString(r.HelpRequest.Description),
-			Status:      utils.GetString(r.HelpRequest.Status),
+			ID:          hr.ID.String(),
+			HelperID:    utils.GetUUIDString(hr.HelperID),
+			Description: utils.GetString(hr.Description),
+			Status:      utils.GetString(hr.Status),
 		})
 	}
 
@@ -349,13 +350,13 @@ func getReportsByTaskId(c echo.Context) error {
 			})
 		}
 
-		var helpResp []response.HelpRequestItem
-		if r.HelpRequest != nil {
+		helpResp := []response.HelpRequestItem{}
+		for _, hr := range r.HelpRequests{
 			helpResp = append(helpResp, response.HelpRequestItem{
-				ID:          r.HelpRequest.ID.String(),
-				HelperID:    utils.GetUUIDString(r.HelpRequest.HelperID),
-				Description: utils.GetString(r.HelpRequest.Description),
-				Status:      utils.GetString(r.HelpRequest.Status),
+				ID:          hr.ID.String(),
+				HelperID:    utils.GetUUIDString(hr.HelperID),
+				Description: utils.GetString(hr.Description),
+				Status:      utils.GetString(hr.Status),
 			})
 		}
 
@@ -494,13 +495,13 @@ func getReportsByProjectId(c echo.Context) error {
 			})
 		}
 
-		var helpResp []response.HelpRequestItem
-		if r.HelpRequest != nil {
+		helpResp := []response.HelpRequestItem{}
+		for _, hr := range r.HelpRequests{
 			helpResp = append(helpResp, response.HelpRequestItem{
-				ID:          r.HelpRequest.ID.String(),
-				HelperID:    utils.GetUUIDString(r.HelpRequest.HelperID),
-				Description: utils.GetString(r.HelpRequest.Description),
-				Status:      utils.GetString(r.HelpRequest.Status),
+				ID:          hr.ID.String(),
+				HelperID:    utils.GetUUIDString(hr.HelperID),
+				Description: utils.GetString(hr.Description),
+				Status:      utils.GetString(hr.Status),
 			})
 		}
 
@@ -586,9 +587,9 @@ func createReport(c echo.Context) error {
 		}
 
 		// CompletedWork: создаём столько, сколько пришло
-		if req.CompleteWork != nil && len(*req.CompleteWork) > 0 {
-			batch := make([]models.CompletedWork, 0, len(*req.CompleteWork))
-			for _, w := range *req.CompleteWork {
+		if len(req.CompleteWork) > 0 {
+			batch := make([]models.CompletedWork, 0, len(req.CompleteWork))
+			for _, w := range req.CompleteWork {
 				item := models.CompletedWork{
 					ID:          uuid.New(),
 					Description: &w.Description,
@@ -610,9 +611,9 @@ func createReport(c echo.Context) error {
 		}
 
 		// TomorrowPlans
-		if req.PlanTomorrow != nil && len(*req.PlanTomorrow) > 0 {
-			batch := make([]models.TomorrowPlans, 0, len(*req.PlanTomorrow))
-			for _, p := range *req.PlanTomorrow {
+		if len(req.PlanTomorrow) > 0 {
+			batch := make([]models.TomorrowPlans, 0, len(req.PlanTomorrow))
+			for _, p := range req.PlanTomorrow {
 				batch = append(batch, models.TomorrowPlans{
 					ID:        uuid.New(),
 					Description: &p.Description,
@@ -627,10 +628,10 @@ func createReport(c echo.Context) error {
 		}
 
 		// Problems (pivot)
-		if req.Problems != nil && len(*req.Problems) > 0 {
-			batch := make([]models.ReportProblem, 0, len(*req.Problems))
-			for _, pr := range *req.Problems {
-				pid, err := uuid.Parse(pr.ID)
+		if len(req.Problems) > 0 {
+			batch := make([]models.ReportProblem, 0, len(req.Problems))
+			for _, pr := range req.Problems {
+				pid, err := uuid.Parse(pr)
 				if err != nil {
 					return echo.NewHTTPError(http.StatusBadRequest, "Некорректный problemId")
 				}
@@ -653,8 +654,8 @@ func createReport(c echo.Context) error {
 			Status      *string
 		}
 		items := []helpItem{}
-		if req.Helps != nil && len(*req.Helps) > 0 {
-			for _, h := range *req.Helps {
+		if len(req.Helps) > 0 {
+			for _, h := range req.Helps {
 				items = append(items, helpItem{HelperID: h.HelperID, Description: h.Description, Status: h.Status})
 			}
 		}
@@ -694,60 +695,276 @@ func createReport(c echo.Context) error {
 }
 
 // updateReport godoc
-// @Summary Обновление отчета
-// @Description Обновляет данные отчета по его ID
+// @Summary Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
+// @Tags Reports
+// @Description Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans, HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
 // @Tags Reports
 // @Accept json
 // @Produce json
 // @Param id path string true "ID отчета"
-// @Param report body request.ReportUpdateRequest true "Данные для обновления отчета"
+// @Param report body request.ReportReplaceRequest true "Данные для обновления отчета и связанных сущностей"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportUniversalResponse "Отчет успешно обновлен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор отчета или ошибка в запросе"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Отчет не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении отчета"
 // @Router /report/{id} [patch]
 func updateReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
+
 	reportID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор отчета"})
 	}
 
-	var req request.ReportUpdateRequest
+	var req request.ReportReplaceRequest
 	if err = c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := map[string]interface{}{}
-	if req.UserId != nil {
-		updateData["user_id"] = *req.UserId
-	}
-	if req.ReportDate != nil {
-		updateData["report_date"] = *req.ReportDate
-	}
-	if req.Checked != nil {
-		updateData["checked"] = *req.Checked
-	}
 	now := time.Now()
-	updateData["updated_at"] = &now
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.DailyReport{}).
-			Where("id = ? AND deleted = FALSE", reportID).
-			Updates(updateData)
-		if res.Error != nil {
-			return res.Error
+		var report models.DailyReport
+		if err := tx.Where("id = ? AND deleted = FALSE", reportID).First(&report).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Отчет не найден"})
+			}
+			return err
 		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+
+		updateData := map[string]interface{}{"updated_at": &now}
+		if req.UserId != "" {
+			if uid, err := uuid.Parse(req.UserId); err == nil {
+				updateData["user_id"] = uid
+			} else {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный user_id"})
+			}
 		}
+		if req.ReportDate != nil {
+			updateData["report_date"] = req.ReportDate
+		}
+		if req.Checked != nil {
+			updateData["checked"] = req.Checked
+		}
+		if err := tx.Model(&report).Updates(updateData).Error; err != nil {
+			return err
+		}
+
+		var existingCWs []models.CompletedWork
+		var existingTPs []models.TomorrowPlans
+		var existingHelps []models.HelpRequest
+		var existingProblems []models.ReportProblem
+
+		tx.Where("report_id = ?", reportID).Find(&existingCWs)
+		tx.Where("report_id = ?", reportID).Find(&existingTPs)
+		tx.Where("report_id = ?", reportID).Find(&existingHelps)
+		tx.Where("report_id = ?", reportID).Find(&existingProblems)
+
+		cwMap := make(map[uuid.UUID]models.CompletedWork)
+		for _, cw := range existingCWs {
+			cwMap[cw.ID] = cw
+		}
+		tpMap := make(map[uuid.UUID]models.TomorrowPlans)
+		for _, tp := range existingTPs {
+			tpMap[tp.ID] = tp
+		}
+		helpMap := make(map[uuid.UUID]models.HelpRequest)
+		for _, h := range existingHelps {
+			helpMap[h.ID] = h
+		}
+		problemMap := make(map[uuid.UUID]models.ReportProblem)
+		for _, rp := range existingProblems {
+			problemMap[rp.ProblemID] = rp
+		}
+
+		var cwInserts []models.CompletedWork
+		var cwUpdates []map[string]interface{}
+		for _, cw := range req.CompleteWork {
+			var cwID uuid.UUID
+			if cw.ID != nil && *cw.ID != "" {
+				cwID, err = uuid.Parse(*cw.ID)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в completed_work"})
+				}
+			} else {
+				cwID = uuid.New()
+			}
+
+			var taskUUID *uuid.UUID
+			if cw.TaskID != nil && *cw.TaskID != "" {
+				if parsed, err := uuid.Parse(*cw.TaskID); err == nil {
+					taskUUID = &parsed
+				} else {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный task_id в completed_work"})
+				}
+			}
+
+			if _, ok := cwMap[cwID]; ok {
+				cwUpdates = append(cwUpdates, map[string]interface{}{
+					"id":          cwID,
+					"description": cw.Description,
+					"task_id":     taskUUID,
+					"updated_at":  now,
+				})
+			} else {
+				cwInserts = append(cwInserts, models.CompletedWork{
+					ID:          cwID,
+					Description: &cw.Description,
+					ReportID:    &reportID,
+					TaskID:      taskUUID,
+					CreatedAt:   &now,
+					UpdatedAt:   &now,
+					Deleted:     func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+
+		if len(cwInserts) > 0 {
+			if err := tx.Create(&cwInserts).Error; err != nil {
+				return err
+			}
+		}
+		if len(cwUpdates) > 0 {
+			tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"description", "task_id", "updated_at"}),
+			}).Create(&cwUpdates)
+		}
+
+		var tpInserts []models.TomorrowPlans
+		var tpUpdates []map[string]interface{}
+		for _, tp := range req.PlanTomorrow {
+			var tpID uuid.UUID
+			if tp.ID != nil && *tp.ID != "" {
+				tpID, err = uuid.Parse(*tp.ID)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в plan_tomorrow"})
+				}
+			} else {
+				tpID = uuid.New()
+			}
+
+			if _, ok := tpMap[tpID]; ok {
+				tpUpdates = append(tpUpdates, map[string]interface{}{
+					"id":          tpID,
+					"description": tp.Description,
+					"updated_at":  now,
+				})
+			} else {
+				tpInserts = append(tpInserts, models.TomorrowPlans{
+					ID:          tpID,
+					Description: &tp.Description,
+					ReportID:    &reportID,
+					CreatedAt:   &now,
+					UpdatedAt:   &now,
+					Deleted:     func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+
+		if len(tpInserts) > 0 {
+			if err := tx.Create(&tpInserts).Error; err != nil {
+				return err
+			}
+		}
+		if len(tpUpdates) > 0 {
+			tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"description", "updated_at"}),
+			}).Create(&tpUpdates)
+		}
+
+		var helpInserts []models.HelpRequest
+		var helpUpdates []map[string]interface{}
+		for _, h := range req.Helps {
+			var hID uuid.UUID
+			if h.ID != nil && *h.ID != "" {
+				hID, err = uuid.Parse(*h.ID)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в help"})
+				}
+			} else {
+				hID = uuid.New()
+			}
+
+			var helperUUID *uuid.UUID
+			if h.HelperID != nil && *h.HelperID != "" {
+				if parsed, err := uuid.Parse(*h.HelperID); err == nil {
+					helperUUID = &parsed
+				} else {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный helper_id в help"})
+				}
+			}
+
+			if _, ok := helpMap[hID]; ok {
+				helpUpdates = append(helpUpdates, map[string]interface{}{
+					"id":          hID,
+					"description": h.Description,
+					"helper_id":   helperUUID,
+					"status":      h.Status,
+					"updated_at":  now,
+				})
+			} else {
+				helpInserts = append(helpInserts, models.HelpRequest{
+					ID:          hID,
+					HelperID:    helperUUID,
+					Description: &h.Description,
+					Status:      h.Status,
+					ReportID:    &reportID,
+					CreatedAt:   &now,
+					UpdatedAt:   &now,
+					Deleted:     func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+
+		if len(helpInserts) > 0 {
+			if err := tx.Create(&helpInserts).Error; err != nil {
+				return err
+			}
+		}
+		if len(helpUpdates) > 0 {
+			tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"description", "helper_id", "status", "updated_at"}),
+			}).Create(&helpUpdates)
+		}
+
+		var rpInserts []models.ReportProblem
+		for _, pIDstr := range req.Problems {
+			if pIDstr == "" {
+				continue
+			}
+			pid, err := uuid.Parse(pIDstr)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в problems"})
+			}
+			if _, ok := problemMap[pid]; !ok {
+				rpInserts = append(rpInserts, models.ReportProblem{
+					ReportID:  reportID,
+					ProblemID: pid,
+					CreatedAt: &now,
+					UpdatedAt: &now,
+					Deleted:   func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+		if len(rpInserts) > 0 {
+			if err := tx.Create(&rpInserts).Error; err != nil {
+				return err
+			}
+		}
+
 		return nil
 	}); txErr != nil {
-		log.Printf("Transaction error (update report): %v", txErr)
+		log.Printf("Transaction error (update report and relations): %v", txErr)
+		if httpErr, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(httpErr.Code, httpErr.Message)
+		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении отчета"})
 	}
 
