@@ -3174,7 +3174,6 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Reports",
                     "Reports"
                 ],
                 "summary": "Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ",
@@ -7128,9 +7127,6 @@ const docTemplate = `{
         "request.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -7163,9 +7159,6 @@ const docTemplate = `{
         "request.UserCreateRequest": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -7177,9 +7170,6 @@ const docTemplate = `{
                 },
                 "is_active": {
                     "type": "boolean"
-                },
-                "last_login": {
-                    "type": "string"
                 },
                 "last_name": {
                     "type": "string"

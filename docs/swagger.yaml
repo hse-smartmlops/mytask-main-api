@@ -504,8 +504,6 @@ definitions:
     type: object
   request.UpdateUserRequest:
     properties:
-      created_at:
-        type: string
       email:
         type: string
       email_verified:
@@ -527,8 +525,6 @@ definitions:
     type: object
   request.UserCreateRequest:
     properties:
-      created_at:
-        type: string
       email:
         type: string
       email_verified:
@@ -537,8 +533,6 @@ definitions:
         type: string
       is_active:
         type: boolean
-      last_login:
-        type: string
       last_name:
         type: string
       profession:
@@ -3183,7 +3177,6 @@ paths:
       summary: Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ
         СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
       tags:
-      - Reports
       - Reports
   /report/all/{page}/{pagesize}:
     get:

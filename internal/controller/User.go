@@ -210,6 +210,7 @@ func createUser(c echo.Context) error {
 	return CreateUserWithIdFunc(req, c, newUUID)
 }
 
+/*
 func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
 	newUUID := uuid.New()
 	now := time.Now()
@@ -227,7 +228,7 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
 		EmailVerified: req.EmailVerified,
 		FirstName:     req.FirstName,
 		LastName:      req.LastName,
-		LastLogin:     req.LastLogin,
+		LastLogin:     &now,
 		Deleted:       &del,
 	}
 
@@ -246,7 +247,7 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
 		ID:      newUUID.String(),
 		Message: "Пользователь успешно создан",
 	})
-}
+}*/
 
 func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
@@ -261,7 +262,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		EmailVerified: req.EmailVerified,
 		FirstName:     req.FirstName,
 		LastName:      req.LastName,
-		LastLogin:     req.LastLogin,
+		LastLogin:     &now,
 		Deleted:       &del,
 	}
 
@@ -273,7 +274,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 
 		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
 		res := tx.
-			Omit(clause.Associations).
+			Omit(clause.Associations, "UserRoles").
 			Create(&user)
 
 		// Лог ошибки, если она есть
@@ -347,9 +348,6 @@ func updateUser(c echo.Context) error {
 	}
 	if req.IsActive != nil {
 		updateData["is_active"] = *req.IsActive
-	}
-	if req.CreatedAt != nil {
-		updateData["created_at"] = *req.CreatedAt
 	}
 	if req.TgId != nil {
 		updateData["tg_id"] = *req.TgId
@@ -531,7 +529,6 @@ func DeleteUserFunc(c echo.Context, id string) error {
 	}
 	return c.JSON(http.StatusOK, deleteResponse)
 }*/
-
 
 // banUser godoc
 // @Summary Ban пользователя
@@ -730,7 +727,7 @@ func addUserRole(c echo.Context) error {
 
 	if err != nil {
 		log.Printf("DB transaction error (add user role): %v", err)
-	return c.JSON(http.StatusInternalServerError, map[string]string{
+		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Не удалось добавить роль пользователям",
 		})
 	}
