@@ -134,7 +134,7 @@ func getAllReports(c echo.Context) error {
 		}
 
 		helpResp := []response.HelpRequestItem{}
-		for _, hr := range r.HelpRequests{
+		for _, hr := range r.HelpRequests {
 			helpResp = append(helpResp, response.HelpRequestItem{
 				ID:          hr.ID.String(),
 				HelperID:    utils.GetUUIDString(hr.HelperID),
@@ -239,7 +239,7 @@ func getReport(c echo.Context) error {
 	}
 
 	helpResp := []response.HelpRequestItem{}
-	for _, hr := range r.HelpRequests{
+	for _, hr := range r.HelpRequests {
 		helpResp = append(helpResp, response.HelpRequestItem{
 			ID:          hr.ID.String(),
 			HelperID:    utils.GetUUIDString(hr.HelperID),
@@ -351,7 +351,7 @@ func getReportsByTaskId(c echo.Context) error {
 		}
 
 		helpResp := []response.HelpRequestItem{}
-		for _, hr := range r.HelpRequests{
+		for _, hr := range r.HelpRequests {
 			helpResp = append(helpResp, response.HelpRequestItem{
 				ID:          hr.ID.String(),
 				HelperID:    utils.GetUUIDString(hr.HelperID),
@@ -496,7 +496,7 @@ func getReportsByProjectId(c echo.Context) error {
 		}
 
 		helpResp := []response.HelpRequestItem{}
-		for _, hr := range r.HelpRequests{
+		for _, hr := range r.HelpRequests {
 			helpResp = append(helpResp, response.HelpRequestItem{
 				ID:          hr.ID.String(),
 				HelperID:    utils.GetUUIDString(hr.HelperID),
@@ -615,11 +615,11 @@ func createReport(c echo.Context) error {
 			batch := make([]models.TomorrowPlans, 0, len(req.PlanTomorrow))
 			for _, p := range req.PlanTomorrow {
 				batch = append(batch, models.TomorrowPlans{
-					ID:        uuid.New(),
+					ID:          uuid.New(),
 					Description: &p.Description,
-					ReportID:  &rep.ID,
-					Deleted:   &delFalse,
-					CreatedAt: &now,
+					ReportID:    &rep.ID,
+					Deleted:     &delFalse,
+					CreatedAt:   &now,
 				})
 			}
 			if res := tx.Session(&gorm.Session{}).Model(&models.TomorrowPlans{}).Create(&batch); res.Error != nil {
@@ -698,7 +698,6 @@ func createReport(c echo.Context) error {
 // @Summary Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
 // @Tags Reports
 // @Description Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans, HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
-// @Tags Reports
 // @Accept json
 // @Produce json
 // @Param id path string true "ID отчета"
