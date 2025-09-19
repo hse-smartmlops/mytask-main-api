@@ -92,6 +92,15 @@ definitions:
       task_id:
         type: string
     type: object
+  request.CompletedWorkReplaceRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+    type: object
   request.CompletedWorkUpdateRequest:
     properties:
       description:
@@ -164,6 +173,17 @@ definitions:
       status:
         type: string
     type: object
+  request.HelpRequestReplaceRequest:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+      id:
+        type: string
+      status:
+        type: string
+    type: object
   request.HelpRequestUpdateRequest:
     properties:
       description:
@@ -188,23 +208,6 @@ definitions:
       code:
         type: string
       redirect_uri:
-        type: string
-    type: object
-  request.Problem:
-    properties:
-      created_at:
-        type: string
-      creator_id:
-        type: string
-      description:
-        items:
-          type: string
-        type: array
-      id:
-        type: string
-      name:
-        type: string
-      updated_at:
         type: string
     type: object
   request.ProblemCreateRequest:
@@ -273,17 +276,33 @@ definitions:
         type: array
       problems:
         items:
-          $ref: '#/definitions/request.Problem'
+          type: string
         type: array
       report_date:
         type: string
       user_id:
         type: string
     type: object
-  request.ReportUpdateRequest:
+  request.ReportReplaceRequest:
     properties:
       checked:
         type: integer
+      complete_work:
+        items:
+          $ref: '#/definitions/request.CompletedWorkReplaceRequest'
+        type: array
+      help:
+        items:
+          $ref: '#/definitions/request.HelpRequestReplaceRequest'
+        type: array
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/request.TomorrowPlanReplaceRequest'
+        type: array
+      problems:
+        items:
+          type: string
+        type: array
       report_date:
         type: string
       user_id:
@@ -431,6 +450,13 @@ definitions:
   request.TomorrowPlanCreateRequest:
     properties:
       description:
+        type: string
+    type: object
+  request.TomorrowPlanReplaceRequest:
+    properties:
+      description:
+        type: string
+      id:
         type: string
     type: object
   request.TomorrowPlansUpdateRequest:
@@ -3106,19 +3132,21 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Обновляет данные отчета по его ID
+      description: Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans,
+        HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ,
+        СОЗДАЕТ НОВЫЕ
       parameters:
       - description: ID отчета
         in: path
         name: id
         required: true
         type: string
-      - description: Данные для обновления отчета
+      - description: Данные для обновления отчета и связанных сущностей
         in: body
         name: report
         required: true
         schema:
-          $ref: '#/definitions/request.ReportUpdateRequest'
+          $ref: '#/definitions/request.ReportReplaceRequest'
       produces:
       - application/json
       responses:
@@ -3138,6 +3166,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Отчет не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении отчета
           schema:
@@ -3146,8 +3180,10 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Обновление отчета
+      summary: Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ
+        СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
       tags:
+      - Reports
       - Reports
   /report/all/{page}/{pagesize}:
     get:

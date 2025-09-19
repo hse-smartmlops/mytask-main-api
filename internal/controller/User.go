@@ -205,7 +205,9 @@ func createUser(c echo.Context) error {
 		})
 	}
 
-	return CreateUserFunc(req, c)
+	newUUID := uuid.New()
+
+	return CreateUserWithIdFunc(req, c, newUUID)
 }
 
 func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {

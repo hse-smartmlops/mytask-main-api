@@ -3166,7 +3166,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Обновляет данные отчета по его ID",
+                "description": "Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans, HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ",
                 "consumes": [
                     "application/json"
                 ],
@@ -3174,9 +3174,10 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
+                    "Reports",
                     "Reports"
                 ],
-                "summary": "Обновление отчета",
+                "summary": "Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ",
                 "parameters": [
                     {
                         "type": "string",
@@ -3186,12 +3187,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Данные для обновления отчета",
+                        "description": "Данные для обновления отчета и связанных сущностей",
                         "name": "report",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.ReportUpdateRequest"
+                            "$ref": "#/definitions/request.ReportReplaceRequest"
                         }
                     }
                 ],
@@ -3213,6 +3214,15 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Отчет не найден",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6497,6 +6507,20 @@ const docTemplate = `{
                 }
             }
         },
+        "request.CompletedWorkReplaceRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.CompletedWorkUpdateRequest": {
             "type": "object",
             "properties": {
@@ -6602,6 +6626,23 @@ const docTemplate = `{
                 }
             }
         },
+        "request.HelpRequestReplaceRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "helper_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "request.HelpRequestUpdateRequest": {
             "type": "object",
             "properties": {
@@ -6638,32 +6679,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "redirect_uri": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.Problem": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "creator_id": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
                     "type": "string"
                 }
             }
@@ -6768,7 +6783,7 @@ const docTemplate = `{
                 "problems": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.Problem"
+                        "type": "string"
                     }
                 },
                 "report_date": {
@@ -6779,11 +6794,35 @@ const docTemplate = `{
                 }
             }
         },
-        "request.ReportUpdateRequest": {
+        "request.ReportReplaceRequest": {
             "type": "object",
             "properties": {
                 "checked": {
                     "type": "integer"
+                },
+                "complete_work": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.CompletedWorkReplaceRequest"
+                    }
+                },
+                "help": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.HelpRequestReplaceRequest"
+                    }
+                },
+                "plan_tomorrow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.TomorrowPlanReplaceRequest"
+                    }
+                },
+                "problems": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "report_date": {
                     "type": "string"
@@ -7005,6 +7044,17 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.TomorrowPlanReplaceRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
                     "type": "string"
                 }
             }
