@@ -271,10 +271,14 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 
 	if err := dbConn.Transaction(func(tx *gorm.DB) error {
 		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
+		user.UserRoles = nil
 
+		log.Print("USER STUCT")
+		log.Print(user)
 		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
+		user.UserRoles = nil
 		res := tx.
-			Omit(clause.Associations, "UserRoles").
+			Omit("UserRoles").
 			Create(&user)
 
 		// Лог ошибки, если она есть
