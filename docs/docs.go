@@ -3166,7 +3166,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Обновляет данные отчета по его ID",
+                "description": "Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans, HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ",
                 "consumes": [
                     "application/json"
                 ],
@@ -3176,7 +3176,7 @@ const docTemplate = `{
                 "tags": [
                     "Reports"
                 ],
-                "summary": "Обновление отчета",
+                "summary": "Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ",
                 "parameters": [
                     {
                         "type": "string",
@@ -3186,12 +3186,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Данные для обновления отчета",
+                        "description": "Данные для обновления отчета и связанных сущностей",
                         "name": "report",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.ReportUpdateRequest"
+                            "$ref": "#/definitions/request.ReportReplaceRequest"
                         }
                     }
                 ],
@@ -3213,6 +3213,15 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Отчет не найден",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4321,7 +4330,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}": {
+        "/subscription/sub-object/{id}/{type}/{page}/{pagesize}": {
             "get": {
                 "security": [
                     {
@@ -4357,14 +4366,14 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "UUID объекта подписки",
-                        "name": "subId",
+                        "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
                         "type": "integer",
                         "description": "Тип объекта подписки",
-                        "name": "typeId",
+                        "name": "type",
                         "in": "path",
                         "required": true
                     }
@@ -5942,6 +5951,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/full-delete/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Удаление пользователя(НЕ ИСПОЛЬЗОВАТЬ, ДОБАВЛЕНО ВРЕМЕННО ДЛЯ ТЕСТА ОШИБКИ 502)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Пользователь успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/response.UserUniversalResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/user/restore": {
             "post": {
                 "security": [
@@ -6486,10 +6559,38 @@ const docTemplate = `{
                 }
             }
         },
+        "request.CompletedWorkCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.CompletedWorkReplaceRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.CompletedWorkUpdateRequest": {
             "type": "object",
             "properties": {
                 "description": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }
@@ -6582,6 +6683,26 @@ const docTemplate = `{
                 },
                 "helper_id": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.HelpRequestReplaceRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "helper_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -6592,6 +6713,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "helper_id": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -6622,32 +6746,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.Problem": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "creator_id": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                }
-            }
-        },
         "request.ProblemCreateRequest": {
             "type": "object",
             "properties": {
@@ -6673,14 +6771,6 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
-                }
-            }
-        },
-        "request.ProjectReport": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
                 }
             }
         },
@@ -6738,28 +6828,28 @@ const docTemplate = `{
                 "complete_work": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ProjectReport"
+                        "$ref": "#/definitions/request.CompletedWorkCreateRequest"
                     }
                 },
                 "help": {
-                    "$ref": "#/definitions/request.HelpRequest"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.HelpRequest"
+                    }
                 },
                 "plan_tomorrow": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.ProjectReport"
+                        "$ref": "#/definitions/request.TomorrowPlanCreateRequest"
                     }
                 },
                 "problems": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/request.Problem"
+                        "type": "string"
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 },
                 "user_id": {
@@ -6767,11 +6857,35 @@ const docTemplate = `{
                 }
             }
         },
-        "request.ReportUpdateRequest": {
+        "request.ReportReplaceRequest": {
             "type": "object",
             "properties": {
                 "checked": {
                     "type": "integer"
+                },
+                "complete_work": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.CompletedWorkReplaceRequest"
+                    }
+                },
+                "help": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.HelpRequestReplaceRequest"
+                    }
+                },
+                "plan_tomorrow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/request.TomorrowPlanReplaceRequest"
+                    }
+                },
+                "problems": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "report_date": {
                     "type": "string"
@@ -6989,6 +7103,25 @@ const docTemplate = `{
                 }
             }
         },
+        "request.TomorrowPlanCreateRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.TomorrowPlanReplaceRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.TomorrowPlansUpdateRequest": {
             "type": "object",
             "properties": {
@@ -7058,9 +7191,6 @@ const docTemplate = `{
         "request.UpdateUserRequest": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -7093,9 +7223,6 @@ const docTemplate = `{
         "request.UserCreateRequest": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -7107,9 +7234,6 @@ const docTemplate = `{
                 },
                 "is_active": {
                     "type": "boolean"
-                },
-                "last_login": {
-                    "type": "string"
                 },
                 "last_name": {
                     "type": "string"
@@ -7361,6 +7485,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.CompletedWork": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }
@@ -7620,6 +7758,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -7871,14 +8012,17 @@ const docTemplate = `{
                 "completed_work": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WorkItem"
+                        "$ref": "#/definitions/response.CompletedWork"
                     }
                 },
                 "created_at": {
                     "type": "string"
                 },
-                "help_request": {
-                    "$ref": "#/definitions/response.HelpRequestItem"
+                "help_requests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HelpRequestItem"
+                    }
                 },
                 "id": {
                     "type": "string"
@@ -7886,7 +8030,7 @@ const docTemplate = `{
                 "plan_tomorrow": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.WorkItem"
+                        "$ref": "#/definitions/response.TomorrowPlans"
                     }
                 },
                 "problem": {
@@ -7896,9 +8040,6 @@ const docTemplate = `{
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                },
-                "task_id": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -8296,6 +8437,17 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TomorrowPlans": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
         "response.UserInfo": {
             "description": "Структура с информацией о пользователе из Keycloak",
             "type": "object",
@@ -8351,17 +8503,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "response.WorkItem": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "id": {
                     "type": "string"
                 }
             }

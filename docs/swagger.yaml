@@ -85,9 +85,27 @@ definitions:
       name:
         type: string
     type: object
+  request.CompletedWorkCreateRequest:
+    properties:
+      description:
+        type: string
+      task_id:
+        type: string
+    type: object
+  request.CompletedWorkReplaceRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+    type: object
   request.CompletedWorkUpdateRequest:
     properties:
       description:
+        type: string
+      task_id:
         type: string
     type: object
   request.CreateForumMessageRequest:
@@ -152,12 +170,27 @@ definitions:
         type: string
       helper_id:
         type: string
+      status:
+        type: string
+    type: object
+  request.HelpRequestReplaceRequest:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+      id:
+        type: string
+      status:
+        type: string
     type: object
   request.HelpRequestUpdateRequest:
     properties:
       description:
         type: string
       helper_id:
+        type: string
+      status:
         type: string
     type: object
   request.LoginRequest:
@@ -177,23 +210,6 @@ definitions:
       redirect_uri:
         type: string
     type: object
-  request.Problem:
-    properties:
-      created_at:
-        type: string
-      creator_id:
-        type: string
-      description:
-        items:
-          type: string
-        type: array
-      id:
-        type: string
-      name:
-        type: string
-      updated_at:
-        type: string
-    type: object
   request.ProblemCreateRequest:
     properties:
       creator_id:
@@ -211,11 +227,6 @@ definitions:
         items:
           type: string
         type: array
-    type: object
-  request.ProjectReport:
-    properties:
-      description:
-        type: string
     type: object
   request.RefreshRequest:
     properties:
@@ -253,29 +264,45 @@ definitions:
     properties:
       complete_work:
         items:
-          $ref: '#/definitions/request.ProjectReport'
+          $ref: '#/definitions/request.CompletedWorkCreateRequest'
         type: array
       help:
-        $ref: '#/definitions/request.HelpRequest'
+        items:
+          $ref: '#/definitions/request.HelpRequest'
+        type: array
       plan_tomorrow:
         items:
-          $ref: '#/definitions/request.ProjectReport'
+          $ref: '#/definitions/request.TomorrowPlanCreateRequest'
         type: array
       problems:
         items:
-          $ref: '#/definitions/request.Problem'
+          type: string
         type: array
       report_date:
-        type: string
-      task_id:
         type: string
       user_id:
         type: string
     type: object
-  request.ReportUpdateRequest:
+  request.ReportReplaceRequest:
     properties:
       checked:
         type: integer
+      complete_work:
+        items:
+          $ref: '#/definitions/request.CompletedWorkReplaceRequest'
+        type: array
+      help:
+        items:
+          $ref: '#/definitions/request.HelpRequestReplaceRequest'
+        type: array
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/request.TomorrowPlanReplaceRequest'
+        type: array
+      problems:
+        items:
+          type: string
+        type: array
       report_date:
         type: string
       user_id:
@@ -420,6 +447,18 @@ definitions:
       name:
         type: string
     type: object
+  request.TomorrowPlanCreateRequest:
+    properties:
+      description:
+        type: string
+    type: object
+  request.TomorrowPlanReplaceRequest:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+    type: object
   request.TomorrowPlansUpdateRequest:
     properties:
       description:
@@ -465,8 +504,6 @@ definitions:
     type: object
   request.UpdateUserRequest:
     properties:
-      created_at:
-        type: string
       email:
         type: string
       email_verified:
@@ -488,8 +525,6 @@ definitions:
     type: object
   request.UserCreateRequest:
     properties:
-      created_at:
-        type: string
       email:
         type: string
       email_verified:
@@ -498,8 +533,6 @@ definitions:
         type: string
       is_active:
         type: boolean
-      last_login:
-        type: string
       last_name:
         type: string
       profession:
@@ -664,6 +697,15 @@ definitions:
       id:
         type: string
       message:
+        type: string
+    type: object
+  response.CompletedWork:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
         type: string
     type: object
   response.ForumMessageListByProblemIdResponse:
@@ -832,6 +874,8 @@ definitions:
         type: string
       id:
         type: string
+      status:
+        type: string
     type: object
   response.ProblemListResponse:
     properties:
@@ -994,25 +1038,25 @@ definitions:
         type: integer
       completed_work:
         items:
-          $ref: '#/definitions/response.WorkItem'
+          $ref: '#/definitions/response.CompletedWork'
         type: array
       created_at:
         type: string
-      help_request:
-        $ref: '#/definitions/response.HelpRequestItem'
+      help_requests:
+        items:
+          $ref: '#/definitions/response.HelpRequestItem'
+        type: array
       id:
         type: string
       plan_tomorrow:
         items:
-          $ref: '#/definitions/response.WorkItem'
+          $ref: '#/definitions/response.TomorrowPlans'
         type: array
       problem:
         items:
           $ref: '#/definitions/response.ProblemResponse'
         type: array
       report_date:
-        type: string
-      task_id:
         type: string
       updated_at:
         type: string
@@ -1270,6 +1314,13 @@ definitions:
         description: '"Token is valid" или описание ошибки'
         type: string
     type: object
+  response.TomorrowPlans:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+    type: object
   response.UserInfo:
     description: Структура с информацией о пользователе из Keycloak
     properties:
@@ -1309,13 +1360,6 @@ definitions:
       id:
         type: string
       message:
-        type: string
-    type: object
-  response.WorkItem:
-    properties:
-      description:
-        type: string
-      id:
         type: string
     type: object
 info:
@@ -3082,19 +3126,21 @@ paths:
     patch:
       consumes:
       - application/json
-      description: Обновляет данные отчета по его ID
+      description: Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans,
+        HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ,
+        СОЗДАЕТ НОВЫЕ
       parameters:
       - description: ID отчета
         in: path
         name: id
         required: true
         type: string
-      - description: Данные для обновления отчета
+      - description: Данные для обновления отчета и связанных сущностей
         in: body
         name: report
         required: true
         schema:
-          $ref: '#/definitions/request.ReportUpdateRequest'
+          $ref: '#/definitions/request.ReportReplaceRequest'
       produces:
       - application/json
       responses:
@@ -3114,6 +3160,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Отчет не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении отчета
           schema:
@@ -3122,7 +3174,8 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Обновление отчета
+      summary: Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ
+        СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
       tags:
       - Reports
   /report/all/{page}/{pagesize}:
@@ -4204,7 +4257,7 @@ paths:
       summary: Получение всех подписок
       tags:
       - Subscriptions
-  /subscription/sub-object/{subId}/{typeId}/{page}/{pagesize}:
+  /subscription/sub-object/{id}/{type}/{page}/{pagesize}:
     get:
       consumes:
       - application/json
@@ -4223,12 +4276,12 @@ paths:
         type: integer
       - description: UUID объекта подписки
         in: path
-        name: subId
+        name: id
         required: true
         type: string
       - description: Тип объекта подписки
         in: path
-        name: typeId
+        name: type
         required: true
         type: integer
       produces:
@@ -5300,6 +5353,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех пользователей
+      tags:
+      - Users
+  /user/full-delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление пользователя по ID, включая связанные данные
+        (поле deleted = true)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно удален
+          schema:
+            $ref: '#/definitions/response.UserUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление пользователя(НЕ ИСПОЛЬЗОВАТЬ, ДОБАВЛЕНО ВРЕМЕННО ДЛЯ ТЕСТА
+        ОШИБКИ 502)
       tags:
       - Users
   /user/restore:

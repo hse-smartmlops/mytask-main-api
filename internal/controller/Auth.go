@@ -60,7 +60,7 @@ func ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, er
 	data.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
 	data.Set("subject_token", subjectToken)
 	data.Set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token") // <-- REQUIRED
-	data.Set("client_id", clientID)       // backend client
+	data.Set("client_id", clientID)                                                 // backend client
 	data.Set("client_secret", clientSecret)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
@@ -291,9 +291,9 @@ func register(c echo.Context) error {
 
 	// Создаём пользователя
 	user := gocloak.User{
-		Username: gocloak.StringP(req.Email),
-		Email:    gocloak.StringP(req.Email),
-		Enabled:  gocloak.BoolP(true),
+		Username:  gocloak.StringP(req.Email),
+		Email:     gocloak.StringP(req.Email),
+		Enabled:   gocloak.BoolP(true),
 		FirstName: gocloak.StringP(req.FirstName),
 		LastName:  gocloak.StringP(req.LastName),
 	}
@@ -381,35 +381,35 @@ func me(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Неверный или истёкший refresh_token"
 // @Router /auth/refresh [post]
 func refreshToken(c echo.Context) error {
-    var req request.RefreshRequest
-    if err := c.Bind(&req); err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
-    }
+	var req request.RefreshRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
+	}
 
-    ctx := context.Background()
-    token, err := keycloakClient.RefreshToken(
-        ctx,
-        req.RefreshToken,
-        os.Getenv("KEYCLOAK_CLIENT_ID"),
-        os.Getenv("KEYCLOAK_CLIENT_SECRET"),
-        realm,
-    )
-    if err != nil {
-        return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid refresh token"})
-    }
+	ctx := context.Background()
+	token, err := keycloakClient.RefreshToken(
+		ctx,
+		req.RefreshToken,
+		os.Getenv("KEYCLOAK_CLIENT_ID"),
+		os.Getenv("KEYCLOAK_CLIENT_SECRET"),
+		realm,
+	)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid refresh token"})
+	}
 
 	now := time.Now()
 
-    newTokens := response.RefreshResponse{
-        AccessToken:  token.AccessToken,
-        RefreshToken: token.RefreshToken,
-        ExpiresIn:    token.ExpiresIn,
-        RefreshExp:   token.RefreshExpiresIn,
-        TokenType:    "Bearer",
-        ExpiresAt:    now.Add(time.Duration(300) * time.Second),
-    }
+	newTokens := response.RefreshResponse{
+		AccessToken:  token.AccessToken,
+		RefreshToken: token.RefreshToken,
+		ExpiresIn:    token.ExpiresIn,
+		RefreshExp:   token.RefreshExpiresIn,
+		TokenType:    "Bearer",
+		ExpiresAt:    now.Add(time.Duration(300) * time.Second),
+	}
 
-    return c.JSON(http.StatusOK, newTokens)
+	return c.JSON(http.StatusOK, newTokens)
 }
 
 // validateToken godoc
@@ -470,7 +470,7 @@ func validateToken(c echo.Context) error {
 	}
 
 	userId, err := uuid.Parse(strPtrToVal(userInfo.Sub))
-	if err != nil{
+	if err != nil {
 		log.Printf("Failed to parse uuid: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "invalid user_id"})
 	}
@@ -481,24 +481,21 @@ func validateToken(c echo.Context) error {
 	if dbResult.Error != nil {
 		if errors.Is(dbResult.Error, gorm.ErrRecordNotFound) {
 			temp := true
-			now := time.Now()
 			userCreateReq := request.UserCreateRequest{
-				Email: userInfo.Email,
-				FirstName: userInfo.GivenName,
-				LastName: userInfo.FamilyName,
-				IsActive: &temp,
-				LastLogin: &now,
-				CreatedAt: &now,
+				Email:         userInfo.Email,
+				FirstName:     userInfo.GivenName,
+				LastName:      userInfo.FamilyName,
+				IsActive:      &temp,
 				EmailVerified: userInfo.EmailVerified,
 			}
 			err = CreateUserWithIdFunc(userCreateReq, c, userId)
-			if err != nil{
+			if err != nil {
 				log.Printf("Failed to create user in database: %v", err)
 				return c.JSON(http.StatusInternalServerError, map[string]string{
 					"error": "failed to create user",
 				})
 			}
-		}else{
+		} else {
 			log.Printf("DB error (find user by email): %v", dbResult.Error)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Ошибка при получении пользователя из базы данных",
@@ -507,7 +504,7 @@ func validateToken(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{"message": "Token is valid"})
-}	
+}
 
 func getAdminToken() string {
 	ctx := context.Background()

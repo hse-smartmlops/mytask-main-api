@@ -14,11 +14,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterProjectRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/project")
-	// apply Keycloak auth middleware to all project routes
 	projectGroup.Use(KeycloakAuthMiddleware)
 	{
 		projectGroup.GET("/all/:page/:pagesize", getAllProjects)
@@ -46,77 +46,52 @@ func RegisterProjectRoutes(e *echo.Echo) {
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/all/{page}/{pagesize} [get]
 func getAllProjects(c echo.Context) error {
-	if err := authorize(c); err != nil {
-		return err
-	}
-	pageReq := c.Param("page")
-	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
-	page, err := strconv.Atoi(pageReq)
-	if err != nil{
-		log.Printf("failed to parse page: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге страницы",
-		})
-	}
-	if page <= 0 {
-		page = 1
-	}
+	if err := authorize(c); err != nil { return err }
 
-	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
-		log.Printf("failed to parse pagesize: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге номера страницы",
-		})
+	page, err := strconv.Atoi(c.Param("page"))
+	if err != nil || page <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Ошибка при парсинге страницы"})
 	}
-	if pageSize <= 0 {
-		pageSize = 10
+	pageSize, err := strconv.Atoi(c.Param("pagesize"))
+	if err != nil || pageSize <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Ошибка при парсинге номера страницы"})
 	}
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	result := dbConn.Session(&gorm.Session{}).Model(models.Project{}).Where("deleted = ?", false).Count(&totalCount)
-	if result.Error != nil {
-		log.Printf("DB error (count projects): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчете проектов",
-		})
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Project{}).
+		Where("deleted = FALSE").
+		Count(&totalCount).Error; err != nil {
+		log.Printf("DB error (count projects): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при подсчете проектов"})
 	}
 
-	// Получаем список проектов с пагинацией
 	var projects []models.Project
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Project{}).Where("deleted = ?", false).
-		Limit(pageSize).
-		Offset(offset).
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Project{}).
+		Where("deleted = FALSE").
+		Limit(pageSize).Offset(offset).
 		Find(&projects).Error; err != nil {
-			log.Printf("DB error (find projects): %v", err)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении проектов из базы данных",
-			})
+		log.Printf("DB error (find projects): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при получении проектов из базы данных"})
 	}
 
-	// Формируем ответ
-	projectList := response.ProjectListResponse{
-		Page:       page,
-		PageSize:   pageSize,
-		TotalCount: totalCount,
-	}
-
-	for _, project := range projects {
-		projectList.Projects = append(projectList.Projects, response.ProjectResponse{
-			ID:              project.ID.String(),
-			Name:            utils.GetString(project.Name),
-			Description:     utils.GetString(project.Description), // исправлено
-			GitlabProjectId: utils.GetInt(project.GitlabProjectID),
-			CreatedBy: 		 utils.GetUUIDString(project.CreatedBy),
-			Status: 		 utils.GetString(project.Status),
-			GitlabUrl:       utils.GetString(project.GitlabURL),
-			CreatedAt:       utils.GetTime(project.CreatedAt),
-			UpdatedAt:       utils.GetTime(project.UpdatedAt),
+	out := response.ProjectListResponse{Page: page, PageSize: pageSize, TotalCount: totalCount}
+	for _, p := range projects {
+		out.Projects = append(out.Projects, response.ProjectResponse{
+			ID:              p.ID.String(),
+			Name:            utils.GetString(p.Name),
+			Description:     utils.GetString(p.Description),
+			GitlabProjectId: utils.GetInt(p.GitlabProjectID),
+			CreatedBy:       utils.GetUUIDString(p.CreatedBy),
+			Status:          utils.GetString(p.Status),
+			GitlabUrl:       utils.GetString(p.GitlabURL),
+			CreatedAt:       utils.GetTime(p.CreatedAt),
+			UpdatedAt:       utils.GetTime(p.UpdatedAt),
 		})
 	}
-	return c.JSON(http.StatusOK, projectList)
+	return c.JSON(http.StatusOK, out)
 }
 
 // getProjectByID godoc
@@ -134,44 +109,37 @@ func getAllProjects(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проекта"
 // @Router /project/{id} [get]
 func getProjectByID(c echo.Context) error {
-	if err := authorize(c); err != nil {
-		return err
-	}
-	id := c.Param("id")
-	projectId, err := uuid.Parse(id)
+	if err := authorize(c); err != nil { return err }
+
+	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный идентификатор проекта"})
 	}
 
-	var project models.Project
-	result := dbConn.Session(&gorm.Session{}).Model(models.Project{}).Where("deleted = ?", false).First(&project, "id = ?", projectId)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Проект не найден",
-			})
+	var p models.Project
+	res := dbConn.Session(&gorm.Session{}).
+		Model(&models.Project{}).
+		Where("id = ? AND deleted = FALSE", projectID).
+		First(&p)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error":"Проект не найден"})
 		}
-		log.Printf("DB error (find project by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проекта из базы данных",
-		})
+		log.Printf("DB error (find project by id): %v", res.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при получении проекта из базы данных"})
 	}
 
-	projectResponse := response.ProjectResponse{
-		ID:              project.ID.String(),
-		Name:            utils.GetString(project.Name),
-		Description:     utils.GetString(project.Description), // исправлено
-		GitlabProjectId: utils.GetInt(project.GitlabProjectID),
-		CreatedBy: 		 utils.GetUUIDString(project.CreatedBy),
-		Status: 		 utils.GetString(project.Status),
-		GitlabUrl:       utils.GetString(project.GitlabURL),
-		CreatedAt:       utils.GetTime(project.CreatedAt),
-		UpdatedAt:       utils.GetTime(project.UpdatedAt),
-	}
-	return c.JSON(http.StatusOK, projectResponse)
+	return c.JSON(http.StatusOK, response.ProjectResponse{
+		ID:              p.ID.String(),
+		Name:            utils.GetString(p.Name),
+		Description:     utils.GetString(p.Description),
+		GitlabProjectId: utils.GetInt(p.GitlabProjectID),
+		CreatedBy:       utils.GetUUIDString(p.CreatedBy),
+		Status:          utils.GetString(p.Status),
+		GitlabUrl:       utils.GetString(p.GitlabURL),
+		CreatedAt:       utils.GetTime(p.CreatedAt),
+		UpdatedAt:       utils.GetTime(p.UpdatedAt),
+	})
 }
 
 // getProjectsByUser godoc
@@ -189,60 +157,51 @@ func getProjectByID(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/user/{id} [get]
 func getProjectsByUser(c echo.Context) error {
-	if err := authorize(c); err != nil {
-		return err
-	}
+	if err := authorize(c); err != nil { return err }
 
-	id := c.Param("id")
-	userId, err := uuid.Parse(id)
+	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор пользователя",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный идентификатор пользователя"})
 	}
 
 	var projects []models.Project
-
-	// Логика: User -> TeamMembers -> ProjectTeams -> Projects
-	result := dbConn.Session(&gorm.Session{}).
+	res := dbConn.Session(&gorm.Session{}).
 		Model(&models.Project{}).
 		Select("projects.*").
 		Joins("JOIN project_teams pt ON pt.project_id = projects.id").
 		Joins("JOIN teams t ON t.id = pt.team_id").
 		Joins("JOIN team_members tm ON tm.team_id = t.id").
-		Where("tm.user_id = ? AND projects.deleted = ? AND (tm.deleted = ? OR tm.deleted IS NULL) AND (pt.deleted = ? OR pt.deleted IS NULL) AND (t.deleted = ? OR t.deleted IS NULL)", 
-			userId, false, false, false, false).
+		Where(`
+			tm.user_id = ? 
+			AND projects.deleted = FALSE 
+			AND tm.deleted = FALSE 
+			AND pt.deleted = FALSE 
+			AND t.deleted = FALSE
+		`, userID).
 		Find(&projects)
-
-	if result.Error != nil {
-		log.Printf("DB error (find projects by user): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении проектов из базы данных",
-		})
+	if res.Error != nil {
+		log.Printf("DB error (find projects by user): %v", res.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при получении проектов из базы данных"})
 	}
-
 	if len(projects) == 0 {
 		return c.JSON(http.StatusOK, []response.ProjectResponse{})
 	}
 
-	// Маппинг в DTO
-	var projectResponses []response.ProjectResponse
-	for _, project := range projects {
-		projectResponses = append(projectResponses, response.ProjectResponse{
-			ID:              project.ID.String(),
-			Name:            utils.GetString(project.Name),
-			Description:     utils.GetString(project.Description),
-			GitlabProjectId: utils.GetInt(project.GitlabProjectID),
-			CreatedBy:       utils.GetUUIDString(project.CreatedBy),
-			Status:          utils.GetString(project.Status),
-			GitlabUrl:       utils.GetString(project.GitlabURL),
-			CreatedAt:       utils.GetTime(project.CreatedAt),
-			UpdatedAt:       utils.GetTime(project.UpdatedAt),
+	var out []response.ProjectResponse
+	for _, p := range projects {
+		out = append(out, response.ProjectResponse{
+			ID:              p.ID.String(),
+			Name:            utils.GetString(p.Name),
+			Description:     utils.GetString(p.Description),
+			GitlabProjectId: utils.GetInt(p.GitlabProjectID),
+			CreatedBy:       utils.GetUUIDString(p.CreatedBy),
+			Status:          utils.GetString(p.Status),
+			GitlabUrl:       utils.GetString(p.GitlabURL),
+			CreatedAt:       utils.GetTime(p.CreatedAt),
+			UpdatedAt:       utils.GetTime(p.UpdatedAt),
 		})
 	}
-
-	return c.JSON(http.StatusOK, projectResponses)
+	return c.JSON(http.StatusOK, out)
 }
 
 // getTeamProjects godoc
@@ -260,71 +219,52 @@ func getProjectsByUser(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/team/{team_id} [get]
 func getTeamProjects(c echo.Context) error {
-	if err := authorize(c); err != nil {
-        return err
-    }
+	if err := authorize(c); err != nil { return err }
 
-    teamIDStr := c.Param("team_id")
-    teamID, err := uuid.Parse(teamIDStr)
-    if err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{
-            "error": "Некорректный team_id",
-        })
-    }
+	teamID, err := uuid.Parse(c.Param("team_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный team_id"})
+	}
 
-	// Получаем связи команда-проект
-	var projectTeams []models.ProjectTeam
-	if err := dbConn.
-		Session(&gorm.Session{}).Model(models.ProjectTeam{}).
-		Where("team_id = ? AND deleted = ?", teamID, false).
-		Find(&projectTeams).Error; err != nil {
+	var pts []models.ProjectTeam
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.ProjectTeam{}).
+		Where("team_id = ? AND deleted = FALSE", teamID).
+		Find(&pts).Error; err != nil {
 		log.Printf("DB error (find projectTeams): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении связей команда-проект",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при получении связей команда-проект"})
+	}
+	if len(pts) == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"error":"Для данной команды проекты не найдены"})
 	}
 
-	if len(projectTeams) == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Для данной команды проекты не найдены",
-		})
-	}
+	projectIDs := make([]uuid.UUID, 0, len(pts))
+	for _, pt := range pts { projectIDs = append(projectIDs, pt.ProjectID) }
 
-	// Собираем projectIDs
-	projectIDs := make([]uuid.UUID, 0, len(projectTeams))
-	for _, pt := range projectTeams {
-		projectIDs = append(projectIDs, pt.ProjectID)
-	}
-
-	// Получаем проекты
 	var projects []models.Project
-	if err := dbConn.Model(models.Project{}).
-		Session(&gorm.Session{}).
-		Where("id IN ? AND deleted = ?", projectIDs, false).
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Project{}).
+		Where("id IN ? AND deleted = FALSE", projectIDs).
 		Find(&projects).Error; err != nil {
 		log.Printf("DB error (find projects): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении списка проектов",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при получении списка проектов"})
 	}
 
-	// Формируем ответ
-	projectListResponse := response.ProjectByTeamResponse{Projects: make([]response.ProjectResponse, 0, len(projects))}
-	for _, project := range projects {
-		projectListResponse.Projects = append(projectListResponse.Projects, response.ProjectResponse{
-			ID:              project.ID.String(),
-			Name:            utils.GetString(project.Name),
-			Description:     utils.GetString(project.Description),
-			GitlabProjectId: utils.GetInt(project.GitlabProjectID),
-			CreatedBy:       utils.GetUUIDString(project.CreatedBy),
-			Status:          utils.GetString(project.Status),
-			GitlabUrl:       utils.GetString(project.GitlabURL),
-			CreatedAt:       utils.GetTime(project.CreatedAt),
-			UpdatedAt:       utils.GetTime(project.UpdatedAt),
+	resp := response.ProjectByTeamResponse{Projects: make([]response.ProjectResponse, 0, len(projects))}
+	for _, p := range projects {
+		resp.Projects = append(resp.Projects, response.ProjectResponse{
+			ID:              p.ID.String(),
+			Name:            utils.GetString(p.Name),
+			Description:     utils.GetString(p.Description),
+			GitlabProjectId: utils.GetInt(p.GitlabProjectID),
+			CreatedBy:       utils.GetUUIDString(p.CreatedBy),
+			Status:          utils.GetString(p.Status),
+			GitlabUrl:       utils.GetString(p.GitlabURL),
+			CreatedAt:       utils.GetTime(p.CreatedAt),
+			UpdatedAt:       utils.GetTime(p.UpdatedAt),
 		})
 	}
-
-	return c.JSON(http.StatusOK, projectListResponse)
+	return c.JSON(http.StatusOK, resp)
 }
 
 // createProject godoc
@@ -341,67 +281,51 @@ func getTeamProjects(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проекта"
 // @Router /project [post]
 func createProject(c echo.Context) error {
-	if err := authorize(c); err != nil {
-		return err
-	}
+	if err := authorize(c); err != nil { return err }
+
 	var req request.CreateProjectRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Не удалось получить данные из запроса"})
 	}
-
-	newUUID := uuid.New()
-
-	now := time.Now()
-
-	del := false
-
 	if req.CreatedBy == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Отсутствует идентификатор создателя",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Отсутствует идентификатор создателя"})
 	}
 	creatorUUID, err := uuid.Parse(*req.CreatedBy)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор создателя",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный идентификатор создателя"})
 	}
 
-	var creatorID *uuid.UUID = &creatorUUID
-
+	now := time.Now()
+	del := false
 
 	project := models.Project{
-		ID:              newUUID,
+		ID:              uuid.New(),
 		Name:            req.Name,
 		Description:     req.Description,
 		CreatedAt:       &now,
-		CreatedBy:       creatorID,
-		Status: 		 req.Status,
+		CreatedBy:       &creatorUUID,
+		Status:          req.Status,
 		GitlabProjectID: req.Gitlab_project_id,
 		GitlabURL:       req.Gitlab_url,
-		Deleted: &del,
+		Deleted:         &del,
 	}
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.Project{}).Create(&project); res.Error != nil {
-			log.Printf("DB error (create project): %v", res.Error)
-			return res.Error
-		}
-		return nil
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Project{}).
+			Omit(clause.Associations).
+			Create(&project)
+		return res.Error
 	}); txErr != nil {
 		log.Printf("DB transaction error (create project): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании проекта"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при создании проекта"})
 	}
 
-	createResponse := response.ProjectUniversalResponse{
+	return c.JSON(http.StatusCreated, response.ProjectUniversalResponse{
 		ID:      project.ID.String(),
 		Message: "Проект создан",
-	}
-
-	return c.JSON(http.StatusCreated, createResponse)
+	})
 }
 
 // updateProject godoc
@@ -419,78 +343,51 @@ func createProject(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проекта"
 // @Router /project/{id} [patch]
 func updateProject(c echo.Context) error {
-	if err := authorize(c); err != nil {
-		return err
-	}
-	// Парсинг ID проекта
-	id := c.Param("id")
-	projectId, err := uuid.Parse(id)
+	if err := authorize(c); err != nil { return err }
+
+	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный идентификатор проекта"})
 	}
 
-	// Привязка данных запроса
 	var req request.UpdateProjectRequest
-	if err = c.Bind(&req); err != nil {
+	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Не удалось получить данные из запроса"})
 	}
 
-	// Формируем карту только для указанных полей
-	updateData := make(map[string]interface{})
-	if req.Name != nil {
-		updateData["name"] = *req.Name
-	}
-	if req.Description != nil {
-		updateData["description"] = *req.Description
-	}
-	if req.GitlabProjectId != nil {
-		updateData["gitlab_project_id"] = *req.GitlabProjectId
-	}
-	if req.GitlabUrl != nil {
-		updateData["gitlab_url"] = *req.GitlabUrl
-	}
-	if req.Status != nil{
-		updateData["status"] = *req.Status
-	}
-
-	// Проверяем, есть ли поля для обновления
+	updateData := map[string]interface{}{}
+	if req.Name != nil            { updateData["name"] = *req.Name }
+	if req.Description != nil     { updateData["description"] = *req.Description }
+	if req.GitlabProjectId != nil { updateData["gitlab_project_id"] = *req.GitlabProjectId }
+	if req.GitlabUrl != nil       { updateData["gitlab_url"] = *req.GitlabUrl }
+	if req.Status != nil          { updateData["status"] = *req.Status }
 	if len(updateData) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не указаны поля для обновления",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Не указаны поля для обновления"})
 	}
 
-	updateData["updated_at"] = time.Now()
+	now := time.Now()
+	updateData["updated_at"] = &now
 
-	// Выполняем обновление только указанных полей
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Project{}).Where("id = ? AND deleted = ?", projectId, false).Updates(updateData)
-		if res.Error != nil {
-			log.Printf("DB error (update project): %v", res.Error)
-			return res.Error
-		}
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Project{}).
+			Where("id = ? AND deleted = FALSE", projectID).
+			Updates(updateData)
+		if res.Error != nil { return res.Error }
 		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message":"Ничего не обновлено"})
 		}
 		return nil
 	}); txErr != nil {
 		log.Printf("DB transaction error (update project): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении проекта"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при обновлении проекта"})
 	}
 
-	// Формируем ответ
-	updateResponse := response.ProjectUniversalResponse{
-		ID:      id,
-		Message: "Проект с ID " + id + " обновлен",
-	}
-
-	return c.JSON(http.StatusOK, updateResponse)
+	return c.JSON(http.StatusOK, response.ProjectUniversalResponse{
+		ID:      projectID.String(),
+		Message: "Проект успешно обновлен",
+	})
 }
 
 // deleteProject godoc
@@ -507,44 +404,42 @@ func updateProject(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта"
 // @Router /project/{id} [delete]
 func deleteProject(c echo.Context) error {
-	if err := authorize(c); err != nil {
-		return err
-	}
+	if err := authorize(c); err != nil { return err }
 
-	id := c.Param("id")
-	projectId, err := uuid.Parse(id)
+	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный идентификатор проекта"})
 	}
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
+
+	delTrue := true
+	now := time.Now()
+	update := map[string]interface{}{"deleted": &delTrue, "updated_at": &now}
+
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Project{}).Where("id = ?", projectId).Updates(updateData)
-		if res.Error != nil {
-			log.Printf("DB error (delete project): %v", res.Error)
-			return res.Error
-		}
+		// проект
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Project{}).
+			Where("id = ?", projectID).
+			Updates(update)
+		if res.Error != nil { return res.Error }
 		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message":"Ничего не удалено"})
 		}
+		// каскад
+		if res = tx.Session(&gorm.Session{}).
+			Model(&models.Task{}).
+			Where("project_id = ?", projectID).
+			Updates(update); res.Error != nil { return res.Error }
 
-		if res = tx.Session(&gorm.Session{}).Model(models.Task{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
-			log.Printf("DB error (delete project - tasks): %v", res.Error)
-			return res.Error
-		}
+		if res = tx.Session(&gorm.Session{}).
+			Model(&models.Board{}).
+			Where("project_id = ?", projectID).
+			Updates(update); res.Error != nil { return res.Error }
 
-		if res = tx.Session(&gorm.Session{}).Model(models.Board{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
-			log.Printf("DB error (delete project - boards): %v", res.Error)
-			return res.Error
-		}
-
-		if res = tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Where("project_id = ?", projectId).Updates(updateData); res.Error != nil {
-			log.Printf("DB error (delete project - project_teams): %v", res.Error)
-			return res.Error
-		}
+		if res = tx.Session(&gorm.Session{}).
+			Model(&models.ProjectTeam{}).
+			Where("project_id = ?", projectID).
+			Updates(update); res.Error != nil { return res.Error }
 
 		return nil
 	}); txErr != nil {
@@ -552,10 +447,11 @@ func deleteProject(c echo.Context) error {
 			return c.JSON(he.Code, he.Message)
 		}
 		log.Printf("DB transaction error (delete project): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проекта"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при удалении проекта"})
 	}
 
-	delResponse := response.ProjectUniversalResponse{ID: id, Message: "Проект с ID " + id + " удален"}
-
-	return c.JSON(http.StatusOK, delResponse)
+	return c.JSON(http.StatusOK, response.ProjectUniversalResponse{
+		ID:      projectID.String(),
+		Message: "Проект удален",
+	})
 }

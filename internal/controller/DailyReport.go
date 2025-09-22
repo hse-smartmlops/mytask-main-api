@@ -4,7 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
-	utils "emplacc-api/internal/utils"
+	"emplacc-api/internal/utils"
 	"errors"
 	"log"
 	"net/http"
@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterReportRoutes(e *echo.Echo) {
@@ -53,7 +54,6 @@ func getAllReports(c echo.Context) error {
 		return err
 	}
 
-	// Пагинация
 	page, _ := strconv.Atoi(c.Param("page"))
 	if page <= 0 {
 		page = 1
@@ -64,89 +64,63 @@ func getAllReports(c echo.Context) error {
 	}
 	offset := (page - 1) * pageSize
 
-	// Считаем общее количество отчетов
 	var totalCount int64
-	if err := dbConn.Model(&models.DailyReport{}).Session(&gorm.Session{}).
-		Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count reports): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчете отчетов",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете отчетов"})
 	}
 
-	// Загружаем отчеты с preloaded связями
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
-		Preload("User", "deleted = ?", false).
-		Preload("Task", "deleted = ?", false).
-		Preload("HelpRequest", "deleted = ?", false).
-		Preload("CompletedWork", "deleted = ?", false).
-		Preload("TomorrowPlans", "deleted = ?", false).
-		Preload("ReportProblems", "deleted = ?", false).
-		Preload("ReportProblems.Problem", "deleted = ?", false).
-		Where("deleted = ?", false).
-		Limit(pageSize).
-		Offset(offset).
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Preload("User", "deleted = FALSE").
+		Preload("HelpRequests", "deleted = FALSE").
+		Preload("CompletedWork", "deleted = FALSE").
+		Preload("TomorrowPlans", "deleted = FALSE").
+		Preload("ReportProblems", "deleted = FALSE").
+		Preload("ReportProblems.Problem", "deleted = FALSE").
+		Where("deleted = FALSE").
+		Order("report_date DESC NULLS LAST, created_at DESC NULLS LAST").
+		Limit(pageSize).Offset(offset).
 		Find(&reports).Error; err != nil {
 		log.Printf("DB error (find reports): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении отчетов из базы данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчетов"})
 	}
 
-	// Формируем ответ
-	reportList := response.ReportListResponse{
+	out := response.ReportListResponse{
 		Page:       page,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
 	}
-
-	for _, report := range reports {
-		if report.Deleted != nil && *report.Deleted {
-			continue
-		}
-
-		// Пользователь
-		user := report.User
+	for _, r := range reports {
+		user := r.User
 		userInfo := response.UserShort{
-			ID:        report.UserID.String(),
+			ID:        r.UserID.String(),
 			FirstName: utils.GetString(user.FirstName),
 			LastName:  utils.GetString(user.LastName),
 		}
 
-		// Выполненная работа
 		var complWork []response.CompletedWork
-		for _, workItem := range report.CompletedWork {
+		for _, w := range r.CompletedWork {
 			complWork = append(complWork, response.CompletedWork{
-				ID:          workItem.ID.String(),
-				Description: utils.GetString(workItem.Description),
+				ID:          w.ID.String(),
+				Description: utils.GetString(w.Description),
 			})
 		}
 
-		// План на завтра
-		var tomorrowPlans []response.TomorrowPlans
-		for _, plan := range report.TomorrowPlans {
-			tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
-				ID:          plan.ID.String(),
-				Description: utils.GetString(plan.Description),
+		var plans []response.TomorrowPlans
+		for _, p := range r.TomorrowPlans {
+			plans = append(plans, response.TomorrowPlans{
+				ID:          p.ID.String(),
+				Description: utils.GetString(p.Description),
 			})
 		}
 
-		// Запрос на помощь
-		var helpRequest response.HelpRequestItem
-		if report.HelpRequest != nil {
-			helpRequest = response.HelpRequestItem{
-				ID:          report.HelpRequest.ID.String(),
-				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
-				Description: utils.GetString(report.HelpRequest.Description),
-				Status:      utils.GetString(report.HelpRequest.Status),
-			}
-		}
-
-		// Проблемы
 		var problemsResp []response.ProblemResponse
-		for _, rp := range report.ReportProblems {
+		for _, rp := range r.ReportProblems {
 			if rp.Problem != nil {
 				problemsResp = append(problemsResp, response.ProblemResponse{
 					ID:          rp.Problem.ID.String(),
@@ -159,27 +133,31 @@ func getAllReports(c echo.Context) error {
 			}
 		}
 
-		helpResp := []response.HelpRequestItem{helpRequest}
-
-	// Формируем ответ
-		resp := response.ReportResponse{
-			ID:            report.ID.String(),
-			UserID:        report.UserID.String(),
-			ReportDate:    utils.GetTime(report.ReportDate),
-			CompletedWork: complWork,
-			PlanTomorrow:  tomorrowPlans,
-			HelpRequest:   helpResp,
-			CreatedAt:     utils.GetTime(report.CreatedAt),
-			UpdatedAt:     utils.GetTime(report.UpdatedAt),
-			UserInfo:      userInfo,
-			Problems:      problemsResp,
-			Checked: 	utils.GetInt8(report.Checked),
+		helpResp := []response.HelpRequestItem{}
+		for _, hr := range r.HelpRequests {
+			helpResp = append(helpResp, response.HelpRequestItem{
+				ID:          hr.ID.String(),
+				HelperID:    utils.GetUUIDString(hr.HelperID),
+				Description: utils.GetString(hr.Description),
+				Status:      utils.GetString(hr.Status),
+			})
 		}
 
-		reportList.Reports = append(reportList.Reports, resp)
+		out.Reports = append(out.Reports, response.ReportResponse{
+			ID:            r.ID.String(),
+			UserID:        r.UserID.String(),
+			ReportDate:    utils.GetTime(r.ReportDate),
+			CompletedWork: complWork,
+			PlanTomorrow:  plans,
+			HelpRequest:   helpResp,
+			CreatedAt:     utils.GetTime(r.CreatedAt),
+			UpdatedAt:     utils.GetTime(r.UpdatedAt),
+			UserInfo:      userInfo,
+			Problems:      problemsResp,
+			Checked:       utils.GetInt8(r.Checked),
+		})
 	}
-
-	return c.JSON(http.StatusOK, reportList)
+	return c.JSON(http.StatusOK, out)
 }
 
 // getReport godoc
@@ -201,26 +179,22 @@ func getReport(c echo.Context) error {
 		return err
 	}
 
-	// Парсим UUID отчета
 	reportID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор отчета",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор отчета"})
 	}
 
-	// Загружаем отчет с предзагрузкой всех связанных сущностей
-	var report models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
-		Preload("User", "deleted = ?", false).
-		Preload("Task", "deleted = ?", false).
-		Preload("HelpRequest", "deleted = ?", false).
-		Preload("CompletedWork", "deleted = ?", false).
-		Preload("TomorrowPlans", "deleted = ?", false).
-		Preload("ReportProblems", "deleted = ?", false).
-		Preload("ReportProblems.Problem", "deleted = ?", false).
-		Where("deleted = ? AND id = ?", false, reportID).
-		First(&report).Error; err != nil {
+	var r models.DailyReport
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Preload("User", "deleted = FALSE").
+		Preload("HelpRequest", "deleted = FALSE").
+		Preload("CompletedWork", "deleted = FALSE").
+		Preload("TomorrowPlans", "deleted = FALSE").
+		Preload("ReportProblems", "deleted = FALSE").
+		Preload("ReportProblems.Problem", "deleted = FALSE").
+		Where("deleted = FALSE AND id = ?", reportID).
+		First(&r).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Отчет не найден"})
 		}
@@ -228,51 +202,35 @@ func getReport(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчета"})
 	}
 
-	// Пользователь
-	user := report.User
 	userInfo := response.UserShort{
-		ID:        report.UserID.String(),
-		FirstName: utils.GetString(user.FirstName),
-		LastName:  utils.GetString(user.LastName),
+		ID:        r.UserID.String(),
+		FirstName: utils.GetString(r.User.FirstName),
+		LastName:  utils.GetString(r.User.LastName),
 	}
 
-	// Выполненная работа
 	var complWork []response.CompletedWork
-	for _, work := range report.CompletedWork {
+	for _, w := range r.CompletedWork {
 		complWork = append(complWork, response.CompletedWork{
-			ID:          work.ID.String(),
-			Description: utils.GetString(work.Description),
+			ID:          w.ID.String(),
+			Description: utils.GetString(w.Description),
 		})
 	}
 
-	// План на завтра
-	var tomorrowPlans []response.TomorrowPlans
-	for _, plan := range report.TomorrowPlans {
-		tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
-			ID:          plan.ID.String(),
-			Description: utils.GetString(plan.Description),
+	var plans []response.TomorrowPlans
+	for _, p := range r.TomorrowPlans {
+		plans = append(plans, response.TomorrowPlans{
+			ID:          p.ID.String(),
+			Description: utils.GetString(p.Description),
 		})
 	}
 
-	// Запрос на помощь
-	var helpRequest response.HelpRequestItem
-	if report.HelpRequest != nil {
-		helpRequest = response.HelpRequestItem{
-			ID:          report.HelpRequest.ID.String(),
-			HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
-			Description: utils.GetString(report.HelpRequest.Description),
-			Status:      utils.GetString(report.HelpRequest.Status),
-		}
-	}
-
-	// Проблемы
 	var problemsResp []response.ProblemResponse
-	for _, rp := range report.ReportProblems {
+	for _, rp := range r.ReportProblems {
 		if rp.Problem != nil {
 			problemsResp = append(problemsResp, response.ProblemResponse{
 				ID:          rp.Problem.ID.String(),
 				Name:        utils.GetString(rp.Problem.Name),
-				Description: rp.Problem.Description, // pq.StringArray уже []string
+				Description: rp.Problem.Description,
 				CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
 				CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
 				UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
@@ -280,24 +238,29 @@ func getReport(c echo.Context) error {
 		}
 	}
 
-	helpResp := []response.HelpRequestItem{helpRequest}
-
-	// Формируем ответ
-	resp := response.ReportResponse{
-		ID:            report.ID.String(),
-		UserID:        report.UserID.String(),
-		ReportDate:    utils.GetTime(report.ReportDate),
-		CompletedWork: complWork,
-		PlanTomorrow:  tomorrowPlans,
-		HelpRequest:   helpResp,
-		CreatedAt:     utils.GetTime(report.CreatedAt),
-		UpdatedAt:     utils.GetTime(report.UpdatedAt),
-		UserInfo:      userInfo,
-		Problems:      problemsResp,
-		Checked: 	utils.GetInt8(report.Checked),
+	helpResp := []response.HelpRequestItem{}
+	for _, hr := range r.HelpRequests {
+		helpResp = append(helpResp, response.HelpRequestItem{
+			ID:          hr.ID.String(),
+			HelperID:    utils.GetUUIDString(hr.HelperID),
+			Description: utils.GetString(hr.Description),
+			Status:      utils.GetString(hr.Status),
+		})
 	}
 
-	return c.JSON(http.StatusOK, resp)
+	return c.JSON(http.StatusOK, response.ReportResponse{
+		ID:            r.ID.String(),
+		UserID:        r.UserID.String(),
+		ReportDate:    utils.GetTime(r.ReportDate),
+		CompletedWork: complWork,
+		PlanTomorrow:  plans,
+		HelpRequest:   helpResp,
+		CreatedAt:     utils.GetTime(r.CreatedAt),
+		UpdatedAt:     utils.GetTime(r.UpdatedAt),
+		UserInfo:      userInfo,
+		Problems:      problemsResp,
+		Checked:       utils.GetInt8(r.Checked),
+	})
 }
 
 // getReportsByTaskId godoc
@@ -319,78 +282,91 @@ func getReportsByTaskId(c echo.Context) error {
 		return err
 	}
 
-	taskIDParam := c.Param("id")
-	taskUUID, err := uuid.Parse(taskIDParam)
+	taskID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный ID задачи"})
 	}
 
+	// находим все completed_work по задаче -> собираем report_id
+	var cw []models.CompletedWork
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.CompletedWork{}).
+		Where("deleted = FALSE AND task_id = ?", taskID).
+		Find(&cw).Error; err != nil {
+		log.Printf("DB error (find completed_work by task): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении работ по задаче"})
+	}
+	reportIDs := make(map[uuid.UUID]struct{})
+	for _, w := range cw {
+		if w.ReportID != nil {
+			reportIDs[*w.ReportID] = struct{}{}
+		}
+	}
+	if len(reportIDs) == 0 {
+		return c.JSON(http.StatusOK, response.ReportListByTaskId{TaskID: taskID.String()})
+	}
+
+	ids := make([]uuid.UUID, 0, len(reportIDs))
+	for id := range reportIDs {
+		ids = append(ids, id)
+	}
+
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
-		Preload("User", "deleted = ?", false).
-		Preload("HelpRequest", "deleted = ?", false).
-		Preload("CompletedWork", "deleted = ?", false).
-		Preload("TomorrowPlans", "deleted = ?", false).
-		Preload("ReportProblems", "deleted = ?", false).
-		Preload("ReportProblems.Problem", "deleted = ?", false).
-		Where("deleted = ? AND task_id = ?", false, taskUUID).
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Preload("User", "deleted = FALSE").
+		Preload("HelpRequest", "deleted = FALSE").
+		Preload("CompletedWork", "deleted = FALSE").
+		Preload("TomorrowPlans", "deleted = FALSE").
+		Preload("ReportProblems", "deleted = FALSE").
+		Preload("ReportProblems.Problem", "deleted = FALSE").
+		Where("deleted = FALSE AND id IN ?", ids).
 		Find(&reports).Error; err != nil {
-		log.Printf("DB error (find reports): %v", err)
+		log.Printf("DB error (find reports by task): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчетов"})
 	}
 
-	reportList := response.ReportListByTaskId{
-		TaskID: taskIDParam,
-	}
-
-	for _, report := range reports {
-		if report.Deleted != nil && *report.Deleted {
-			continue
-		}
-
+	out := response.ReportListByTaskId{TaskID: taskID.String()}
+	for _, r := range reports {
 		userInfo := response.UserShort{
-			ID:        report.UserID.String(),
-			FirstName: utils.GetString(report.User.FirstName),
-			LastName:  utils.GetString(report.User.LastName),
+			ID:        r.UserID.String(),
+			FirstName: utils.GetString(r.User.FirstName),
+			LastName:  utils.GetString(r.User.LastName),
 		}
 
-		// Выполненная работа
 		var complWork []response.CompletedWork
-		for _, work := range report.CompletedWork {
+		for _, w := range r.CompletedWork {
 			complWork = append(complWork, response.CompletedWork{
-				ID:          work.ID.String(),
-				Description: utils.GetString(work.Description),
+				ID:          w.ID.String(),
+				Description: utils.GetString(w.Description),
 			})
 		}
 
-		// План на завтра
-		var tomorrowPlans []response.TomorrowPlans
-		for _, plan := range report.TomorrowPlans {
-			tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
-				ID:          plan.ID.String(),
-				Description: utils.GetString(plan.Description),
+		var plans []response.TomorrowPlans
+		for _, p := range r.TomorrowPlans {
+			plans = append(plans, response.TomorrowPlans{
+				ID:          p.ID.String(),
+				Description: utils.GetString(p.Description),
 			})
 		}
 
-		// Запрос на помощь
-		var helpRequest response.HelpRequestItem
-		if report.HelpRequest != nil {
-			helpRequest = response.HelpRequestItem{
-				ID:          report.HelpRequest.ID.String(),
-				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
-				Description: utils.GetString(report.HelpRequest.Description),
-				Status:      utils.GetString(report.HelpRequest.Status),
-			}
+		helpResp := []response.HelpRequestItem{}
+		for _, hr := range r.HelpRequests {
+			helpResp = append(helpResp, response.HelpRequestItem{
+				ID:          hr.ID.String(),
+				HelperID:    utils.GetUUIDString(hr.HelperID),
+				Description: utils.GetString(hr.Description),
+				Status:      utils.GetString(hr.Status),
+			})
 		}
 
-		// Проблемы
 		var problemsResp []response.ProblemResponse
-		for _, rp := range report.ReportProblems {
+		for _, rp := range r.ReportProblems {
 			if rp.Problem != nil {
 				problemsResp = append(problemsResp, response.ProblemResponse{
 					ID:          rp.Problem.ID.String(),
 					Name:        utils.GetString(rp.Problem.Name),
-					Description: rp.Problem.Description, // pq.StringArray уже []string
+					Description: rp.Problem.Description,
 					CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
 					CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
 					UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
@@ -398,26 +374,21 @@ func getReportsByTaskId(c echo.Context) error {
 			}
 		}
 
-		helpResp := []response.HelpRequestItem{helpRequest}
-
-		resp := response.ReportResponse{
-			ID:            report.ID.String(),
-			UserID:        report.UserID.String(),
-			ReportDate:    utils.GetTime(report.ReportDate),
+		out.Reports = append(out.Reports, response.ReportResponse{
+			ID:            r.ID.String(),
+			UserID:        r.UserID.String(),
+			ReportDate:    utils.GetTime(r.ReportDate),
 			CompletedWork: complWork,
-			PlanTomorrow:  tomorrowPlans,
+			PlanTomorrow:  plans,
 			HelpRequest:   helpResp,
-			CreatedAt:     utils.GetTime(report.CreatedAt),
-			UpdatedAt:     utils.GetTime(report.UpdatedAt),
+			CreatedAt:     utils.GetTime(r.CreatedAt),
+			UpdatedAt:     utils.GetTime(r.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
-			Checked: 	utils.GetInt8(report.Checked),
-		}
-
-		reportList.Reports = append(reportList.Reports, resp)
+			Checked:       utils.GetInt8(r.Checked),
+		})
 	}
-
-	return c.JSON(http.StatusOK, reportList)
+	return c.JSON(http.StatusOK, out)
 }
 
 // getReportsByProjectId godoc
@@ -439,79 +410,108 @@ func getReportsByProjectId(c echo.Context) error {
 		return err
 	}
 
-	projectID := c.Param("id")
+	projectUUID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
+	}
+
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Task{}).Where("project_id = ? AND deleted = ?", projectID, false).Find(&tasks).Error; err != nil {
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Task{}).
+		Where("project_id = ? AND deleted = FALSE", projectUUID).
+		Find(&tasks).Error; err != nil {
 		log.Printf("DB error (find tasks by project id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач"})
 	}
 
-	var taskIDs []uuid.UUID
+	if len(tasks) == 0 {
+		return c.JSON(http.StatusOK, response.ReportListByProjectId{ProjectID: projectUUID.String()})
+	}
+
+	taskIDs := make([]uuid.UUID, 0, len(tasks))
 	for _, t := range tasks {
 		taskIDs = append(taskIDs, t.ID)
 	}
 
+	// по задачам проекта берём completed_work, вытягиваем report_id
+	var cw []models.CompletedWork
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.CompletedWork{}).
+		Where("deleted = FALSE AND task_id IN ?", taskIDs).
+		Find(&cw).Error; err != nil {
+		log.Printf("DB error (find completed_work by tasks): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении работ"})
+	}
+	reportIDs := make(map[uuid.UUID]struct{})
+	for _, w := range cw {
+		if w.ReportID != nil {
+			reportIDs[*w.ReportID] = struct{}{}
+		}
+	}
+	if len(reportIDs) == 0 {
+		return c.JSON(http.StatusOK, response.ReportListByProjectId{ProjectID: projectUUID.String()})
+	}
+	ids := make([]uuid.UUID, 0, len(reportIDs))
+	for id := range reportIDs {
+		ids = append(ids, id)
+	}
+
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).
-		Preload("User", "deleted = ?", false).
-		Preload("HelpRequest", "deleted = ?", false).
-		Preload("CompletedWork", "deleted = ?", false).
-		Preload("TomorrowPlans", "deleted = ?", false).
-		Preload("ReportProblems", "deleted = ?", false).
-		Preload("ReportProblems.Problem", "deleted = ?", false).
-		Where("task_id IN (?)", taskIDs).
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Preload("User", "deleted = FALSE").
+		Preload("HelpRequest", "deleted = FALSE").
+		Preload("CompletedWork", "deleted = FALSE").
+		Preload("TomorrowPlans", "deleted = FALSE").
+		Preload("ReportProblems", "deleted = FALSE").
+		Preload("ReportProblems.Problem", "deleted = FALSE").
+		Where("deleted = FALSE AND id IN ?", ids).
 		Find(&reports).Error; err != nil {
 		log.Printf("DB error (find reports by project id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчетов"})
 	}
 
-	reportList := response.ReportListByProjectId{ProjectID: projectID}
-
-	for _, report := range reports {
-		if report.Deleted != nil && *report.Deleted {
-			continue
-		}
-
+	out := response.ReportListByProjectId{ProjectID: projectUUID.String()}
+	for _, r := range reports {
 		userInfo := response.UserShort{
-			ID:        report.UserID.String(),
-			FirstName: utils.GetString(report.User.FirstName),
-			LastName:  utils.GetString(report.User.LastName),
+			ID:        r.UserID.String(),
+			FirstName: utils.GetString(r.User.FirstName),
+			LastName:  utils.GetString(r.User.LastName),
 		}
 
 		var complWork []response.CompletedWork
-		for _, w := range report.CompletedWork {
+		for _, w := range r.CompletedWork {
 			complWork = append(complWork, response.CompletedWork{
 				ID:          w.ID.String(),
 				Description: utils.GetString(w.Description),
 			})
 		}
 
-		var tomorrowPlans []response.TomorrowPlans
-		for _, t := range report.TomorrowPlans {
-			tomorrowPlans = append(tomorrowPlans, response.TomorrowPlans{
-				ID:          t.ID.String(),
-				Description: utils.GetString(t.Description),
+		var plans []response.TomorrowPlans
+		for _, p := range r.TomorrowPlans {
+			plans = append(plans, response.TomorrowPlans{
+				ID:          p.ID.String(),
+				Description: utils.GetString(p.Description),
 			})
 		}
 
-		var helpRequest response.HelpRequestItem
-		if report.HelpRequest != nil {
-			helpRequest = response.HelpRequestItem{
-				ID:          report.HelpRequest.ID.String(),
-				HelperID:    utils.GetUUIDString(report.HelpRequest.HelperID),
-				Description: utils.GetString(report.HelpRequest.Description),
-				Status:      utils.GetString(report.HelpRequest.Status),
-
-			}
+		helpResp := []response.HelpRequestItem{}
+		for _, hr := range r.HelpRequests {
+			helpResp = append(helpResp, response.HelpRequestItem{
+				ID:          hr.ID.String(),
+				HelperID:    utils.GetUUIDString(hr.HelperID),
+				Description: utils.GetString(hr.Description),
+				Status:      utils.GetString(hr.Status),
+			})
 		}
 
 		var problemsResp []response.ProblemResponse
-		for _, rp := range report.ReportProblems {
+		for _, rp := range r.ReportProblems {
 			if rp.Problem != nil {
 				problemsResp = append(problemsResp, response.ProblemResponse{
 					ID:          rp.Problem.ID.String(),
 					Name:        utils.GetString(rp.Problem.Name),
-					Description: rp.Problem.Description, // уже []string
+					Description: rp.Problem.Description,
 					CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
 					CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
 					UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
@@ -519,27 +519,22 @@ func getReportsByProjectId(c echo.Context) error {
 			}
 		}
 
-		helpResp := []response.HelpRequestItem{helpRequest}
-
-
-		reportList.Reports = append(reportList.Reports, response.ReportResponse{
-			ID:            report.ID.String(),
-			UserID:        report.UserID.String(),
-			ReportDate:    utils.GetTime(report.ReportDate),
+		out.Reports = append(out.Reports, response.ReportResponse{
+			ID:            r.ID.String(),
+			UserID:        r.UserID.String(),
+			ReportDate:    utils.GetTime(r.ReportDate),
 			CompletedWork: complWork,
-			PlanTomorrow:  tomorrowPlans,
+			PlanTomorrow:  plans,
 			HelpRequest:   helpResp,
-			CreatedAt:     utils.GetTime(report.CreatedAt),
-			UpdatedAt:     utils.GetTime(report.UpdatedAt),
+			CreatedAt:     utils.GetTime(r.CreatedAt),
+			UpdatedAt:     utils.GetTime(r.UpdatedAt),
 			UserInfo:      userInfo,
 			Problems:      problemsResp,
-			Checked: 	utils.GetInt8(report.Checked),
+			Checked:       utils.GetInt8(r.Checked),
 		})
 	}
-
-	return c.JSON(http.StatusOK, reportList)
+	return c.JSON(http.StatusOK, out)
 }
-
 
 // createReport godoc
 // @Summary Создание нового отчета
@@ -559,225 +554,423 @@ func createReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
+
 	var req request.ReportCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	newUUID := uuid.New()
-
-	now := time.Now()
-
-	var userId uuid.UUID
-	userId, err := uuid.Parse(req.UserId)
+	userID, err := uuid.Parse(req.UserId)
 	if err != nil {
 		log.Printf("ParseUserId error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось распарсить userId ",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось распарсить userId"})
 	}
 
-	del := false
+	now := time.Now()
+	delFalse := false
+	zero := int8(0)
 
-	var zero int8 = 0
-
-	report := models.DailyReport{
-		ID:         newUUID,
-		UserID:     userId,
+	rep := models.DailyReport{
+		ID:         uuid.New(),
+		UserID:     userID,
 		ReportDate: req.ReportDate,
 		CreatedAt:  &now,
-		Deleted: &del,
-		Checked:  &zero,
+		Deleted:    &delFalse,
+		Checked:    &zero,
 	}
 
-	result := dbConn.Session(&gorm.Session{}).Model(models.DailyReport{}).Create(&report)
-	if result.Error != nil {
-		log.Printf("DB error (create report): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании отчета",
-		})
-	}
+	txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		// создаём сам отчёт
+		if res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Create(&rep); res.Error != nil {
+			return res.Error
+		}
 
-	if req.CompleteWork != nil {
-		for _, completedWorks := range *req.CompleteWork {
-			tempUUID := uuid.New()
-
-		
-			complWork := models.CompletedWork{
-				ID:          tempUUID,
-				Description: &completedWorks.Description,
-				ReportID:    &newUUID,
-				Deleted: &del,
+		// CompletedWork: создаём столько, сколько пришло
+		if len(req.CompleteWork) > 0 {
+			batch := make([]models.CompletedWork, 0, len(req.CompleteWork))
+			for _, w := range req.CompleteWork {
+				item := models.CompletedWork{
+					ID:          uuid.New(),
+					Description: &w.Description,
+					ReportID:    &rep.ID,
+					Deleted:     &delFalse,
+					CreatedAt:   &now,
+				}
+				// task_id опционально
+				if w.TaskID != nil {
+					if tid, err := uuid.Parse(*w.TaskID); err == nil {
+						item.TaskID = &tid
+					}
+				}
+				batch = append(batch, item)
 			}
+			if res := tx.Session(&gorm.Session{}).Model(&models.CompletedWork{}).Create(&batch); res.Error != nil {
+				return res.Error
+			}
+		}
 
-			result = dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Create(&complWork)
-			if result.Error != nil {
-				log.Printf("DB error (create report): %v", result.Error)
-				return c.JSON(http.StatusInternalServerError, map[string]string{
-					"error": "Ошибка при создании выполненной работы",
+		// TomorrowPlans
+		if len(req.PlanTomorrow) > 0 {
+			batch := make([]models.TomorrowPlans, 0, len(req.PlanTomorrow))
+			for _, p := range req.PlanTomorrow {
+				batch = append(batch, models.TomorrowPlans{
+					ID:          uuid.New(),
+					Description: &p.Description,
+					ReportID:    &rep.ID,
+					Deleted:     &delFalse,
+					CreatedAt:   &now,
 				})
 			}
-		}
-	}
-
-	if req.PlanTomorrow != nil {
-		for _, tomorrowPlan := range *req.PlanTomorrow {
-			tempUUID := uuid.New()
-
-			tomPlan := models.TomorrowPlans{
-				ID:          tempUUID,
-				Description: &tomorrowPlan.Description,
-				ReportID:    &newUUID,
-				Deleted: &del,
+			if res := tx.Session(&gorm.Session{}).Model(&models.TomorrowPlans{}).Create(&batch); res.Error != nil {
+				return res.Error
 			}
+		}
 
-			result = dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Create(&tomPlan)
-			if result.Error != nil {
-				log.Printf("DB error (create report): %v", result.Error)
-				return c.JSON(http.StatusInternalServerError, map[string]string{
-					"error": "Ошибка при создании плана на завтра",
+		// Problems (pivot)
+		if len(req.Problems) > 0 {
+			batch := make([]models.ReportProblem, 0, len(req.Problems))
+			for _, pr := range req.Problems {
+				pid, err := uuid.Parse(pr)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, "Некорректный problemId")
+				}
+				batch = append(batch, models.ReportProblem{
+					ReportID:  rep.ID,
+					ProblemID: pid,
+					Deleted:   &delFalse,
+					CreatedAt: &now,
 				})
 			}
+			if res := tx.Session(&gorm.Session{}).Model(&models.ReportProblem{}).Create(&batch); res.Error != nil {
+				return res.Error
+			}
 		}
-	}
 
-	if req.Problems != nil {
-		for _, problem := range *req.Problems {
-			problemId, err := uuid.Parse(problem.ID)
-			if err != nil {
-				log.Printf("ParseProblemId error: %v", err)
-				return c.JSON(http.StatusBadRequest, map[string]string{
-					"error": "Ошибка при парсинге problemId",
+		// HelpRequest: поддержка массива Helps и одиночного Help
+		type helpItem struct {
+			HelperID    string
+			Description string
+			Status      *string
+		}
+		items := []helpItem{}
+		if len(req.Helps) > 0 {
+			for _, h := range req.Helps {
+				items = append(items, helpItem{HelperID: h.HelperID, Description: h.Description, Status: h.Status})
+			}
+		}
+		if len(items) > 0 {
+			batch := make([]models.HelpRequest, 0, len(items))
+			for _, hi := range items {
+				hid, err := uuid.Parse(hi.HelperID)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, "Некорректный helperId")
+				}
+				batch = append(batch, models.HelpRequest{
+					ID:          uuid.New(),
+					HelperID:    &hid,
+					Description: &hi.Description,
+					Status:      hi.Status,
+					ReportID:    &rep.ID,
+					Deleted:     &delFalse,
+					CreatedAt:   &now,
 				})
 			}
-
-			reportProblem := models.ReportProblem{
-				ReportID:  newUUID,
-				ProblemID: problemId,
-				Deleted: &del,
-			}
-
-			result = dbConn.Session(&gorm.Session{}).Model(models.ReportProblem{}).Create(&reportProblem)
-			if result.Error != nil {
-				log.Printf("DB error (create report): %v", result.Error)
-				return c.JSON(http.StatusInternalServerError, map[string]string{
-					"error": "Ошибка при создании связи отчет-проблема",
-				})
+			if res := tx.Session(&gorm.Session{}).Model(&models.HelpRequest{}).Create(&batch); res.Error != nil {
+				return res.Error
 			}
 		}
+
+		return nil
+	})
+	if txErr != nil {
+		log.Printf("DB transaction error (create report): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании отчета"})
 	}
 
-	if req.Help != nil {
-		tempUUID := uuid.New()
-
-		helperId, err := uuid.Parse(req.Help.HelperID)
-		if err != nil {
-			log.Printf("ParseHelperId error: %v", err)
-			return c.JSON(http.StatusBadRequest, map[string]string{
-				"error": "Ошибка при парсинге helperId",
-			})
-		}
-
-		help := models.HelpRequest{
-			ID:          tempUUID,
-			HelperID:    &helperId,
-			Description: &req.Help.Description,
-			ReportID:    &newUUID,
-			Deleted: &del,
-			CreatedAt: &now,
-			Status: req.Help.Status,
-		}
-
-		result = dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Create(&help)
-		if result.Error != nil {
-			log.Printf("DB error (create report): %v", result.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при создании запроса на помощь",
-			})
-		}
-	}
-
-	resp := response.ReportUniversalResponse{
-		ID:      newUUID.String(),
+	return c.JSON(http.StatusCreated, response.ReportUniversalResponse{
+		ID:      rep.ID.String(),
 		Message: "Успешно создано",
-	}
-
-	return c.JSON(http.StatusCreated, resp)
+	})
 }
 
 // updateReport godoc
-// @Summary Обновление отчета
-// @Description Обновляет данные отчета по его ID
+// @Summary Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
 // @Tags Reports
+// @Description Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans, HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
 // @Accept json
 // @Produce json
 // @Param id path string true "ID отчета"
-// @Param report body request.ReportUpdateRequest true "Данные для обновления отчета"
+// @Param report body request.ReportReplaceRequest true "Данные для обновления отчета и связанных сущностей"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ReportUniversalResponse "Отчет успешно обновлен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор отчета или ошибка в запросе"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Отчет не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении отчета"
 // @Router /report/{id} [patch]
 func updateReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	id := c.Param("id")
-	reportId, err := uuid.Parse(id)
-	if err != nil{
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор отчета",
-		})
+
+	reportID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор отчета"})
 	}
 
-	var req request.ReportUpdateRequest 
-	if err = c.Bind(&req); err != nil{
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+	var req request.ReportReplaceRequest
+	if err = c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := make(map[string]interface{})
-	if req.UserId != nil{
-		updateData["user_id"] = *req.UserId
-	}
-	if req.ReportDate != nil{
-		updateData["report_date"] = *req.ReportDate
-	}
-	if req.Checked != nil{
-		updateData["checked"] = *req.Checked
-	}
-	updateData["updated_at"] = time.Now()
+	now := time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Where("id = ? and deleted = ?", reportId, false).Updates(updateData)
-		if res.Error != nil{
-			log.Printf("DB error (update report): %v", res.Error)
-			return res.Error
+		var report models.DailyReport
+		if err := tx.Where("id = ? AND deleted = FALSE", reportID).First(&report).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Отчет не найден"})
+			}
+			return err
 		}
-		if res.RowsAffected == 0{
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+
+		updateData := map[string]interface{}{"updated_at": &now}
+		if req.UserId != "" {
+			if uid, err := uuid.Parse(req.UserId); err == nil {
+				updateData["user_id"] = uid
+			} else {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный user_id"})
+			}
 		}
+		if req.ReportDate != nil {
+			updateData["report_date"] = req.ReportDate
+		}
+		if req.Checked != nil {
+			updateData["checked"] = req.Checked
+		}
+		if err := tx.Model(&report).Updates(updateData).Error; err != nil {
+			return err
+		}
+
+		var existingCWs []models.CompletedWork
+		var existingTPs []models.TomorrowPlans
+		var existingHelps []models.HelpRequest
+		var existingProblems []models.ReportProblem
+
+		tx.Where("report_id = ?", reportID).Find(&existingCWs)
+		tx.Where("report_id = ?", reportID).Find(&existingTPs)
+		tx.Where("report_id = ?", reportID).Find(&existingHelps)
+		tx.Where("report_id = ?", reportID).Find(&existingProblems)
+
+		cwMap := make(map[uuid.UUID]models.CompletedWork)
+		for _, cw := range existingCWs {
+			cwMap[cw.ID] = cw
+		}
+		tpMap := make(map[uuid.UUID]models.TomorrowPlans)
+		for _, tp := range existingTPs {
+			tpMap[tp.ID] = tp
+		}
+		helpMap := make(map[uuid.UUID]models.HelpRequest)
+		for _, h := range existingHelps {
+			helpMap[h.ID] = h
+		}
+		problemMap := make(map[uuid.UUID]models.ReportProblem)
+		for _, rp := range existingProblems {
+			problemMap[rp.ProblemID] = rp
+		}
+
+		var cwInserts []models.CompletedWork
+		var cwUpdates []map[string]interface{}
+		for _, cw := range req.CompleteWork {
+			var cwID uuid.UUID
+			if cw.ID != nil && *cw.ID != "" {
+				cwID, err = uuid.Parse(*cw.ID)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в completed_work"})
+				}
+			} else {
+				cwID = uuid.New()
+			}
+
+			var taskUUID *uuid.UUID
+			if cw.TaskID != nil && *cw.TaskID != "" {
+				if parsed, err := uuid.Parse(*cw.TaskID); err == nil {
+					taskUUID = &parsed
+				} else {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный task_id в completed_work"})
+				}
+			}
+
+			if _, ok := cwMap[cwID]; ok {
+				cwUpdates = append(cwUpdates, map[string]interface{}{
+					"id":          cwID,
+					"description": cw.Description,
+					"task_id":     taskUUID,
+					"updated_at":  now,
+				})
+			} else {
+				cwInserts = append(cwInserts, models.CompletedWork{
+					ID:          cwID,
+					Description: &cw.Description,
+					ReportID:    &reportID,
+					TaskID:      taskUUID,
+					CreatedAt:   &now,
+					UpdatedAt:   &now,
+					Deleted:     func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+
+		if len(cwInserts) > 0 {
+			if err := tx.Create(&cwInserts).Error; err != nil {
+				return err
+			}
+		}
+		if len(cwUpdates) > 0 {
+			tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"description", "task_id", "updated_at"}),
+			}).Create(&cwUpdates)
+		}
+
+		var tpInserts []models.TomorrowPlans
+		var tpUpdates []map[string]interface{}
+		for _, tp := range req.PlanTomorrow {
+			var tpID uuid.UUID
+			if tp.ID != nil && *tp.ID != "" {
+				tpID, err = uuid.Parse(*tp.ID)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в plan_tomorrow"})
+				}
+			} else {
+				tpID = uuid.New()
+			}
+
+			if _, ok := tpMap[tpID]; ok {
+				tpUpdates = append(tpUpdates, map[string]interface{}{
+					"id":          tpID,
+					"description": tp.Description,
+					"updated_at":  now,
+				})
+			} else {
+				tpInserts = append(tpInserts, models.TomorrowPlans{
+					ID:          tpID,
+					Description: &tp.Description,
+					ReportID:    &reportID,
+					CreatedAt:   &now,
+					UpdatedAt:   &now,
+					Deleted:     func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+
+		if len(tpInserts) > 0 {
+			if err := tx.Create(&tpInserts).Error; err != nil {
+				return err
+			}
+		}
+		if len(tpUpdates) > 0 {
+			tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"description", "updated_at"}),
+			}).Create(&tpUpdates)
+		}
+
+		var helpInserts []models.HelpRequest
+		var helpUpdates []map[string]interface{}
+		for _, h := range req.Helps {
+			var hID uuid.UUID
+			if h.ID != nil && *h.ID != "" {
+				hID, err = uuid.Parse(*h.ID)
+				if err != nil {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в help"})
+				}
+			} else {
+				hID = uuid.New()
+			}
+
+			var helperUUID *uuid.UUID
+			if h.HelperID != nil && *h.HelperID != "" {
+				if parsed, err := uuid.Parse(*h.HelperID); err == nil {
+					helperUUID = &parsed
+				} else {
+					return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный helper_id в help"})
+				}
+			}
+
+			if _, ok := helpMap[hID]; ok {
+				helpUpdates = append(helpUpdates, map[string]interface{}{
+					"id":          hID,
+					"description": h.Description,
+					"helper_id":   helperUUID,
+					"status":      h.Status,
+					"updated_at":  now,
+				})
+			} else {
+				helpInserts = append(helpInserts, models.HelpRequest{
+					ID:          hID,
+					HelperID:    helperUUID,
+					Description: &h.Description,
+					Status:      h.Status,
+					ReportID:    &reportID,
+					CreatedAt:   &now,
+					UpdatedAt:   &now,
+					Deleted:     func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+
+		if len(helpInserts) > 0 {
+			if err := tx.Create(&helpInserts).Error; err != nil {
+				return err
+			}
+		}
+		if len(helpUpdates) > 0 {
+			tx.Clauses(clause.OnConflict{
+				Columns:   []clause.Column{{Name: "id"}},
+				DoUpdates: clause.AssignmentColumns([]string{"description", "helper_id", "status", "updated_at"}),
+			}).Create(&helpUpdates)
+		}
+
+		var rpInserts []models.ReportProblem
+		for _, pIDstr := range req.Problems {
+			if pIDstr == "" {
+				continue
+			}
+			pid, err := uuid.Parse(pIDstr)
+			if err != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, map[string]string{"error": "Некорректный id в problems"})
+			}
+			if _, ok := problemMap[pid]; !ok {
+				rpInserts = append(rpInserts, models.ReportProblem{
+					ReportID:  reportID,
+					ProblemID: pid,
+					CreatedAt: &now,
+					UpdatedAt: &now,
+					Deleted:   func() *bool { b := false; return &b }(),
+				})
+			}
+		}
+		if len(rpInserts) > 0 {
+			if err := tx.Create(&rpInserts).Error; err != nil {
+				return err
+			}
+		}
+
 		return nil
-	}); txErr != nil{
-		log.Printf("Transaction error (update report): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении отчета",
-		})
+	}); txErr != nil {
+		log.Printf("Transaction error (update report and relations): %v", txErr)
+		if httpErr, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(httpErr.Code, httpErr.Message)
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении отчета"})
 	}
 
-	updateResponse := response.ReportUniversalResponse{
-		ID: id,
+	return c.JSON(http.StatusOK, response.ReportUniversalResponse{
+		ID:      reportID.String(),
 		Message: "Отчет успешно изменен",
-	}
-
-	return c.JSON(http.StatusOK, updateResponse)
+	})
 }
 
 // deleteReport godoc
@@ -797,57 +990,54 @@ func deleteReport(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	id := c.Param("id")
-	updateData := map[string]interface{}{"deleted": true}
+	reportID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор отчета"})
+	}
+
+	delTrue := true
+	now := time.Now()
+	update := map[string]interface{}{
+		"deleted":    &delTrue,
+		"updated_at": &now,
+	}
 
 	txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Where("id = ?", id).Updates(updateData); res.Error != nil {
-			log.Printf("DB error (delete report): %v", res.Error)
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.DailyReport{}).
+			Where("id = ?", reportID).
+			Updates(update)
+		if res.Error != nil {
 			return res.Error
-		} else if res.RowsAffected == 0 {
+		}
+		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
 
-		tables := []interface{}{
-			&models.HelpRequest{},
-			&models.CompletedWork{},
-			&models.TomorrowPlans{},
-		}
-
-		for _, table := range tables {
-			if res := tx.Session(&gorm.Session{}).Model(table).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
-				log.Printf("DB error (delete related table %T): %v", table, res.Error)
+		// связанные сущности по report_id
+		for _, tbl := range []interface{}{
+			&models.HelpRequest{}, &models.CompletedWork{}, &models.TomorrowPlans{}, &models.ReportProblem{},
+		} {
+			if res := tx.Session(&gorm.Session{}).
+				Model(tbl).
+				Where("report_id = ?", reportID).
+				Updates(update); res.Error != nil {
 				return res.Error
 			}
 		}
-
-		var reportProblems []models.ReportProblem
-		if err := tx.Session(&gorm.Session{}).Model(models.ReportProblem{}).Where("report_id = ? AND deleted = ?", id, false).Find(&reportProblems).Error; err != nil {
-			log.Printf("DB error (get report-problem): %v", err)
-			return err
-		}
-
-		if res := tx.Session(&gorm.Session{}).Model(&models.ReportProblem{}).Where("report_id = ?", id).Updates(updateData); res.Error != nil {
-			log.Printf("DB error (delete report-problem): %v", res.Error)
-			return res.Error
-		}
-
 		return nil
 	})
-
 	if txErr != nil {
-		if httpErr, ok := txErr.(*echo.HTTPError); ok {
-			return c.JSON(httpErr.Code, httpErr.Message)
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении отчета"})
 	}
 
-	resp := response.ReportUniversalResponse{
-		ID:      id,
+	return c.JSON(http.StatusOK, response.ReportUniversalResponse{
+		ID:      reportID.String(),
 		Message: "Отчет успешно удален",
-	}
-
-	return c.JSON(http.StatusOK, resp)
+	})
 }
 
 // updateHelpRequest godoc
@@ -864,66 +1054,50 @@ func deleteReport(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении запроса на помощь"
 // @Router /report/help-request/{id} [patch]
-func updateHelpRequest(c echo.Context) error{
+func updateHelpRequest(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	id := c.Param("id")
-	helpRequestId, err := uuid.Parse(id)
+	helpID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор запроса помощи",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор запроса помощи"})
 	}
 
 	var req request.HelpRequestUpdateRequest
 	if err = c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := make(map[string]interface{})
-	if req.Description != nil{
+	updateData := map[string]interface{}{}
+	if req.Description != nil {
 		updateData["description"] = *req.Description
 	}
-	if req.HelperID != nil{
+	if req.HelperID != nil {
 		updateData["helper_id"] = *req.HelperID
 	}
-	if req.Status != nil{
+	if req.Status != nil {
 		updateData["status"] = *req.Status
 	}
-
-	if len(updateData) == 0{
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не указаны поля для обновления",
-		})
+	if len(updateData) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
 	}
+	now := time.Now()
+	updateData["updated_at"] = &now
 
-	updateData["updated_at"] = time.Now()
-
-	result := dbConn.Session(&gorm.Session{}).Model(models.HelpRequest{}).Where("id = ?", helpRequestId).Updates(updateData)
-	if result.Error != nil{
-		log.Printf("DB error (update help request): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении запроса на помощь",
-		})
+	res := dbConn.Session(&gorm.Session{}).
+		Model(&models.HelpRequest{}).
+		Where("id = ? AND deleted = FALSE", helpID).
+		Updates(updateData)
+	if res.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении запроса на помощь"})
 	}
-
-	if result.RowsAffected == 0{
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не обновлено",
-		})
+	if res.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 	}
-
-	updateResponse := response.ReportUniversalResponse{
-		ID:      id,
-		Message: "Проект с ID " + id + " обновлен",
-	}
-
-	return c.JSON(http.StatusOK, updateResponse)
+	return c.JSON(http.StatusOK, response.ReportUniversalResponse{
+		ID:      helpID.String(),
+		Message: "Запрос на помощь обновлен",
+	})
 }
 
 // updateCompletedWork godoc
@@ -940,60 +1114,44 @@ func updateHelpRequest(c echo.Context) error{
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении выполненной работы"
 // @Router /report/completed-work/{id} [patch]
-func updateCompletedWork(c echo.Context) error{
+func updateCompletedWork(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	id := c.Param("id")
-	completedWorkId, err := uuid.Parse(id)
-	if err != nil{
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор выполненной работы",
-		})
+	cwID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор выполненной работы"})
 	}
 
 	var req request.CompletedWorkUpdateRequest
 	if err = c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := make(map[string]interface{})
-	if req.Description != nil{
+	updateData := map[string]interface{}{}
+	if req.Description != nil {
 		updateData["description"] = *req.Description
 	}
-
 	if len(updateData) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не указаны поля для обновления",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
 	}
+	now := time.Now()
+	updateData["updated_at"] = &now
 
-	updateData["updated_at"] = time.Now()
-
-	result := dbConn.Session(&gorm.Session{}).Model(models.CompletedWork{}).Where("id = ?", completedWorkId).Updates(updateData)
-	if result.Error != nil{
-		log.Printf("DB error (update completedWork): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении проделанной работы",
-		})
+	res := dbConn.Session(&gorm.Session{}).
+		Model(&models.CompletedWork{}).
+		Where("id = ? AND deleted = FALSE", cwID).
+		Updates(updateData)
+	if res.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении проделанной работы"})
 	}
-
-	if result.RowsAffected == 0{
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не обновлено",
-		})
-	}	
-
-	updateResponse := response.ReportUniversalResponse{
-		ID:      id,
-		Message: "Выполненная работа успешно обновлена",
+	if res.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 	}
-
-	return c.JSON(http.StatusOK, updateResponse)
+	return c.JSON(http.StatusOK, response.ReportUniversalResponse{
+		ID:      cwID.String(),
+		Message: "Выполненная работа обновлена",
+	})
 }
 
 // updateTomorrowPlans godoc
@@ -1010,59 +1168,42 @@ func updateCompletedWork(c echo.Context) error{
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении планов на завтра"
 // @Router /report/tomorrow-plans/{id} [patch]
-func updateTomorrowPlans(c echo.Context) error{
+func updateTomorrowPlans(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
-	id := c.Param("id")
-	tomorrowPlansId, err := uuid.Parse(id)
-	if err != nil{
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор планов на завтра",
-		})
+	tpID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор планов на завтра"})
 	}
 
 	var req request.TomorrowPlansUpdateRequest
 	if err = c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := make(map[string]interface{})
-	if req.Description != nil{
+	updateData := map[string]interface{}{}
+	if req.Description != nil {
 		updateData["description"] = *req.Description
 	}
-
 	if len(updateData) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не указаны поля для обновления",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
 	}
+	now := time.Now()
+	updateData["updated_at"] = &now
 
-	updateData["updated_at"] = time.Now()
-
-	result := dbConn.Session(&gorm.Session{}).Model(models.TomorrowPlans{}).Where("id = ?", tomorrowPlansId).Updates(updateData)
-	if result.Error != nil{
-		log.Printf("DB error (update completedWork): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении планов на завтра",
-		})
+	res := dbConn.Session(&gorm.Session{}).
+		Model(&models.TomorrowPlans{}).
+		Where("id = ? AND deleted = FALSE", tpID).
+		Updates(updateData)
+	if res.Error != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении планов на завтра"})
 	}
-
-	if result.RowsAffected == 0{
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"message": "Ничего не обновлено",
-		})
+	if res.RowsAffected == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 	}
-
-	updateResponse := response.ReportUniversalResponse{
-		ID:      id,
-		Message: "Планы на завтра успешно обновлены",
-	}
-
-	return c.JSON(http.StatusOK, updateResponse)
-}	
-
+	return c.JSON(http.StatusOK, response.ReportUniversalResponse{
+		ID:      tpID.String(),
+		Message: "Планы на завтра обновлены",
+	})
+}

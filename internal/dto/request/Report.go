@@ -6,8 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type ProjectReport struct {
+type TomorrowPlanCreateRequest struct {
 	Description string `json:"description"`
+}
+
+type CompletedWorkCreateRequest struct{
+	Description string `json:"description"`
+	TaskID *string `json:"task_id"`
 }
 
 type HelpRequest struct {
@@ -19,10 +24,10 @@ type HelpRequest struct {
 type ReportCreateRequest struct {
 	UserId       string           `json:"user_id"`
 	ReportDate   *time.Time       `json:"report_date"`
-	CompleteWork *[]ProjectReport `json:"complete_work"`
-	PlanTomorrow *[]ProjectReport `json:"plan_tomorrow"`
-	Problems     *[]Problem      `json:"problems"`
-	Help         *HelpRequest     `json:"help"`
+	CompleteWork []CompletedWorkCreateRequest `json:"complete_work"`
+	PlanTomorrow []TomorrowPlanCreateRequest `json:"plan_tomorrow"`
+	Problems     []string                       `json:"problems,omitempty"`
+	Helps        []HelpRequest     `json:"help"`
 }
 
 type ReportUpdateRequest struct {
@@ -64,5 +69,34 @@ type Problem struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	Name        string    `json:"name"`
+}
+
+type CompletedWorkReplaceRequest struct {
+	ID          *string `json:"id,omitempty"`
+	Description string  `json:"description"`
+	TaskID *string `json:"task_id,omitempty"`
+}
+
+type TomorrowPlanReplaceRequest struct {
+	ID          *string `json:"id,omitempty"`
+	Description string  `json:"description"`
+}
+
+type HelpRequestReplaceRequest struct {
+	ID          *string `json:"id,omitempty"`
+	HelperID    *string `json:"helper_id,omitempty"`
+	Description string  `json:"description"`
+	Status      *string `json:"status,omitempty"`
+}
+
+type ReportReplaceRequest struct {
+	UserId     string                         `json:"user_id"`
+	ReportDate *time.Time                     `json:"report_date,omitempty"`
+	Checked    *int8                          `json:"checked,omitempty"`
+
+	CompleteWork []CompletedWorkReplaceRequest `json:"complete_work,omitempty"`
+	PlanTomorrow []TomorrowPlanReplaceRequest  `json:"plan_tomorrow,omitempty"`
+	Problems     []string                      `json:"problems,omitempty"`
+	Helps        []HelpRequestReplaceRequest   `json:"help,omitempty"`
 }
 
