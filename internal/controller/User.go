@@ -252,13 +252,9 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
 
 func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
-	del := false
-
-	tgId := ""
-	var tgUserID int64 = 0
-	profession := ""
-
-	user := models.UserCreate{
+	
+	// Создаем пользователя без ассоциаций
+	user := models.User{
 		ID:            id,
 		Email:         utils.GetString(req.Email),
 		IsActive:      utils.GetBool(req.IsActive),
@@ -268,36 +264,31 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		FirstName:     utils.GetString(req.FirstName),
 		LastName:      utils.GetString(req.LastName),
 		LastLogin:     now,
-		Deleted:       del,
-		TgID:          tgId,
-		TgUserID:      tgUserID,
-		Profession:    profession,
+		Deleted:       false,
+		TgID:          "",
+		TgUserID:      0,
+		Profession:    "",
+		// UserRoles остается пустым слайсом по умолчанию
 	}
 
-	// Логируем входные данные (без чувствительных полей)
 	log.Printf("CreateUserWithIdFunc: start create user id=%s email=%v", user.ID, user.Email)
 
 	if err := dbConn.Transaction(func(tx *gorm.DB) error {
 		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
-
-		log.Print("USER STRUCT")
-		log.Print(user)
 		
-		// ИСПОЛЬЗУЕМ ОТДЕЛЬНУЮ ПЕРЕМЕННУЮ ДЛЯ РЕЗУЛЬТАТА
+		// Явно указываем поля для создания, исключая ассоциации
 		res := tx.Select(
 			"ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
 			"TgID", "TgUserID", "Profession", "EmailVerified",
 			"FirstName", "LastName", "LastLogin", "Deleted",
 		).Create(&user)
 
-		// Лог ошибки, если она есть
 		if res.Error != nil {
 			log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", user.ID, res.Error)
 			return res.Error
 		}
 
 		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", user.ID, res.RowsAffected)
-
 		return nil
 	}); err != nil {
 		log.Printf("DB transaction error (create user with id): %v", err)
