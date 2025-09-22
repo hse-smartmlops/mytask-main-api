@@ -35,6 +35,3 @@ services:
 
 networks:
   emplacc-net:
-
-volumes:
-  postgres_new_data:
