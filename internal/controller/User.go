@@ -107,15 +107,15 @@ func getAllUsers(c echo.Context) error {
 	for _, user := range users {
 		userList.Users = append(userList.Users, response.GetUserResponse{
 			ID:            user.ID.String(),
-			Email:         utils.GetString(user.Email),
-			IsActive:      utils.GetBool(user.IsActive),
+			Email:         user.Email,
+			IsActive:      user.IsActive,
 			CreatedAt:     user.CreatedAt,
-			TgId:          utils.GetString(user.TgID),
-			TgUserId:      utils.GetInt64(user.TgUserID),
-			Profession:    utils.GetString(user.Profession),
-			EmailVerified: utils.GetBool(user.EmailVerified),
-			FirstName:     utils.GetString(user.FirstName),
-			LastName:      utils.GetString(user.LastName),
+			TgId:          user.TgID,
+			TgUserId:      user.TgUserID,
+			Profession:    user.Profession,
+			EmailVerified: user.EmailVerified,
+			FirstName:     user.FirstName,
+			LastName:      user.LastName,
 			LastLogin:     user.LastLogin,
 		})
 	}
@@ -166,15 +166,15 @@ func getUserById(c echo.Context) error {
 	}
 	getUserResponse := response.GetUserResponse{
 		ID:            user.ID.String(),
-		Email:         utils.GetString(user.Email),
-		IsActive:      utils.GetBool(user.IsActive),
+		Email:         user.Email,
+		IsActive:      user.IsActive,
 		CreatedAt:     user.CreatedAt,
-		TgId:          utils.GetString(user.TgID),
-		TgUserId:      utils.GetInt64(user.TgUserID),
-		Profession:    utils.GetString(user.Profession),
-		EmailVerified: utils.GetBool(user.EmailVerified),
-		FirstName:     utils.GetString(user.FirstName),
-		LastName:      utils.GetString(user.LastName),
+		TgId:          user.TgID,
+		TgUserId:      user.TgUserID,
+		Profession:    user.Profession,
+		EmailVerified: user.EmailVerified,
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
 		LastLogin:     user.LastLogin,
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
@@ -260,18 +260,18 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 
 	user := models.User{
 		ID:            id,
-		Email:         req.Email,
-		IsActive:      req.IsActive,
+		Email:         utils.GetString(req.Email),
+		IsActive:      utils.GetBool(req.IsActive),
 		CreatedAt:     now,
 		UpdatedAt:     now,
-		EmailVerified: req.EmailVerified,
-		FirstName:     req.FirstName,
-		LastName:      req.LastName,
+		EmailVerified: utils.GetBool(req.EmailVerified),
+		FirstName:     utils.GetString(req.FirstName),
+		LastName:      utils.GetString(req.LastName),
 		LastLogin:     now,
-		Deleted:       &del,
-		TgID: &tgId,
-		TgUserID: &tgUserID,
-		Profession: &profession,
+		Deleted:       del,
+		TgID: tgId,
+		TgUserID: tgUserID,
+		Profession: profession,
 		UserRoles: []models.UserRole{},
 	}
 

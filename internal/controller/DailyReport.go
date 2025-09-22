@@ -99,8 +99,8 @@ func getAllReports(c echo.Context) error {
 		user := r.User
 		userInfo := response.UserShort{
 			ID:        r.UserID.String(),
-			FirstName: utils.GetString(user.FirstName),
-			LastName:  utils.GetString(user.LastName),
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
 		}
 
 		var complWork []response.CompletedWork
@@ -204,8 +204,8 @@ func getReport(c echo.Context) error {
 
 	userInfo := response.UserShort{
 		ID:        r.UserID.String(),
-		FirstName: utils.GetString(r.User.FirstName),
-		LastName:  utils.GetString(r.User.LastName),
+		FirstName: r.User.FirstName,
+		LastName:  r.User.LastName,
 	}
 
 	var complWork []response.CompletedWork
@@ -330,8 +330,8 @@ func getReportsByTaskId(c echo.Context) error {
 	for _, r := range reports {
 		userInfo := response.UserShort{
 			ID:        r.UserID.String(),
-			FirstName: utils.GetString(r.User.FirstName),
-			LastName:  utils.GetString(r.User.LastName),
+			FirstName: r.User.FirstName,
+			LastName:  r.User.LastName,
 		}
 
 		var complWork []response.CompletedWork
@@ -475,8 +475,8 @@ func getReportsByProjectId(c echo.Context) error {
 	for _, r := range reports {
 		userInfo := response.UserShort{
 			ID:        r.UserID.String(),
-			FirstName: utils.GetString(r.User.FirstName),
-			LastName:  utils.GetString(r.User.LastName),
+			FirstName: r.User.FirstName,
+			LastName:  r.User.LastName,
 		}
 
 		var complWork []response.CompletedWork
