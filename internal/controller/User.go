@@ -272,7 +272,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		TgID: tgId,
 		TgUserID: tgUserID,
 		Profession: profession,
-		UserRoles: nil,
+		UserRoles: []models.UserRole{},
 	}
 
 	// Логируем входные данные (без чувствительных полей)
