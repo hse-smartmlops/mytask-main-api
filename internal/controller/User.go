@@ -258,7 +258,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	var tgUserID int64 = 0
 	profession := ""
 
-	user := models.User{
+	user := models.UserCreate{
 		ID:            id,
 		Email:         utils.GetString(req.Email),
 		IsActive:      utils.GetBool(req.IsActive),
@@ -269,9 +269,9 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		LastName:      utils.GetString(req.LastName),
 		LastLogin:     now,
 		Deleted:       del,
-		TgID: tgId,
-		TgUserID: tgUserID,
-		Profession: profession,
+		TgID:          tgId,
+		TgUserID:      tgUserID,
+		Profession:    profession,
 	}
 
 	// Логируем входные данные (без чувствительных полей)
