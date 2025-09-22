@@ -11,7 +11,7 @@ require (
 	github.com/swaggo/echo-swagger v1.4.1
 	github.com/swaggo/swag v1.8.12
 	gorm.io/driver/postgres v1.6.0
-	gorm.io/gorm v1.26.0
+	gorm.io/gorm v1.31.0
 )
 
 require (
