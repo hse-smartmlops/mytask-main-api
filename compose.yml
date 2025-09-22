@@ -11,7 +11,7 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - postgres_new_data:/var/lib/postgresql/data
+      - ./postgres:/var/lib/postgresql/data
     networks:
       - emplacc-net
 
