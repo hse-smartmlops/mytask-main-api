@@ -283,7 +283,11 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		log.Print("USER STRUCT")
 		log.Print(user)
 		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
-		res := tx.Session(&gorm.Session{SkipHooks: true}).Create(&user)
+		res := tx.Select(
+			"ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
+			"TgID", "TgUserID", "Profession", "EmailVerified",
+			"FirstName", "LastName", "LastLogin", "Deleted",
+		).Create(&user)
 
 		// Лог ошибки, если она есть
 		if res.Error != nil {
