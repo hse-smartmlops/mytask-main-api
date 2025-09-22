@@ -343,10 +343,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	affectedRows := result.RowsAffected
 	log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", id, affectedRows)
 	
-	return c.JSON(http.StatusCreated, map[string]string{
-		"message": "Пользователь успешно создан",
-		"id":      id.String(),
-	})
+	return nil
 }
 
 // updateUser godoc
