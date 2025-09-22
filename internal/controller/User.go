@@ -250,6 +250,7 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
 	})
 }*/
 
+/*
 func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
 	
@@ -301,6 +302,50 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	return c.JSON(http.StatusCreated, map[string]string{
 		"message": "Пользователь успешно создан",
 		"id":      user.ID.String(),
+	})
+}*/
+
+func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
+	now := time.Now()
+	
+	email := utils.GetString(req.Email)
+	isActive := utils.GetBool(req.IsActive)
+	emailVerified := utils.GetBool(req.EmailVerified)
+	firstName := utils.GetString(req.FirstName)
+	lastName := utils.GetString(req.LastName)
+	
+	// Используем Raw SQL для полного контроля
+	query := `INSERT INTO users (id, email, is_active, created_at, updated_at, email_verified, first_name, last_name, last_login, deleted, tg_id, tg_user_id, profession) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+	
+	result := dbConn.Exec(query, 
+		id, 
+		email, 
+		isActive, 
+		now, 
+		now, 
+		emailVerified, 
+		firstName, 
+		lastName, 
+		now, 
+		false, 
+		"", 
+		int64(0), 
+		"")
+	
+	if result.Error != nil {
+		log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", id, result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при создании пользователя",
+		})
+	}
+	
+	affectedRows := result.RowsAffected
+	log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", id, affectedRows)
+	
+	return c.JSON(http.StatusCreated, map[string]string{
+		"message": "Пользователь успешно создан",
+		"id":      id.String(),
 	})
 }
 
