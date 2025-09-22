@@ -284,9 +284,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		log.Print("USER STUCT")
 		log.Print(user)
 		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
-		res := tx.Select("ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
-                 "EmailVerified",
-                 "FirstName", "LastName", "LastLogin", "Deleted").
+		res := tx.
 			Create(&user)
 
 		// Лог ошибки, если она есть
