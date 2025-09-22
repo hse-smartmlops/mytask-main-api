@@ -30,6 +30,7 @@ func RegisterUserRoutes(e *echo.Echo) {
 	userGroup.POST("/restore", restoreUser)
 	userGroup.POST("/role", addUserRole)
 	userGroup.DELETE("/role", removeUserRole)
+	userGroup.DELETE("/full-delete/:id", deleteUser)
 }
 
 // getAllUsers godoc
@@ -277,7 +278,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
 		user.UserRoles = []models.UserRole{}
 		res := tx.Select("ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
-                 "TgID", "TgUserID", "Profession", "EmailVerified",
+                 "EmailVerified",
                  "FirstName", "LastName", "LastLogin", "Deleted").
 			Create(&user)
 
@@ -533,6 +534,58 @@ func DeleteUserFunc(c echo.Context, id string) error {
 	}
 	return c.JSON(http.StatusOK, deleteResponse)
 }*/
+
+// deleteUser godoc
+// @Summary Удаление пользователя(НЕ ИСПОЛЬЗОВАТЬ, ДОБАВЛЕНО ВРЕМЕННО ДЛЯ ТЕСТА ОШИБКИ 502)
+// @Description Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Success 200 {object} response.UserUniversalResponse "Пользователь успешно удален"
+// @Failure 404 {object} map[string]string "Пользователь не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
+// @Router /user/full-delete/{id} [delete]
+func deleteUser(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+	id := c.Param("id")
+	return DeleteUserFunc(c, id)
+}
+
+func DeleteUserFunc(c echo.Context, id string) error {
+	err := dbConn.Transaction(func(tx *gorm.DB) error {
+		// Удаляем пользователя
+		result := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("id = ?", id).Delete(&models.User{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Ничего не удалено")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		if he, ok := err.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, map[string]string{"error": he.Message.(string)})
+		}
+		log.Printf("DB transaction error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении пользователя",
+		})
+	}
+
+	deleteResponse := response.UserUniversalResponse{
+		ID:      id,
+		Message: "Пользователь с ID " + id + " удален",
+	}
+	return c.JSON(http.StatusOK, deleteResponse)
+}
 
 // banUser godoc
 // @Summary Ban пользователя

@@ -5355,6 +5355,49 @@ paths:
       summary: Получение списка всех пользователей
       tags:
       - Users
+  /user/full-delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление пользователя по ID, включая связанные данные
+        (поле deleted = true)
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно удален
+          schema:
+            $ref: '#/definitions/response.UserUniversalResponse'
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление пользователя(НЕ ИСПОЛЬЗОВАТЬ, ДОБАВЛЕНО ВРЕМЕННО ДЛЯ ТЕСТА
+        ОШИБКИ 502)
+      tags:
+      - Users
   /user/restore:
     post:
       consumes:
