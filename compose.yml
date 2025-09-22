@@ -10,8 +10,7 @@ services:
     ports:
       - "5436:5432"
     volumes:
-      - /docker/compose/outline/db:/var/lib/postgresql/data:Z
-      - /etc/localtime:/etc/localtime:ro
+      - postgres_new_data:/var/lib/postgresql/data
     networks:
       - emplacc-net
 
