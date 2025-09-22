@@ -19,18 +19,18 @@ import (
 )
 
 func RegisterStatusRoutes(e *echo.Echo) {
-	statusGroup := e.Group("/status")
-	statusGroup.Use(KeycloakAuthMiddleware)
+	g := e.Group("/status")
+	g.Use(KeycloakAuthMiddleware)
 	{
-		statusGroup.GET("/all/:page/:pagesize", getAllStatuses)
-		statusGroup.GET("/:id", getStatusByID)
-		statusGroup.POST("", createStatus)	
-		statusGroup.PATCH("/:id", updateStatus)
-		statusGroup.DELETE("/:id", deleteStatus)
-		statusGroup.GET("/project/:board_id", getStatusesByBoardId)
-		statusGroup.GET("/task/:task_id", getStatusesByTaskId)
-		statusGroup.POST("/add-to-task", addStatusToTask)
-		statusGroup.POST("/add-to-board", addStatusToBoard)
+		g.GET("/all/:page/:pagesize", getAllStatuses)
+		g.GET("/:id", getStatusByID)
+		g.POST("", createStatus)
+		g.PATCH("/:id", updateStatus)
+		g.DELETE("/:id", deleteStatus)
+		g.GET("/project/:board_id", getStatusesByBoardId)
+		g.GET("/task/:task_id", getStatusesByTaskId)
+		g.POST("/add-to-task", addStatusToTask)
+		g.POST("/add-to-board", addStatusToBoard)
 	}
 }
 
@@ -47,76 +47,57 @@ func RegisterStatusRoutes(e *echo.Echo) {
 // @Success 200 {object} response.StatusListResponse "Список статусов"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статусов"
 // @Router /status/all/{page}/{pagesize} [get]
-func getAllStatuses(c echo.Context) error{
-	if err := authorize(c); err != nil{
-		return err
-	}
-	pageReq := c.Param("page")
-	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
-	page, err := strconv.Atoi(pageReq)
-	if err != nil{
-		log.Printf("failed to parse page: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге страницы",
-		})
-	}
-	if page <= 0 {
-		page = 1
-	}
+func getAllStatuses(c echo.Context) error {
+	if err := authorize(c); err != nil { return err }
 
-	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
-		log.Printf("failed to parse pagesize: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге номера страницы",
-		})
+	page, err := strconv.Atoi(c.Param("page"))
+	if err != nil || page <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге страницы"})
 	}
-	if pageSize <= 0 {
-		pageSize = 10
+	pageSize, err := strconv.Atoi(c.Param("pagesize"))
+	if err != nil || pageSize <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге номера страницы"})
 	}
 	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	result := dbConn.Session(&gorm.Session{}).Model(models.Status{}).Where("deleted = ?", false).Count(&totalCount)
-	if result.Error != nil {
-		log.Printf("DB error (count statuses): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчете статусов",
+	var total int64
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Status{}).
+		Where("deleted = FALSE").
+		Count(&total).Error; err != nil {
+		log.Printf("DB error (count statuses): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте статусов"})
+	}
+
+	var rows []models.Status
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.Status{}).
+		Where("deleted = FALSE").
+		Limit(pageSize).Offset(offset).
+		Find(&rows).Error; err != nil {
+		log.Printf("DB error (find statuses): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов"})
+	}
+
+	out := response.StatusListResponse{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: total,
+	}
+	for _, s := range rows {
+		out.Statuses = append(out.Statuses, response.StatusResponse{
+			ID:        s.ID.String(),
+			Key:       utils.GetString(s.Key),
+			Name:      utils.GetString(s.Name),
+			Color:     utils.GetString(s.Color),
+			IsDefault: utils.GetBool(s.IsDefault),
+			IsActive:  utils.GetBool(s.IsActive),
+			IsOpen:    utils.GetBool(s.IsOpen),
+			CreatedAt: utils.GetTime(s.CreatedAt),
+			UpdatedAt: utils.GetTime(s.UpdatedAt),
 		})
 	}
-
-	var statuses []models.Status
-	if err := dbConn.Session(&gorm.Session{}).Model(models.Status{}).Where("deleted = ?", false).
-		Limit(pageSize).
-		Offset(offset).
-		Find(&statuses).Error; err != nil {
-			log.Printf("DB error (find statuses): %v", err)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении статусов из базы данных",
-			})
-	}
-
-	statusesList := response.StatusListResponse{
-		Page: page,
-		PageSize: pageSize,
-		TotalCount: totalCount,
-	}
-
-	for _, status := range statuses{
-		statusesList.Statuses = append(statusesList.Statuses, response.StatusResponse{
-			ID:        status.ID.String(),
-			Key:       utils.GetString(status.Key),
-			Name:      utils.GetString(status.Name),
-			Color:     utils.GetString(status.Color),
-			IsDefault: utils.GetBool(status.IsDefault),
-			IsActive:  utils.GetBool(status.IsActive),
-			IsOpen:    utils.GetBool(status.IsOpen),
-			CreatedAt: utils.GetTime(status.CreatedAt),
-			UpdatedAt: utils.GetTime(status.UpdatedAt),
-		})
-	}
-	return c.JSON(http.StatusOK, statusesList)
+	return c.JSON(http.StatusOK, out)
 }
 
 // getStatusesByBoardId godoc
@@ -132,54 +113,40 @@ func getAllStatuses(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статусов"
 // @Router /status/project/{board_id} [get]
 func getStatusesByBoardId(c echo.Context) error {
-    // Authorization check
-    if err := authorize(c); err != nil {
-        return err
-    }
+	if err := authorize(c); err != nil { return err }
 
-    boardId := c.Param("board_id")
-    boardUUID, err := uuid.Parse(boardId)
-    if err != nil {
-        log.Printf("failed to parse board uuid: %v", err)
-        return c.JSON(http.StatusBadRequest, map[string]string{
-            "error": "Ошибка при парсинге идентификатора доски",
-        })
-    }
+	boardUUID, err := uuid.Parse(c.Param("board_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора доски"})
+	}
 
-    // Fetch all StatusBoard entries with preloaded Status in one query
-    var statusBoards []models.StatusBoard
-    if err := dbConn.Model(models.StatusBoard{}).
-        Preload("Status", "statuses.deleted = ?", false).Session(&gorm.Session{}).
-        Where("status_boards.deleted = ? AND status_boards.board_id = ?", false, boardUUID).
-        Find(&statusBoards).Error; err != nil {
-        log.Printf("failed to get statuses for board %s: %v", boardId, err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{
-            "error": "Ошибка при получении статусов для доски",
-        })
-    }
+	var links []models.StatusBoard
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.StatusBoard{}).
+		Preload("Status", "deleted = FALSE").
+		Where("status_boards.deleted = FALSE AND status_boards.board_id = ?", boardUUID).
+		Find(&links).Error; err != nil {
+		log.Printf("DB error (statuses by board): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов для доски"})
+	}
 
-    // Build response
-    getResponse := response.StatusByBoardIdResponse{
-        BoardId: boardId,
-    }
-
-    for _, sb := range statusBoards {
-        if sb.Status != nil {
-            getResponse.Statuses = append(getResponse.Statuses, response.StatusResponse{
-                ID:        sb.Status.ID.String(),
-                Key:       utils.GetString(sb.Status.Key),
-                Name:      utils.GetString(sb.Status.Name),
-                Color:     utils.GetString(sb.Status.Color),
-                IsDefault: utils.GetBool(sb.Status.IsDefault),
-                IsActive:  utils.GetBool(sb.Status.IsActive),
-                IsOpen:    utils.GetBool(sb.Status.IsOpen),
-                CreatedAt: utils.GetTime(sb.Status.CreatedAt),
-                UpdatedAt: utils.GetTime(sb.Status.UpdatedAt),
-            })
-        }
-    }
-
-    return c.JSON(http.StatusOK, getResponse)
+	resp := response.StatusByBoardIdResponse{BoardId: c.Param("board_id")}
+	for _, sb := range links {
+		if sb.Status != nil {
+			resp.Statuses = append(resp.Statuses, response.StatusResponse{
+				ID:        sb.Status.ID.String(),
+				Key:       utils.GetString(sb.Status.Key),
+				Name:      utils.GetString(sb.Status.Name),
+				Color:     utils.GetString(sb.Status.Color),
+				IsDefault: utils.GetBool(sb.Status.IsDefault),
+				IsActive:  utils.GetBool(sb.Status.IsActive),
+				IsOpen:    utils.GetBool(sb.Status.IsOpen),
+				CreatedAt: utils.GetTime(sb.Status.CreatedAt),
+				UpdatedAt: utils.GetTime(sb.Status.UpdatedAt),
+			})
+		}
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 // getStatusesByTaskId godoc
@@ -195,54 +162,40 @@ func getStatusesByBoardId(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статусов"
 // @Router /status/task/{task_id} [get]
 func getStatusesByTaskId(c echo.Context) error {
-    // Authorization check
-    if err := authorize(c); err != nil {
-        return err
-    }
+	if err := authorize(c); err != nil { return err }
 
-    taskId := c.Param("task_id")
-    taskUUID, err := uuid.Parse(taskId)
-    if err != nil {
-        log.Printf("failed to parse task uuid: %v", err)
-        return c.JSON(http.StatusBadRequest, map[string]string{
-            "error": "Ошибка при парсинге идентификатора задачи",
-        })
-    }
+	taskUUID, err := uuid.Parse(c.Param("task_id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора задачи"})
+	}
 
-    // Fetch all StatusTask entries with preloaded Status in one query
-    var statusTasks []models.StatusTask
-    if err := dbConn.Session(&gorm.Session{}).Model(models.StatusTask{}).
-        Preload("Status", "deleted = ?", false).
-        Where("deleted = ? AND task_id = ?", false, taskUUID).
-        Find(&statusTasks).Error; err != nil {
-        log.Printf("failed to get statuses for task %s: %v", taskId, err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{
-            "error": "Ошибка при получении статусов для задачи",
-        })
-    }
+	var links []models.StatusTask
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.StatusTask{}).
+		Preload("Status", "deleted = FALSE").
+		Where("deleted = FALSE AND task_id = ?", taskUUID).
+		Find(&links).Error; err != nil {
+		log.Printf("DB error (statuses by task): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов для задачи"})
+	}
 
-    // Build response
-    getResponse := response.StatusByTaskIdResponse{
-        TaskId: taskId,
-    }
-
-    for _, st := range statusTasks {
-        if st.Status != nil {
-            getResponse.Statuses = append(getResponse.Statuses, response.StatusResponse{
-                ID:        st.Status.ID.String(),
-                Key:       utils.GetString(st.Status.Key),
-                Name:      utils.GetString(st.Status.Name),
-                Color:     utils.GetString(st.Status.Color),
-                IsDefault: utils.GetBool(st.Status.IsDefault),
-                IsActive:  utils.GetBool(st.Status.IsActive),
-                IsOpen:    utils.GetBool(st.Status.IsOpen),
-                CreatedAt: utils.GetTime(st.Status.CreatedAt),
-                UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
-            })
-        }
-    }
-
-    return c.JSON(http.StatusOK, getResponse)
+	resp := response.StatusByTaskIdResponse{TaskId: c.Param("task_id")}
+	for _, st := range links {
+		if st.Status.ID != uuid.Nil { // Status preloaded
+			resp.Statuses = append(resp.Statuses, response.StatusResponse{
+				ID:        st.Status.ID.String(),
+				Key:       utils.GetString(st.Status.Key),
+				Name:      utils.GetString(st.Status.Name),
+				Color:     utils.GetString(st.Status.Color),
+				IsDefault: utils.GetBool(st.Status.IsDefault),
+				IsActive:  utils.GetBool(st.Status.IsActive),
+				IsOpen:    utils.GetBool(st.Status.IsOpen),
+				CreatedAt: utils.GetTime(st.Status.CreatedAt),
+				UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
+			})
+		}
+	}
+	return c.JSON(http.StatusOK, resp)
 }
 
 // getStatusByID godoc
@@ -258,45 +211,38 @@ func getStatusesByTaskId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Статус не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статуса"
 // @Router /status/{id} [get]
-func getStatusByID(c echo.Context) error{
-	if err := authorize(c); err != nil{
-		return err
-	}
-	id := c.Param("id")
-	statusID, err := uuid.Parse(id)
-	if err != nil{
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор статуса",
-		})
+func getStatusByID(c echo.Context) error {
+	if err := authorize(c); err != nil { return err }
+
+	statusID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор статуса"})
 	}
 
-	var status models.Status
-	result := dbConn.Session(&gorm.Session{}).Model(models.Status{}).Where("deleted = ? and id = ?", false, statusID).First(&status)
-	if result.Error != nil{
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Статус не найден",
-			})
+	var s models.Status
+	res := dbConn.Session(&gorm.Session{}).
+		Model(&models.Status{}).
+		Where("deleted = FALSE AND id = ?", statusID).
+		First(&s)
+	if res.Error != nil {
+		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Статус не найден"})
 		}
-		log.Printf("DB error (find project by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении статуса из базы данных",
-		})
+		log.Printf("DB error (find status by id): %v", res.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статуса"})
 	}
 
-	statusResponse := response.StatusResponse{
-		ID:        status.ID.String(),
-		Key:       utils.GetString(status.Key),
-		Name:      utils.GetString(status.Name),
-		Color:     utils.GetString(status.Color),
-		IsDefault: utils.GetBool(status.IsDefault),
-		IsActive:  utils.GetBool(status.IsActive),
-		IsOpen:    utils.GetBool(status.IsOpen),
-		CreatedAt: utils.GetTime(status.CreatedAt),
-		UpdatedAt: utils.GetTime(status.UpdatedAt),
-	}
-	return c.JSON(http.StatusOK, statusResponse)
+	return c.JSON(http.StatusOK, response.StatusResponse{
+		ID:        s.ID.String(),
+		Key:       utils.GetString(s.Key),
+		Name:      utils.GetString(s.Name),
+		Color:     utils.GetString(s.Color),
+		IsDefault: utils.GetBool(s.IsDefault),
+		IsActive:  utils.GetBool(s.IsActive),
+		IsOpen:    utils.GetBool(s.IsOpen),
+		CreatedAt: utils.GetTime(s.CreatedAt),
+		UpdatedAt: utils.GetTime(s.UpdatedAt),
+	})
 }
 
 // createStatus godoc
@@ -312,56 +258,46 @@ func getStatusByID(c echo.Context) error{
 // @Success 201 {object} response.StatusUniversalResponse "Статус успешно создан"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании статуса"
 // @Router /status [post]
-func createStatus(c echo.Context) error{
-	if err := authorize(c); err != nil{
-		log.Printf("Failed to authorize: %v", err)
-		return err
-	}
+func createStatus(c echo.Context) error {
+	if err := authorize(c); err != nil { return err }
 
 	var req request.CreateStatusRequest
-	if err := c.Bind(&req); err != nil{
+	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при привязке данных запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при привязке данных запроса"})
 	}
 
-	newUUID := uuid.New()
+	id := uuid.New()
 	now := time.Now()
 	del := false
-	h := sha256.Sum256(newUUID[:])
+	h := sha256.Sum256(id[:])
 	key := hex.EncodeToString(h[:])[:8]
 
-	status := models.Status{
-		ID: &newUUID,
-		Key: &key,
-		Name: &req.Name,
-		Color: &req.Color,
+	row := models.Status{
+		ID:        id,
+		Key:       &key,
+		Name:      &req.Name,
+		Color:     &req.Color,
 		IsDefault: &req.IsDefault,
-		IsActive: &req.IsActive,
-		IsOpen: &req.IsOpen,
+		IsActive:  &req.IsActive,
+		IsOpen:    &req.IsOpen,
 		CreatedAt: &now,
-		Deleted: &del,
+		Deleted:   &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		if res := tx.Session(&gorm.Session{}).Model(models.Status{}).Create(&status); res.Error != nil{
-			log.Printf("DB error (create status): %v", res.Error)
-			return res.Error
-		}
-		return nil
-	}); txErr != nil{
-		log.Printf("DB error (create status): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при создании статуса в базе данных",
-		})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		return tx.Session(&gorm.Session{}).
+			Model(&models.Status{}).
+			Create(&row).Error
+	}); txErr != nil {
+		log.Printf("DB transaction error (create status): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании статуса"})
 	}
 
-	createResponse := response.StatusUniversalResponse{
-		ID: newUUID.String(),
+	return c.JSON(http.StatusCreated, response.StatusUniversalResponse{
+		ID:      id.String(),
 		Message: "Статус успешно создан",
-	}
-	return c.JSON(http.StatusCreated, createResponse)
+	})
 }
 
 // updateStatus godoc
@@ -379,76 +315,51 @@ func createStatus(c echo.Context) error{
 // @Failure 404 {object} map[string]string "Статус не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении статуса"
 // @Router /status/{id} [patch]
-func updateStatus(c echo.Context) error{
-	if err := authorize(c); err != nil{
-		return err
-	}
-	id := c.Param("id")
-	statusID, err := uuid.Parse(id)
-	if err != nil{
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор статуса",
-		})
+func updateStatus(c echo.Context) error {
+	if err := authorize(c); err != nil { return err }
+
+	statusID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор статуса"})
 	}
 
 	var req request.UpdateStatusRequest
-	if err := c.Bind(&req); err != nil{
+	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при привязке данных запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при привязке данных запроса"})
 	}
 
-	updateData := make(map[string]interface{})
-	if req.Name != nil{
-		updateData["name"] = *req.Name
+	update := map[string]interface{}{}
+	if req.Name != nil      { update["name"] = *req.Name }
+	if req.Color != nil     { update["color"] = *req.Color }
+	if req.IsDefault != nil { update["is_default"] = *req.IsDefault }
+	if req.IsActive != nil  { update["is_active"]  = *req.IsActive }
+	if req.IsOpen != nil    { update["is_open"]    = *req.IsOpen }
+	if len(update) == 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Нет данных для обновления"})
 	}
-	if req.Color != nil{
-		updateData["color"] = *req.Color
-	}
-	if req.IsDefault != nil{
-		updateData["is_default"] = *req.IsDefault
-	}
-	if req.IsActive != nil{
-		updateData["is_active"] = *req.IsActive
-	}
-	if req.IsOpen != nil{
-		updateData["is_open"] = *req.IsOpen
-	}
+	now := time.Now()
+	update["updated_at"] = &now
 
-	if len(updateData) == 0{
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Нет данных для обновления",
-		})
-	}
-
-	updateData["updated_at"] = time.Now()
-
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		res := tx.Session(&gorm.Session{}).Model(&models.Status{}).Where("id = ? and deleted = ?", statusID, false).Updates(updateData)
-		if res.Error != nil{
-			log.Printf("DB error (update status): %v", res.Error)
-			return res.Error
-		}
-		if res.RowsAffected == 0{
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{
-				"error": "Ничего не найдено для обновленияЭ",
-			})
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Status{}).
+			Where("id = ? AND deleted = FALSE", statusID).
+			Updates(update)
+		if res.Error != nil { return res.Error }
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
-	}); txErr != nil{
+	}); txErr != nil {
 		log.Printf("DB transaction error (update status): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обновлении статуса в базе данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении статуса"})
 	}
 
-	updateResponse := response.StatusUniversalResponse{
-		ID: id,
-		Message: "Статус успешно обновлен",
-	}
-	return c.JSON(http.StatusOK, updateResponse)
+	return c.JSON(http.StatusOK, response.StatusUniversalResponse{
+		ID:      statusID.String(),
+		Message: "Статус успешно обновлён",
+	})
 }
 
 // deleteStatus godoc
@@ -465,57 +376,54 @@ func updateStatus(c echo.Context) error{
 // @Failure 404 {object} map[string]string "Статус не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении статуса"
 // @Router /status/{id} [delete]
-func deleteStatus(c echo.Context) error{
-	if err := authorize(c); err != nil{
-		return err
+func deleteStatus(c echo.Context) error {
+	if err := authorize(c); err != nil { return err }
+
+	statusID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор статуса"})
 	}
 
-	id := c.Param("id")
-	statusID, err := uuid.Parse(id)
-	if err != nil{
-		log.Printf("UUID parse error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор статуса",
-		})
-	}
-	updateData := make(map[string]interface{})
-	updateData["deleted"] = true
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		res := tx.Session(&gorm.Session{}).Model(&models.Status{}).Where("id = ?", statusID).Updates(updateData)
-		if res.Error != nil{
-			log.Printf("DB error (delete status): %v", res.Error)
+	delTrue := true
+	now := time.Now()
+	update := map[string]interface{}{"deleted": &delTrue, "updated_at": &now}
+
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		// сам статус
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.Status{}).
+			Where("id = ? AND deleted = FALSE", statusID).
+			Updates(update)
+		if res.Error != nil { return res.Error }
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		// связи
+		if res = tx.Session(&gorm.Session{}).
+			Model(&models.StatusBoard{}).
+			Where("status_id = ?", statusID).
+			Updates(update); res.Error != nil {
 			return res.Error
 		}
-		if res.RowsAffected == 0{
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{
-				"error": "Ничего не найдено для удаления",
-			})
-		}
-		if res = tx.Session(&gorm.Session{}).Model(models.StatusBoard{}).Where("status_id = ?", statusID).Updates(updateData); res.Error != nil{
-			log.Printf("DB error (delete status_board): %v", res.Error)
-			return res.Error
-		}
-		if res = tx.Session(&gorm.Session{}).Model(models.StatusTask{}).Where("status_id = ?", statusID).Updates(updateData); res.Error != nil{
-			log.Printf("DB error (delete status_task): %v", res.Error)
+		if res = tx.Session(&gorm.Session{}).
+			Model(&models.StatusTask{}).
+			Where("status_id = ?", statusID).
+			Updates(map[string]interface{}{"deleted": true}); res.Error != nil {
 			return res.Error
 		}
 		return nil
-	}); txErr != nil{
-		if he, ok := txErr.(*echo.HTTPError); ok{
+	}); txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
 			return c.JSON(he.Code, he.Message)
 		}
 		log.Printf("DB transaction error (delete status): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при удалении статуса из базы данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении статуса"})
 	}
 
-	delResponse := response.StatusUniversalResponse{
-		ID: id,
-		Message: "Статус успешно удален",
-	}
-
-	return c.JSON(http.StatusOK, delResponse)
+	return c.JSON(http.StatusOK, response.StatusUniversalResponse{
+		ID:      statusID.String(),
+		Message: "Статус успешно удалён",
+	})
 }
 
 // addStatusToTask godoc
@@ -531,65 +439,49 @@ func deleteStatus(c echo.Context) error{
 // @Success 201 {object} response.AddStatusToTaskResponse "Статус успешно добавлен к задаче"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении статуса к задаче"
 // @Router /status/add-to-task [post]
-func addStatusToTask(c echo.Context) error{
-	if err := authorize(c); err != nil{
-		return err
-	}	
+func addStatusToTask(c echo.Context) error {
+	if err := authorize(c); err != nil { return err }
+
 	var req request.AddStatusToTaskRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
-	
-	del := false
 
 	taskID, err := uuid.Parse(req.TaskId)
-	if err != nil{
-		log.Printf("failed to parse task uuid: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге идентификатора задачи",
-		})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора задачи"})
 	}
-
 	statusID, err := uuid.Parse(req.StatusId)
-	if err != nil{
-		log.Printf("failed to parse status uuid: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге идентификатора статуса",
-		})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора статуса"})
 	}
 
-	now := time.Now()
+	del := false
 
-	statusTask := models.StatusTask{
-		TaskID: &taskID,
-		StatusID: &statusID,
-		Deleted: &del,
-		CreatedAt: &now,
+	// ВАЖНО: StatusTask.Deleted — bool, CreatedAt/UpdatedAt — авто
+	link := models.StatusTask{
+		StatusID: statusID,
+		TaskID:   taskID,
+		Deleted:  &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		if res := tx.Session(&gorm.Session{}).Model(models.StatusTask{}).Create(&statusTask); res.Error != nil{
-			log.Printf("DB error (add status to task): %v", res.Error)
-			return res.Error
-		}
-		return nil
-	}); txErr != nil{
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		return tx.Session(&gorm.Session{}).
+			Model(&models.StatusTask{}).
+			Create(&link).Error
+	}); txErr != nil {
 		log.Printf("DB error (add status to task): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при добавлении статуса к задаче в базе данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при добавлении статуса к задаче"})
 	}
 
-	addResponse := response.AddStatusToTaskResponse{
-		TaskId: req.TaskId,
+	return c.JSON(http.StatusCreated, response.AddStatusToTaskResponse{
+		TaskId:   req.TaskId,
 		StatusId: req.StatusId,
-		Message: "Статус успешно добавлен к задаче",
-	}
-	return c.JSON(http.StatusCreated, addResponse)
+		Message:  "Статус успешно добавлен к задаче",
+	})
 }
+
 
 // addStatusToBoard godoc
 // @Summary Добавление статуса к доске
@@ -604,63 +496,45 @@ func addStatusToTask(c echo.Context) error{
 // @Success 201 {object} response.AddStatusToBoardResponse "Статус успешно добавлен к доске"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении статуса к доске"
 // @Router /status/add-to-board [post]
-func addStatusToBoard(c echo.Context) error{
-	if err := authorize(c); err != nil{
-		return err
-	}	
+func addStatusToBoard(c echo.Context) error {
+	if err := authorize(c); err != nil { return err }
+
 	var req request.AddStatusToBoardRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Не удалось получить данные из запроса",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
-	
-	del := false
 
 	boardID, err := uuid.Parse(req.BoardId)
-	if err != nil{
-		log.Printf("failed to parse task uuid: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге идентификатора доски",
-		})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора доски"})
 	}
-
 	statusID, err := uuid.Parse(req.StatusId)
-	if err != nil{
-		log.Printf("failed to parse status uuid: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге идентификатора статуса",
-		})
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора статуса"})
 	}
 
+	del := false
 	now := time.Now()
-
-	statusBoard := models.StatusBoard{
-		BoardID: &boardID,
-		StatusID: &statusID,
-		Deleted: &del,
+	link := models.StatusBoard{
+		StatusID:  statusID,
+		BoardID:   boardID,
+		Deleted:   &del,
 		CreatedAt: &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error{
-		if res := tx.Session(&gorm.Session{}).Model(models.StatusBoard{}).Create(&statusBoard); res.Error != nil{
-			log.Printf("DB error (add status to board): %v", res.Error)
-			return res.Error
-		}
-		return nil
-	}); txErr != nil{
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		return tx.Session(&gorm.Session{}).
+			Model(&models.StatusBoard{}).
+			Create(&link).Error
+	}); txErr != nil {
 		log.Printf("DB error (add status to board): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при добавлении статуса к доске в базе данных",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при добавлении статуса к доске"})
 	}
 
-	addResponse := response.AddStatusToBoardResponse{
-		BoardId: req.BoardId,
+	return c.JSON(http.StatusCreated, response.AddStatusToBoardResponse{
+		BoardId:  req.BoardId,
 		StatusId: req.StatusId,
-		Message: "Статус успешно добавлен к доске",
-	}
-
-	return c.JSON(http.StatusCreated, addResponse)
+		Message:  "Статус успешно добавлен к доске",
+	})
 }

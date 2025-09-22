@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func RegisterUserRoutes(e *echo.Echo) {
@@ -29,6 +30,7 @@ func RegisterUserRoutes(e *echo.Echo) {
 	userGroup.POST("/restore", restoreUser)
 	userGroup.POST("/role", addUserRole)
 	userGroup.DELETE("/role", removeUserRole)
+	userGroup.DELETE("/full-delete/:id", deleteUser)
 }
 
 // getAllUsers godoc
@@ -51,9 +53,9 @@ func getAllUsers(c echo.Context) error {
 	}
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
+
 	page, err := strconv.Atoi(pageReq)
-	if err != nil{
+	if err != nil {
 		log.Printf("failed to parse page: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Ошибка при парсинге страницы",
@@ -64,7 +66,7 @@ func getAllUsers(c echo.Context) error {
 	}
 
 	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
+	if err != nil {
 		log.Printf("failed to parse pagesize: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Ошибка при парсинге номера страницы",
@@ -76,7 +78,7 @@ func getAllUsers(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).Where("deleted = ?", false).Count(&totalCount)
+	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).Where("deleted = FALSE").Count(&totalCount)
 	if result.Error != nil {
 		log.Printf("DB error (count users): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -85,11 +87,12 @@ func getAllUsers(c echo.Context) error {
 	}
 
 	var users []models.User
-	if err := dbConn.Session(&gorm.Session{}).Model(models.User{}).Where("deleted = ?", false).
+	if err := dbConn.Session(&gorm.Session{}).Model(models.User{}).
+		Where("deleted = FALSE").
 		Limit(pageSize).
 		Offset(offset).
 		Find(&users).Error; err != nil {
-		log.Printf("DB error (find projects): %v", err)
+		log.Printf("DB error (find users): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при получении пользователей из базы данных",
 		})
@@ -103,17 +106,17 @@ func getAllUsers(c echo.Context) error {
 
 	for _, user := range users {
 		userList.Users = append(userList.Users, response.GetUserResponse{
-			ID:             user.ID.String(),
-			Email:          utils.GetString(user.Email),
-			IsActive:       utils.GetBool(user.IsActive),
-			CreatedAt:      utils.GetTime(user.CreatedAt),
-			TgId:           utils.GetString(user.TgID),
-			TgUserId:       utils.GetInt64(user.TgUserID),
-			Profession:     utils.GetString(user.Profession),
-			EmailVerified:  utils.GetBool(user.EmailVerified),
-			FirstName:      utils.GetString(user.FirstName),
-			LastName:       utils.GetString(user.LastName),
-			LastLogin:      utils.GetTime(user.LastLogin),
+			ID:            user.ID.String(),
+			Email:         utils.GetString(user.Email),
+			IsActive:      utils.GetBool(user.IsActive),
+			CreatedAt:     user.CreatedAt,
+			TgId:          utils.GetString(user.TgID),
+			TgUserId:      utils.GetInt64(user.TgUserID),
+			Profession:    utils.GetString(user.Profession),
+			EmailVerified: utils.GetBool(user.EmailVerified),
+			FirstName:     utils.GetString(user.FirstName),
+			LastName:      utils.GetString(user.LastName),
+			LastLogin:     user.LastLogin,
 		})
 	}
 	return c.JSON(http.StatusOK, userList)
@@ -147,7 +150,9 @@ func getUserById(c echo.Context) error {
 	}
 
 	var user models.User
-	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).Where("id = ? and deleted = ?", userId, false).First(&user)
+	result := dbConn.Session(&gorm.Session{}).Model(models.User{}).
+		Where("id = ? AND deleted = FALSE", userId).
+		First(&user)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -160,17 +165,17 @@ func getUserById(c echo.Context) error {
 		})
 	}
 	getUserResponse := response.GetUserResponse{
-		ID:             user.ID.String(),
-		Email:          utils.GetString(user.Email),
-		IsActive:       utils.GetBool(user.IsActive),
-		CreatedAt:      utils.GetTime(user.CreatedAt),
-		TgId:           utils.GetString(user.TgID),
-		TgUserId:       utils.GetInt64(user.TgUserID),
-		Profession:     utils.GetString(user.Profession),
-		EmailVerified:  utils.GetBool(user.EmailVerified),
-		FirstName:      utils.GetString(user.FirstName),
-		LastName:       utils.GetString(user.LastName),
-		LastLogin:      utils.GetTime(user.LastLogin),
+		ID:            user.ID.String(),
+		Email:         utils.GetString(user.Email),
+		IsActive:      utils.GetBool(user.IsActive),
+		CreatedAt:     user.CreatedAt,
+		TgId:          utils.GetString(user.TgID),
+		TgUserId:      utils.GetInt64(user.TgUserID),
+		Profession:    utils.GetString(user.Profession),
+		EmailVerified: utils.GetBool(user.EmailVerified),
+		FirstName:     utils.GetString(user.FirstName),
+		LastName:      utils.GetString(user.LastName),
+		LastLogin:     user.LastLogin,
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
 }
@@ -201,84 +206,116 @@ func createUser(c echo.Context) error {
 		})
 	}
 
-	return CreateUserFunc(req, c)
-	
-}
-
-func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error{
 	newUUID := uuid.New()
 
-	now := time.Now()
+	return CreateUserWithIdFunc(req, c, newUUID)
+}
 
+/*
+func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
+	newUUID := uuid.New()
+	now := time.Now()
 	del := false
 
 	user := models.User{
-		ID:             newUUID,
-		Email:          req.Email,
-		IsActive:       req.IsActive,
-		CreatedAt:      &now,
-		UpdatedAt:      &now,
-		EmailVerified:  req.EmailVerified,
-		FirstName:      req.FirstName,
-		LastName:       req.LastName,
-		Deleted: &del,
+		ID:            newUUID,
+		Email:         req.Email,
+		IsActive:      req.IsActive,
+		CreatedAt:     &now,
+		UpdatedAt:     &now,
+		TgID:          req.TgId,
+		TgUserID:      req.TgUserId,
+		Profession:    req.Profession,
+		EmailVerified: req.EmailVerified,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		LastLogin:     &now,
+		Deleted:       &del,
 	}
 
-	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).Model(models.User{}).Create(&user).Error; err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if err != nil {
+	if err := dbConn.Transaction(func(tx *gorm.DB) error {
+		return tx.
+			Omit(clause.Associations).
+			Create(&user).Error
+	}); err != nil {
 		log.Printf("DB transaction error (create user): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при создании пользователя",
 		})
 	}
 
-	createResponse := response.UserUniversalResponse{
+	return c.JSON(http.StatusCreated, response.UserUniversalResponse{
 		ID:      newUUID.String(),
 		Message: "Пользователь успешно создан",
-	}
-	return c.JSON(http.StatusCreated, createResponse)
-}
+	})
+}*/
 
-func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error{
+func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
-
 	del := false
 
+	tgId := ""
+	var tgUserID int64 = 0
+	profession := ""
+
 	user := models.User{
-		ID:             id,
-		Email:          req.Email,
-		IsActive:       req.IsActive,
-		CreatedAt:      &now,
-		UpdatedAt:      &now,
-		TgID:           req.TgId,
-		TgUserID:       req.TgUserId,
-		Profession:     req.Profession,
-		EmailVerified:  req.EmailVerified,
-		FirstName:      req.FirstName,
-		LastName:       req.LastName,
-		LastLogin:      req.LastLogin,
-		Deleted: &del,
+		ID:            id,
+		Email:         req.Email,
+		IsActive:      req.IsActive,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+		EmailVerified: req.EmailVerified,
+		FirstName:     req.FirstName,
+		LastName:      req.LastName,
+		LastLogin:     now,
+		Deleted:       &del,
+		TgID: &tgId,
+		TgUserID: &tgUserID,
+		Profession: &profession,
+		UserRoles: []models.UserRole{},
 	}
 
-	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).Create(&user).Error; err != nil {
-			return err
-		}
-		return nil
-	})
+	// Логируем входные данные (без чувствительных полей)
+	log.Printf("CreateUserWithIdFunc: start create user id=%s email=%v", user.ID, user.Email)
 
-	if err != nil {
+	if err := dbConn.Transaction(func(tx *gorm.DB) error {
+		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
+
+		log.Print("USER STUCT")
+		log.Print(user)
+		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
+		res := tx.Select("ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
+                 "EmailVerified",
+                 "FirstName", "LastName", "LastLogin", "Deleted").
+			Create(&user)
+
+		// Лог ошибки, если она есть
+		if res.Error != nil {
+			log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", user.ID, res.Error)
+			// Если доступен Statement — логируем SQL и переменные (поможет диагностике)
+			if res.Statement != nil {
+				log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
+				log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
+			}
+			return res.Error
+		}
+
+		// Успешно создались — логируем результат
+		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d user=%+v", user.ID, res.RowsAffected, user)
+		if res.Statement != nil {
+			log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
+			log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
+		}
+
+		return nil
+	}); err != nil {
 		log.Printf("DB transaction error (create user with id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при создании пользователя",
 		})
 	}
+
+	log.Printf("CreateUserWithIdFunc: finished create user id=%s", user.ID)
 	return nil
 }
 
@@ -324,9 +361,6 @@ func updateUser(c echo.Context) error {
 	if req.IsActive != nil {
 		updateData["is_active"] = *req.IsActive
 	}
-	if req.CreatedAt != nil {
-		updateData["created_at"] = *req.CreatedAt
-	}
 	if req.TgId != nil {
 		updateData["tg_id"] = *req.TgId
 	}
@@ -358,16 +392,18 @@ func updateUser(c echo.Context) error {
 	updateData["updated_at"] = time.Now()
 
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.User{}).Where("id = ?", userId).Updates(updateData)
-		if res.Error != nil{
+		res := tx.Session(&gorm.Session{}).Model(models.User{}).
+			Where("id = ? AND deleted = FALSE", userId).
+			Updates(updateData)
+		if res.Error != nil {
 			log.Print("DB error (update user)")
 			return res.Error
 		}
-		if res.RowsAffected == 0{
+		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
 		return nil
-	}); txErr != nil{
+	}); txErr != nil {
 		log.Printf("DB transaction error (update user): %v", txErr)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении пользователя"})
 	}
@@ -506,6 +542,58 @@ func DeleteUserFunc(c echo.Context, id string) error {
 	return c.JSON(http.StatusOK, deleteResponse)
 }*/
 
+// deleteUser godoc
+// @Summary Удаление пользователя(НЕ ИСПОЛЬЗОВАТЬ, ДОБАВЛЕНО ВРЕМЕННО ДЛЯ ТЕСТА ОШИБКИ 502)
+// @Description Логическое удаление пользователя по ID, включая связанные данные (поле deleted = true)
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Success 200 {object} response.UserUniversalResponse "Пользователь успешно удален"
+// @Failure 404 {object} map[string]string "Пользователь не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
+// @Router /user/full-delete/{id} [delete]
+func deleteUser(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+	id := c.Param("id")
+	return DeleteUserFunc(c, id)
+}
+
+func DeleteUserFunc(c echo.Context, id string) error {
+	err := dbConn.Transaction(func(tx *gorm.DB) error {
+		// Удаляем пользователя
+		result := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("id = ?", id).Delete(&models.User{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusBadRequest, "Ничего не удалено")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		if he, ok := err.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, map[string]string{"error": he.Message.(string)})
+		}
+		log.Printf("DB transaction error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при удалении пользователя",
+		})
+	}
+
+	deleteResponse := response.UserUniversalResponse{
+		ID:      id,
+		Message: "Пользователь с ID " + id + " удален",
+	}
+	return c.JSON(http.StatusOK, deleteResponse)
+}
+
 // banUser godoc
 // @Summary Ban пользователя
 // @Description Логическое удаление пользователя по ID
@@ -519,22 +607,25 @@ func DeleteUserFunc(c echo.Context, id string) error {
 // @Failure 404 {object} map[string]string "Пользователь не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении пользователя"
 // @Router /user/{id} [delete]
-func banUser(c echo.Context) error{
+func banUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
 	id := c.Param("id")
+
 	updateData := map[string]interface{}{
-		"deleted": true,
+		"deleted":    true,
+		"updated_at": time.Now(),
 	}
 
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
-		// Удаляем пользователя
-		result := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("id = ?", id).Updates(updateData)
-		if result.Error != nil {
-			return result.Error
+		res := tx.Session(&gorm.Session{}).Model(&models.User{}).
+			Where("id = ? AND deleted = FALSE", id).
+			Updates(updateData)
+		if res.Error != nil {
+			return res.Error
 		}
-		if result.RowsAffected == 0 {
+		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusBadRequest, "Ничего не удалено")
 		}
 		return nil
@@ -570,7 +661,7 @@ func banUser(c echo.Context) error{
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при восстановлении пользователя"
 // @Router /user/restore [post]
-func restoreUser(c echo.Context) error{
+func restoreUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
 		return err
 	}
@@ -583,21 +674,26 @@ func restoreUser(c echo.Context) error{
 	}
 
 	updateData := map[string]interface{}{
-		"deleted": false,
+		"deleted":    false,
+		"updated_at": time.Now(),
 	}
 
 	var id string
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
 		var user models.User
-		if err := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("email = ?", req.Email).First(&user).Error; err != nil {
-        	return err
-    	}
-	
-		result := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("email = ?", req.Email).Updates(updateData)
-		if result.Error != nil {
-			return result.Error
+		if err := tx.Session(&gorm.Session{}).Model(&models.User{}).
+			Where("email = ? AND deleted = TRUE", req.Email).
+			First(&user).Error; err != nil {
+			return err
 		}
-		if result.RowsAffected == 0 {
+
+		res := tx.Session(&gorm.Session{}).Model(&models.User{}).
+			Where("email = ? AND deleted = TRUE", req.Email).
+			Updates(updateData)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusBadRequest, "Ничего не восстановлено")
 		}
 		id = user.ID.String()
@@ -615,12 +711,11 @@ func restoreUser(c echo.Context) error{
 	}
 
 	restoreResponse := response.UserUniversalResponse{
-		ID: id,
+		ID:      id,
 		Message: "Пользователь с email " + *req.Email + " восстановлен",
 	}
 	return c.JSON(http.StatusOK, restoreResponse)
 }
-
 
 // addUserRole godoc
 // @Summary Добавление роли пользователю
@@ -650,33 +745,39 @@ func addUserRole(c echo.Context) error {
 	var addResponse response.AddRoleUserResponse
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
 		var user models.User
-		if err := tx.Session(&gorm.Session{}).Model(models.User{}).Select("id, profession").Where("id = ? AND deleted = ?", req.UserId, false).First(&user).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Model(models.User{}).
+			Select("id, profession").
+			Where("id = ? AND deleted = FALSE", req.UserId).
+			First(&user).Error; err != nil {
 			return err
 		}
 
 		var role models.Role
-		if err := tx.Session(&gorm.Session{}).Model(models.Role{}).Select("id").Where("id = ? AND deleted = ?", req.RoleId, false).First(&role).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Model(models.Role{}).
+			Select("id").
+			Where("id = ? AND deleted = FALSE", req.RoleId).
+			First(&role).Error; err != nil {
 			return err
 		}
 
 		var assignerId uuid.UUID
 		assignerId, err := uuid.Parse(req.AssignerId)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 
 		now := time.Now()
-
 		del := false
+
 		userRole := models.UserRole{
-			UserID:  user.ID,
-			RoleID:  role.ID,
+			UserID:     user.ID,
+			RoleID:     role.ID,
 			AssignedAt: &now,
-			Deleted: &del,
+			Deleted:    &del,
 			AssignedBy: &assignerId,
 		}
 
-		if err := tx.Session(&gorm.Session{}).Create(&userRole).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Omit(clause.Associations).Create(&userRole).Error; err != nil {
 			return err
 		}
 
@@ -727,20 +828,29 @@ func removeUserRole(c echo.Context) error {
 	var deleteResponse response.RemoveRoleUserResponse
 	err := dbConn.Transaction(func(tx *gorm.DB) error {
 		var user models.User
-		if err := tx.Session(&gorm.Session{}).Model(models.User{}).Select("id, profession").Where("id = ? AND deleted = ?", req.UserId, false).First(&user).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Model(models.User{}).
+			Select("id, profession").
+			Where("id = ? AND deleted = FALSE", req.UserId).
+			First(&user).Error; err != nil {
 			return err
 		}
 
 		var role models.Role
-		if err := tx.Session(&gorm.Session{}).Model(models.Role{}).Select("id").Where("id = ? AND deleted = ?", req.RoleId, false).First(&role).Error; err != nil {
+		if err := tx.Session(&gorm.Session{}).Model(models.Role{}).
+			Select("id").
+			Where("id = ? AND deleted = FALSE", req.RoleId).
+			First(&role).Error; err != nil {
 			return err
 		}
 
-		updateData := make(map[string]interface{})
-		updateData["deleted"] = true
-		updateData["updated_at"] = time.Now()
+		updateData := map[string]interface{}{
+			"deleted":    true,
+			"updated_at": time.Now(),
+		}
 
-		result := tx.Session(&gorm.Session{}).Model(models.UserRole{}).Where("user_id = ? AND role_id = ?", user.ID, role.ID).Updates(updateData)
+		result := tx.Session(&gorm.Session{}).Model(models.UserRole{}).
+			Where("user_id = ? AND role_id = ? AND deleted = FALSE", user.ID, role.ID).
+			Updates(updateData)
 		if result.Error != nil {
 			return result.Error
 		}
