@@ -254,6 +254,10 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	now := time.Now()
 	del := false
 
+	tgId := ""
+	var tgUserID int64 = 0
+	profession := ""
+
 	user := models.User{
 		ID:            id,
 		Email:         req.Email,
@@ -265,6 +269,10 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		LastName:      req.LastName,
 		LastLogin:     now,
 		Deleted:       &del,
+		TgID: &tgId,
+		TgUserID: &tgUserID,
+		Profession: &profession,
+		UserRoles: []models.UserRole{},
 	}
 
 	// Логируем входные данные (без чувствительных полей)
@@ -276,7 +284,6 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		log.Print("USER STUCT")
 		log.Print(user)
 		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
-		user.UserRoles = []models.UserRole{}
 		res := tx.Select("ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
                  "EmailVerified",
                  "FirstName", "LastName", "LastLogin", "Deleted").
