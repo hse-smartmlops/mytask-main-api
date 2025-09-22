@@ -272,7 +272,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		TgID: tgId,
 		TgUserID: tgUserID,
 		Profession: profession,
-		UserRoles: []models.UserRole{},
+		UserRoles: nil,
 	}
 
 	// Логируем входные данные (без чувствительных полей)
@@ -281,11 +281,10 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	if err := dbConn.Transaction(func(tx *gorm.DB) error {
 		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
 
-		log.Print("USER STUCT")
+		log.Print("USER STRUCT")
 		log.Print(user)
 		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
-		res := tx.
-			Create(&user)
+		res := tx.Session(&gorm.Session{SkipHooks: true}).Create(&user)
 
 		// Лог ошибки, если она есть
 		if res.Error != nil {
