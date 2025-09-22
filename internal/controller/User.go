@@ -109,14 +109,14 @@ func getAllUsers(c echo.Context) error {
 			ID:            user.ID.String(),
 			Email:         utils.GetString(user.Email),
 			IsActive:      utils.GetBool(user.IsActive),
-			CreatedAt:     utils.GetTime(user.CreatedAt),
+			CreatedAt:     user.CreatedAt,
 			TgId:          utils.GetString(user.TgID),
 			TgUserId:      utils.GetInt64(user.TgUserID),
 			Profession:    utils.GetString(user.Profession),
 			EmailVerified: utils.GetBool(user.EmailVerified),
 			FirstName:     utils.GetString(user.FirstName),
 			LastName:      utils.GetString(user.LastName),
-			LastLogin:     utils.GetTime(user.LastLogin),
+			LastLogin:     user.LastLogin,
 		})
 	}
 	return c.JSON(http.StatusOK, userList)
@@ -168,14 +168,14 @@ func getUserById(c echo.Context) error {
 		ID:            user.ID.String(),
 		Email:         utils.GetString(user.Email),
 		IsActive:      utils.GetBool(user.IsActive),
-		CreatedAt:     utils.GetTime(user.CreatedAt),
+		CreatedAt:     user.CreatedAt,
 		TgId:          utils.GetString(user.TgID),
 		TgUserId:      utils.GetInt64(user.TgUserID),
 		Profession:    utils.GetString(user.Profession),
 		EmailVerified: utils.GetBool(user.EmailVerified),
 		FirstName:     utils.GetString(user.FirstName),
 		LastName:      utils.GetString(user.LastName),
-		LastLogin:     utils.GetTime(user.LastLogin),
+		LastLogin:     user.LastLogin,
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
 }
@@ -258,12 +258,12 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		ID:            id,
 		Email:         req.Email,
 		IsActive:      req.IsActive,
-		CreatedAt:     &now,
-		UpdatedAt:     &now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
 		EmailVerified: req.EmailVerified,
 		FirstName:     req.FirstName,
 		LastName:      req.LastName,
-		LastLogin:     &now,
+		LastLogin:     now,
 		Deleted:       &del,
 	}
 
