@@ -282,7 +282,8 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 
 		log.Print("USER STRUCT")
 		log.Print(user)
-		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
+		
+		// ИСПОЛЬЗУЕМ ОТДЕЛЬНУЮ ПЕРЕМЕННУЮ ДЛЯ РЕЗУЛЬТАТА
 		res := tx.Select(
 			"ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
 			"TgID", "TgUserID", "Profession", "EmailVerified",
@@ -292,20 +293,10 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		// Лог ошибки, если она есть
 		if res.Error != nil {
 			log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", user.ID, res.Error)
-			// Если доступен Statement — логируем SQL и переменные (поможет диагностике)
-			if res.Statement != nil {
-				log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
-				log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
-			}
 			return res.Error
 		}
 
-		// Успешно создались — логируем результат
-		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d user=%+v", user.ID, res.RowsAffected, user)
-		if res.Statement != nil {
-			log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
-			log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
-		}
+		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", user.ID, res.RowsAffected)
 
 		return nil
 	}); err != nil {
@@ -316,7 +307,10 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	}
 
 	log.Printf("CreateUserWithIdFunc: finished create user id=%s", user.ID)
-	return nil
+	return c.JSON(http.StatusCreated, map[string]string{
+		"message": "Пользователь успешно создан",
+		"id":      user.ID.String(),
+	})
 }
 
 // updateUser godoc
