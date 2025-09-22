@@ -25,11 +25,10 @@ RUN apk add --no-cache ca-certificates tzdata bash
 RUN cp /usr/share/zoneinfo/Europe/Moscow /etc/localtime && \
     echo "Europe/Moscow" > /etc/timezone
 
-WORKDIR /root/
+WORKDIR /app
 
 # Копирование бинарного файла из builder stage
-COPY --from=builder /app/server ./server
+COPY --from=builder /app/server ./
 # Копирование .env файла, если он нужен напрямую в корень или в /app
-COPY --from=builder /app/.env ./ # Или WORKDIR /app выше и копирование в ./
-
+COPY --from=builder /app/.env ./ 
 CMD ["./server"]
