@@ -277,7 +277,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
 		
 		// Явно указываем поля для создания, исключая ассоциации
-		res := tx.Select(
+		res := tx.Omit("UserRoles").Select(
 			"ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
 			"TgID", "TgUserID", "Profession", "EmailVerified",
 			"FirstName", "LastName", "LastLogin", "Deleted",
