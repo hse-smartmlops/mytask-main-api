@@ -164,6 +164,20 @@ definitions:
     - color
     - name
     type: object
+  request.DeleteStatusFromBoardRequest:
+    properties:
+      board_id:
+        type: string
+      status_id:
+        type: string
+    type: object
+  request.DeleteStatusFromTaskRequest:
+    properties:
+      status_id:
+        type: string
+      task_id:
+        type: string
+    type: object
   request.HelpRequest:
     properties:
       description:
@@ -4004,6 +4018,102 @@ paths:
       summary: Получение всех статусов
       tags:
       - Statuses
+  /status/delete-from-board:
+    delete:
+      consumes:
+      - application/json
+      description: Удаление связи между статусом и доской (мягкое удаление)
+      parameters:
+      - description: Данные для удаления статуса с доски
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.DeleteStatusFromBoardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Статус успешно удалён с доски
+          schema:
+            $ref: '#/definitions/response.StatusUniversalResponse'
+        "400":
+          description: Ошибка при привязке данных или парсинге UUID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Связь не найдена или уже удалена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении статуса с доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление статуса с доски
+      tags:
+      - Statuses
+  /status/delete-from-task:
+    delete:
+      consumes:
+      - application/json
+      description: Удаление связи между статусом и задачей (мягкое удаление)
+      parameters:
+      - description: Данные для удаления статуса из задачи
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.DeleteStatusFromTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Статус успешно удалён из задачи
+          schema:
+            $ref: '#/definitions/response.StatusUniversalResponse'
+        "400":
+          description: Ошибка при привязке данных или парсинге UUID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Связь не найдена или уже удалена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении статуса из задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление статуса из задачи
+      tags:
+      - Statuses
   /status/project/{board_id}:
     get:
       description: Получение списка статусов, связанных с доской по ее ID
@@ -5133,48 +5243,6 @@ paths:
       summary: Добавление пользователя в команду
       tags:
       - Teams
-  /user:
-    post:
-      consumes:
-      - application/json
-      description: Создает нового пользователя с указанными параметрами
-      parameters:
-      - description: Данные для создания пользователя
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/request.UserCreateRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Пользователь успешно создан
-          schema:
-            $ref: '#/definitions/response.UserUniversalResponse'
-        "400":
-          description: Ошибка в запросе или некорректные идентификаторы
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при создании пользователя
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Создание нового пользователя
-      tags:
-      - Users
   /user/{id}:
     delete:
       consumes:
@@ -5353,6 +5421,50 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех пользователей
+      tags:
+      - Users
+  /user/create:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт пользователя с автоматически сгенерированным UUID
+      parameters:
+      - description: Данные для создания пользователя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.UserCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно создан
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Ошибка при привязке данных
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при создании пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание нового пользователя
       tags:
       - Users
   /user/full-delete/{id}:
