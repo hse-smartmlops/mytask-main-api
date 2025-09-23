@@ -10,7 +10,6 @@ import (
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/utils"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -209,7 +208,7 @@ func createUser(c echo.Context) error {
 
 	newUUID := uuid.New()
 
-	if err := CreateUserWithId(req, newUUID); err != nil {
+	if err := CreateUserWithIdFunc(req, c, newUUID); err != nil {
 		log.Printf("Failed to create user: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при создании пользователя",
@@ -316,7 +315,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	})
 }*/
 
-/*func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
+func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
 	
 	email := utils.GetString(req.Email)
@@ -354,37 +353,6 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	affectedRows := result.RowsAffected
 	log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", id, affectedRows)
 	
-	return nil
-}*/
-
-func CreateUserWithId(req request.UserCreateRequest, id uuid.UUID) error {
-	now := time.Now()
-
-	user := models.User{
-		ID:            id,
-		Email:         utils.GetString(req.Email),
-		IsActive:      utils.GetBool(req.IsActive),
-		CreatedAt:     now,
-		TgID:          "",
-		TgUserID:      0,
-		Profession:    "",
-		EmailVerified: utils.GetBool(req.EmailVerified),
-		FirstName:     utils.GetString(req.FirstName),
-		LastName:      utils.GetString(req.LastName),
-		LastLogin:     now,
-		Deleted:       false,
-		UpdatedAt:     now,
-	}
-
-	result := dbConn.Session(&gorm.Session{}).Create(&user)
-	if result.Error != nil {
-		log.Printf("CreateUserWithId: db create error for id=%s: %v", id, result.Error)
-		return fmt.Errorf("failed to create user: %w", result.Error)
-	}
-
-	affectedRows := result.RowsAffected
-	log.Printf("CreateUserWithId: user created id=%s rows=%d", id, affectedRows)
-
 	return nil
 }
 
