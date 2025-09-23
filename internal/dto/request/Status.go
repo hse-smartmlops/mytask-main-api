@@ -25,3 +25,13 @@ type AddStatusToBoardRequest struct {
 	BoardId  string `json:"board_id"`
 	StatusId string `json:"status_id"`
 }
+
+type DeleteStatusFromTaskRequest struct {
+	TaskId   string `json:"task_id"`
+	StatusId string `json:"status_id"`
+}
+
+type DeleteStatusFromBoardRequest struct {
+	BoardId  string `json:"board_id"`
+	StatusId string `json:"status_id"`
+}

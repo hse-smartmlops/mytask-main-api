@@ -66,20 +66,13 @@ func getTeams(c echo.Context) error {
 	for _, team := range teams {
 		members := make([]response.TeamMemberResponse, 0, len(team.TeamMembers))
 		for _, tm := range team.TeamMembers {
-			// уже фильтруется в Preload, проверка остаётся на всякий
-			if tm.Deleted != nil && *tm.Deleted {
-				continue
-			}
-			if tm.User == nil || (tm.User.Deleted != nil && *tm.User.Deleted) {
-				continue
-			}
 			user := tm.User
 			members = append(members, response.TeamMemberResponse{
 				UserID:         user.ID.String(),
-				Specialization: utils.GetString(user.Profession),
-				FirstName:      utils.GetString(user.FirstName),
-				LastName:       utils.GetString(user.LastName),
-				Email:          utils.GetString(user.Email),
+				Specialization: user.Profession,
+				FirstName:      user.FirstName,
+				LastName:       user.LastName,
+				Email:          user.Email,
 			})
 		}
 
@@ -208,10 +201,10 @@ func getProjectTeams(c echo.Context) error {
 			teamAndMembers[tm.TeamID] = append(teamAndMembers[tm.TeamID],
 				response.TeamMemberResponse{
 					UserID:         user.ID.String(),
-					Specialization: utils.GetString(user.Profession),
-					FirstName:      utils.GetString(user.FirstName),
-					LastName:       utils.GetString(user.LastName),
-					Email:          utils.GetString(user.Email),
+					Specialization: user.Profession,
+					FirstName:      user.FirstName,
+					LastName:       user.LastName,
+					Email:          user.Email,
 				})
 		}
 	}
@@ -298,10 +291,10 @@ func getTeamByID(c echo.Context) error {
 		user := memberMap[tm.UserID]
 		membersResp = append(membersResp, response.TeamMemberResponse{
 			UserID:         user.ID.String(),
-			Specialization: utils.GetString(user.Profession),
-			FirstName:      utils.GetString(user.FirstName),
-			LastName:       utils.GetString(user.LastName),
-			Email:          utils.GetString(user.Email),
+			Specialization: user.Profession,
+			FirstName:      user.FirstName,
+			LastName:       user.LastName,
+			Email:          user.Email,
 		})
 	}
 
@@ -563,10 +556,11 @@ func addUserToTeam(c echo.Context) error {
 	}
 
 	del := false
+
 	teamMember := models.TeamMember{
 		UserID:         user.ID,
 		TeamID:         team.ID,
-		Specialization: user.Profession,
+		Specialization: &user.Profession,
 		Deleted:        &del,
 	}
 	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {

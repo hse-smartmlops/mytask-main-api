@@ -13,22 +13,23 @@ import (
 
 type User struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	Email         *string    `gorm:"size:100"`
-	IsActive      *bool
+	Email         string    `gorm:"size:100"`
+	IsActive      bool
 	CreatedAt     time.Time `gorm:"type:timestamp"`
-	TgID          *string    `gorm:"size:50"`
-	TgUserID      *int64
-	Profession    *string    `gorm:"size:50"`
-	EmailVerified *bool
-	FirstName     *string    `gorm:"size:50"`
-	LastName      *string    `gorm:"size:50"`
+	TgID          string    `gorm:"size:50"`
+	TgUserID      int64
+	Profession    string    `gorm:"size:50"`
+	EmailVerified bool
+	FirstName     string    `gorm:"size:50"`
+	LastName      string    `gorm:"size:50"`
 	LastLogin     time.Time
-	Deleted       *bool      `gorm:"type:boolean"`
+	Deleted       bool      `gorm:"type:boolean"`
 	UpdatedAt     time.Time `gorm:"type:timestamp"`
 
 	// вместо many2many — явная джойн-модель
 	UserRoles []UserRole `gorm:"foreignKey:UserID;references:ID"`
 }
+
 
 type Role struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
