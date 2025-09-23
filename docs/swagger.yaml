@@ -3482,6 +3482,58 @@ paths:
       summary: Обновление планов на завтра
       tags:
       - Reports
+  /report/user/{id}/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список отчетов, созданных конкретным пользователем, с
+        пагинацией и исключением удаленных записей
+      parameters:
+      - description: ID пользователя (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список отчетов успешно получен
+          schema:
+            $ref: '#/definitions/response.ReportListResponse'
+        "400":
+          description: Некорректный ID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении отчетов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение списка отчетов по ID пользователя
+      tags:
+      - Reports
   /role:
     post:
       consumes:
