@@ -184,8 +184,8 @@ func getTaskByID(c echo.Context) error {
     if task.CreatedByUser != nil {
         creatorInfo = response.UserShort{
             ID:        task.CreatedByUser.ID.String(),
-            FirstName: utils.GetString(task.CreatedByUser.FirstName),
-            LastName:  utils.GetString(task.CreatedByUser.LastName),
+            FirstName: task.CreatedByUser.FirstName,
+            LastName:  task.CreatedByUser.LastName,
         }
     }
 
@@ -193,8 +193,8 @@ func getTaskByID(c echo.Context) error {
     if task.AssignedToUser != nil {
         assignerInfo = response.UserShort{
             ID:        task.AssignedToUser.ID.String(),
-            FirstName: utils.GetString(task.AssignedToUser.FirstName),
-            LastName:  utils.GetString(task.AssignedToUser.LastName),
+            FirstName: task.AssignedToUser.FirstName,
+            LastName:  task.AssignedToUser.LastName,
         }
     }
 

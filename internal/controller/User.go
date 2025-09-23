@@ -10,6 +10,7 @@ import (
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/utils"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -107,15 +108,15 @@ func getAllUsers(c echo.Context) error {
 	for _, user := range users {
 		userList.Users = append(userList.Users, response.GetUserResponse{
 			ID:            user.ID.String(),
-			Email:         utils.GetString(user.Email),
-			IsActive:      utils.GetBool(user.IsActive),
+			Email:         user.Email,
+			IsActive:      user.IsActive,
 			CreatedAt:     user.CreatedAt,
-			TgId:          utils.GetString(user.TgID),
-			TgUserId:      utils.GetInt64(user.TgUserID),
-			Profession:    utils.GetString(user.Profession),
-			EmailVerified: utils.GetBool(user.EmailVerified),
-			FirstName:     utils.GetString(user.FirstName),
-			LastName:      utils.GetString(user.LastName),
+			TgId:          user.TgID,
+			TgUserId:      user.TgUserID,
+			Profession:    user.Profession,
+			EmailVerified: user.EmailVerified,
+			FirstName:     user.FirstName,
+			LastName:      user.LastName,
 			LastLogin:     user.LastLogin,
 		})
 	}
@@ -166,15 +167,15 @@ func getUserById(c echo.Context) error {
 	}
 	getUserResponse := response.GetUserResponse{
 		ID:            user.ID.String(),
-		Email:         utils.GetString(user.Email),
-		IsActive:      utils.GetBool(user.IsActive),
+		Email:         user.Email,
+		IsActive:      user.IsActive,
 		CreatedAt:     user.CreatedAt,
-		TgId:          utils.GetString(user.TgID),
-		TgUserId:      utils.GetInt64(user.TgUserID),
-		Profession:    utils.GetString(user.Profession),
-		EmailVerified: utils.GetBool(user.EmailVerified),
-		FirstName:     utils.GetString(user.FirstName),
-		LastName:      utils.GetString(user.LastName),
+		TgId:          user.TgID,
+		TgUserId:      user.TgUserID,
+		Profession:    user.Profession,
+		EmailVerified: user.EmailVerified,
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
 		LastLogin:     user.LastLogin,
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
@@ -182,24 +183,24 @@ func getUserById(c echo.Context) error {
 
 // createUser godoc
 // @Summary Создание нового пользователя
-// @Description Создает нового пользователя с указанными параметрами
+// @Description Создаёт пользователя с автоматически сгенерированным UUID
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param user body request.UserCreateRequest true "Данные для создания пользователя"
+// @Param body body request.UserCreateRequest true "Данные для создания пользователя"
 // @Security BearerAuth
+// @Success 201 {object} map[string]string "Пользователь успешно создан"
+// @Failure 400 {object} map[string]string "Ошибка при привязке данных"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
-// @Success 201 {object} response.UserUniversalResponse "Пользователь успешно создан"
-// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
-// @Failure 500 {object} map[string]string "Ошибка сервера при создании пользователя"
-// @Router /user [post]
+// @Failure 500 {object} map[string]string "Ошибка при создании пользователя"
+// @Router /user/create [post]
 func createUser(c echo.Context) error {
 	if err := authorize(c); err != nil {
-		return err
+		return err // authorize возвращает echo.HTTPError — это корректно
 	}
+
 	var req request.UserCreateRequest
-	err := c.Bind(&req)
-	if err != nil {
+	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "Не удалось получить данные из запроса",
@@ -208,7 +209,17 @@ func createUser(c echo.Context) error {
 
 	newUUID := uuid.New()
 
-	return CreateUserWithIdFunc(req, c, newUUID)
+	if err := CreateUserWithId(req, newUUID); err != nil {
+		log.Printf("Failed to create user: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при создании пользователя",
+		})
+	}
+
+	return c.JSON(http.StatusCreated, map[string]string{
+		"message": "Пользователь успешно создан",
+		"id":      newUUID.String(),
+	})
 }
 
 /*
@@ -250,63 +261,46 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
 	})
 }*/
 
+/*
 func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
-	del := false
-
-	tgId := ""
-	var tgUserID int64 = 0
-	profession := ""
-
+	
+	// Создаем пользователя без ассоциаций
 	user := models.User{
 		ID:            id,
-		Email:         req.Email,
-		IsActive:      req.IsActive,
+		Email:         utils.GetString(req.Email),
+		IsActive:      utils.GetBool(req.IsActive),
 		CreatedAt:     now,
 		UpdatedAt:     now,
-		EmailVerified: req.EmailVerified,
-		FirstName:     req.FirstName,
-		LastName:      req.LastName,
+		EmailVerified: utils.GetBool(req.EmailVerified),
+		FirstName:     utils.GetString(req.FirstName),
+		LastName:      utils.GetString(req.LastName),
 		LastLogin:     now,
-		Deleted:       &del,
-		TgID: &tgId,
-		TgUserID: &tgUserID,
-		Profession: &profession,
-		UserRoles: []models.UserRole{},
+		Deleted:       false,
+		TgID:          "",
+		TgUserID:      0,
+		Profession:    "",
+		// UserRoles остается пустым слайсом по умолчанию
 	}
 
-	// Логируем входные данные (без чувствительных полей)
 	log.Printf("CreateUserWithIdFunc: start create user id=%s email=%v", user.ID, user.Email)
 
 	if err := dbConn.Transaction(func(tx *gorm.DB) error {
 		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
+		
+		// Явно указываем поля для создания, исключая ассоциации
+		res := tx.Omit("UserRoles").Select(
+			"ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
+			"TgID", "TgUserID", "Profession", "EmailVerified",
+			"FirstName", "LastName", "LastLogin", "Deleted",
+		).Create(&user)
 
-		log.Print("USER STUCT")
-		log.Print(user)
-		// Явно исключаем ассоциации, на случай, если GORM попытается писать их
-		res := tx.Select("ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
-                 "EmailVerified",
-                 "FirstName", "LastName", "LastLogin", "Deleted").
-			Create(&user)
-
-		// Лог ошибки, если она есть
 		if res.Error != nil {
 			log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", user.ID, res.Error)
-			// Если доступен Statement — логируем SQL и переменные (поможет диагностике)
-			if res.Statement != nil {
-				log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
-				log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
-			}
 			return res.Error
 		}
 
-		// Успешно создались — логируем результат
-		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d user=%+v", user.ID, res.RowsAffected, user)
-		if res.Statement != nil {
-			log.Printf("CreateUserWithIdFunc: SQL: %s", res.Statement.SQL.String())
-			log.Printf("CreateUserWithIdFunc: Vars: %v", res.Statement.Vars)
-		}
-
+		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", user.ID, res.RowsAffected)
 		return nil
 	}); err != nil {
 		log.Printf("DB transaction error (create user with id): %v", err)
@@ -316,6 +310,81 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	}
 
 	log.Printf("CreateUserWithIdFunc: finished create user id=%s", user.ID)
+	return c.JSON(http.StatusCreated, map[string]string{
+		"message": "Пользователь успешно создан",
+		"id":      user.ID.String(),
+	})
+}*/
+
+/*func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
+	now := time.Now()
+	
+	email := utils.GetString(req.Email)
+	isActive := utils.GetBool(req.IsActive)
+	emailVerified := utils.GetBool(req.EmailVerified)
+	firstName := utils.GetString(req.FirstName)
+	lastName := utils.GetString(req.LastName)
+	
+	// Используем Raw SQL для полного контроля
+	query := `INSERT INTO users (id, email, is_active, created_at, updated_at, email_verified, first_name, last_name, last_login, deleted, tg_id, tg_user_id, profession) 
+	          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+	
+	result := dbConn.Exec(query, 
+		id, 
+		email, 
+		isActive, 
+		now, 
+		now, 
+		emailVerified, 
+		firstName, 
+		lastName, 
+		now, 
+		false, 
+		"", 
+		int64(0), 
+		"")
+	
+	if result.Error != nil {
+		log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", id, result.Error)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при создании пользователя",
+		})
+	}
+	
+	affectedRows := result.RowsAffected
+	log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", id, affectedRows)
+	
+	return nil
+}*/
+
+func CreateUserWithId(req request.UserCreateRequest, id uuid.UUID) error {
+	now := time.Now()
+
+	user := models.User{
+		ID:            id,
+		Email:         utils.GetString(req.Email),
+		IsActive:      utils.GetBool(req.IsActive),
+		CreatedAt:     now,
+		TgID:          "",
+		TgUserID:      0,
+		Profession:    "",
+		EmailVerified: utils.GetBool(req.EmailVerified),
+		FirstName:     utils.GetString(req.FirstName),
+		LastName:      utils.GetString(req.LastName),
+		LastLogin:     now,
+		Deleted:       false,
+		UpdatedAt:     now,
+	}
+
+	result := dbConn.Session(&gorm.Session{}).Create(&user)
+	if result.Error != nil {
+		log.Printf("CreateUserWithId: db create error for id=%s: %v", id, result.Error)
+		return fmt.Errorf("failed to create user: %w", result.Error)
+	}
+
+	affectedRows := result.RowsAffected
+	log.Printf("CreateUserWithId: user created id=%s rows=%d", id, affectedRows)
+
 	return nil
 }
 
