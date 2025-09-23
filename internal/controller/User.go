@@ -260,7 +260,7 @@ func CreateUserFunc(req request.UserCreateRequest, c echo.Context) error {
 	})
 }*/
 
-/*
+
 func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
 	
@@ -280,7 +280,9 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		TgUserID:      0,
 		Profession:    "",
 		// UserRoles остается пустым слайсом по умолчанию
+		UserRoles: nil,
 	}
+
 
 	log.Printf("CreateUserWithIdFunc: start create user id=%s email=%v", user.ID, user.Email)
 
@@ -288,18 +290,13 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		log.Printf("CreateUserWithIdFunc: db transaction started for id=%s", user.ID)
 		
 		// Явно указываем поля для создания, исключая ассоциации
-		res := tx.Omit("UserRoles").Select(
-			"ID", "Email", "IsActive", "CreatedAt", "UpdatedAt",
-			"TgID", "TgUserID", "Profession", "EmailVerified",
-			"FirstName", "LastName", "LastLogin", "Deleted",
-		).Create(&user)
-
-		if res.Error != nil {
-			log.Printf("CreateUserWithIdFunc: db create error for id=%s: %v", user.ID, res.Error)
-			return res.Error
+		if err := tx.Create(&user).Error; err != nil {
+			return err
 		}
 
-		log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", user.ID, res.RowsAffected)
+		user.UserRoles = []models.UserRole{}
+
+		log.Printf("CreateUserWithIdFunc: user created id=%s", user.ID)
 		return nil
 	}); err != nil {
 		log.Printf("DB transaction error (create user with id): %v", err)
@@ -308,14 +305,16 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 		})
 	}
 
+	
+
 	log.Printf("CreateUserWithIdFunc: finished create user id=%s", user.ID)
 	return c.JSON(http.StatusCreated, map[string]string{
 		"message": "Пользователь успешно создан",
 		"id":      user.ID.String(),
 	})
-}*/
+}
 
-func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
+/*func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
 	now := time.Now()
 	
 	email := utils.GetString(req.Email)
@@ -354,7 +353,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	log.Printf("CreateUserWithIdFunc: user created id=%s rows=%d", id, affectedRows)
 	
 	return nil
-}
+}*/
 
 // updateUser godoc
 // @Summary Обновление пользователя
