@@ -31,6 +31,7 @@ func RegisterReportRoutes(e *echo.Echo) {
 		reportGroup.PATCH("/help-request/:id", updateHelpRequest)
 		reportGroup.PATCH("/completed-work/:id", updateCompletedWork)
 		reportGroup.PATCH("/tomorrow-plans/:id", updateTomorrowPlans)
+		reportGroup.GET("/user/:id/:page/:pagesize", getAllReportsByUserId)
 	}
 }
 
@@ -83,6 +84,136 @@ func getAllReports(c echo.Context) error {
 		Preload("ReportProblems", "deleted = FALSE").
 		Preload("ReportProblems.Problem", "deleted = FALSE").
 		Where("deleted = FALSE").
+		Order("report_date DESC NULLS LAST, created_at DESC NULLS LAST").
+		Limit(pageSize).Offset(offset).
+		Find(&reports).Error; err != nil {
+		log.Printf("DB error (find reports): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчетов"})
+	}
+
+	out := response.ReportListResponse{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+	}
+	for _, r := range reports {
+		user := r.User
+		userInfo := response.UserShort{
+			ID:        r.UserID.String(),
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+		}
+
+		var complWork []response.CompletedWork
+		for _, w := range r.CompletedWork {
+			complWork = append(complWork, response.CompletedWork{
+				ID:          w.ID.String(),
+				Description: utils.GetString(w.Description),
+			})
+		}
+
+		var plans []response.TomorrowPlans
+		for _, p := range r.TomorrowPlans {
+			plans = append(plans, response.TomorrowPlans{
+				ID:          p.ID.String(),
+				Description: utils.GetString(p.Description),
+			})
+		}
+
+		var problemsResp []response.ProblemResponse
+		for _, rp := range r.ReportProblems {
+			if rp.Problem != nil {
+				problemsResp = append(problemsResp, response.ProblemResponse{
+					ID:          rp.Problem.ID.String(),
+					Name:        utils.GetString(rp.Problem.Name),
+					Description: rp.Problem.Description,
+					CreatorId:   utils.GetUUIDString(rp.Problem.CreatorID),
+					CreatedAt:   utils.GetTime(rp.Problem.CreatedAt),
+					UpdatedAt:   utils.GetTime(rp.Problem.UpdatedAt),
+				})
+			}
+		}
+
+		helpResp := []response.HelpRequestItem{}
+		for _, hr := range r.HelpRequests {
+			helpResp = append(helpResp, response.HelpRequestItem{
+				ID:          hr.ID.String(),
+				HelperID:    utils.GetUUIDString(hr.HelperID),
+				Description: utils.GetString(hr.Description),
+				Status:      utils.GetString(hr.Status),
+			})
+		}
+
+		out.Reports = append(out.Reports, response.ReportResponse{
+			ID:            r.ID.String(),
+			UserID:        r.UserID.String(),
+			ReportDate:    utils.GetTime(r.ReportDate),
+			CompletedWork: complWork,
+			PlanTomorrow:  plans,
+			HelpRequest:   helpResp,
+			CreatedAt:     utils.GetTime(r.CreatedAt),
+			UpdatedAt:     utils.GetTime(r.UpdatedAt),
+			UserInfo:      userInfo,
+			Problems:      problemsResp,
+			Checked:       utils.GetInt8(r.Checked),
+		})
+	}
+	return c.JSON(http.StatusOK, out)
+}
+
+// getAllReportsByUserId godoc
+// @Summary Получение списка отчетов по ID пользователя
+// @Description Получает список отчетов, созданных конкретным пользователем, с пагинацией и исключением удаленных записей
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя (UUID)"
+// @Param page path int true "Номер страницы"
+// @Param pagesize path int true "Размер страницы"
+// @Security BearerAuth
+// @Success 200 {object} response.ReportListResponse "Список отчетов успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный ID пользователя"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
+// @Router /report/user/{id}/{page}/{pagesize} [get]
+func getAllReportsByUserId(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+
+	page, _ := strconv.Atoi(c.Param("page"))
+	if page <= 0 {
+		page = 1
+	}
+	pageSize, _ := strconv.Atoi(c.Param("pagesize"))
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный ID пользователя"})
+	}
+	offset := (page - 1) * pageSize
+
+	var totalCount int64
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Where("deleted = FALSE and user_id = ?", userID).
+		Count(&totalCount).Error; err != nil {
+		log.Printf("DB error (count reports): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете отчетов"})
+	}
+
+	var reports []models.DailyReport
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Preload("User", "deleted = FALSE").
+		Preload("HelpRequests", "deleted = FALSE").
+		Preload("CompletedWork", "deleted = FALSE").
+		Preload("TomorrowPlans", "deleted = FALSE").
+		Preload("ReportProblems", "deleted = FALSE").
+		Preload("ReportProblems.Problem", "deleted = FALSE").
+		Where("deleted = FALSE and user_id = ?", userID).
 		Order("report_date DESC NULLS LAST, created_at DESC NULLS LAST").
 		Limit(pageSize).Offset(offset).
 		Find(&reports).Error; err != nil {
