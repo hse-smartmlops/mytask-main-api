@@ -488,7 +488,7 @@ func validateToken(c echo.Context) error {
 				IsActive:      &temp,
 				EmailVerified: userInfo.EmailVerified,
 			}
-			err = CreateUserWithId(userCreateReq, userId)
+			err = CreateUserWithIdFunc(userCreateReq, c, userId)
 			if err != nil {
 				log.Printf("Failed to create user in database: %v", err)
 				return c.JSON(http.StatusInternalServerError, map[string]string{
