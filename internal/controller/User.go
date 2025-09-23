@@ -308,10 +308,7 @@ func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid
 	
 
 	log.Printf("CreateUserWithIdFunc: finished create user id=%s", user.ID)
-	return c.JSON(http.StatusCreated, map[string]string{
-		"message": "Пользователь успешно создан",
-		"id":      user.ID.String(),
-	})
+	return nil
 }
 
 /*func CreateUserWithIdFunc(req request.UserCreateRequest, c echo.Context, id uuid.UUID) error {
