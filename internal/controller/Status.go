@@ -31,6 +31,8 @@ func RegisterStatusRoutes(e *echo.Echo) {
 		g.GET("/task/:task_id", getStatusesByTaskId)
 		g.POST("/add-to-task", addStatusToTask)
 		g.POST("/add-to-board", addStatusToBoard)
+		g.DELETE("/delete-from-task", deleteStatusFromTask)
+		g.DELETE("/delete-from-board", deleteStatusFromBoard)
 	}
 }
 
@@ -482,6 +484,130 @@ func addStatusToTask(c echo.Context) error {
 	})
 }
 
+// deleteStatusFromTask godoc
+// @Summary Удаление статуса из задачи
+// @Description Удаление связи между статусом и задачей (мягкое удаление)
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param body body request.DeleteStatusFromTaskRequest true "Данные для удаления статуса из задачи"
+// @Security BearerAuth
+// @Failure 400 {object} map[string]string "Ошибка при привязке данных или парсинге UUID"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Связь не найдена или уже удалена"
+// @Success 200 {object} response.StatusUniversalResponse "Статус успешно удалён из задачи"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении статуса из задачи"
+// @Router /status/delete-from-task [delete]
+func deleteStatusFromTask(c echo.Context) error{
+	var req request.DeleteStatusFromTaskRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
+	}
+
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
+	}
+
+	taskID, err := uuid.Parse(req.TaskId)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора задачи"})
+	}
+	statusID, err := uuid.Parse(req.StatusId)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора статуса"})
+	}
+
+	now := time.Now()
+	del := true
+	updateData := map[string]any{
+		"deleted":    &del,
+		"updated_at": &now,
+	}
+
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Session(&gorm.Session{}).Model(&models.StatusTask{}).Where("status_id = ? and task_id = ? and deleted = FALSE", statusID, taskID).Updates(updateData)
+		if res.Error != nil{
+			log.Printf("DB error (delete status-task): %v", res.Error)
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Связь не найдена или уже удалена"})
+		}
+		return nil
+	}); txErr != nil{
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete status-task): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении статус у задачи"})
+	}
+
+	return c.JSON(http.StatusOK, response.StatusUniversalResponse{
+		ID:      statusID.String(),
+		Message: "Статус задачи успешно удалён",
+	})
+}
+
+// deleteStatusFromBoard godoc
+// @Summary Удаление статуса с доски
+// @Description Удаление связи между статусом и доской (мягкое удаление)
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param body body request.DeleteStatusFromBoardRequest true "Данные для удаления статуса с доски"
+// @Security BearerAuth
+// @Failure 400 {object} map[string]string "Ошибка при привязке данных или парсинге UUID"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Связь не найдена или уже удалена"
+// @Success 200 {object} response.StatusUniversalResponse "Статус успешно удалён с доски"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении статуса с доски"
+// @Router /status/delete-from-board [delete]
+func deleteStatusFromBoard(c echo.Context) error{
+	var req request.DeleteStatusFromBoardRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
+	}
+
+	boardID, err := uuid.Parse(req.BoardId)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора доски"})
+	}
+	statusID, err := uuid.Parse(req.StatusId)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора статуса"})
+	}
+
+	now := time.Now()
+	del := true
+	updateData := map[string]any{
+		"deleted":    &del,
+		"updated_at": &now,
+	}
+
+	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Session(&gorm.Session{}).Model(&models.StatusBoard{}).Where("status_id = ? and board_id = ? and deleted = FALSE", statusID, boardID).Updates(updateData)
+		if res.Error != nil{
+			log.Printf("DB error (delete status-board): %v", res.Error)
+		}
+		if res.RowsAffected == 0{
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Связь не найдена или уже удалена"})
+		}
+		return nil
+	}); txErr != nil{
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		log.Printf("DB transaction error (delete status-board): %v", txErr)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении статус у доски"})
+	}
+
+	return c.JSON(http.StatusOK, response.StatusUniversalResponse{
+		ID:      statusID.String(),
+		Message: "Статус доски успешно удалён",
+	})
+}
 
 // addStatusToBoard godoc
 // @Summary Добавление статуса к доске
