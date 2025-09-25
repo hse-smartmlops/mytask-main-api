@@ -41,6 +41,10 @@ var (
 	realm          = os.Getenv("KEYCLOAK_REALM")
 	clientID       = os.Getenv("KEYCLOAK_CLIENT_ID")
 	clientSecret   = os.Getenv("KEYCLOAK_CLIENT_SECRET")
+	webID          = os.Getenv("WEB_CLIENT_ID")
+	webSecret      = os.Getenv("WEB_CLIENT_SECRET")
+	desktopID      = os.Getenv("DESKTOP_CLIENT_ID")
+	desktopSecret  = os.Getenv("DESKTOP_CLIENT_SECRET")
 )
 
 type TokenResponse struct {
@@ -53,39 +57,50 @@ type TokenResponse struct {
 }
 
 func ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, error) {
-	endpoint := strings.TrimRight(os.Getenv("KEYCLOAK_URL"), "/") +
-		"/realms/" + os.Getenv("KEYCLOAK_REALM") + "/protocol/openid-connect/token"
+    endpoint := strings.TrimRight(os.Getenv("KEYCLOAK_URL"), "/") +
+        "/realms/" + os.Getenv("KEYCLOAK_REALM") + "/protocol/openid-connect/token"
 
-	data := url.Values{}
-	data.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
-	data.Set("subject_token", subjectToken)
-	data.Set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token") // <-- REQUIRED
-	data.Set("client_id", clientID)                                                 // backend client
-	data.Set("client_secret", clientSecret)
+    data := url.Values{}
+    data.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+    data.Set("subject_token", subjectToken)
+    data.Set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
+    data.Set("client_id", clientID)
+    data.Set("client_secret", clientSecret)
+    // Добавляем необходимые scopes
+    data.Set("scope", "openid") // Основной scope для OpenID Connect
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+    log.Printf("Exchanging token with scope: openid")
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+    req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
+    if err != nil {
+        log.Printf("Error creating request: %v", err)
+        return nil, err
+    }
+    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("token exchange failed: %s", body)
-	}
+    resp, err := http.DefaultClient.Do(req)
+    if err != nil {
+        log.Printf("Error making request: %v", err)
+        return nil, err
+    }
+    defer resp.Body.Close()
 
-	var tokenResp TokenResponse
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return nil, err
-	}
+    body, err := io.ReadAll(resp.Body)
+    if err != nil {
+        return nil, fmt.Errorf("error reading response: %v", err)
+    }
 
-	return &tokenResp, nil
+    if resp.StatusCode != http.StatusOK {
+        log.Printf("Token exchange failed with status %d: %s", resp.StatusCode, body)
+        return nil, fmt.Errorf("token exchange failed: %s", body)
+    }
+
+    var tokenResp TokenResponse
+    if err := json.Unmarshal(body, &tokenResp); err != nil {
+        return nil, fmt.Errorf("error parsing token response: %v", err)
+    }
+
+    return &tokenResp, nil
 }
 
 // login godoc
