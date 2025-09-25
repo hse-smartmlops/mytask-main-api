@@ -2807,6 +2807,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/report/help-requests-by-user-id/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает список запросов на помощь, где указанный пользователь назначен в качестве помощника. В ответе также возвращаются имя и фамилия пользователя, создавшего запрос (автора ежедневного отчёта).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Получение запросов на помощь по ID пользователя-помощника",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя-помощника (в формате UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список запросов на помощь успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.HelpRequestsForUser"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении запросов на помощь",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/report/project/{id}": {
             "get": {
                 "security": [
@@ -8014,6 +8078,31 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "response.HelpRequestWithAssignerID": {
+            "type": "object",
+            "properties": {
+                "help_requests": {
+                    "$ref": "#/definitions/response.HelpRequestItem"
+                },
+                "user_first_name": {
+                    "type": "string"
+                },
+                "user_last_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.HelpRequestsForUser": {
+            "type": "object",
+            "properties": {
+                "help_requests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HelpRequestWithAssignerID"
+                    }
                 }
             }
         },

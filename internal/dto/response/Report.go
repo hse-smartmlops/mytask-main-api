@@ -19,7 +19,7 @@ type ReportResponse struct {
 	CreatedAt     time.Time         `json:"created_at"`
 	UpdatedAt     time.Time         `json:"updated_at"`
 	UserInfo      UserShort         `json:"user_info"`
-	Checked	   	int8           `json:"checked"`
+	Checked	   	  int8           `json:"checked"`
 	Problems      []ProblemResponse `json:"problem"`
 }
 
@@ -65,4 +65,14 @@ type ReportListByTaskId struct {
 type ReportListByProjectId struct {
 	ProjectID string           `json:"project_id"`
 	Reports   []ReportResponse `json:"reports"`
+}
+
+type HelpRequestWithAssignerID struct{
+	HelpRequest HelpRequestItem `json:"help_requests"`
+	UserFirstName      string    `json:"user_first_name"`
+	UserLastName       string    `json:"user_last_name"`
+}
+
+type HelpRequestsForUser struct{
+	HelpRequests []HelpRequestWithAssignerID `json:"help_requests"`
 }
