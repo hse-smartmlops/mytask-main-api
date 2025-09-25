@@ -41,10 +41,6 @@ var (
 	realm          = os.Getenv("KEYCLOAK_REALM")
 	clientID       = os.Getenv("KEYCLOAK_CLIENT_ID")
 	clientSecret   = os.Getenv("KEYCLOAK_CLIENT_SECRET")
-	webID          = os.Getenv("WEB_CLIENT_ID")
-	webSecret      = os.Getenv("WEB_CLIENT_SECRET")
-	desktopID      = os.Getenv("DESKTOP_CLIENT_ID")
-	desktopSecret  = os.Getenv("DESKTOP_CLIENT_SECRET")
 )
 
 type TokenResponse struct {

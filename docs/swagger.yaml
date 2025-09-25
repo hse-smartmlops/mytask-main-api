@@ -891,6 +891,22 @@ definitions:
       status:
         type: string
     type: object
+  response.HelpRequestWithAssignerID:
+    properties:
+      help_requests:
+        $ref: '#/definitions/response.HelpRequestItem'
+      user_first_name:
+        type: string
+      user_last_name:
+        type: string
+    type: object
+  response.HelpRequestsForUser:
+    properties:
+      help_requests:
+        items:
+          $ref: '#/definitions/response.HelpRequestWithAssignerID'
+        type: array
+    type: object
   response.ProblemListResponse:
     properties:
       page:
@@ -3337,6 +3353,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление запроса на помощь
+      tags:
+      - Reports
+  /report/help-requests-by-user-id/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список запросов на помощь, где указанный пользователь
+        назначен в качестве помощника. В ответе также возвращаются имя и фамилия пользователя,
+        создавшего запрос (автора ежедневного отчёта).
+      parameters:
+      - description: ID пользователя-помощника (в формате UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список запросов на помощь успешно получен
+          schema:
+            $ref: '#/definitions/response.HelpRequestsForUser'
+        "400":
+          description: Некорректный ID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении запросов на помощь
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение запросов на помощь по ID пользователя-помощника
       tags:
       - Reports
   /report/project/{id}:
