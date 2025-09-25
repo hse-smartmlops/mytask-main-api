@@ -32,6 +32,7 @@ func RegisterReportRoutes(e *echo.Echo) {
 		reportGroup.PATCH("/completed-work/:id", updateCompletedWork)
 		reportGroup.PATCH("/tomorrow-plans/:id", updateTomorrowPlans)
 		reportGroup.GET("/user/:id/:page/:pagesize", getAllReportsByUserId)
+		reportGroup.GET("/help-requests-by-user-id/:id", getHelpRequestsForUser)
 	}
 }
 
@@ -1337,4 +1338,62 @@ func updateTomorrowPlans(c echo.Context) error {
 		ID:      tpID.String(),
 		Message: "Планы на завтра обновлены",
 	})
+}
+
+// getHelpRequestsForUser godoc
+// @Summary Получение запросов на помощь по ID пользователя-помощника
+// @Description Возвращает список запросов на помощь, где указанный пользователь назначен в качестве помощника. В ответе также возвращаются имя и фамилия пользователя, создавшего запрос (автора ежедневного отчёта).
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя-помощника (в формате UUID)"
+// @Security BearerAuth
+// @Success 200 {object} response.HelpRequestsForUser "Список запросов на помощь успешно получен"
+// @Failure 400 {object} map[string]string "Некорректный ID пользователя"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении запросов на помощь"
+// @Router /report/help-requests-by-user-id/{id} [get]
+func getHelpRequestsForUser(c echo.Context) error {
+	if err := authorize(c); err != nil {
+		return err
+	}
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный ID пользователя"})
+	}
+
+	var helpRequests []models.HelpRequest
+	if err := dbConn.Session(&gorm.Session{}).
+		Model(&models.HelpRequest{}).
+		Preload("Report", "deleted = FALSE").
+		Preload("Report.User", "deleted = FALSE").
+		Where("deleted = false AND helper_id = ?", userID).
+		Find(&helpRequests).Error; err != nil {
+		log.Printf("DB error (find help_requests): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении запросов на помощь"})
+	}
+
+	helpRequestResponse := response.HelpRequestsForUser{}
+
+	for _, helpRequest := range helpRequests {
+		var firstName, lastName string
+		if helpRequest.Report != nil && helpRequest.Report.User != nil {
+			firstName = helpRequest.Report.User.FirstName
+			lastName = helpRequest.Report.User.LastName
+		}
+
+		helpRequestResp := response.HelpRequestWithAssignerID{
+			HelpRequest: response.HelpRequestItem{
+				ID:          helpRequest.ID.String(),
+				HelperID:    utils.GetUUIDString(helpRequest.HelperID),
+				Description: utils.GetString(helpRequest.Description),
+				Status:      utils.GetString(helpRequest.Status),
+			},
+			UserFirstName: firstName,
+			UserLastName:  lastName,
+		}
+		helpRequestResponse.HelpRequests = append(helpRequestResponse.HelpRequests, helpRequestResp)
+	}
+
+	return c.JSON(http.StatusOK, helpRequestResponse)
 }
