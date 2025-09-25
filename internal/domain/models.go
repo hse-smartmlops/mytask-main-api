@@ -30,7 +30,6 @@ type User struct {
 	UserRoles []UserRole `gorm:"foreignKey:UserID;references:ID"`
 }
 
-
 type Role struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	Name        *string    `gorm:"size:50"`
@@ -52,8 +51,8 @@ type UserRole struct {
 	CreatedAt  *time.Time `gorm:"type:timestamp"`
 	UpdatedAt  *time.Time `gorm:"type:timestamp"`
 
-	Role *Role `gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:CASCADE"`
-	User *User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
+	//Role *Role `gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:CASCADE"`
+	//User *User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 func (UserRole) TableName() string { return "user_roles" }
