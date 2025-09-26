@@ -22,17 +22,17 @@ func RegisterTaskRoutes(e *echo.Echo) {
 	taskGroup := e.Group("/task")
 	taskGroup.Use(KeycloakAuthMiddleware)
 	{
-		taskGroup.GET("/all/:page/:pagesize", getAllTasks)
-		taskGroup.GET("/:id", getTaskByID)
-		taskGroup.GET("/project/:projectId/:page/:pagesize", getTasksByProjectID)
-		taskGroup.POST("", createTask)
-		taskGroup.PATCH("/:id", updateTask)
-		taskGroup.DELETE("/:id", deleteTask)
-		taskGroup.GET("/user/:id/:page/:pagesize", getTasksByUserId)
+		taskGroup.GET("/all/:page/:pagesize", GetAllTasks)
+		taskGroup.GET("/:id", GetTaskByID)
+		taskGroup.GET("/project/:projectId/:page/:pagesize", GetTasksByProjectID)
+		taskGroup.POST("", CreateTask)
+		taskGroup.PATCH("/:id", UpdateTask)
+		taskGroup.DELETE("/:id", DeleteTask)
+		taskGroup.GET("/user/:id/:page/:pagesize", GetTasksByUserId)
 	}
 }
 
-// getAllTasks godoc
+// GetAllTasks godoc
 // @Summary Получение списка всех задач
 // @Description Получает список всех задач с учетом пагинации, исключая удаленные
 // @Tags Tasks
@@ -46,8 +46,8 @@ func RegisterTaskRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/all/{page}/{pagesize} [get]
-func getAllTasks(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAllTasks(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	pageReq := c.Param("page")
@@ -77,7 +77,7 @@ func getAllTasks(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
 		Preload("StatusTasks", "deleted = FALSE").
 		Preload("StatusTasks.Status", "deleted = FALSE").
 		Where("deleted = FALSE").
@@ -91,7 +91,7 @@ func getAllTasks(c echo.Context) error {
 	}
 
 	var totalCount int64
-	result := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).Where("deleted = FALSE").Count(&totalCount)
+	result := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).Where("deleted = FALSE").Count(&totalCount)
 	if result.Error != nil {
 		log.Printf("DB error (count tasks): %v", result.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -137,7 +137,7 @@ func getAllTasks(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskList)
 }
 
-// getTaskByID godoc
+// GetTaskByID godoc
 // @Summary Получение задачи по ID
 // @Description Получает данные задачи по её уникальному идентификатору
 // @Tags Tasks
@@ -151,8 +151,8 @@ func getAllTasks(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задачи"
 // @Router /task/{id} [get]
-func getTaskByID(c echo.Context) error {
-    if err := authorize(c); err != nil {
+func GetTaskByID(c echo.Context) error {
+    if err := Authorize(c); err != nil {
         return err
     }
 
@@ -165,7 +165,7 @@ func getTaskByID(c echo.Context) error {
 
     var task models.Task
     // Подгружаем статусы и пользователей сразу
-    if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+    if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
         Preload("StatusTasks", "deleted = FALSE").
         Preload("StatusTasks.Status", "deleted = FALSE").
         Preload("CreatedByUser", "deleted = FALSE").
@@ -236,7 +236,7 @@ func getTaskByID(c echo.Context) error {
 }
 
 
-// getTasksByProjectID godoc
+// GetTasksByProjectID godoc
 // @Summary Получение задач по ID проекта
 // @Description Получает список задач, связанных с указанным проектом
 // @Tags Tasks
@@ -251,8 +251,8 @@ func getTaskByID(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/project/{projectId}/{page}/{pagesize} [get]
-func getTasksByProjectID(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetTasksByProjectID(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -274,7 +274,7 @@ func getTasksByProjectID(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
 		Preload("StatusTasks", "deleted = FALSE").
 		Preload("StatusTasks.Status", "deleted = FALSE").
 		Where("project_id = ? AND deleted = FALSE", projectUUID).
@@ -288,7 +288,7 @@ func getTasksByProjectID(c echo.Context) error {
 	}
 
 	var totalCount int64
-	if err := dbConn.Model(&models.Task{}).Session(&gorm.Session{}).
+	if err := DBConn.Model(&models.Task{}).Session(&gorm.Session{}).
 		Where("project_id = ? AND deleted = FALSE", projectUUID).
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count tasks): %v", err)
@@ -340,7 +340,7 @@ func getTasksByProjectID(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskList)
 }
 
-// createTask godoc
+// CreateTask godoc
 // @Summary Создание новой задачи
 // @Description Создает новую задачу с указанными параметрами
 // @Tags Tasks
@@ -354,8 +354,8 @@ func getTasksByProjectID(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Исполнитель или поручитель не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании задачи"
 // @Router /task [post]
-func createTask(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func CreateTask(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	var req request.TaskCreateRequest
@@ -383,7 +383,7 @@ func createTask(c echo.Context) error {
 	assignerID := &assignerUUID
 
 	var assigner models.User
-	result := dbConn.Session(&gorm.Session{}).Model(&models.User{}).First(&assigner, "id = ? AND deleted = FALSE", assignerUUID)
+	result := DBConn.Session(&gorm.Session{}).Model(&models.User{}).First(&assigner, "id = ? AND deleted = FALSE", assignerUUID)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -410,7 +410,7 @@ func createTask(c echo.Context) error {
 	}
 
 	var creator models.User
-	result = dbConn.Session(&gorm.Session{}).Model(&models.User{}).First(&creator, "id = ? AND deleted = FALSE", creatorUUID)
+	result = DBConn.Session(&gorm.Session{}).Model(&models.User{}).First(&creator, "id = ? AND deleted = FALSE", creatorUUID)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			return c.JSON(http.StatusNotFound, map[string]string{
@@ -457,7 +457,7 @@ func createTask(c echo.Context) error {
 		CreatedAt:     &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Session(&gorm.Session{}).Model(&models.Task{}).Omit(clause.Associations).Create(&task); res.Error != nil {
 			log.Printf("DB error (create task): %v", res.Error)
 			return res.Error
@@ -476,7 +476,7 @@ func createTask(c echo.Context) error {
 	return c.JSON(http.StatusCreated, createResp)
 }
 
-// updateTask godoc
+// UpdateTask godoc
 // @Summary Обновление задачи
 // @Description Обновляет данные задачи по её ID
 // @Tags Tasks
@@ -491,8 +491,8 @@ func createTask(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении задачи"
 // @Router /task/{id} [patch]
-func updateTask(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateTask(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	id := c.Param("id")
@@ -548,7 +548,7 @@ func updateTask(c echo.Context) error {
 
 	updates["updated_at"] = time.Now()
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).Model(&models.Task{}).Where("id = ? AND deleted = FALSE", taskID).Updates(updates)
 		if res.Error != nil {
 			log.Printf("DB error (update task): %v", res.Error)
@@ -572,7 +572,7 @@ func updateTask(c echo.Context) error {
 	})
 }
 
-// deleteTask godoc
+// DeleteTask godoc
 // @Summary Удаление задачи
 // @Description Логическое удаление задачи по ID, включая связанные отчеты (поле deleted = true)
 // @Tags Tasks
@@ -585,13 +585,13 @@ func updateTask(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении задачи"
 // @Router /task/{id} [delete]
-func deleteTask(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func DeleteTask(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	id := c.Param("id")
 	updateData := map[string]interface{}{"deleted": true}
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).Model(&models.Task{}).Where("id = ?", id).Updates(updateData)
 		if res.Error != nil {
 			log.Printf("DB error (delete task): %v", res.Error)
@@ -619,7 +619,7 @@ func deleteTask(c echo.Context) error {
 	})
 }
 
-// getTasksByUserId godoc
+// GetTasksByUserId godoc
 // @Summary Получение задач по ID пользователя
 // @Description Получение списка задач, назначенных на конкретного пользователя, с пагинацией (deleted = false)
 // @Tags Tasks
@@ -634,8 +634,8 @@ func deleteTask(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Router /task/user/{id}/{page}/{pagesize} [get]
-func getTasksByUserId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetTasksByUserId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -656,7 +656,7 @@ func getTasksByUserId(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).Model(&models.Task{}).
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
 		Preload("StatusTasks", "deleted = FALSE").
 		Preload("StatusTasks.Status", "deleted = FALSE").
 		Where("assigned_to = ? AND deleted = FALSE", userUUID).
@@ -670,7 +670,7 @@ func getTasksByUserId(c echo.Context) error {
 	}
 
 	var totalCount int64
-	if err := dbConn.Model(&models.Task{}).Session(&gorm.Session{}).
+	if err := DBConn.Model(&models.Task{}).Session(&gorm.Session{}).
 		Where("assigned_to = ? AND deleted = FALSE", userUUID).
 		Count(&totalCount).Error; err != nil {
 		log.Printf("DB error (count tasks): %v", err)

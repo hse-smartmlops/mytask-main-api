@@ -20,16 +20,16 @@ func RegisterSubscriptionRoutes(e *echo.Echo){
 	subscriptionGroup := e.Group("/subscription")
 	subscriptionGroup.Use(KeycloakAuthMiddleware)
 	{
-		subscriptionGroup.GET("/all/:page/:pagesize", getAllSubscriptions)
-		subscriptionGroup.GET("/:id", getSubscriptionById)
-		subscriptionGroup.GET("/user/:id/:page/:pagesize", getSubscriptionsByUserId)
-		subscriptionGroup.GET("/sub-object/:id/:type/:page/:pagesize", getSubscriptionBySubObject)
-		subscriptionGroup.POST("", createSubscription)
-		subscriptionGroup.DELETE("/:id", deleteSubscription)
+		subscriptionGroup.GET("/all/:page/:pagesize", GetAllSubscriptions)
+		subscriptionGroup.GET("/:id", GetSubscriptionById)
+		subscriptionGroup.GET("/user/:id/:page/:pagesize", GetSubscriptionsByUserId)
+		subscriptionGroup.GET("/sub-object/:id/:type/:page/:pagesize", GetSubscriptionBySubObject)
+		subscriptionGroup.POST("", CreateSubscription)
+		subscriptionGroup.DELETE("/:id", DeleteSubscription)
 	}
 }
 
-// getAllSubscriptions godoc
+// GetAllSubscriptions godoc
 // @Summary Получение всех подписок
 // @Description Получение списка всех подписок с пагинацией (deleted = false)
 // @Tags Subscriptions
@@ -43,8 +43,8 @@ func RegisterSubscriptionRoutes(e *echo.Echo){
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListResponse "Список подписок успешно получен"
 // @Router /subscription/all/{page}/{pagesize} [get]
-func getAllSubscriptions(c echo.Context) error{
-	if err := authorize(c); err != nil { return err }
+func GetAllSubscriptions(c echo.Context) error{
+	if err := Authorize(c); err != nil { return err }
 
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
@@ -60,7 +60,7 @@ func getAllSubscriptions(c echo.Context) error{
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -69,7 +69,7 @@ func getAllSubscriptions(c echo.Context) error{
 	}
 
 	var subs []models.Subscription
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE").
 		Limit(pageSize).Offset(offset).
@@ -100,7 +100,7 @@ func getAllSubscriptions(c echo.Context) error{
 	return c.JSON(http.StatusOK, out)
 }
 
-// getSubscriptionsByUserId godoc
+// GetSubscriptionsByUserId godoc
 // @Summary Получение подписок по ID пользователя
 // @Description Получение списка подписок для конкретного пользователя с пагинацией (deleted = false)
 // @Tags Subscriptions
@@ -115,8 +115,8 @@ func getAllSubscriptions(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListByUserIdResponse "Список подписок успешно получен"
 // @Router /subscription/user/{id}/{page}/{pagesize} [get]
-func getSubscriptionsByUserId(c echo.Context) error{
-	if err := authorize(c); err != nil { return err }
+func GetSubscriptionsByUserId(c echo.Context) error{
+	if err := Authorize(c); err != nil { return err }
 
 	userUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -133,7 +133,7 @@ func getSubscriptionsByUserId(c echo.Context) error{
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND user_id = ?", userUUID).
 		Count(&totalCount).Error; err != nil {
@@ -142,7 +142,7 @@ func getSubscriptionsByUserId(c echo.Context) error{
 	}
 
 	var subs []models.Subscription
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND user_id = ?", userUUID).
 		Limit(pageSize).Offset(offset).
@@ -174,7 +174,7 @@ func getSubscriptionsByUserId(c echo.Context) error{
 	return c.JSON(http.StatusOK, out)
 }
 
-// getSubscriptionBySubObject godoc
+// GetSubscriptionBySubObject godoc
 // @Summary Получение подписок по объекту подписки
 // @Description Получение списка подписок для конкретного объекта подписки и типа с пагинацией (deleted = false)
 // @Tags Subscriptions
@@ -190,8 +190,8 @@ func getSubscriptionsByUserId(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListBySubObjectResponse "Список подписок успешно получен"
 // @Router /subscription/sub-object/{id}/{type}/{page}/{pagesize} [get]
-func getSubscriptionBySubObject(c echo.Context) error{
-	if err := authorize(c); err != nil { return err }
+func GetSubscriptionBySubObject(c echo.Context) error{
+	if err := Authorize(c); err != nil { return err }
 
 	subObjUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -212,7 +212,7 @@ func getSubscriptionBySubObject(c echo.Context) error{
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND subscription_id = ? AND type_id = ?", subObjUUID, typeId).
 		Count(&totalCount).Error; err != nil {
@@ -221,7 +221,7 @@ func getSubscriptionBySubObject(c echo.Context) error{
 	}
 
 	var subs []models.Subscription
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND subscription_id = ? AND type_id = ?", subObjUUID, typeId).
 		Limit(pageSize).Offset(offset).
@@ -254,7 +254,7 @@ func getSubscriptionBySubObject(c echo.Context) error{
 	return c.JSON(http.StatusOK, out)
 }
 
-// getSubscriptionById godoc
+// GetSubscriptionById godoc
 // @Summary Получение подписки по ID
 // @Description Получение детальной информации о подписке по её ID (deleted = false)
 // @Tags Subscriptions
@@ -268,8 +268,8 @@ func getSubscriptionBySubObject(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписки"
 // @Success 200 {object} response.SubscriptionResponse "Подписка успешно получена"
 // @Router /subscription/{id} [get]
-func getSubscriptionById(c echo.Context) error{
-	if err := authorize(c); err != nil { return err }
+func GetSubscriptionById(c echo.Context) error{
+	if err := Authorize(c); err != nil { return err }
 
 	subId, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -277,7 +277,7 @@ func getSubscriptionById(c echo.Context) error{
 	}
 
 	var subscription models.Subscription
-	result := dbConn.Session(&gorm.Session{}).
+	result := DBConn.Session(&gorm.Session{}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND id = ?", subId).
 		First(&subscription)
@@ -302,7 +302,7 @@ func getSubscriptionById(c echo.Context) error{
 	})
 }
 
-// createSubscription godoc
+// CreateSubscription godoc
 // @Summary Создание подписки
 // @Description Создание новой подписки с указанными данными
 // @Tags Subscriptions
@@ -315,8 +315,8 @@ func getSubscriptionById(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании подписки"
 // @Success 201 {object} response.SubscriptionUniversalResponse "Подписка успешно создана"
 // @Router /subscription [post]
-func createSubscription(c echo.Context) error{
-	if err := authorize(c); err != nil { return err }
+func CreateSubscription(c echo.Context) error{
+	if err := Authorize(c); err != nil { return err }
 
 	var req request.SubscriptionCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -341,7 +341,7 @@ func createSubscription(c echo.Context) error{
 	switch typeId {
 	case 0:
 		var task models.Task
-		res := dbConn.Session(&gorm.Session{}).
+		res := DBConn.Session(&gorm.Session{}).
 			Model(&models.Task{}).
 			Where("id = ? AND deleted = FALSE", subId).
 			First(&task)
@@ -354,7 +354,7 @@ func createSubscription(c echo.Context) error{
 		}
 	case 1:
 		var problem models.Problem
-		res := dbConn.Session(&gorm.Session{}).
+		res := DBConn.Session(&gorm.Session{}).
 			Model(&models.Problem{}).
 			Where("id = ? AND deleted = FALSE", subId).
 			First(&problem)
@@ -378,7 +378,7 @@ func createSubscription(c echo.Context) error{
 		Deleted:        &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		return tx.Session(&gorm.Session{}).
 			Model(&models.Subscription{}).
 			Create(&sub).Error
@@ -393,7 +393,7 @@ func createSubscription(c echo.Context) error{
 	})
 }
 
-// deleteSubscription godoc
+// DeleteSubscription godoc
 // @Summary Удаление подписки
 // @Description Логическое удаление подписки по ID (поле deleted = true)
 // @Tags Subscriptions
@@ -406,8 +406,8 @@ func createSubscription(c echo.Context) error{
 // @Failure 404 {object} map[string]string "Подписка не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении подписки"
 // @Router /subscription/{id} [delete]
-func deleteSubscription(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func DeleteSubscription(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	subUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -415,7 +415,7 @@ func deleteSubscription(c echo.Context) error {
 	}
 
 	updateData := map[string]interface{}{"deleted": true}
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Subscription{}).
 			Where("id = ?", subUUID).

@@ -2735,6 +2735,77 @@ const docTemplate = `{
             }
         },
         "/report/help-request/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Логическое удаление запроса на помощь по ID (установка поля deleted = true)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Удаление запроса на помощь",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID запроса на помощь",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Запрос на помощь успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/response.ReportUniversalResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор запроса на помощь",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Запрос на помощь не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при удалении запроса на помощь",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -3992,7 +4063,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/status/delete-from-board": {
+        "/status/delete-from-board/{board_id}/{status_id}": {
             "delete": {
                 "security": [
                     {
@@ -4000,9 +4071,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Удаление связи между статусом и доской (мягкое удаление)",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -4012,13 +4080,18 @@ const docTemplate = `{
                 "summary": "Удаление статуса с доски",
                 "parameters": [
                     {
-                        "description": "Данные для удаления статуса с доски",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.DeleteStatusFromBoardRequest"
-                        }
+                        "type": "string",
+                        "description": "ID доски",
+                        "name": "board_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "status_id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -4029,7 +4102,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Ошибка при привязке данных или парсинге UUID",
+                        "description": "Ошибка при парсинге UUID",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4067,7 +4140,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/status/delete-from-task": {
+        "/status/delete-from-task/{task_id}/{status_id}": {
             "delete": {
                 "security": [
                     {
@@ -4075,9 +4148,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Удаление связи между статусом и задачей (мягкое удаление)",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -4087,13 +4157,18 @@ const docTemplate = `{
                 "summary": "Удаление статуса из задачи",
                 "parameters": [
                     {
-                        "description": "Данные для удаления статуса из задачи",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.DeleteStatusFromTaskRequest"
-                        }
+                        "type": "string",
+                        "description": "ID задачи",
+                        "name": "task_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID статуса",
+                        "name": "status_id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -4104,7 +4179,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Ошибка при привязке данных или парсинге UUID",
+                        "description": "Ошибка при парсинге UUID",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6970,28 +7045,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.DeleteStatusFromBoardRequest": {
-            "type": "object",
-            "properties": {
-                "board_id": {
-                    "type": "string"
-                },
-                "status_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.DeleteStatusFromTaskRequest": {
-            "type": "object",
-            "properties": {
-                "status_id": {
-                    "type": "string"
-                },
-                "task_id": {
-                    "type": "string"
-                }
-            }
-        },
         "request.HelpRequest": {
             "type": "object",
             "properties": {
@@ -7735,7 +7788,7 @@ const docTemplate = `{
         "response.BoardForProjectResponse": {
             "type": "object",
             "properties": {
-                "board": {
+                "boards": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/response.BoardResponse"
@@ -7772,7 +7825,7 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "descroption": {
+                "description": {
                     "type": "string"
                 },
                 "id": {
@@ -8084,7 +8137,7 @@ const docTemplate = `{
         "response.HelpRequestWithAssignerID": {
             "type": "object",
             "properties": {
-                "help_requests": {
+                "help_request": {
                     "$ref": "#/definitions/response.HelpRequestItem"
                 },
                 "user_first_name": {

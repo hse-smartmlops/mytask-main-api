@@ -19,11 +19,11 @@ func RegisterAttendanceRoutes(e *echo.Echo) {
 	attendanceGroup := e.Group("/attendance")
 	attendanceGroup.Use(KeycloakAuthMiddleware)
 	{
-		attendanceGroup.GET("/all/:page/:pagesize", getAllAttendances)
-		attendanceGroup.GET("/user/:id", getAttendancesByUserId)
-		attendanceGroup.POST("", createAttendance)
-		attendanceGroup.PATCH("/:id", updateAttendance)
-		attendanceGroup.DELETE("/:id", deleteAttendance)
+		attendanceGroup.GET("/all/:page/:pagesize", GetAllAttendances)
+		attendanceGroup.GET("/user/:id", GetAttendancesByUserId)
+		attendanceGroup.POST("", CreateAttendance)
+		attendanceGroup.PATCH("/:id", UpdateAttendance)
+		attendanceGroup.DELETE("/:id", DeleteAttendance)
 	}
 }
 
@@ -41,8 +41,8 @@ func RegisterAttendanceRoutes(e *echo.Echo) {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/all/{page}/{pagesize} [get]
-func getAllAttendances(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAllAttendances(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -59,7 +59,7 @@ func getAllAttendances(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	// Базовый запрос
-	dbq := dbConn.Session(&gorm.Session{}).
+	dbq := DBConn.Session(&gorm.Session{}).
 		Model(&models.Attendance{}).
 		Where("deleted = FALSE")
 
@@ -119,8 +119,8 @@ func getAllAttendances(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/user/{id} [get]
-func getAttendancesByUserId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAttendancesByUserId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -130,7 +130,7 @@ func getAttendancesByUserId(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
 	}
 
-	dbq := dbConn.Session(&gorm.Session{}).
+	dbq := DBConn.Session(&gorm.Session{}).
 		Model(&models.Attendance{}).
 		Where("deleted = FALSE AND user_id = ?", userID)
 
@@ -175,8 +175,8 @@ func getAttendancesByUserId(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании посещения"
 // @Router /attendance [post]
-func createAttendance(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func CreateAttendance(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -210,7 +210,7 @@ func createAttendance(c echo.Context) error {
 		CreatedAt:     &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Session(&gorm.Session{}).
 			Model(&models.Attendance{}).
 			Create(&attendance).Error; err != nil {
@@ -244,8 +244,8 @@ func createAttendance(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении посещения"
 // @Router /attendance/{id} [patch]
-func updateAttendance(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateAttendance(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -294,7 +294,7 @@ func updateAttendance(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Attendance{}).
 			Where("id = ? AND deleted = FALSE", attendanceID).
@@ -335,8 +335,8 @@ func updateAttendance(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении посещения"
 // @Router /attendance/{id} [delete]
-func deleteAttendance(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func DeleteAttendance(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -353,7 +353,7 @@ func deleteAttendance(c echo.Context) error {
 		"updated_at": &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Attendance{}).
 			Where("id = ? AND deleted = FALSE", attendanceID).
