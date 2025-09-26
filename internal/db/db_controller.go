@@ -13,7 +13,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var DB_conn *gorm.DB
+var DB_conn *gorm.DB = GetDBConnection()
 
 func GetDBConnection() *gorm.DB {
 	time.Sleep(5 * time.Second)
