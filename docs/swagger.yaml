@@ -164,20 +164,6 @@ definitions:
     - color
     - name
     type: object
-  request.DeleteStatusFromBoardRequest:
-    properties:
-      board_id:
-        type: string
-      status_id:
-        type: string
-    type: object
-  request.DeleteStatusFromTaskRequest:
-    properties:
-      status_id:
-        type: string
-      task_id:
-        type: string
-    type: object
   request.HelpRequest:
     properties:
       description:
@@ -667,7 +653,7 @@ definitions:
     type: object
   response.BoardForProjectResponse:
     properties:
-      board:
+      boards:
         items:
           $ref: '#/definitions/response.BoardResponse'
         type: array
@@ -691,7 +677,7 @@ definitions:
     properties:
       created_at:
         type: string
-      descroption:
+      description:
         type: string
       id:
         type: string
@@ -893,7 +879,7 @@ definitions:
     type: object
   response.HelpRequestWithAssignerID:
     properties:
-      help_requests:
+      help_request:
         $ref: '#/definitions/response.HelpRequestItem'
       user_first_name:
         type: string
@@ -3309,6 +3295,53 @@ paths:
       tags:
       - Reports
   /report/help-request/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Логическое удаление запроса на помощь по ID (установка поля deleted
+        = true)
+      parameters:
+      - description: ID запроса на помощь
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Запрос на помощь успешно удален
+          schema:
+            $ref: '#/definitions/response.ReportUniversalResponse'
+        "400":
+          description: Некорректный идентификатор запроса на помощь
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Запрос на помощь не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при удалении запроса на помощь
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Удаление запроса на помощь
+      tags:
+      - Reports
     patch:
       consumes:
       - application/json
@@ -4129,18 +4162,20 @@ paths:
       summary: Получение всех статусов
       tags:
       - Statuses
-  /status/delete-from-board:
+  /status/delete-from-board/{board_id}/{status_id}:
     delete:
-      consumes:
-      - application/json
       description: Удаление связи между статусом и доской (мягкое удаление)
       parameters:
-      - description: Данные для удаления статуса с доски
-        in: body
-        name: body
+      - description: ID доски
+        in: path
+        name: board_id
         required: true
-        schema:
-          $ref: '#/definitions/request.DeleteStatusFromBoardRequest'
+        type: string
+      - description: ID статуса
+        in: path
+        name: status_id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -4149,7 +4184,7 @@ paths:
           schema:
             $ref: '#/definitions/response.StatusUniversalResponse'
         "400":
-          description: Ошибка при привязке данных или парсинге UUID
+          description: Ошибка при парсинге UUID
           schema:
             additionalProperties:
               type: string
@@ -4177,18 +4212,20 @@ paths:
       summary: Удаление статуса с доски
       tags:
       - Statuses
-  /status/delete-from-task:
+  /status/delete-from-task/{task_id}/{status_id}:
     delete:
-      consumes:
-      - application/json
       description: Удаление связи между статусом и задачей (мягкое удаление)
       parameters:
-      - description: Данные для удаления статуса из задачи
-        in: body
-        name: body
+      - description: ID задачи
+        in: path
+        name: task_id
         required: true
-        schema:
-          $ref: '#/definitions/request.DeleteStatusFromTaskRequest'
+        type: string
+      - description: ID статуса
+        in: path
+        name: status_id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -4197,7 +4234,7 @@ paths:
           schema:
             $ref: '#/definitions/response.StatusUniversalResponse'
         "400":
-          description: Ошибка при привязке данных или парсинге UUID
+          description: Ошибка при парсинге UUID
           schema:
             additionalProperties:
               type: string

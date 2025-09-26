@@ -21,22 +21,23 @@ func RegisterReportRoutes(e *echo.Echo) {
 	reportGroup := e.Group("/report")
 	reportGroup.Use(KeycloakAuthMiddleware)
 	{
-		reportGroup.GET("/all/:page/:pagesize", getAllReports)
-		reportGroup.GET("/:id", getReport)
-		reportGroup.GET("/task/:id", getReportsByTaskId)
-		reportGroup.GET("/project/:id", getReportsByProjectId)
-		reportGroup.POST("", createReport)
-		reportGroup.PATCH("/:id", updateReport)
-		reportGroup.DELETE("/:id", deleteReport)
-		reportGroup.PATCH("/help-request/:id", updateHelpRequest)
-		reportGroup.PATCH("/completed-work/:id", updateCompletedWork)
-		reportGroup.PATCH("/tomorrow-plans/:id", updateTomorrowPlans)
-		reportGroup.GET("/user/:id/:page/:pagesize", getAllReportsByUserId)
-		reportGroup.GET("/help-requests-by-user-id/:id", getHelpRequestsForUser)
+		reportGroup.GET("/all/:page/:pagesize", GetAllReports)
+		reportGroup.GET("/:id", GetReport)
+		reportGroup.GET("/task/:id", GetReportsByTaskId)
+		reportGroup.GET("/project/:id", GetReportsByProjectId)
+		reportGroup.POST("", CreateReport)
+		reportGroup.PATCH("/:id", UpdateReport)
+		reportGroup.DELETE("/:id", DeleteReport)
+		reportGroup.PATCH("/help-request/:id", UpdateHelpRequest)
+		reportGroup.PATCH("/completed-work/:id", UpdateCompletedWork)
+		reportGroup.PATCH("/tomorrow-plans/:id", UpdateTomorrowPlans)
+		reportGroup.GET("/user/:id/:page/:pagesize", GetAllReportsByUserId)
+		reportGroup.GET("/help-requests-by-user-id/:id", GetHelpRequestsForUser)
+		reportGroup.DELETE("/help-request/:id", DeleteHelpRequest)
 	}
 }
 
-// getAllReports godoc
+// GetAllReports godoc
 // @Summary Получение списка всех отчетов
 // @Description Получает список всех отчетов с учетом пагинации, исключая удаленные
 // @Tags Reports
@@ -51,8 +52,8 @@ func RegisterReportRoutes(e *echo.Echo) {
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/all/{page}/{pagesize} [get]
-func getAllReports(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAllReports(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -67,7 +68,7 @@ func getAllReports(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -76,7 +77,7 @@ func getAllReports(c echo.Context) error {
 	}
 
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
 		Preload("HelpRequests", "deleted = FALSE").
@@ -162,7 +163,7 @@ func getAllReports(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getAllReportsByUserId godoc
+// GetAllReportsByUserId godoc
 // @Summary Получение списка отчетов по ID пользователя
 // @Description Получает список отчетов, созданных конкретным пользователем, с пагинацией и исключением удаленных записей
 // @Tags Reports
@@ -177,8 +178,8 @@ func getAllReports(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/user/{id}/{page}/{pagesize} [get]
-func getAllReportsByUserId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAllReportsByUserId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -197,7 +198,7 @@ func getAllReportsByUserId(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Where("deleted = FALSE and user_id = ?", userID).
 		Count(&totalCount).Error; err != nil {
@@ -206,7 +207,7 @@ func getAllReportsByUserId(c echo.Context) error {
 	}
 
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
 		Preload("HelpRequests", "deleted = FALSE").
@@ -292,7 +293,7 @@ func getAllReportsByUserId(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getReport godoc
+// GetReport godoc
 // @Summary Получение отчета по ID
 // @Description Получает данные отчета по его уникальному идентификатору
 // @Tags Reports
@@ -306,8 +307,8 @@ func getAllReportsByUserId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчета"
 // @Router /report/{id} [get]
-func getReport(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetReport(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -317,10 +318,10 @@ func getReport(c echo.Context) error {
 	}
 
 	var r models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
-		Preload("HelpRequest", "deleted = FALSE").
+		Preload("HelpRequests", "deleted = FALSE").
 		Preload("CompletedWork", "deleted = FALSE").
 		Preload("TomorrowPlans", "deleted = FALSE").
 		Preload("ReportProblems", "deleted = FALSE").
@@ -395,7 +396,7 @@ func getReport(c echo.Context) error {
 	})
 }
 
-// getReportsByTaskId godoc
+// GetReportsByTaskId godoc
 // @Summary Получение отчетов по ID задачи
 // @Description Получает список отчетов, связанных с указанной задачей
 // @Tags Reports
@@ -409,8 +410,8 @@ func getReport(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/task/{id} [get]
-func getReportsByTaskId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetReportsByTaskId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -421,7 +422,7 @@ func getReportsByTaskId(c echo.Context) error {
 
 	// находим все completed_work по задаче -> собираем report_id
 	var cw []models.CompletedWork
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.CompletedWork{}).
 		Where("deleted = FALSE AND task_id = ?", taskID).
 		Find(&cw).Error; err != nil {
@@ -444,10 +445,10 @@ func getReportsByTaskId(c echo.Context) error {
 	}
 
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
-		Preload("HelpRequest", "deleted = FALSE").
+		Preload("HelpRequests", "deleted = FALSE").
 		Preload("CompletedWork", "deleted = FALSE").
 		Preload("TomorrowPlans", "deleted = FALSE").
 		Preload("ReportProblems", "deleted = FALSE").
@@ -523,7 +524,7 @@ func getReportsByTaskId(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getReportsByProjectId godoc
+// GetReportsByProjectId godoc
 // @Summary Получение отчетов по ID проекта
 // @Description Получает список отчетов, связанных с задачами указанного проекта
 // @Tags Reports
@@ -537,8 +538,8 @@ func getReportsByTaskId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчетов"
 // @Router /report/project/{id} [get]
-func getReportsByProjectId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetReportsByProjectId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -548,7 +549,7 @@ func getReportsByProjectId(c echo.Context) error {
 	}
 
 	var tasks []models.Task
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Task{}).
 		Where("project_id = ? AND deleted = FALSE", projectUUID).
 		Find(&tasks).Error; err != nil {
@@ -567,7 +568,7 @@ func getReportsByProjectId(c echo.Context) error {
 
 	// по задачам проекта берём completed_work, вытягиваем report_id
 	var cw []models.CompletedWork
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.CompletedWork{}).
 		Where("deleted = FALSE AND task_id IN ?", taskIDs).
 		Find(&cw).Error; err != nil {
@@ -589,10 +590,10 @@ func getReportsByProjectId(c echo.Context) error {
 	}
 
 	var reports []models.DailyReport
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
-		Preload("HelpRequest", "deleted = FALSE").
+		Preload("HelpRequests", "deleted = FALSE").
 		Preload("CompletedWork", "deleted = FALSE").
 		Preload("TomorrowPlans", "deleted = FALSE").
 		Preload("ReportProblems", "deleted = FALSE").
@@ -668,7 +669,7 @@ func getReportsByProjectId(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// createReport godoc
+// CreateReport godoc
 // @Summary Создание нового отчета
 // @Description Создает новый отчет с указанными параметрами, включая выполненную работу, планы на завтра, проблемы и запрос на помощь
 // @Tags Reports
@@ -682,8 +683,8 @@ func getReportsByProjectId(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании отчета"
 // @Router /report [post]
-func createReport(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func CreateReport(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -712,7 +713,7 @@ func createReport(c echo.Context) error {
 		Checked:    &zero,
 	}
 
-	txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		// создаём сам отчёт
 		if res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Create(&rep); res.Error != nil {
 			return res.Error
@@ -826,7 +827,7 @@ func createReport(c echo.Context) error {
 	})
 }
 
-// updateReport godoc
+// UpdateReport godoc
 // @Summary Обновление отчета и связанных данных, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
 // @Tags Reports
 // @Description Обновляет поля отчета, а также связанные CompletedWork, TomorrowPlans, HelpRequests и ReportProblems, ЕСЛИ НЕ УКАЗЫВАТЬ ID ВО ВСПОМОГАТЕЛЬНЫХ СУЩНОСТЯХ, СОЗДАЕТ НОВЫЕ
@@ -841,8 +842,8 @@ func createReport(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Отчет не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении отчета"
 // @Router /report/{id} [patch]
-func updateReport(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateReport(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -858,7 +859,7 @@ func updateReport(c echo.Context) error {
 
 	now := time.Now()
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		var report models.DailyReport
 		if err := tx.Where("id = ? AND deleted = FALSE", reportID).First(&report).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -1105,7 +1106,7 @@ func updateReport(c echo.Context) error {
 	})
 }
 
-// deleteReport godoc
+// DeleteReport godoc
 // @Summary Удаление отчета
 // @Description Логическое удаление отчета по ID, включая связанные данные (поле deleted = true)
 // @Tags Reports
@@ -1118,8 +1119,8 @@ func updateReport(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Отчет не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении отчета"
 // @Router /report/{id} [delete]
-func deleteReport(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func DeleteReport(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	reportID, err := uuid.Parse(c.Param("id"))
@@ -1134,7 +1135,7 @@ func deleteReport(c echo.Context) error {
 		"updated_at": &now,
 	}
 
-	txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.DailyReport{}).
 			Where("id = ?", reportID).
@@ -1172,7 +1173,7 @@ func deleteReport(c echo.Context) error {
 	})
 }
 
-// updateHelpRequest godoc
+// UpdateHelpRequest godoc
 // @Summary Обновление запроса на помощь
 // @Description Обновляет данные запроса на помощь по его ID
 // @Tags Reports
@@ -1186,8 +1187,8 @@ func deleteReport(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении запроса на помощь"
 // @Router /report/help-request/{id} [patch]
-func updateHelpRequest(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateHelpRequest(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	helpID, err := uuid.Parse(c.Param("id"))
@@ -1216,7 +1217,7 @@ func updateHelpRequest(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.HelpRequest{}).
 		Where("id = ? AND deleted = FALSE", helpID).
 		Updates(updateData)
@@ -1232,7 +1233,7 @@ func updateHelpRequest(c echo.Context) error {
 	})
 }
 
-// updateCompletedWork godoc
+// UpdateCompletedWork godoc
 // @Summary Обновление выполненной работы
 // @Description Обновляет данные выполненной работы по ее ID
 // @Tags Reports
@@ -1246,8 +1247,8 @@ func updateHelpRequest(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении выполненной работы"
 // @Router /report/completed-work/{id} [patch]
-func updateCompletedWork(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateCompletedWork(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	cwID, err := uuid.Parse(c.Param("id"))
@@ -1270,7 +1271,7 @@ func updateCompletedWork(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.CompletedWork{}).
 		Where("id = ? AND deleted = FALSE", cwID).
 		Updates(updateData)
@@ -1286,7 +1287,7 @@ func updateCompletedWork(c echo.Context) error {
 	})
 }
 
-// updateTomorrowPlans godoc
+// UpdateTomorrowPlans godoc
 // @Summary Обновление планов на завтра
 // @Description Обновляет данные планов на завтра по их ID
 // @Tags Reports
@@ -1300,8 +1301,8 @@ func updateCompletedWork(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении планов на завтра"
 // @Router /report/tomorrow-plans/{id} [patch]
-func updateTomorrowPlans(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateTomorrowPlans(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	tpID, err := uuid.Parse(c.Param("id"))
@@ -1324,7 +1325,7 @@ func updateTomorrowPlans(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.TomorrowPlans{}).
 		Where("id = ? AND deleted = FALSE", tpID).
 		Updates(updateData)
@@ -1340,7 +1341,7 @@ func updateTomorrowPlans(c echo.Context) error {
 	})
 }
 
-// getHelpRequestsForUser godoc
+// GetHelpRequestsForUser godoc
 // @Summary Получение запросов на помощь по ID пользователя-помощника
 // @Description Возвращает список запросов на помощь, где указанный пользователь назначен в качестве помощника. В ответе также возвращаются имя и фамилия пользователя, создавшего запрос (автора ежедневного отчёта).
 // @Tags Reports
@@ -1353,8 +1354,8 @@ func updateTomorrowPlans(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении запросов на помощь"
 // @Router /report/help-requests-by-user-id/{id} [get]
-func getHelpRequestsForUser(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetHelpRequestsForUser(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 	userID, err := uuid.Parse(c.Param("id"))
@@ -1363,7 +1364,7 @@ func getHelpRequestsForUser(c echo.Context) error {
 	}
 
 	var helpRequests []models.HelpRequest
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.HelpRequest{}).
 		Preload("Report", "deleted = FALSE").
 		Preload("Report.User", "deleted = FALSE").
@@ -1396,4 +1397,60 @@ func getHelpRequestsForUser(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, helpRequestResponse)
+}
+
+// DeleteHelpRequest godoc
+// @Summary Удаление запроса на помощь
+// @Description Логическое удаление запроса на помощь по ID (установка поля deleted = true)
+// @Tags Reports
+// @Accept json
+// @Produce json
+// @Param id path string true "ID запроса на помощь"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Success 200 {object} response.ReportUniversalResponse "Запрос на помощь успешно удален"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор запроса на помощь"
+// @Failure 404 {object} map[string]string "Запрос на помощь не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при удалении запроса на помощь"
+// @Router /report/help-request/{id} [delete]
+func DeleteHelpRequest(c echo.Context) error {
+	if err := Authorize(c); err != nil {
+		return err
+	}
+	requestID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор запроса на помощь"})
+	}
+
+	delTrue := true
+	now := time.Now()
+	update := map[string]interface{}{
+		"deleted":    &delTrue,
+		"updated_at": &now,
+	}
+
+	txErr := DBConn.Transaction(func(tx *gorm.DB) error {
+		res := tx.Session(&gorm.Session{}).
+			Model(&models.HelpRequest{}).
+			Where("id = ?", requestID).
+			Updates(update)
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		return nil
+	})
+	if txErr != nil {
+		if he, ok := txErr.(*echo.HTTPError); ok {
+			return c.JSON(he.Code, he.Message)
+		}
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении запроса на помощь"})
+	}
+
+	return c.JSON(http.StatusOK, response.ReportUniversalResponse{
+		ID:      requestID.String(),
+		Message: "Запрос на помощь успешно удален",
+	})
 }

@@ -3,7 +3,7 @@ package response
 import "time"
 
 type GetAllRolesResponse struct {
-	Roles      []GetRoleResponse
+	Roles      []GetRoleResponse `json:"roles"`
 	TotalCount int64 `json:"total_count"`
 	Page       int   `json:"page"`
 	PageSize   int   `json:"page_size"`

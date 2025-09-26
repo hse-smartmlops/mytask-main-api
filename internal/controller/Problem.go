@@ -21,16 +21,16 @@ func RegisterProblemRoutes(e *echo.Echo) {
 	problemGroup := e.Group("/problem")
 	problemGroup.Use(KeycloakAuthMiddleware)
 	{
-		problemGroup.GET("/all/:page/:pagesize", getAllProblems)
-		problemGroup.GET("/:id", getProblemByID)
-		problemGroup.GET("/user/:id/:page/:pagesize", getProblemsByUserId)
-		problemGroup.POST("", createProblem)
-		problemGroup.PATCH("/:id", updateProblem)
-		problemGroup.DELETE("/:id", deleteProblem)
+		problemGroup.GET("/all/:page/:pagesize", GetAllProblems)
+		problemGroup.GET("/:id", GetProblemByID)
+		problemGroup.GET("/user/:id/:page/:pagesize", GetProblemsByUserId)
+		problemGroup.POST("", CreateProblem)
+		problemGroup.PATCH("/:id", UpdateProblem)
+		problemGroup.DELETE("/:id", DeleteProblem)
 	}
 }
 
-// getAllProblems godoc
+// GetAllProblems godoc
 // @Summary Получение списка всех проблем
 // @Description Получает список всех проблем с учетом пагинации, исключая удаленные
 // @Tags Problems
@@ -44,8 +44,8 @@ func RegisterProblemRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/all/{page}/{pagesize} [get]
-func getAllProblems(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAllProblems(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func getAllProblems(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Problem{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -69,7 +69,7 @@ func getAllProblems(c echo.Context) error {
 	}
 
 	var problems []models.Problem
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Problem{}).
 		Where("deleted = FALSE").
 		Limit(pageSize).
@@ -104,7 +104,7 @@ func getAllProblems(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getProblemsByUserId godoc
+// GetProblemsByUserId godoc
 // @Summary Получение проблем по ID пользователя
 // @Description Получает список проблем, созданных указанным пользователем, с учетом пагинации
 // @Tags Problems
@@ -119,8 +119,8 @@ func getAllProblems(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/user/{id}/{page}/{pagesize} [get]
-func getProblemsByUserId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetProblemsByUserId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -140,7 +140,7 @@ func getProblemsByUserId(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Problem{}).
 		Where("creator_id = ? AND deleted = FALSE", creatorUUID).
 		Count(&totalCount).Error; err != nil {
@@ -149,7 +149,7 @@ func getProblemsByUserId(c echo.Context) error {
 	}
 
 	var problems []models.Problem
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Problem{}).
 		Where("creator_id = ? AND deleted = FALSE", creatorUUID).
 		Limit(pageSize).
@@ -184,7 +184,7 @@ func getProblemsByUserId(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getProblemByID godoc
+// GetProblemByID godoc
 // @Summary Получение проблемы по ID
 // @Description Получает данные проблемы по её уникальному идентификатору
 // @Tags Problems
@@ -198,8 +198,8 @@ func getProblemsByUserId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблемы"
 // @Router /problem/{id} [get]
-func getProblemByID(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetProblemByID(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -209,7 +209,7 @@ func getProblemByID(c echo.Context) error {
 	}
 
 	var p models.Problem
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Problem{}).
 		Where("id = ? AND deleted = FALSE", problemId).
 		First(&p).Error; err != nil {
@@ -236,7 +236,7 @@ func getProblemByID(c echo.Context) error {
 	})
 }
 
-// createProblem godoc
+// CreateProblem godoc
 // @Summary Создание новой проблемы
 // @Description Создает новую проблему с указанными параметрами
 // @Tags Problems
@@ -249,8 +249,8 @@ func getProblemByID(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор пользователя"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проблемы"
 // @Router /problem [post]
-func createProblem(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func CreateProblem(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -284,7 +284,7 @@ func createProblem(c echo.Context) error {
 		Deleted:     &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Session(&gorm.Session{}).
 			Model(&models.Problem{}).
 			Create(&p); res.Error != nil {
@@ -303,7 +303,7 @@ func createProblem(c echo.Context) error {
 	})
 }
 
-// updateProblem godoc
+// UpdateProblem godoc
 // @Summary Обновление проблемы
 // @Description Обновляет данные проблемы по её ID
 // @Tags Problems
@@ -317,8 +317,8 @@ func createProblem(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проблемы"
 // @Router /problem/{id} [patch]
-func updateProblem(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateProblem(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -345,7 +345,7 @@ func updateProblem(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Problem{}).
 			Where("id = ? AND deleted = FALSE", problemId).
@@ -369,7 +369,7 @@ func updateProblem(c echo.Context) error {
 	})
 }
 
-// deleteProblem godoc
+// DeleteProblem godoc
 // @Summary Удаление проблемы
 // @Description Логическое удаление проблемы по ID, включая связанные данные (поле deleted = true)
 // @Tags Problems
@@ -381,8 +381,8 @@ func updateProblem(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проблемы"
 // @Router /problem/{id} [delete]
-func deleteProblem(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func DeleteProblem(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -398,7 +398,7 @@ func deleteProblem(c echo.Context) error {
 		"updated_at": &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		// помечаем проблему удалённой
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Problem{}).

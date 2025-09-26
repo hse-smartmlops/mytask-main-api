@@ -21,16 +21,16 @@ func RegisterForumMessagesRoutes(e *echo.Echo) {
 	forumMessageGroup := e.Group("/forum-messages")
 	forumMessageGroup.Use(KeycloakAuthMiddleware)
 	{
-		forumMessageGroup.GET("/all/:page/:pagesize", getAllForumMessages)
-		forumMessageGroup.GET("/problem/:id/:page/:pagesize", getForumMessagesByProblemId)
-		forumMessageGroup.GET("/:id", getForumMessageById)
-		forumMessageGroup.POST("", createForumMessage)
-		forumMessageGroup.PATCH("/:id", updateForumMessage)
-		forumMessageGroup.DELETE("/:id", deleteForumMessage)
+		forumMessageGroup.GET("/all/:page/:pagesize", GetAllForumMessages)
+		forumMessageGroup.GET("/problem/:id/:page/:pagesize", GetForumMessagesByProblemId)
+		forumMessageGroup.GET("/:id", GetForumMessageById)
+		forumMessageGroup.POST("", CreateForumMessage)
+		forumMessageGroup.PATCH("/:id", UpdateForumMessage)
+		forumMessageGroup.DELETE("/:id", DeleteForumMessage)
 	}
 }
 
-// getAllForumMessages godoc
+// GetAllForumMessages godoc
 // @Summary Получение списка всех сообщений форума
 // @Description Получает список всех сообщений форума с учетом пагинации, исключая удаленные
 // @Tags ForumMessages
@@ -44,8 +44,8 @@ func RegisterForumMessagesRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
 // @Router /forum-messages/all/{page}/{pagesize} [get]
-func getAllForumMessages(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAllForumMessages(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func getAllForumMessages(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -69,7 +69,7 @@ func getAllForumMessages(c echo.Context) error {
 	}
 
 	var forumMessages []models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE").
 		Limit(pageSize).
@@ -102,7 +102,7 @@ func getAllForumMessages(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getForumMessagesByProblemId godoc
+// GetForumMessagesByProblemId godoc
 // @Summary Получение сообщений форума по ID проблемы
 // @Description Получает список сообщений форума, связанных с указанной проблемой, с учетом пагинации
 // @Tags ForumMessages
@@ -117,8 +117,8 @@ func getAllForumMessages(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
 // @Router /forum-messages/problem/{id}/{page}/{pagesize} [get]
-func getForumMessagesByProblemId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetForumMessagesByProblemId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -138,7 +138,7 @@ func getForumMessagesByProblemId(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE AND problem_id = ?", problemID).
 		Count(&totalCount).Error; err != nil {
@@ -147,7 +147,7 @@ func getForumMessagesByProblemId(c echo.Context) error {
 	}
 
 	var forumMessages []models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE AND problem_id = ?", problemID).
 		Limit(pageSize).
@@ -181,7 +181,7 @@ func getForumMessagesByProblemId(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getForumMessageById godoc
+// GetForumMessageById godoc
 // @Summary Получение сообщения форума по ID
 // @Description Получает данные сообщения форума по его уникальному идентификатору
 // @Tags ForumMessages
@@ -195,8 +195,8 @@ func getForumMessagesByProblemId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Сообщение форума не найдено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщения форума"
 // @Router /forum-messages/{id} [get]
-func getForumMessageById(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetForumMessageById(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -206,7 +206,7 @@ func getForumMessageById(c echo.Context) error {
 	}
 
 	var m models.ForumMessage
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.ForumMessage{}).
 		Where("id = ? AND deleted = FALSE", messageID).
 		First(&m).Error; err != nil {
@@ -233,7 +233,7 @@ func getForumMessageById(c echo.Context) error {
 	})
 }
 
-// createForumMessage godoc
+// CreateForumMessage godoc
 // @Summary Создание нового сообщения форума
 // @Description Создает новое сообщение форума с указанными параметрами
 // @Tags ForumMessages
@@ -246,8 +246,8 @@ func getForumMessageById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании сообщения форума"
 // @Router /forum-messages [post]
-func createForumMessage(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func CreateForumMessage(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -290,7 +290,7 @@ func createForumMessage(c echo.Context) error {
 		Deleted:     &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Session(&gorm.Session{}).
 			Model(&models.ForumMessage{}).
 			Create(&fm); res.Error != nil {
@@ -309,7 +309,7 @@ func createForumMessage(c echo.Context) error {
 	})
 }
 
-// updateForumMessage godoc
+// UpdateForumMessage godoc
 // @Summary Обновление сообщения форума
 // @Description Обновляет данные сообщения форума по его ID
 // @Tags ForumMessages
@@ -323,8 +323,8 @@ func createForumMessage(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении сообщения форума"
 // @Router /forum-messages/{id} [patch]
-func updateForumMessage(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateForumMessage(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -365,7 +365,7 @@ func updateForumMessage(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.ForumMessage{}).
 			Where("id = ? AND deleted = FALSE", messageID).
@@ -389,7 +389,7 @@ func updateForumMessage(c echo.Context) error {
 	})
 }
 
-// deleteForumMessage godoc
+// DeleteForumMessage godoc
 // @Summary Удаление сообщения форума
 // @Description Логическое удаление сообщения форума по ID (поле deleted = true)
 // @Tags ForumMessages
@@ -402,8 +402,8 @@ func updateForumMessage(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Сообщение форума не найдено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении сообщения форума"
 // @Router /forum-messages/{id} [delete]
-func deleteForumMessage(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func DeleteForumMessage(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -419,7 +419,7 @@ func deleteForumMessage(c echo.Context) error {
 		"updated_at": &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.ForumMessage{}).
 			Where("id = ?", messageID).

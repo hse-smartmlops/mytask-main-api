@@ -63,16 +63,14 @@ func KeycloakAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
     }
 }
 
-// authorize can be used by handlers that were not yet refactored away from inline checks.
-// It prefers an already-stored token (set by middleware) but will validate header if missing.
-func authorize(c echo.Context) error {
+
+var Authorize = func(c echo.Context) error {
     if t := c.Get("auth_token"); t != nil {
         if _, ok := t.(string); ok {
             return nil
         }
     }
 
-    // Fallback: validate header (same logic as middleware)
     authHeader := c.Request().Header.Get("Authorization")
 
     if authHeader == ""{

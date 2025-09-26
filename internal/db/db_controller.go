@@ -13,9 +13,9 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-var DB_conn *gorm.DB = getDBConnection()
+var DB_conn *gorm.DB
 
-func getDBConnection() *gorm.DB {
+func GetDBConnection() *gorm.DB {
 	time.Sleep(5 * time.Second)
 
 	if err := godotenv.Load(".env"); err != nil {
