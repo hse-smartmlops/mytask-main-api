@@ -20,8 +20,6 @@ import (
 
 	echoSwagger "github.com/swaggo/echo-swagger"
 
-	db "emplacc-api/internal/db"
-
 	"github.com/labstack/echo/v4"
 )
 
@@ -79,8 +77,6 @@ func main() {
 	e.OPTIONS("/event", func(c echo.Context) error {
 		return c.NoContent(http.StatusOK)
 	})
-
-	db.DB_conn = db.GetDBConnection()
 
 	log.Println("Server started on :8081")
 	e.Logger.Fatal(e.Start("0.0.0.0:8081"))
