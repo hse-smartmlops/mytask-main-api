@@ -3,7 +3,7 @@ package response
 import "time"
 
 type GetAllUsersResponse struct {
-	Users      []GetUserResponse
+	Users      []GetUserResponse `json:"users"`
 	TotalCount int64 `json:"total_count"`
 	Page       int   `json:"page"`
 	PageSize   int   `json:"page_size"`

@@ -21,16 +21,16 @@ func RegisterBoardRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/boards")
 	projectGroup.Use(KeycloakAuthMiddleware)
 	{
-		projectGroup.GET("/all/:page/:pagesize", getAllBoards)
-		projectGroup.GET("/:id", getBoardById)
-		projectGroup.GET("/project/:projectId", getBoardByProjectId)
-		projectGroup.POST("", createBoard)
-		projectGroup.PATCH("/:id", updateBoard)
-		projectGroup.DELETE("/:id", deleteBoard)
+		projectGroup.GET("/all/:page/:pagesize", GetAllBoards)
+		projectGroup.GET("/:id", GetBoardById)
+		projectGroup.GET("/project/:projectId", GetBoardByProjectId)
+		projectGroup.POST("", CreateBoard)
+		projectGroup.PATCH("/:id", UpdateBoard)
+		projectGroup.DELETE("/:id", DeleteBoard)
 	}
 }
 
-// getAllBoards godoc
+// GetAllBoards godoc
 // @Summary Получение списка всех досок
 // @Description Получает список всех досок с учетом пагинации, исключая удаленные.
 // @Tags Boards
@@ -44,8 +44,8 @@ func RegisterBoardRoutes(e *echo.Echo) {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
 // @Router /boards/all/{page}/{pagesize} [get]
-func getAllBoards(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetAllBoards(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -60,7 +60,7 @@ func getAllBoards(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var total int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Board{}).
 		Where("deleted = FALSE").
 		Count(&total).Error; err != nil {
@@ -69,7 +69,7 @@ func getAllBoards(c echo.Context) error {
 	}
 
 	var boards []models.Board
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Board{}).
 		Where("deleted = FALSE").
 		Order("created_at DESC NULLS LAST").
@@ -86,7 +86,7 @@ func getAllBoards(c echo.Context) error {
 
 	var statusBoards []models.StatusBoard
 	if len(boardIDs) > 0 {
-		if err := dbConn.Session(&gorm.Session{}).
+		if err := DBConn.Session(&gorm.Session{}).
 			Model(&models.StatusBoard{}).
 			Preload("Status", "deleted = FALSE").
 			Where("deleted = FALSE AND board_id IN ?", boardIDs).
@@ -133,7 +133,7 @@ func getAllBoards(c echo.Context) error {
 	return c.JSON(http.StatusOK, boardList)
 }
 
-// getBoardById godoc
+// GetBoardById godoc
 // @Summary Получение доски по ID
 // @Description Получает данные доски по её уникальному идентификатору
 // @Tags Boards
@@ -147,8 +147,8 @@ func getAllBoards(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Доска не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении доски"
 // @Router /boards/{id} [get]
-func getBoardById(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetBoardById(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -159,7 +159,7 @@ func getBoardById(c echo.Context) error {
 	}
 
 	var board models.Board
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.Board{}).
 		First(&board, "id = ? AND deleted = FALSE", boardID)
 	if res.Error != nil {
@@ -169,6 +169,7 @@ func getBoardById(c echo.Context) error {
 		log.Printf("DB error (find board by id): %v", res.Error)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении доски"})
 	}
+	log.Printf("Loaded board: Name=%v, Desc=%v", board.Name, board.Description)
 
 	boardResponse := response.BoardResponse{
 		Id:          board.ID.String(),
@@ -180,7 +181,7 @@ func getBoardById(c echo.Context) error {
 	}
 
 	var statusBoards []models.StatusBoard
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.StatusBoard{}).
 		Preload("Status", "deleted = FALSE").
 		Where("deleted = FALSE AND board_id = ?", board.ID).
@@ -206,7 +207,7 @@ func getBoardById(c echo.Context) error {
 	return c.JSON(http.StatusOK, boardResponse)
 }
 
-// getBoardByProjectId godoc
+// GetBoardByProjectId godoc
 // @Summary Получение досок по ID проекта
 // @Description Получает список досок, связанных с указанным проектом
 // @Tags Boards
@@ -220,8 +221,8 @@ func getBoardById(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Доска не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении досок"
 // @Router /boards/project/{projectId} [get]
-func getBoardByProjectId(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func GetBoardByProjectId(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -232,7 +233,7 @@ func getBoardByProjectId(c echo.Context) error {
 	}
 
 	var boards []models.Board
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Board{}).
 		Preload("StatusBoards", "deleted = FALSE").
 		Preload("StatusBoards.Status", "deleted = FALSE").
@@ -273,7 +274,7 @@ func getBoardByProjectId(c echo.Context) error {
 	return c.JSON(http.StatusOK, projectResponse)
 }
 
-// createBoard godoc
+// CreateBoard godoc
 // @Summary Создание новой доски
 // @Description Создает новую доску с указанными параметрами
 // @Tags Boards
@@ -286,8 +287,8 @@ func getBoardByProjectId(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании доски"
 // @Router /boards [post]
-func createBoard(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func CreateBoard(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -319,7 +320,7 @@ func createBoard(c echo.Context) error {
 		CreatedAt:   &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Board{}).
 			Omit(clause.Associations).
@@ -340,7 +341,7 @@ func createBoard(c echo.Context) error {
 	})
 }
 
-// updateBoard godoc
+// UpdateBoard godoc
 // @Summary Обновление доски
 // @Description Обновляет данные доски по её ID
 // @Tags Boards
@@ -354,8 +355,8 @@ func createBoard(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении доски"
 // @Router /boards/{id} [patch]
-func updateBoard(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func UpdateBoard(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -387,7 +388,7 @@ func updateBoard(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Board{}).
 			Where("id = ? AND deleted = FALSE", boardID).
@@ -411,7 +412,7 @@ func updateBoard(c echo.Context) error {
 	})
 }
 
-// deleteBoard godoc
+// DeleteBoard godoc
 // @Summary Удаление доски
 // @Description Логическое удаление доски по ID (поле deleted = true)
 // @Tags Boards
@@ -424,8 +425,8 @@ func updateBoard(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении доски"
 // @Router /boards/{id} [delete]
-func deleteBoard(c echo.Context) error {
-	if err := authorize(c); err != nil {
+func DeleteBoard(c echo.Context) error {
+	if err := Authorize(c); err != nil {
 		return err
 	}
 
@@ -442,7 +443,7 @@ func deleteBoard(c echo.Context) error {
 		"updated_at": &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		// помечаем саму доску
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Board{}).

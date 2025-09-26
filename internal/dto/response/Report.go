@@ -68,7 +68,7 @@ type ReportListByProjectId struct {
 }
 
 type HelpRequestWithAssignerID struct{
-	HelpRequest HelpRequestItem `json:"help_requests"`
+	HelpRequest HelpRequestItem `json:"help_request"`
 	UserFirstName      string    `json:"user_first_name"`
 	UserLastName       string    `json:"user_last_name"`
 }

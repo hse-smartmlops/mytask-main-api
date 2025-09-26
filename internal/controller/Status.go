@@ -22,21 +22,21 @@ func RegisterStatusRoutes(e *echo.Echo) {
 	g := e.Group("/status")
 	g.Use(KeycloakAuthMiddleware)
 	{
-		g.GET("/all/:page/:pagesize", getAllStatuses)
-		g.GET("/:id", getStatusByID)
-		g.POST("", createStatus)
-		g.PATCH("/:id", updateStatus)
-		g.DELETE("/:id", deleteStatus)
-		g.GET("/project/:board_id", getStatusesByBoardId)
-		g.GET("/task/:task_id", getStatusesByTaskId)
-		g.POST("/add-to-task", addStatusToTask)
-		g.POST("/add-to-board", addStatusToBoard)
-		g.DELETE("/delete-from-task", deleteStatusFromTask)
-		g.DELETE("/delete-from-board", deleteStatusFromBoard)
+		g.GET("/all/:page/:pagesize", GetAllStatuses)
+		g.GET("/:id", GetStatusByID)
+		g.POST("", CreateStatus)
+		g.PATCH("/:id", UpdateStatus)
+		g.DELETE("/:id", DeleteStatus)
+		g.GET("/project/:board_id", GetStatusesByBoardId)
+		g.GET("/task/:task_id", GetStatusesByTaskId)
+		g.POST("/add-to-task", AddStatusToTask)
+		g.POST("/add-to-board", AddStatusToBoard)
+		g.DELETE("/delete-from-task/:task_id/:status_id", DeleteStatusFromTask)
+		g.DELETE("/delete-from-board/:task_id/:status_id", DeleteStatusFromBoard)
 	}
 }
 
-// getAllStatuses godoc
+// GetAllStatuses godoc
 // @Summary Получение всех статусов
 // @Description Получение списка всех статусов с пагинацией (только неудаленные)
 // @Tags Statuses
@@ -49,8 +49,8 @@ func RegisterStatusRoutes(e *echo.Echo) {
 // @Success 200 {object} response.StatusListResponse "Список статусов"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статусов"
 // @Router /status/all/{page}/{pagesize} [get]
-func getAllStatuses(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetAllStatuses(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
@@ -63,7 +63,7 @@ func getAllStatuses(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var total int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Status{}).
 		Where("deleted = FALSE").
 		Count(&total).Error; err != nil {
@@ -72,7 +72,7 @@ func getAllStatuses(c echo.Context) error {
 	}
 
 	var rows []models.Status
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Status{}).
 		Where("deleted = FALSE").
 		Limit(pageSize).Offset(offset).
@@ -102,7 +102,7 @@ func getAllStatuses(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getStatusesByBoardId godoc
+// GetStatusesByBoardId godoc
 // @Summary Получение статусов по ID доски
 // @Description Получение списка статусов, связанных с доской по ее ID
 // @Tags Statuses
@@ -114,8 +114,8 @@ func getAllStatuses(c echo.Context) error {
 // @Success 200 {object} response.StatusByBoardIdResponse "Список статусов для доски"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статусов"
 // @Router /status/project/{board_id} [get]
-func getStatusesByBoardId(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetStatusesByBoardId(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	boardUUID, err := uuid.Parse(c.Param("board_id"))
 	if err != nil {
@@ -123,7 +123,7 @@ func getStatusesByBoardId(c echo.Context) error {
 	}
 
 	var links []models.StatusBoard
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.StatusBoard{}).
 		Preload("Status", "deleted = FALSE").
 		Where("status_boards.deleted = FALSE AND status_boards.board_id = ?", boardUUID).
@@ -151,7 +151,7 @@ func getStatusesByBoardId(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// getStatusesByTaskId godoc
+// GetStatusesByTaskId godoc
 // @Summary Получение статусов по ID задачи
 // @Description Получение списка статусов, связанных с задачей по ее ID
 // @Tags Statuses
@@ -163,8 +163,8 @@ func getStatusesByBoardId(c echo.Context) error {
 // @Success 200 {object} response.StatusByTaskIdResponse "Список статусов для задачи"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статусов"
 // @Router /status/task/{task_id} [get]
-func getStatusesByTaskId(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetStatusesByTaskId(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	taskUUID, err := uuid.Parse(c.Param("task_id"))
 	if err != nil {
@@ -172,7 +172,7 @@ func getStatusesByTaskId(c echo.Context) error {
 	}
 
 	var links []models.StatusTask
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.StatusTask{}).
 		Preload("Status", "deleted = FALSE").
 		Where("deleted = FALSE AND task_id = ?", taskUUID).
@@ -200,7 +200,7 @@ func getStatusesByTaskId(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// getStatusByID godoc
+// GetStatusByID godoc
 // @Summary Получение статуса по ID
 // @Description Получение информации о статусе по его ID
 // @Tags Statuses
@@ -213,8 +213,8 @@ func getStatusesByTaskId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Статус не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статуса"
 // @Router /status/{id} [get]
-func getStatusByID(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetStatusByID(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	statusID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -222,7 +222,7 @@ func getStatusByID(c echo.Context) error {
 	}
 
 	var s models.Status
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.Status{}).
 		Where("deleted = FALSE AND id = ?", statusID).
 		First(&s)
@@ -247,7 +247,7 @@ func getStatusByID(c echo.Context) error {
 	})
 }
 
-// createStatus godoc
+// CreateStatus godoc
 // @Summary Создание статуса
 // @Description Создание нового статуса
 // @Tags Statuses
@@ -260,8 +260,8 @@ func getStatusByID(c echo.Context) error {
 // @Success 201 {object} response.StatusUniversalResponse "Статус успешно создан"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании статуса"
 // @Router /status [post]
-func createStatus(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func CreateStatus(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	var req request.CreateStatusRequest
 	if err := c.Bind(&req); err != nil {
@@ -287,7 +287,7 @@ func createStatus(c echo.Context) error {
 		Deleted:   &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		return tx.Session(&gorm.Session{}).
 			Model(&models.Status{}).
 			Create(&row).Error
@@ -302,7 +302,7 @@ func createStatus(c echo.Context) error {
 	})
 }
 
-// updateStatus godoc
+// UpdateStatus godoc
 // @Summary Обновление статуса
 // @Description Обновление информации о статусе по ID
 // @Tags Statuses
@@ -317,8 +317,8 @@ func createStatus(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Статус не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении статуса"
 // @Router /status/{id} [patch]
-func updateStatus(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func UpdateStatus(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	statusID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -343,7 +343,7 @@ func updateStatus(c echo.Context) error {
 	now := time.Now()
 	update["updated_at"] = &now
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Status{}).
 			Where("id = ? AND deleted = FALSE", statusID).
@@ -364,7 +364,7 @@ func updateStatus(c echo.Context) error {
 	})
 }
 
-// deleteStatus godoc
+// DeleteStatus godoc
 // @Summary Удаление статуса
 // @Description Логическое удаление статуса по ID, включая связанные данные (поле deleted = true)
 // @Tags Statuses
@@ -378,8 +378,8 @@ func updateStatus(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Статус не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении статуса"
 // @Router /status/{id} [delete]
-func deleteStatus(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func DeleteStatus(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	statusID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -390,7 +390,7 @@ func deleteStatus(c echo.Context) error {
 	now := time.Now()
 	update := map[string]interface{}{"deleted": &delTrue, "updated_at": &now}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		// сам статус
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Status{}).
@@ -428,7 +428,7 @@ func deleteStatus(c echo.Context) error {
 	})
 }
 
-// addStatusToTask godoc
+// AddStatusToTask godoc
 // @Summary Добавление статуса к задаче
 // @Description Создание связи между статусом и задачей
 // @Tags Statuses
@@ -441,8 +441,8 @@ func deleteStatus(c echo.Context) error {
 // @Success 201 {object} response.AddStatusToTaskResponse "Статус успешно добавлен к задаче"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении статуса к задаче"
 // @Router /status/add-to-task [post]
-func addStatusToTask(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func AddStatusToTask(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	var req request.AddStatusToTaskRequest
 	if err := c.Bind(&req); err != nil {
@@ -468,7 +468,7 @@ func addStatusToTask(c echo.Context) error {
 		Deleted:  &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		return tx.Session(&gorm.Session{}).
 			Model(&models.StatusTask{}).
 			Create(&link).Error
@@ -484,37 +484,31 @@ func addStatusToTask(c echo.Context) error {
 	})
 }
 
-// deleteStatusFromTask godoc
+// DeleteStatusFromTask godoc
 // @Summary Удаление статуса из задачи
 // @Description Удаление связи между статусом и задачей (мягкое удаление)
 // @Tags Statuses
-// @Accept json
 // @Produce json
-// @Param body body request.DeleteStatusFromTaskRequest true "Данные для удаления статуса из задачи"
+// @Param task_id path string true "ID задачи"
+// @Param status_id path string true "ID статуса"
 // @Security BearerAuth
-// @Failure 400 {object} map[string]string "Ошибка при привязке данных или парсинге UUID"
+// @Failure 400 {object} map[string]string "Ошибка при парсинге UUID"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 404 {object} map[string]string "Связь не найдена или уже удалена"
 // @Success 200 {object} response.StatusUniversalResponse "Статус успешно удалён из задачи"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении статуса из задачи"
-// @Router /status/delete-from-task [delete]
-func deleteStatusFromTask(c echo.Context) error{
-	var req request.DeleteStatusFromTaskRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
-	}
+// @Router /status/delete-from-task/{task_id}/{status_id} [delete]
+func DeleteStatusFromTask(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
-	}
+	taskIDStr := c.Param("task_id")
+	statusIDStr := c.Param("status_id")
 
-	taskID, err := uuid.Parse(req.TaskId)
+	taskID, err := uuid.Parse(taskIDStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора задачи"})
 	}
-	statusID, err := uuid.Parse(req.StatusId)
+	statusID, err := uuid.Parse(statusIDStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора статуса"})
 	}
@@ -526,16 +520,16 @@ func deleteStatusFromTask(c echo.Context) error{
 		"updated_at": &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).Model(&models.StatusTask{}).Where("status_id = ? and task_id = ? and deleted = FALSE", statusID, taskID).Updates(updateData)
-		if res.Error != nil{
+		if res.Error != nil {
 			log.Printf("DB error (delete status-task): %v", res.Error)
 		}
-		if res.RowsAffected == 0{
+		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Связь не найдена или уже удалена"})
 		}
 		return nil
-	}); txErr != nil{
+	}); txErr != nil {
 		if he, ok := txErr.(*echo.HTTPError); ok {
 			return c.JSON(he.Code, he.Message)
 		}
@@ -549,32 +543,31 @@ func deleteStatusFromTask(c echo.Context) error{
 	})
 }
 
-// deleteStatusFromBoard godoc
+// DeleteStatusFromBoard godoc
 // @Summary Удаление статуса с доски
 // @Description Удаление связи между статусом и доской (мягкое удаление)
 // @Tags Statuses
-// @Accept json
 // @Produce json
-// @Param body body request.DeleteStatusFromBoardRequest true "Данные для удаления статуса с доски"
+// @Param board_id path string true "ID доски"
+// @Param status_id path string true "ID статуса"
 // @Security BearerAuth
-// @Failure 400 {object} map[string]string "Ошибка при привязке данных или парсинге UUID"
+// @Failure 400 {object} map[string]string "Ошибка при парсинге UUID"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 404 {object} map[string]string "Связь не найдена или уже удалена"
 // @Success 200 {object} response.StatusUniversalResponse "Статус успешно удалён с доски"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении статуса с доски"
-// @Router /status/delete-from-board [delete]
-func deleteStatusFromBoard(c echo.Context) error{
-	var req request.DeleteStatusFromBoardRequest
-	if err := c.Bind(&req); err != nil {
-		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
-	}
+// @Router /status/delete-from-board/{board_id}/{status_id} [delete]
+func DeleteStatusFromBoard(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
-	boardID, err := uuid.Parse(req.BoardId)
+	boardIDStr := c.Param("board_id")
+	statusIDStr := c.Param("status_id")
+
+	boardID, err := uuid.Parse(boardIDStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора доски"})
 	}
-	statusID, err := uuid.Parse(req.StatusId)
+	statusID, err := uuid.Parse(statusIDStr)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге идентификатора статуса"})
 	}
@@ -586,16 +579,16 @@ func deleteStatusFromBoard(c echo.Context) error{
 		"updated_at": &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).Model(&models.StatusBoard{}).Where("status_id = ? and board_id = ? and deleted = FALSE", statusID, boardID).Updates(updateData)
-		if res.Error != nil{
+		if res.Error != nil {
 			log.Printf("DB error (delete status-board): %v", res.Error)
 		}
-		if res.RowsAffected == 0{
+		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Связь не найдена или уже удалена"})
 		}
 		return nil
-	}); txErr != nil{
+	}); txErr != nil {
 		if he, ok := txErr.(*echo.HTTPError); ok {
 			return c.JSON(he.Code, he.Message)
 		}
@@ -609,7 +602,7 @@ func deleteStatusFromBoard(c echo.Context) error{
 	})
 }
 
-// addStatusToBoard godoc
+// AddStatusToBoard godoc
 // @Summary Добавление статуса к доске
 // @Description Создание связи между статусом и доской
 // @Tags Statuses
@@ -622,8 +615,8 @@ func deleteStatusFromBoard(c echo.Context) error{
 // @Success 201 {object} response.AddStatusToBoardResponse "Статус успешно добавлен к доске"
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении статуса к доске"
 // @Router /status/add-to-board [post]
-func addStatusToBoard(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func AddStatusToBoard(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	var req request.AddStatusToBoardRequest
 	if err := c.Bind(&req); err != nil {
@@ -649,7 +642,7 @@ func addStatusToBoard(c echo.Context) error {
 		CreatedAt: &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		return tx.Session(&gorm.Session{}).
 			Model(&models.StatusBoard{}).
 			Create(&link).Error

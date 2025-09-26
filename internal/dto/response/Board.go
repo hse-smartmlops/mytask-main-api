@@ -11,7 +11,7 @@ type BoardResponse struct {
 	Id          string    `json:"id"`
 	ProjectId   string    `json:"project_id"`
 	Name        string    `json:"name"`
-	Description string    `json:"descroption"`
+	Description string    `json:"description"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	CreatedAt   time.Time `json:"created_at"`
 	Statuses   []StatusResponse `json:"statuses,omitempty"`
@@ -25,6 +25,6 @@ type BoardListResponse struct {
 }
 
 type BoardForProjectResponse struct {
-	Boards    []BoardResponse `json:"board"`
+	Boards    []BoardResponse `json:"boards"`
 	ProjectId string          `json:"project_id"`
 }

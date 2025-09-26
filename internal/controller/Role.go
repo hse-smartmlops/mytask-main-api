@@ -21,15 +21,15 @@ func RegisterRoleRoutes(e *echo.Echo) {
 	group := e.Group("/role")
 	group.Use(KeycloakAuthMiddleware)
 	{
-		group.GET("/all/:page/:pagesize", getAllRoles)
-		group.GET("/:id", getRoleById)
-		group.POST("", createRole)
-		group.PATCH("/:id", updateRole)
-		group.DELETE("/:id", deleteRole)
+		group.GET("/all/:page/:pagesize", GetAllRoles)
+		group.GET("/:id", GetRoleById)
+		group.POST("", CreateRole)
+		group.PATCH("/:id", UpdateRole)
+		group.DELETE("/:id", DeleteRole)
 	}
 }
 
-// getAllRoles godoc
+// GetAllRoles godoc
 // @Summary Получение списка всех ролей
 // @Description Получает список всех ролей с учетом пагинации, исключая удаленные
 // @Tags Roles
@@ -43,8 +43,8 @@ func RegisterRoleRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении ролей"
 // @Router /role/all/{page}/{pagesize} [get]
-func getAllRoles(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetAllRoles(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
@@ -57,7 +57,7 @@ func getAllRoles(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Role{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -66,7 +66,7 @@ func getAllRoles(c echo.Context) error {
 	}
 
 	var roles []models.Role
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Role{}).
 		Where("deleted = FALSE").
 		Limit(pageSize).Offset(offset).
@@ -92,7 +92,7 @@ func getAllRoles(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getRoleById godoc
+// GetRoleById godoc
 // @Summary Получение роли по ID
 // @Description Получает данные роли по её уникальному идентификатору
 // @Tags Roles
@@ -106,8 +106,8 @@ func getAllRoles(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении роли"
 // @Router /role/{id} [get]
-func getRoleById(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetRoleById(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -115,7 +115,7 @@ func getRoleById(c echo.Context) error {
 	}
 
 	var role models.Role
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.Role{}).
 		Where("id = ? AND deleted = FALSE", roleID).
 		First(&role)
@@ -136,7 +136,7 @@ func getRoleById(c echo.Context) error {
 	})
 }
 
-// createRole godoc
+// CreateRole godoc
 // @Summary Создание новой роли
 // @Description Создает новую роль с указанными параметрами
 // @Tags Roles
@@ -149,8 +149,8 @@ func getRoleById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании роли"
 // @Router /role [post]
-func createRole(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func CreateRole(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	var req request.RoleCreateRequest
 	if err := c.Bind(&req); err != nil {
@@ -168,7 +168,7 @@ func createRole(c echo.Context) error {
 		CreatedAt:   &now,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		return tx.Session(&gorm.Session{}).
 			Model(&models.Role{}).
 			Omit(clause.Associations).
@@ -184,7 +184,7 @@ func createRole(c echo.Context) error {
 	})
 }
 
-// updateRole godoc
+// UpdateRole godoc
 // @Summary Обновление роли
 // @Description Обновляет данные роли по её ID
 // @Tags Roles
@@ -198,8 +198,8 @@ func createRole(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении роли"
 // @Router /role/{id} [patch]
-func updateRole(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func UpdateRole(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -221,7 +221,7 @@ func updateRole(c echo.Context) error {
 	now := time.Now()
 	update["updated_at"] = &now
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Role{}).
 			Where("id = ? AND deleted = FALSE", roleID).
@@ -242,7 +242,7 @@ func updateRole(c echo.Context) error {
 	})
 }
 
-// deleteRole godoc
+// DeleteRole godoc
 // @Summary Удаление роли
 // @Description Логическое удаление роли по ID, включая связанные данные (поле deleted = true)
 // @Tags Roles
@@ -255,8 +255,8 @@ func updateRole(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /role/{id} [delete]
-func deleteRole(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func DeleteRole(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -267,7 +267,7 @@ func deleteRole(c echo.Context) error {
 	now := time.Now()
 	update := map[string]interface{}{"deleted": &delTrue, "updated_at": &now}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		// сама роль
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Role{}).

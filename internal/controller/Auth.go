@@ -488,7 +488,7 @@ func validateToken(c echo.Context) error {
 
 	var user models.User
 
-	dbResult := dbConn.Session(&gorm.Session{}).Model(models.User{}).First(&user, "id = ? and deleted = ?", userId, false)
+	dbResult := DBConn.Session(&gorm.Session{}).Model(models.User{}).First(&user, "id = ? and deleted = ?", userId, false)
 	if dbResult.Error != nil {
 		if errors.Is(dbResult.Error, gorm.ErrRecordNotFound) {
 			temp := true
@@ -499,7 +499,7 @@ func validateToken(c echo.Context) error {
 				IsActive:      &temp,
 				EmailVerified: userInfo.EmailVerified,
 			}
-			err = CreateUserWithIdFunc(userCreateReq, c, userId)
+			err = CreateUserWithIdFunc(userCreateReq, userId)
 			if err != nil {
 				log.Printf("Failed to create user in database: %v", err)
 				return c.JSON(http.StatusInternalServerError, map[string]string{

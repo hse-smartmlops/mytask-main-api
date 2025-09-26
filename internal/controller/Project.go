@@ -21,17 +21,17 @@ func RegisterProjectRoutes(e *echo.Echo) {
 	projectGroup := e.Group("/project")
 	projectGroup.Use(KeycloakAuthMiddleware)
 	{
-		projectGroup.GET("/all/:page/:pagesize", getAllProjects)
-		projectGroup.GET("/:id", getProjectByID)
-		projectGroup.POST("", createProject)
-		projectGroup.PATCH("/:id", updateProject)
-		projectGroup.DELETE("/:id", deleteProject)
-		projectGroup.GET("/user/:id", getProjectsByUser)
-		projectGroup.GET("/team/:team_id", getTeamProjects)
+		projectGroup.GET("/all/:page/:pagesize", GetAllProjects)
+		projectGroup.GET("/:id", GetProjectByID)
+		projectGroup.POST("", CreateProject)
+		projectGroup.PATCH("/:id", UpdateProject)
+		projectGroup.DELETE("/:id", DeleteProject)
+		projectGroup.GET("/user/:id", GetProjectsByUser)
+		projectGroup.GET("/team/:team_id", GetTeamProjects)
 	}
 }
 
-// getAllProjects godoc
+// GetAllProjects godoc
 // @Summary Получение списка всех проектов
 // @Description Получает список всех проектов с учетом пагинации, исключая удаленные
 // @Tags Projects
@@ -45,8 +45,8 @@ func RegisterProjectRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/all/{page}/{pagesize} [get]
-func getAllProjects(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetAllProjects(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
@@ -59,7 +59,7 @@ func getAllProjects(c echo.Context) error {
 	offset := (page - 1) * pageSize
 
 	var totalCount int64
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Project{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -68,7 +68,7 @@ func getAllProjects(c echo.Context) error {
 	}
 
 	var projects []models.Project
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Project{}).
 		Where("deleted = FALSE").
 		Limit(pageSize).Offset(offset).
@@ -94,7 +94,7 @@ func getAllProjects(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getProjectByID godoc
+// GetProjectByID godoc
 // @Summary Получение проекта по ID
 // @Description Получает данные проекта по его уникальному идентификатору
 // @Tags Projects
@@ -108,8 +108,8 @@ func getAllProjects(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проект не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проекта"
 // @Router /project/{id} [get]
-func getProjectByID(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetProjectByID(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -117,7 +117,7 @@ func getProjectByID(c echo.Context) error {
 	}
 
 	var p models.Project
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.Project{}).
 		Where("id = ? AND deleted = FALSE", projectID).
 		First(&p)
@@ -142,7 +142,7 @@ func getProjectByID(c echo.Context) error {
 	})
 }
 
-// getProjectsByUser godoc
+// GetProjectsByUser godoc
 // @Summary Получение проектов пользователя
 // @Description Получает список проектов, в которых участвует пользователь через команды
 // @Tags Projects
@@ -156,8 +156,8 @@ func getProjectByID(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проекты не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/user/{id} [get]
-func getProjectsByUser(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetProjectsByUser(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -165,7 +165,7 @@ func getProjectsByUser(c echo.Context) error {
 	}
 
 	var projects []models.Project
-	res := dbConn.Session(&gorm.Session{}).
+	res := DBConn.Session(&gorm.Session{}).
 		Model(&models.Project{}).
 		Select("projects.*").
 		Joins("JOIN project_teams pt ON pt.project_id = projects.id").
@@ -204,7 +204,7 @@ func getProjectsByUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, out)
 }
 
-// getTeamProjects godoc
+// GetTeamProjects godoc
 // @Summary Получение списка проектов команды
 // @Description Получает список всех проектов, связанных с командой, по team_id
 // @Tags Teams
@@ -218,8 +218,8 @@ func getProjectsByUser(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Команда или проекты не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проектов"
 // @Router /project/team/{team_id} [get]
-func getTeamProjects(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func GetTeamProjects(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	teamID, err := uuid.Parse(c.Param("team_id"))
 	if err != nil {
@@ -227,7 +227,7 @@ func getTeamProjects(c echo.Context) error {
 	}
 
 	var pts []models.ProjectTeam
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.ProjectTeam{}).
 		Where("team_id = ? AND deleted = FALSE", teamID).
 		Find(&pts).Error; err != nil {
@@ -242,7 +242,7 @@ func getTeamProjects(c echo.Context) error {
 	for _, pt := range pts { projectIDs = append(projectIDs, pt.ProjectID) }
 
 	var projects []models.Project
-	if err := dbConn.Session(&gorm.Session{}).
+	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.Project{}).
 		Where("id IN ? AND deleted = FALSE", projectIDs).
 		Find(&projects).Error; err != nil {
@@ -267,7 +267,7 @@ func getTeamProjects(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// createProject godoc
+// CreateProject godoc
 // @Summary Создание нового проекта
 // @Description Создает новый проект с указанными параметрами
 // @Tags Projects
@@ -280,8 +280,8 @@ func getTeamProjects(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проекта"
 // @Router /project [post]
-func createProject(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func CreateProject(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	var req request.CreateProjectRequest
 	if err := c.Bind(&req); err != nil {
@@ -311,7 +311,7 @@ func createProject(c echo.Context) error {
 		Deleted:         &del,
 	}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Project{}).
 			Omit(clause.Associations).
@@ -328,7 +328,7 @@ func createProject(c echo.Context) error {
 	})
 }
 
-// updateProject godoc
+// UpdateProject godoc
 // @Summary Обновление проекта
 // @Description Обновляет данные проекта по его ID
 // @Tags Projects
@@ -342,8 +342,8 @@ func createProject(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проекта"
 // @Router /project/{id} [patch]
-func updateProject(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func UpdateProject(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -369,7 +369,7 @@ func updateProject(c echo.Context) error {
 	now := time.Now()
 	updateData["updated_at"] = &now
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Project{}).
 			Where("id = ? AND deleted = FALSE", projectID).
@@ -390,7 +390,7 @@ func updateProject(c echo.Context) error {
 	})
 }
 
-// deleteProject godoc
+// DeleteProject godoc
 // @Summary Удаление проекта
 // @Description Логическое удаление проекта по ID, включая связанные данные (поле deleted = true)
 // @Tags Projects
@@ -403,8 +403,8 @@ func updateProject(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проект не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта"
 // @Router /project/{id} [delete]
-func deleteProject(c echo.Context) error {
-	if err := authorize(c); err != nil { return err }
+func DeleteProject(c echo.Context) error {
+	if err := Authorize(c); err != nil { return err }
 
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -415,7 +415,7 @@ func deleteProject(c echo.Context) error {
 	now := time.Now()
 	update := map[string]interface{}{"deleted": &delTrue, "updated_at": &now}
 
-	if txErr := dbConn.Transaction(func(tx *gorm.DB) error {
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
 		// проект
 		res := tx.Session(&gorm.Session{}).
 			Model(&models.Project{}).
