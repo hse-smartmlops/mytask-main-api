@@ -78,6 +78,11 @@ func main() {
 		return c.NoContent(http.StatusOK)
 	})
 
+	err = controller.CreateStartStatuses()
+	if err != nil{
+		log.Printf("Error while creating base statuses: %v", err)
+	}
+
 	log.Println("Server started on :8081")
 	e.Logger.Fatal(e.Start("0.0.0.0:8081"))
 }

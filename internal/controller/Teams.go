@@ -52,7 +52,7 @@ func GetTeams(c echo.Context) error {
 
 	var teams []models.Team
 
-	err := DBConn.
+	err := DBConn.Session(&gorm.Session{}).
 		Where("deleted = ?", false).
 		Preload("TeamMembers", "deleted = ?", false).
 		Preload("TeamMembers.User", "deleted = ?", false).
@@ -120,7 +120,7 @@ func GetProjectTeams(c echo.Context) error {
 	}
 
 	var projectTeams []models.ProjectTeam
-	err = DBConn.
+	err = DBConn.Session(&gorm.Session{}).
 		Where("project_id = ? AND deleted = ?", projectID, false).
 		Preload("Team", "deleted = ?", false).
 		Preload("Team.TeamMembers", "deleted = ?", false).
@@ -210,7 +210,7 @@ func GetTeamByID(c echo.Context) error {
 	}
 
 	var team models.Team
-	err = DBConn.
+	err = DBConn.Session(&gorm.Session{}).
 		Where("id = ? AND deleted = ?", teamUUID, false).
 		Preload("TeamMembers", "deleted = ?", false).
 		Preload("TeamMembers.User", "deleted = ?", false).

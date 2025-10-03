@@ -298,9 +298,10 @@ func CreateProject(c echo.Context) error {
 
 	now := time.Now()
 	del := false
+	projectId := uuid.New()
 
 	project := models.Project{
-		ID:              uuid.New(),
+		ID:              projectId,
 		Name:            req.Name,
 		Description:     req.Description,
 		CreatedAt:       &now,
@@ -311,12 +312,52 @@ func CreateProject(c echo.Context) error {
 		Deleted:         &del,
 	}
 
+	now = time.Now()
+	del = false
+	name := "Главная"
+	desc := "Главная доска проекта"
+	boardId := uuid.New()
+
+	board := models.Board{
+		ID:          boardId,
+		ProjectID:   projectId,
+		Name:        &name,
+		Description: &desc,
+		Deleted:     &del,
+		CreatedAt:   &now,
+	}
+
+	statusBoards := []models.StatusBoard{
+		{StatusID: BaseStartStatus,
+		BoardID: boardId,
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Deleted: &del,},
+		{StatusID: BaseEndStatus,
+		BoardID: boardId,
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Deleted: &del,},
+	}
+
 	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{}).
 			Model(&models.Project{}).
 			Omit(clause.Associations).
-			Create(&project)
-		return res.Error
+			Create(&project).Error; err != nil{
+				return err
+			}
+		if err := tx.Session(&gorm.Session{}).
+			Model(&models.Board{}).
+			Create(&board).Error; err != nil{
+				return err
+			}
+		if err := tx.Session(&gorm.Session{}).
+			Model(&models.StatusBoard{}).
+			Create(&statusBoards).Error; err != nil{
+				return err
+			}
+		return nil
 	}); txErr != nil {
 		log.Printf("DB transaction error (create project): %v", txErr)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при создании проекта"})

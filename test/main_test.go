@@ -38,7 +38,7 @@ var (
 
 func createTestDatabase() {
     // Используем единый подход для Docker и локальной среды
-    host := getEnv("TEST_DB_HOST", "postgres_new")
+    host := getEnv("TEST_DB_HOST", "localhost")
     port := getEnv("TEST_DB_PORT", "5432")
     user := getEnv("TEST_DB_USER", "postgres")
     password := getEnv("TEST_DB_PASSWORD", "admin")
@@ -66,7 +66,7 @@ func createTestDatabase() {
 }
 
 func setupTestDB(t *testing.T) *gorm.DB {
-    host := getEnv("TEST_DB_HOST", "postgres_new")
+    host := getEnv("TEST_DB_HOST", "localhost")
     port := getEnv("TEST_DB_PORT", "5432")
     user := getEnv("TEST_DB_USER", "postgres")
     password := getEnv("TEST_DB_PASSWORD", "admin")

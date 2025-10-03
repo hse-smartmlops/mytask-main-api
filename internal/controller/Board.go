@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 func RegisterBoardRoutes(e *echo.Echo) {
@@ -310,9 +309,10 @@ func CreateBoard(c echo.Context) error {
 
 	now := time.Now()
 	del := false
+	boardId := uuid.New()
 
 	board := models.Board{
-		ID:          uuid.New(),
+		ID:          boardId,
 		ProjectID:   projectID,
 		Name:        req.Name,
 		Description: req.Description,
@@ -320,15 +320,30 @@ func CreateBoard(c echo.Context) error {
 		CreatedAt:   &now,
 	}
 
+	statusBoards := []models.StatusBoard{
+		{StatusID: BaseStartStatus,
+		BoardID: boardId,
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Deleted: &del,},
+		{StatusID: BaseEndStatus,
+		BoardID: boardId,
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Deleted: &del,},
+	}
+
 	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{}).
 			Model(&models.Board{}).
-			Omit(clause.Associations).
-			Create(&board)
-		if res.Error != nil {
-			log.Printf("DB error (create board): %v", res.Error)
-			return res.Error
-		}
+			Create(&board).Error; err != nil{
+				return err
+			}
+		if err := tx.Session(&gorm.Session{}).
+			Model(&models.StatusBoard{}).
+			Create(&statusBoards).Error; err != nil{
+				return err
+			}
 		return nil
 	}); txErr != nil {
 		log.Printf("DB transaction error (create board): %v", txErr)

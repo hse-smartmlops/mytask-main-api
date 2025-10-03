@@ -36,6 +36,9 @@ func RegisterStatusRoutes(e *echo.Echo) {
 	}
 }
 
+var BaseStartStatus uuid.UUID
+var BaseEndStatus uuid.UUID
+
 // GetAllStatuses godoc
 // @Summary Получение всех статусов
 // @Description Получение списка всех статусов с пагинацией (только неудаленные)
@@ -656,4 +659,57 @@ func AddStatusToBoard(c echo.Context) error {
 		StatusId: req.StatusId,
 		Message:  "Статус успешно добавлен к доске",
 	})
+}
+
+func CreateStartStatuses() error{	
+	id1 := uuid.New()
+	BaseStartStatus = id1
+	now := time.Now()
+	fal := false
+	tr := true
+	h1 := sha256.Sum256(id1[:])
+	key1 := hex.EncodeToString(h1[:])[:8]
+	id2 := uuid.New()
+	BaseEndStatus = id2
+	h2 := sha256.Sum256(id2[:])
+	key2 := hex.EncodeToString(h2[:])[:8]
+	name1 := "Открыта"
+	name2 := "Закрыта"
+	red := "#FF0000"
+	green := "#008000"
+
+	arr := []models.Status{
+		{
+			ID:        id1,
+			Key:       &key1,
+			Name:      &name1,
+			Color:     &green,
+			IsDefault: &tr,
+			IsActive:  &tr,
+			IsOpen:    &tr,
+			CreatedAt: &now,
+			Deleted:   &fal,
+		},
+		{
+			ID:        id2,
+			Key:       &key2,
+			Name:      &name2,
+			Color:     &red,
+			IsDefault: &tr,
+			IsActive:  &tr,
+			IsOpen:    &tr,
+			CreatedAt: &now,
+			Deleted:   &fal,
+		},
+	}
+
+	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
+		return tx.Session(&gorm.Session{}).
+			Model(&models.Status{}).
+			Create(&arr).Error
+	}); txErr != nil {
+		log.Printf("DB transaction error (create status): %v", txErr)
+		return txErr
+	}
+	return nil
 }
