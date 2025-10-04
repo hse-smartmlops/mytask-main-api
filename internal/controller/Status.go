@@ -661,55 +661,83 @@ func AddStatusToBoard(c echo.Context) error {
 	})
 }
 
-func CreateStartStatuses() error{	
-	id1 := uuid.New()
-	BaseStartStatus = id1
-	now := time.Now()
-	fal := false
-	tr := true
-	h1 := sha256.Sum256(id1[:])
-	key1 := hex.EncodeToString(h1[:])[:8]
-	id2 := uuid.New()
-	BaseEndStatus = id2
-	h2 := sha256.Sum256(id2[:])
-	key2 := hex.EncodeToString(h2[:])[:8]
-	name1 := "Открыта"
-	name2 := "Закрыта"
-	red := "#FF0000"
-	green := "#008000"
-
-	arr := []models.Status{
-		{
-			ID:        id1,
-			Key:       &key1,
-			Name:      &name1,
-			Color:     &green,
-			IsDefault: &tr,
-			IsActive:  &tr,
-			IsOpen:    &tr,
-			CreatedAt: &now,
-			Deleted:   &fal,
-		},
-		{
-			ID:        id2,
-			Key:       &key2,
-			Name:      &name2,
-			Color:     &red,
-			IsDefault: &tr,
-			IsActive:  &tr,
-			IsOpen:    &tr,
-			CreatedAt: &now,
-			Deleted:   &fal,
-		},
+func CreateStartStatuses() error {
+	var rows []models.Status
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Status{}).Where("deleted = FALSE AND (name = ? OR name = ?)", "Открыта", "Закрыта").Find(&rows).Error; err != nil {
+		log.Printf("DB error (find statuses): %v", err)
+		return err
 	}
 
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		return tx.Session(&gorm.Session{}).
-			Model(&models.Status{}).
-			Create(&arr).Error
-	}); txErr != nil {
-		log.Printf("DB transaction error (create status): %v", txErr)
-		return txErr
+	existing := make(map[string]uuid.UUID)
+	for _, v := range rows {
+		if v.Name == nil {
+			continue
+		}
+		existing[*v.Name] = v.ID
 	}
+
+	var statusesToCreate []models.Status
+
+	if _, hasOpen := existing["Открыта"]; !hasOpen {
+		statusesToCreate = append(statusesToCreate, newStatus("Открыта", "#008000", true))
+	}
+	if _, hasClosed := existing["Закрыта"]; !hasClosed {
+		statusesToCreate = append(statusesToCreate, newStatus("Закрыта", "#FF0000", false))
+	}
+
+	if id, ok := existing["Открыта"]; ok {
+		BaseStartStatus = id
+	} else if len(statusesToCreate) > 0 {
+		for _, s := range statusesToCreate {
+			if s.Name != nil && *s.Name == "Открыта" {
+				BaseStartStatus = s.ID
+				break
+			}
+		}
+	}
+
+	if id, ok := existing["Закрыта"]; ok {
+		BaseEndStatus = id
+	} else if len(statusesToCreate) > 0 {
+		for _, s := range statusesToCreate {
+			if s.Name != nil && *s.Name == "Закрыта" {
+				BaseEndStatus = s.ID
+				break
+			}
+		}
+	}
+
+	if len(statusesToCreate) == 0 {
+		return nil
+	}
+
+	if err := DBConn.Transaction(func(tx *gorm.DB) error {
+		return tx.Session(&gorm.Session{}).Create(&statusesToCreate).Error
+	}); err != nil {
+		log.Printf("DB transaction error (create statuses): %v", err)
+		return err
+	}
+
 	return nil
+}
+
+func newStatus(name, color string, isOpen bool) models.Status {
+	id := uuid.New()
+	now := time.Now()
+	tr := true
+	fal := false
+	h := sha256.Sum256(id[:])
+	key := hex.EncodeToString(h[:])[:8]
+
+	return models.Status{
+		ID:        id,
+		Key:       &key,
+		Name:      &name,
+		Color:     &color,
+		IsDefault: &tr,
+		IsActive:  &tr,
+		IsOpen:    &isOpen,
+		CreatedAt: &now,
+		Deleted:   &fal,
+	}
 }
