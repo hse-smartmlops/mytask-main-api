@@ -4063,6 +4063,67 @@ const docTemplate = `{
                 }
             }
         },
+        "/status/board/{board_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка статусов, связанных с доской по ее ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Statuses"
+                ],
+                "summary": "Получение статусов по ID доски",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID доски",
+                        "name": "board_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список статусов для доски",
+                        "schema": {
+                            "$ref": "#/definitions/response.StatusByBoardIdResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге ID доски",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении статусов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/status/delete-from-board/{board_id}/{status_id}": {
             "delete": {
                 "security": [
@@ -4207,67 +4268,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при удалении статуса из задачи",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/status/project/{board_id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Получение списка статусов, связанных с доской по ее ID",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Statuses"
-                ],
-                "summary": "Получение статусов по ID доски",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID доски",
-                        "name": "board_id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список статусов для доски",
-                        "schema": {
-                            "$ref": "#/definitions/response.StatusByBoardIdResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка при парсинге ID доски",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Нет или неверный токен",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении статусов",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6921,9 +6921,6 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "filter": {
-                    "type": "string"
-                },
                 "name": {
                     "type": "string"
                 }
@@ -8473,7 +8470,7 @@ const docTemplate = `{
         "response.StatusByBoardIdResponse": {
             "type": "object",
             "properties": {
-                "project_id": {
+                "board_id": {
                     "type": "string"
                 },
                 "statuses": {

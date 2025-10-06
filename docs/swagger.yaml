@@ -80,8 +80,6 @@ definitions:
     properties:
       description:
         type: string
-      filter:
-        type: string
       name:
         type: string
     type: object
@@ -1097,7 +1095,7 @@ definitions:
     type: object
   response.StatusByBoardIdResponse:
     properties:
-      project_id:
+      board_id:
         type: string
       statuses:
         items:
@@ -4162,6 +4160,45 @@ paths:
       summary: Получение всех статусов
       tags:
       - Statuses
+  /status/board/{board_id}:
+    get:
+      description: Получение списка статусов, связанных с доской по ее ID
+      parameters:
+      - description: ID доски
+        in: path
+        name: board_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список статусов для доски
+          schema:
+            $ref: '#/definitions/response.StatusByBoardIdResponse'
+        "400":
+          description: Ошибка при парсинге ID доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении статусов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение статусов по ID доски
+      tags:
+      - Statuses
   /status/delete-from-board/{board_id}/{status_id}:
     delete:
       description: Удаление связи между статусом и доской (мягкое удаление)
@@ -4260,45 +4297,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Удаление статуса из задачи
-      tags:
-      - Statuses
-  /status/project/{board_id}:
-    get:
-      description: Получение списка статусов, связанных с доской по ее ID
-      parameters:
-      - description: ID доски
-        in: path
-        name: board_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список статусов для доски
-          schema:
-            $ref: '#/definitions/response.StatusByBoardIdResponse'
-        "400":
-          description: Ошибка при парсинге ID доски
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении статусов
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Получение статусов по ID доски
       tags:
       - Statuses
   /status/task/{task_id}:

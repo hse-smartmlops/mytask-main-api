@@ -29,7 +29,7 @@ type StatusUniversalResponse struct {
 }
 
 type StatusByBoardIdResponse struct {
-	BoardId string           `json:"project_id"`
+	BoardId string           `json:"board_id"`
 	Statuses  []StatusResponse `json:"statuses"`
 }
 

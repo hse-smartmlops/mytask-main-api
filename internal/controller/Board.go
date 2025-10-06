@@ -394,7 +394,6 @@ func UpdateBoard(c echo.Context) error {
 	if req.Description != nil {
 		updateData["description"] = req.Description
 	}
-	// В модели Board нет поля filter — не апдейтим его.
 
 	if len(updateData) == 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})

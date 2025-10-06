@@ -27,7 +27,7 @@ func RegisterStatusRoutes(e *echo.Echo) {
 		g.POST("", CreateStatus)
 		g.PATCH("/:id", UpdateStatus)
 		g.DELETE("/:id", DeleteStatus)
-		g.GET("/project/:board_id", GetStatusesByBoardId)
+		g.GET("/board/:board_id", GetStatusesByBoardId)
 		g.GET("/task/:task_id", GetStatusesByTaskId)
 		g.POST("/add-to-task", AddStatusToTask)
 		g.POST("/add-to-board", AddStatusToBoard)
@@ -116,7 +116,7 @@ func GetAllStatuses(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.StatusByBoardIdResponse "Список статусов для доски"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении статусов"
-// @Router /status/project/{board_id} [get]
+// @Router /status/board/{board_id} [get]
 func GetStatusesByBoardId(c echo.Context) error {
 	if err := Authorize(c); err != nil { return err }
 
