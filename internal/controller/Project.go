@@ -269,39 +269,44 @@ func GetTeamProjects(c echo.Context) error {
 
 // CreateProject godoc
 // @Summary Создание нового проекта
-// @Description Создает новый проект с указанными параметрами
+// @Description Создает новый проект с указанными параметрами и автоматически создаёт главную доску с двумя статусами: начальным и конечным
 // @Tags Projects
 // @Accept json
 // @Produce json
 // @Param project body request.CreateProjectRequest true "Данные для создания проекта"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.ProjectUniversalResponse "Проект успешно создан"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проекта"
 // @Router /project [post]
 func CreateProject(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
+	if err := Authorize(c); err != nil {
+		return err
+	}
 
 	var req request.CreateProjectRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Не удалось получить данные из запроса"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
+
 	if req.CreatedBy == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Отсутствует идентификатор создателя"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Отсутствует идентификатор создателя"})
 	}
+
 	creatorUUID, err := uuid.Parse(*req.CreatedBy)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный идентификатор создателя"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор создателя"})
 	}
 
 	now := time.Now()
-	del := false
-	projectId := uuid.New()
+	deleted := false
+	projectID := uuid.New()
+	tr := true
 
 	project := models.Project{
-		ID:              projectId,
+		ID:              projectID,
 		Name:            req.Name,
 		Description:     req.Description,
 		CreatedAt:       &now,
@@ -309,64 +314,82 @@ func CreateProject(c echo.Context) error {
 		Status:          req.Status,
 		GitlabProjectID: req.Gitlab_project_id,
 		GitlabURL:       req.Gitlab_url,
-		Deleted:         &del,
+		Deleted:         &deleted,
+		UpdatedAt:       &now,
 	}
 
-	now = time.Now()
-	del = false
-	name := "Главная"
-	desc := "Главная доска проекта"
-	boardId := uuid.New()
-
-	board := models.Board{
-		ID:          boardId,
-		ProjectID:   projectId,
-		Name:        &name,
-		Description: &desc,
-		Deleted:     &del,
+	// Создаём главную доску
+	boardID := uuid.New()
+	mainBoard := models.Board{
+		ID:          boardID,
+		ProjectID:   projectID,
+		Name:        strPtr("Главная"),
+		Description: strPtr("Главная доска проекта"),
+		Deleted:     &deleted,
 		CreatedAt:   &now,
+		UpdatedAt:   &now,
 	}
 
-	statusBoards := []models.StatusBoard{
-		{StatusID: BaseStartStatus,
-		BoardID: boardId,
-		CreatedAt: &now,
-		UpdatedAt: &now,
-		Deleted: &del,},
-		{StatusID: BaseEndStatus,
-		BoardID: boardId,
-		CreatedAt: &now,
-		UpdatedAt: &now,
-		Deleted: &del,},
+	// Создаём два статуса: начальный и конечный
+	makeStatus := func(order int, name, color string, isOpen bool) models.Status {
+		id := uuid.New()
+		key := id.String()[:8] // сокращённый UUID (8 символов)
+		return models.Status{
+			ID:        id,
+			BoardID:   boardID,
+			SortOrder:     &order,
+			Key:       &key,
+			Name:      &name,
+			Color:     &color,
+			IsDefault: &tr, // false
+			IsActive:  boolPtr(true),
+			IsOpen:    &isOpen,
+			Deleted:   &deleted,
+			CreatedAt: &now,
+			UpdatedAt: &now,
+		}
 	}
 
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
+	statuses := []models.Status{
+		makeStatus(0, "To Do", "#fa0707ff", true),   // Начальный статус
+		makeStatus(1, "Done", "#28A745", false),   // Конечный статус
+	}
+
+	// Транзакция: проект → доска → статусы
+	if err := DBConn.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Session(&gorm.Session{}).
 			Model(&models.Project{}).
 			Omit(clause.Associations).
-			Create(&project).Error; err != nil{
-				return err
-			}
+			Create(&project).Error; err != nil {
+			return err
+		}
+
 		if err := tx.Session(&gorm.Session{}).
 			Model(&models.Board{}).
-			Create(&board).Error; err != nil{
-				return err
-			}
+			Create(&mainBoard).Error; err != nil {
+			return err
+		}
+
 		if err := tx.Session(&gorm.Session{}).
-			Model(&models.StatusBoard{}).
-			Create(&statusBoards).Error; err != nil{
-				return err
-			}
+			Model(&models.Status{}).
+			Create(&statuses).Error; err != nil {
+			return err
+		}
+
 		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (create project): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при создании проекта"})
+	}); err != nil {
+		log.Printf("DB transaction error (create project): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании проекта"})
 	}
 
 	return c.JSON(http.StatusCreated, response.ProjectUniversalResponse{
 		ID:      project.ID.String(),
 		Message: "Проект создан",
 	})
+}
+
+func strPtr(s string) *string {
+	return &s
 }
 
 // UpdateProject godoc
@@ -433,54 +456,110 @@ func UpdateProject(c echo.Context) error {
 
 // DeleteProject godoc
 // @Summary Удаление проекта
-// @Description Логическое удаление проекта по ID, включая связанные данные (поле deleted = true)
+// @Description Логическое удаление проекта по ID, включая все связанные доски, статусы и задачи (поле deleted = true)
 // @Tags Projects
 // @Accept json
 // @Produce json
 // @Param id path string true "ID проекта"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.ProjectUniversalResponse "Проект успешно удален"
 // @Failure 404 {object} map[string]string "Проект не найден"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проекта"
 // @Router /project/{id} [delete]
 func DeleteProject(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
+	if err := Authorize(c); err != nil {
+		return err
+	}
 
 	projectID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error":"Некорректный идентификатор проекта"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
 	}
 
-	delTrue := true
+	deleted := true
 	now := time.Now()
-	update := map[string]interface{}{"deleted": &delTrue, "updated_at": &now}
+	updateData := map[string]interface{}{
+		"deleted":    &deleted,
+		"updated_at": now,
+	}
 
 	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		// проект
-		res := tx.Session(&gorm.Session{}).
+		// 1. Проверяем, существует ли неудалённый проект
+		var count int64
+		if err := tx.Session(&gorm.Session{}).
 			Model(&models.Project{}).
-			Where("id = ?", projectID).
-			Updates(update)
-		if res.Error != nil { return res.Error }
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message":"Ничего не удалено"})
+			Where("id = ? AND deleted = ?", projectID, false).
+			Count(&count).Error; err != nil {
+			return err
 		}
-		// каскад
-		if res = tx.Session(&gorm.Session{}).
-			Model(&models.Task{}).
-			Where("project_id = ?", projectID).
-			Updates(update); res.Error != nil { return res.Error }
+		if count == 0 {
+			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"error": "Проект не найден или уже удалён"})
+		}
 
-		if res = tx.Session(&gorm.Session{}).
+		// 2. Получаем ID всех досок проекта
+		var boardIDs []uuid.UUID
+		if err := tx.Session(&gorm.Session{}).
+			Model(&models.Board{}).
+			Where("project_id = ? AND deleted = ?", projectID, false).
+			Pluck("id", &boardIDs).Error; err != nil {
+			return err
+		}
+
+		// 3. Получаем ID всех статусов этих досок
+		var statusIDs []uuid.UUID
+		if len(boardIDs) > 0 {
+			if err := tx.Session(&gorm.Session{}).
+				Model(&models.Status{}).
+				Where("board_id IN ?", boardIDs).
+				Pluck("id", &statusIDs).Error; err != nil {
+				return err
+			}
+		}
+
+		// 4. Удаляем задачи (привязаны к статусам)
+		if len(statusIDs) > 0 {
+			if err := tx.Session(&gorm.Session{}).
+				Model(&models.Task{}).
+				Where("status_id IN ?", statusIDs).
+				Updates(updateData).Error; err != nil {
+				return err
+			}
+		}
+
+		// 5. Удаляем статусы
+		if len(boardIDs) > 0 {
+			if err := tx.Session(&gorm.Session{}).
+				Model(&models.Status{}).
+				Where("board_id IN ?", boardIDs).
+				Updates(updateData).Error; err != nil {
+				return err
+			}
+		}
+
+		// 6. Удаляем доски
+		if err := tx.Session(&gorm.Session{}).
 			Model(&models.Board{}).
 			Where("project_id = ?", projectID).
-			Updates(update); res.Error != nil { return res.Error }
+			Updates(updateData).Error; err != nil {
+			return err
+		}
 
-		if res = tx.Session(&gorm.Session{}).
+		// 7. Удаляем связи с командами
+		if err := tx.Session(&gorm.Session{}).
 			Model(&models.ProjectTeam{}).
 			Where("project_id = ?", projectID).
-			Updates(update); res.Error != nil { return res.Error }
+			Updates(updateData).Error; err != nil {
+			return err
+		}
+
+		// 8. Удаляем сам проект
+		if err := tx.Session(&gorm.Session{}).
+			Model(&models.Project{}).
+			Where("id = ?", projectID).
+			Updates(updateData).Error; err != nil {
+			return err
+		}
 
 		return nil
 	}); txErr != nil {
@@ -488,7 +567,7 @@ func DeleteProject(c echo.Context) error {
 			return c.JSON(he.Code, he.Message)
 		}
 		log.Printf("DB transaction error (delete project): %v", txErr)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error":"Ошибка при удалении проекта"})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проекта"})
 	}
 
 	return c.JSON(http.StatusOK, response.ProjectUniversalResponse{

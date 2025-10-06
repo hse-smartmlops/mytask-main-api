@@ -29,6 +29,7 @@ func RegisterTaskRoutes(e *echo.Echo) {
 		taskGroup.PATCH("/:id", UpdateTask)
 		taskGroup.DELETE("/:id", DeleteTask)
 		taskGroup.GET("/user/:id/:page/:pagesize", GetTasksByUserId)
+		taskGroup.POST("/move", TaskMoveFunc)
 	}
 }
 
@@ -41,204 +42,159 @@ func RegisterTaskRoutes(e *echo.Echo) {
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/all/{page}/{pagesize} [get]
 func GetAllTasks(c echo.Context) error {
 	if err := Authorize(c); err != nil {
 		return err
 	}
-	pageReq := c.Param("page")
-	pageSizeReq := c.Param("pagesize")
-	// Значения по умолчанию
-	page, err := strconv.Atoi(pageReq)
-	if err != nil{
-		log.Printf("failed to parse page: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге страницы",
-		})
-	}
-	if page <= 0 {
+
+	page, err := strconv.Atoi(c.Param("page"))
+	if err != nil || page <= 0 {
 		page = 1
 	}
-
-	pageSize, err := strconv.Atoi(pageSizeReq)
-	if err != nil{
-		log.Printf("failed to parse pagesize: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Ошибка при парсинге номера страницы",
-		})
-	}
-	if pageSize <= 0 {
+	pageSize, err := strconv.Atoi(c.Param("pagesize"))
+	if err != nil || pageSize <= 0 {
 		pageSize = 10
 	}
 	offset := (page - 1) * pageSize
 
+	var totalCount int64
+	if err := DBConn.Session(&gorm.Session{}).
+		Model(&models.Task{}).
+		Where("deleted = ?", false).
+		Count(&totalCount).Error; err != nil {
+		log.Printf("DB error (count tasks): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте задач"})
+	}
+
 	var tasks []models.Task
-	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
-		Preload("StatusTasks", "deleted = FALSE").
-		Preload("StatusTasks.Status", "deleted = FALSE").
-		Where("deleted = FALSE").
+	if err := DBConn.Session(&gorm.Session{}).
+		Where("deleted = ?", false).
+		// НЕ нужно Preload("Status"), потому что TaskShort не включает Status — только StatusID
 		Limit(pageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
 		log.Printf("DB error (find tasks): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении задач из базы данных",
-		})
-	}
-
-	var totalCount int64
-	result := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).Where("deleted = FALSE").Count(&totalCount)
-	if result.Error != nil {
-		log.Printf("DB error (count tasks): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчете задач",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач"})
 	}
 
 	taskList := response.TaskListResponse{
 		Page:       page,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
+		Tasks:      make([]response.TaskShort, 0, len(tasks)),
 	}
 
 	for _, task := range tasks {
-		taskResponse := response.TaskShort{
+		taskList.Tasks = append(taskList.Tasks, response.TaskShort{
 			ID:        task.ID.String(),
+			StatusID:  task.StatusID.String(), // ← uuid.UUID → string
 			Name:      utils.GetString(task.Name),
-			ProjectID: task.ProjectID.String(),
 			Priority:  utils.GetInt16(task.Priority),
-			StartDate: utils.GetTime(task.StartDate),
-			Deadline:  utils.GetTime(task.Deadline),
-			UpdatedAt: utils.GetTime(task.UpdatedAt),
-		}
-
-		for _, st := range task.StatusTasks {
-			if st.Status != nil {
-				taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
-					ID:        st.Status.ID.String(),
-					Key:       utils.GetString(st.Status.Key),
-					Name:      utils.GetString(st.Status.Name),
-					Color:     utils.GetString(st.Status.Color),
-					IsDefault: utils.GetBool(st.Status.IsDefault),
-					IsActive:  utils.GetBool(st.Status.IsActive),
-					IsOpen:    utils.GetBool(st.Status.IsOpen),
-					CreatedAt: utils.GetTime(st.Status.CreatedAt),
-					UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
-				})
-			}
-		}
-
-		taskList.Tasks = append(taskList.Tasks, taskResponse)
+			StartDate: utils.GetTime(task.StartDate),   // ← важно: обработка nil
+			Deadline:  utils.GetTime(task.Deadline),    // ← важно: обработка nil
+			CreatedAt: utils.GetTime(task.CreatedAt),   // ← важно
+			UpdatedAt: utils.GetTime(task.UpdatedAt),   // ← важно
+		})
 	}
+
 	return c.JSON(http.StatusOK, taskList)
 }
 
 // GetTaskByID godoc
 // @Summary Получение задачи по ID
-// @Description Получает данные задачи по её уникальному идентификатору
+// @Description Получает данные задачи по её уникальному идентификатору, включая статус и пользователей
 // @Tags Tasks
 // @Accept json
 // @Produce json
 // @Param id path string true "ID задачи"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.GetTaskByIDResponse "Задача успешно получена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор задачи"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 404 {object} map[string]string "Задача не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задачи"
 // @Router /task/{id} [get]
 func GetTaskByID(c echo.Context) error {
-    if err := Authorize(c); err != nil {
-        return err
-    }
+	if err := Authorize(c); err != nil {
+		return err
+	}
 
-    taskID, err := uuid.Parse(c.Param("id"))
-    if err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{
-            "error": "Некорректный идентификатор задачи",
-        })
-    }
+	taskID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор задачи",
+		})
+	}
 
-    var task models.Task
-    // Подгружаем статусы и пользователей сразу
-    if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
-        Preload("StatusTasks", "deleted = FALSE").
-        Preload("StatusTasks.Status", "deleted = FALSE").
-        Preload("CreatedByUser", "deleted = FALSE").
-        Preload("AssignedToUser", "deleted = FALSE").
-        Where("id = ? AND deleted = FALSE", taskID).
-        First(&task).Error; err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
-        }
-        log.Printf("DB error (find task by id): %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задачи"})
-    }
+	var task models.Task
+	if err := DBConn.Session(&gorm.Session{}).
+		Where("id = ? AND deleted = ?", taskID, false).
+		Preload("Status", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+		}
+		log.Printf("DB error (find task by id): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задачи"})
+	}
 
-    // Формируем creator и assigner
-    creatorInfo := response.UserShort{}
-    if task.CreatedByUser != nil {
-        creatorInfo = response.UserShort{
-            ID:        task.CreatedByUser.ID.String(),
-            FirstName: task.CreatedByUser.FirstName,
-            LastName:  task.CreatedByUser.LastName,
-        }
-    }
-
-    assignerInfo := response.UserShort{}
-    if task.AssignedToUser != nil {
-        assignerInfo = response.UserShort{
-            ID:        task.AssignedToUser.ID.String(),
-            FirstName: task.AssignedToUser.FirstName,
-            LastName:  task.AssignedToUser.LastName,
-        }
-    }
-
-	statuses := []response.StatusResponse{}
-	for _, st := range task.StatusTasks {
-		if st.Status != nil {
-			statuses = append(statuses, response.StatusResponse{
-				ID:        st.Status.ID.String(),
-				Key:       utils.GetString(st.Status.Key),
-				Name:      utils.GetString(st.Status.Name),
-				Color:     utils.GetString(st.Status.Color),
-				IsDefault: utils.GetBool(st.Status.IsDefault),
-				IsActive:  utils.GetBool(st.Status.IsActive),
-				IsOpen:    utils.GetBool(st.Status.IsOpen),
-				CreatedAt: utils.GetTime(st.Status.CreatedAt),
-				UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
-			})
+	// Создатель
+	creatorInfo := response.UserShort{}
+	if task.CreatedByUser != nil {
+		creatorInfo = response.UserShort{
+			ID:        task.CreatedByUser.ID.String(),
+			FirstName: task.CreatedByUser.FirstName,
+			LastName:  task.CreatedByUser.LastName,
 		}
 	}
 
-    taskResponse := response.GetTaskByIDResponse{
-        ID:           task.ID.String(),
-        ProjectID:    task.ProjectID.String(),
-        Name:         utils.GetString(task.Name),
-        Description:  utils.GetString(task.Description),
-        Priority:     utils.GetInt16(task.Priority),
-        CreatedBy:    creatorInfo,
-        AssignedTo:   assignerInfo,
-        Deadline:     utils.GetTime(task.Deadline),
-        StartDate:    utils.GetTime(task.StartDate),
-        TimeSpent:    utils.GetString(task.TimeSpent),
-        GitlabIssueID: utils.GetInt(task.GitlabIssueID),
-        Category:     utils.GetInt8(task.Category),
-        UpdatedAt:    utils.GetTime(task.UpdatedAt),
-    	Statuses:     statuses,
-    }
+	// Исполнитель
+	var assignerInfo response.UserShort
+	if task.AssignedToUser != nil {
+		assignerInfo = response.UserShort{
+			ID:        task.AssignedToUser.ID.String(),
+			FirstName: task.AssignedToUser.FirstName,
+			LastName:  task.AssignedToUser.LastName,
+		}
+	}
 
-    return c.JSON(http.StatusOK, taskResponse)
+	taskResponse := response.GetTaskByIDResponse{
+		ID:            task.ID.String(),
+		StatusID:      task.StatusID.String(), // ← только ID статуса
+		Name:          utils.GetString(task.Name),
+		Description:   utils.GetString(task.Description),
+		Priority:      utils.GetInt16(task.Priority),
+		CreatedBy:     creatorInfo,
+		AssignedTo:    assignerInfo, // ← указатель, чтобыomitempty работал
+		Deadline:      utils.GetTime(task.Deadline),
+		TimeSpent:     utils.GetString(task.TimeSpent),
+		StartDate:     utils.GetTime(task.StartDate),
+		GitlabIssueID: utils.GetInt(task.GitlabIssueID),
+		Category:      utils.GetInt8(task.Category),
+		UpdatedAt:     utils.GetTime(task.UpdatedAt),
+		CreatedAt:     utils.GetTime(task.CreatedAt),
+	}
+
+	return c.JSON(http.StatusOK, taskResponse)
 }
 
 
 // GetTasksByProjectID godoc
 // @Summary Получение задач по ID проекта
-// @Description Получает список задач, связанных с указанным проектом
+// @Description Получает список задач, связанных с указанным проектом через доски и статусы
 // @Tags Tasks
 // @Accept json
 // @Produce json
@@ -246,9 +202,9 @@ func GetTaskByID(c echo.Context) error {
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/project/{projectId}/{page}/{pagesize} [get]
 func GetTasksByProjectID(c echo.Context) error {
@@ -256,85 +212,76 @@ func GetTasksByProjectID(c echo.Context) error {
 		return err
 	}
 
-	// projectID
-	projectIDParam := c.Param("projectId")
-	projectUUID, err := uuid.Parse(projectIDParam)
+	projectID, err := uuid.Parse(c.Param("projectId"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
 	}
 
-	page, _ := strconv.Atoi(c.Param("page"))
-	if page <= 0 {
+	page, err := strconv.Atoi(c.Param("page"))
+	if err != nil || page <= 0 {
 		page = 1
 	}
-	pageSize, _ := strconv.Atoi(c.Param("pagesize"))
-	if pageSize <= 0 {
+	pageSize, err := strconv.Atoi(c.Param("pagesize"))
+	if err != nil || pageSize <= 0 {
 		pageSize = 10
 	}
 	offset := (page - 1) * pageSize
 
-	var tasks []models.Task
-	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
-		Preload("StatusTasks", "deleted = FALSE").
-		Preload("StatusTasks.Status", "deleted = FALSE").
-		Where("project_id = ? AND deleted = FALSE", projectUUID).
-		Limit(pageSize).
-		Offset(offset).
-		Find(&tasks).Error; err != nil {
-		log.Printf("DB error (find tasks): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении задач из базы данных",
-		})
+	// Подзапрос: все status_id, принадлежащие доскам этого проекта
+	var statusIDs []uuid.UUID
+	if err := DBConn.Session(&gorm.Session{}).
+		Model(&models.Status{}).
+		Select("statuses.id").
+		Joins("JOIN boards ON statuses.board_id = boards.id").
+		Where("boards.project_id = ? AND boards.deleted = ? AND statuses.deleted = ?", projectID, false, false).
+		Scan(&statusIDs).Error; err != nil {
+		log.Printf("DB error (get status IDs): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов проекта"})
 	}
 
 	var totalCount int64
-	if err := DBConn.Model(&models.Task{}).Session(&gorm.Session{}).
-		Where("project_id = ? AND deleted = FALSE", projectUUID).
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count tasks): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчете задач",
-		})
+	if len(statusIDs) == 0 {
+		totalCount = 0
+	} else {
+		if err := DBConn.Session(&gorm.Session{}).
+			Model(&models.Task{}).
+			Where("status_id IN ? AND deleted = ?", statusIDs, false).
+			Count(&totalCount).Error; err != nil {
+			log.Printf("DB error (count tasks): %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте задач"})
+		}
+	}
+
+	var tasks []models.Task
+	if len(statusIDs) > 0 {
+		if err := DBConn.Session(&gorm.Session{}).
+			Where("status_id IN ? AND deleted = ?", statusIDs, false).
+			Limit(pageSize).
+			Offset(offset).
+			Find(&tasks).Error; err != nil {
+			log.Printf("DB error (find tasks): %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач"})
+		}
 	}
 
 	taskList := response.TaskListResponse{
 		Page:       page,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
+		Tasks:      make([]response.TaskShort, 0, len(tasks)),
 	}
 
 	for _, task := range tasks {
-		if task.Deleted != nil && *task.Deleted {
-			continue
-		}
-
-		taskResponse := response.TaskShort{
+		taskList.Tasks = append(taskList.Tasks, response.TaskShort{
 			ID:        task.ID.String(),
+			StatusID:  task.StatusID.String(),
 			Name:      utils.GetString(task.Name),
-			ProjectID: task.ProjectID.String(),
 			Priority:  utils.GetInt16(task.Priority),
 			StartDate: utils.GetTime(task.StartDate),
 			Deadline:  utils.GetTime(task.Deadline),
+			CreatedAt: utils.GetTime(task.CreatedAt),
 			UpdatedAt: utils.GetTime(task.UpdatedAt),
-		}
-
-		for _, st := range task.StatusTasks {
-			if st.Status != nil {
-				taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
-					ID:        st.Status.ID.String(),
-					Key:       utils.GetString(st.Status.Key),
-					Name:      utils.GetString(st.Status.Name),
-					Color:     utils.GetString(st.Status.Color),
-					IsDefault: utils.GetBool(st.Status.IsDefault),
-					IsActive:  utils.GetBool(st.Status.IsActive),
-					IsOpen:    utils.GetBool(st.Status.IsOpen),
-					CreatedAt: utils.GetTime(st.Status.CreatedAt),
-					UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
-				})
-			}
-		}
-
-		taskList.Tasks = append(taskList.Tasks, taskResponse)
+		})
 	}
 
 	return c.JSON(http.StatusOK, taskList)
@@ -348,16 +295,17 @@ func GetTasksByProjectID(c echo.Context) error {
 // @Produce json
 // @Param task body request.TaskCreateRequest true "Данные для создания задачи"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 201 {object} response.TaskUniversaResponse "Задача успешно создана"
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
-// @Failure 404 {object} map[string]string "Исполнитель или поручитель не найден"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Исполнитель, поручитель или статус не найдены"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании задачи"
 // @Router /task [post]
 func CreateTask(c echo.Context) error {
 	if err := Authorize(c); err != nil {
 		return err
 	}
+
 	var req request.TaskCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
@@ -366,114 +314,99 @@ func CreateTask(c echo.Context) error {
 		})
 	}
 
-	newUUID := uuid.New()
-
+	// === Валидация и парсинг AssignedTo (исполнитель) ===
 	if req.AssignedTo == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Отсутствует идентификатор исполнителя",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Отсутствует идентификатор исполнителя"})
 	}
-	assignerUUID, err := uuid.Parse(*req.AssignedTo)
+	assigneeID, err := uuid.Parse(*req.AssignedTo)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор исполнителя",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор исполнителя"})
 	}
 
-	assignerID := &assignerUUID
-
-	var assigner models.User
-	result := DBConn.Session(&gorm.Session{}).Model(&models.User{}).First(&assigner, "id = ? AND deleted = FALSE", assignerUUID)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Исполнитель не найден",
-			})
-		}
-		log.Printf("DB error (find assignee by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении исполнителя из базы данных",
-		})
+	// Проверка существования исполнителя
+	var assigneeCount int64
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.User{}).
+		Where("id = ? AND deleted = ?", assigneeID, false).
+		Count(&assigneeCount).Error; err != nil {
+		log.Printf("DB error (check assignee): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке исполнителя"})
+	}
+	if assigneeCount == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Исполнитель не найден"})
 	}
 
-	// Валидируем и получаем поручителя (creator_id)
+	// === Валидация и парсинг CreatorID (поручитель) ===
 	if req.CreatorID == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Отсутствует идентификатор поручителя",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Отсутствует идентификатор поручителя"})
 	}
-	creatorUUID, err := uuid.Parse(*req.CreatorID)
+	creatorID, err := uuid.Parse(*req.CreatorID)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор поручителя",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор поручителя"})
 	}
 
-	var creator models.User
-	result = DBConn.Session(&gorm.Session{}).Model(&models.User{}).First(&creator, "id = ? AND deleted = FALSE", creatorUUID)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			return c.JSON(http.StatusNotFound, map[string]string{
-				"error": "Поручитель исполнитель не найден",
-			})
-		}
-		log.Printf("DB error (find creator by id): %v", result.Error)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении поручителя задачи из базы данных",
-		})
+	// Проверка существования поручителя
+	var creatorCount int64
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.User{}).
+		Where("id = ? AND deleted = ?", creatorID, false).
+		Count(&creatorCount).Error; err != nil {
+		log.Printf("DB error (check creator): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке поручителя"})
+	}
+	if creatorCount == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Поручитель не найден"})
 	}
 
-	var creatorID *uuid.UUID = &creator.ID
-
-	// Валидируем идентификатор проекта
-	temp1, err := uuid.Parse(req.ProjectID)
+	// === Валидация StatusID ===
+	statusID, err := uuid.Parse(req.StatusID)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор проекта",
-		})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор статуса"})
 	}
 
-	var category *int8
-	if req.Category != nil {
-		category = req.Category
+	// Проверка существования статуса и его принадлежности к неудалённой доске
+	var statusExists bool
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Status{}).
+		Joins("INNER JOIN boards ON statuses.board_id = boards.id").
+		Where("statuses.id = ? AND statuses.deleted = ? AND boards.deleted = ?", statusID, false, false).
+		Scan(&statusExists).Error; err != nil {
+		log.Printf("DB error (check status): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке статуса"})
+	}
+	if !statusExists {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "Статус не найден или привязан к удалённой доске"})
 	}
 
-	del := false
+	// === Создание задачи ===
 	now := time.Now()
+	deleted := false
 
 	task := models.Task{
-		ID:            newUUID,
+		ID:            uuid.New(),
+		StatusID:      statusID,
 		Priority:      req.Priority,
 		Name:          req.Name,
 		Description:   req.Description,
-		CreatedBy:     creatorID,
-		AssignedTo:    assignerID,
+		CreatedBy:     &creatorID,
+		AssignedTo:    &assigneeID,
 		Deadline:      req.Deadline,
 		StartDate:     req.StartDate,
 		GitlabIssueID: req.GitlabIssueID,
-		ProjectID:     temp1,
-		Category:      category,
-		Deleted:       &del,
+		Category:      req.Category,
+		Deleted:       &deleted,
 		CreatedAt:     &now,
+		UpdatedAt:     &now,
 	}
 
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(&models.Task{}).Omit(clause.Associations).Create(&task); res.Error != nil {
-			log.Printf("DB error (create task): %v", res.Error)
-			return res.Error
-		}
-		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (create task): %v", txErr)
+	if err := DBConn.Session(&gorm.Session{FullSaveAssociations: false}).
+		Omit(clause.Associations).
+		Create(&task).Error; err != nil {
+		log.Printf("DB error (create task): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании задачи"})
 	}
 
-	createResp := response.TaskUniversaResponse{
+	return c.JSON(http.StatusCreated, response.TaskUniversaResponse{
 		ID:      task.ID.String(),
 		Message: "Задача создана",
-	}
-
-	return c.JSON(http.StatusCreated, createResp)
+	})
 }
 
 // UpdateTask godoc
@@ -600,10 +533,6 @@ func DeleteTask(c echo.Context) error {
 		if res.RowsAffected == 0 {
 			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		if res = tx.Session(&gorm.Session{}).Model(&models.StatusTask{}).Where("task_id = ?", id).Updates(updateData); res.Error != nil {
-			log.Printf("DB error (delete status_task): %v", res.Error)
-			return res.Error
-		}
 		return nil
 	}); txErr != nil {
 		if he, ok := txErr.(*echo.HTTPError); ok {
@@ -629,95 +558,212 @@ func DeleteTask(c echo.Context) error {
 // @Param page path int true "Номер страницы"
 // @Param pagesize path int true "Размер страницы"
 // @Security BearerAuth
+// @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Ошибка при парсинге параметров или некорректный ID пользователя"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
-// @Success 200 {object} response.TaskListResponse "Список задач успешно получен"
 // @Router /task/user/{id}/{page}/{pagesize} [get]
 func GetTasksByUserId(c echo.Context) error {
 	if err := Authorize(c); err != nil {
 		return err
 	}
 
-	userIDParam := c.Param("id")
-	userUUID, err := uuid.Parse(userIDParam)
+	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
 	}
 
-	page, _ := strconv.Atoi(c.Param("page"))
-	if page <= 0 {
+	page, err := strconv.Atoi(c.Param("page"))
+	if err != nil || page <= 0 {
 		page = 1
 	}
-	pageSize, _ := strconv.Atoi(c.Param("pagesize"))
-	if pageSize <= 0 {
+	pageSize, err := strconv.Atoi(c.Param("pagesize"))
+	if err != nil || pageSize <= 0 {
 		pageSize = 10
 	}
 	offset := (page - 1) * pageSize
 
+	var totalCount int64
+	if err := DBConn.Session(&gorm.Session{}).
+		Model(&models.Task{}).
+		Where("assigned_to = ? AND deleted = ?", userID, false).
+		Count(&totalCount).Error; err != nil {
+		log.Printf("DB error (count tasks): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте задач"})
+	}
+
 	var tasks []models.Task
-	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
-		Preload("StatusTasks", "deleted = FALSE").
-		Preload("StatusTasks.Status", "deleted = FALSE").
-		Where("assigned_to = ? AND deleted = FALSE", userUUID).
+	if err := DBConn.Session(&gorm.Session{}).
+		Where("assigned_to = ? AND deleted = ?", userID, false).
+		// НЕ нужно Preload("Status"), потому что TaskShort содержит только StatusID
 		Limit(pageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
 		log.Printf("DB error (find tasks): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при получении задач из базы данных",
-		})
-	}
-
-	var totalCount int64
-	if err := DBConn.Model(&models.Task{}).Session(&gorm.Session{}).
-		Where("assigned_to = ? AND deleted = FALSE", userUUID).
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count tasks): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при подсчете задач",
-		})
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач"})
 	}
 
 	taskList := response.TaskListResponse{
 		Page:       page,
 		PageSize:   pageSize,
 		TotalCount: totalCount,
+		Tasks:      make([]response.TaskShort, 0, len(tasks)),
 	}
 
 	for _, task := range tasks {
-		if task.Deleted != nil && *task.Deleted {
-			continue
-		}
-
-		taskResponse := response.TaskShort{
+		taskList.Tasks = append(taskList.Tasks, response.TaskShort{
 			ID:        task.ID.String(),
+			StatusID:  task.StatusID.String(), // ← uuid.UUID → string
 			Name:      utils.GetString(task.Name),
-			ProjectID: task.ProjectID.String(),
 			Priority:  utils.GetInt16(task.Priority),
 			StartDate: utils.GetTime(task.StartDate),
 			Deadline:  utils.GetTime(task.Deadline),
+			CreatedAt: utils.GetTime(task.CreatedAt),
 			UpdatedAt: utils.GetTime(task.UpdatedAt),
-		}
-
-		for _, st := range task.StatusTasks {
-			if st.Status != nil {
-				taskResponse.Statuses = append(taskResponse.Statuses, response.StatusResponse{
-					ID:        st.Status.ID.String(),
-					Key:       utils.GetString(st.Status.Key),
-					Name:      utils.GetString(st.Status.Name),
-					Color:     utils.GetString(st.Status.Color),
-					IsDefault: utils.GetBool(st.Status.IsDefault),
-					IsActive:  utils.GetBool(st.Status.IsActive),
-					IsOpen:    utils.GetBool(st.Status.IsOpen),
-					CreatedAt: utils.GetTime(st.Status.CreatedAt),
-					UpdatedAt: utils.GetTime(st.Status.UpdatedAt),
-				})
-			}
-		}
-
-		taskList.Tasks = append(taskList.Tasks, taskResponse)
+		})
 	}
 
 	return c.JSON(http.StatusOK, taskList)
+}
+
+// TaskMoveFunc godoc
+// @Summary Переместить задачу в другой статус (столбец)
+// @Description Перемещает задачу в указанный статус на той же доске
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param request body request.MoveTaskToAnotherStatus true "Данные для перемещения задачи"
+// @Security BearerAuth
+// @Success 200 {object} map[string]string "Задача успешно перемещена"
+// @Failure 400 {object} map[string]string "Некорректные данные запроса"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Задача или статус не найдены"
+// @Failure 409 {object} map[string]string "Нельзя переместить задачу в статус с другой доски"
+// @Failure 500 {object} map[string]string "Ошибка сервера при перемещении задачи"
+// @Router /task/move [post]
+func TaskMoveFunc(c echo.Context) error {
+	if err := Authorize(c); err != nil {
+		return err
+	}
+
+	var req request.MoveTaskToAnotherStatus
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Bind error: %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Неверный формат запроса"})
+	}
+
+	taskID, err := uuid.Parse(req.TaskID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный ID задачи"})
+	}
+
+	toStatusID, err := uuid.Parse(req.ToStatusID)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный ID статуса"})
+	}
+
+	// 1. Получаем задачу с её текущим статусом и доской
+	var task models.Task
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
+		Select("id, status_id, deleted").
+		Where("id = ? AND deleted = ?", taskID, false).
+		First(&task).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+		}
+		log.Printf("DB error (fetch task): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задачи"})
+	}
+
+	// 2. Получаем текущий статус задачи — чтобы узнать board_id
+	var currentStatus models.Status
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Status{}).
+		Select("board_id").
+		Where("id = ? AND deleted = ?", task.StatusID, false).
+		First(&currentStatus).Error; err != nil {
+		log.Printf("DB error (fetch current status): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Не удалось определить доску задачи"})
+	}
+
+	// 3. Проверяем, существует ли целевой статус и принадлежит ли он той же доске
+	var targetStatus models.Status
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Status{}).
+		Select("id, board_id").
+		Where("id = ? AND deleted = ?", toStatusID, false).
+		First(&targetStatus).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Целевой статус не найден"})
+		}
+		log.Printf("DB error (fetch target status): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке целевого статуса"})
+	}
+
+	// 4. Запрещаем перемещение между разными досками
+	if currentStatus.BoardID != targetStatus.BoardID {
+		return c.JSON(http.StatusConflict, map[string]string{"error": "Нельзя переместить задачу в статус с другой доски"})
+	}
+
+	// 5. Обновляем статус задачи
+	updatedAt := time.Now()
+	if err := DBConn.Session(&gorm.Session{}).Model(&models.Task{}).
+		Where("id = ?", taskID).
+		Updates(map[string]interface{}{
+			"status_id":   toStatusID,
+			"updated_at":  updatedAt,
+		}).Error; err != nil {
+		log.Printf("DB error (update task status): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении статуса задачи"})
+	}
+
+	// Загружаем статусы доски + задачи к каждому статусу
+	var statuses []models.Status
+	if err := DBConn.Session(&gorm.Session{}).
+		Model(&models.Status{}).
+		Where("board_id = ? AND deleted = ?", targetStatus.BoardID, false).
+		Order("sort_order ASC").
+		Preload("Tasks", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		Find(&statuses).Error; err != nil {
+		log.Printf("DB error (statuses by board): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов для доски"})
+	}
+
+	// Формируем ответ
+	resp := response.StatusByBoardIdResponse{
+		BoardId:  targetStatus.BoardID.String(),
+		Statuses: make([]response.StatusResponse, 0, len(statuses)),
+	}
+
+	for _, status := range statuses {
+		tasks := make([]response.TaskShort, 0, len(status.Tasks))
+		for _, task := range status.Tasks {
+			tasks = append(tasks, response.TaskShort{
+				ID:          task.ID.String(),
+				Name:        utils.GetString(task.Name),
+				StatusID:    task.StatusID.String(),
+				Priority:    utils.GetInt16(task.Priority),
+				CreatedAt:   utils.GetTime(task.CreatedAt),
+				UpdatedAt:   utils.GetTime(task.UpdatedAt),
+				StartDate:   utils.GetTime(task.StartDate),
+				Deadline:    utils.GetTime(task.Deadline),
+			})
+		}
+
+		resp.Statuses = append(resp.Statuses, response.StatusResponse{
+			ID:        status.ID.String(),
+			Key:       utils.GetString(status.Key),
+			Name:      utils.GetString(status.Name),
+			Color:     utils.GetString(status.Color),
+			Order:     utils.GetInt(status.SortOrder), // ← не забудь!
+			IsDefault: utils.GetBool(status.IsDefault),
+			IsActive:  utils.GetBool(status.IsActive),
+			IsOpen:    utils.GetBool(status.IsOpen),
+			CreatedAt: utils.GetTime(status.CreatedAt),
+			UpdatedAt: utils.GetTime(status.UpdatedAt),
+			Tasks:     tasks, // ← задачи внутри статуса
+		})
+	}
+
+	return c.JSON(http.StatusOK, resp)
 }

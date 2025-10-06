@@ -60,14 +60,36 @@ func GetDBConnection() *gorm.DB {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	if err := db.AutoMigrate(
-		&models.User{}, &models.Role{}, &models.UserRole{},
-		&models.Project{}, &models.Board{}, &models.Task{},
-		&models.Team{}, &models.TeamMember{}, &models.ProjectTeam{},
-		&models.Attendance{}, &models.DailyReport{},
-		&models.Problem{}, &models.ForumMessage{}, &models.ReportProblem{},
-		&models.HelpRequest{}, &models.CompletedWork{}, &models.TomorrowPlans{},
+	// 1. Базовые сущности (без внешних ключов или с необязательными)
+		&models.User{},
+		&models.Role{},
+		&models.Team{},
+		&models.Problem{},
+
+		// 2. Джойн-таблицы и сущности, ссылающиеся на базовые
+		&models.UserRole{},
+		&models.TeamMember{},
+		&models.ForumMessage{}, // ссылается на Problem и User
+		&models.Project{},      // ссылается на User (CreatedBy)
+
+		// 3. Сущности второго уровня
+		&models.Board{},        // ссылается на Project
+
+		// 4. Статусы — ссылаются на Board
+		&models.Status{},
+
+		// 5. Задачи — ссылаются на Status, User (AssignedTo, CreatedBy)
+		&models.Task{},
+
+		// 6. Отчёты и связанные с задачами/пользователями
+		&models.Attendance{},
+		&models.DailyReport{},
+		&models.ReportProblem{},
+		&models.HelpRequest{},
+		&models.CompletedWork{},
+		&models.TomorrowPlans{},
+		&models.ProjectTeam{},  // ссылается на Project и Team
 		&models.Subscription{},
-		&models.Status{}, &models.StatusBoard{}, &models.StatusTask{},
 	); err != nil {
 		log.Fatal("AutoMigrate failed:", err)
 	}

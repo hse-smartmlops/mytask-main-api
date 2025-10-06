@@ -36,6 +36,8 @@ func TestTask_FullCRUD(t *testing.T) {
 	userID := createTestUser(t, testDB, "user@example.com")
 	creatorID := createTestUser(t, testDB, "creator@example.com")
 	projectID := createTestProject(t, testDB, "Test Project")
+	boardID := createTestBoard(t, testDB, projectID, "Test Board")
+	statusID := createTestStatus(t, testDB, boardID, "To Do")
 
 	var taskID uuid.UUID
 
@@ -49,9 +51,10 @@ func TestTask_FullCRUD(t *testing.T) {
 		deadline := time.Now().Add(24 * time.Hour)
 		creatorId := creatorID.String()
 		userId := userID.String()
+		statusId := statusID.String() // ← обязательно
 
 		reqBody := request.TaskCreateRequest{
-			ProjectID:     projectID.String(),
+			StatusID:      statusId,    // ← вместо ProjectID
 			Name:          &name,
 			Description:   &description,
 			Priority:      &priority,
@@ -78,7 +81,6 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.NotEmpty(t, resp["id"])
 		assert.Equal(t, "Задача создана", resp["message"])
 
-		// Сохраняем ID задачи
 		taskID = uuid.MustParse(resp["id"].(string))
 	})
 
@@ -97,10 +99,12 @@ func TestTask_FullCRUD(t *testing.T) {
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		assert.Equal(t, taskID.String(), resp["id"])
-		assert.Equal(t, projectID.String(), resp["project_id"])
+		assert.Equal(t, statusID.String(), resp["status_id"]) // ← проверяем status_id, а не project_id
 		assert.Equal(t, "Test Task", resp["name"])
 		assert.Equal(t, "This is a test task", resp["description"])
 		assert.Equal(t, float64(5), resp["priority"])
+		// Убедись, что нет поля project_id
+		assert.NotContains(t, resp, "project_id")
 	})
 
 	// === 3. GetTasksByProjectID ===
@@ -117,7 +121,6 @@ func TestTask_FullCRUD(t *testing.T) {
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		// Убираем проверку resp["project_id"] — его нет в TaskListResponse
 		assert.Equal(t, float64(1), resp["page"])
 		assert.Equal(t, float64(10), resp["page_size"])
 
@@ -125,9 +128,11 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.True(t, ok)
 		assert.Greater(t, len(tasks), 0)
 
-		// Проверим, что задача принадлежит проекту
+		// Проверим, что задача содержит status_id, но не project_id
 		firstTask := tasks[0].(map[string]interface{})
-		assert.Equal(t, projectID.String(), firstTask["project_id"])
+		assert.Equal(t, taskID.String(), firstTask["id"])
+		assert.Equal(t, statusID.String(), firstTask["status_id"])
+		assert.NotContains(t, firstTask, "project_id") // ← убедись, что его нет
 	})
 
 	// === 4. GetTasksByUserId ===
@@ -144,7 +149,6 @@ func TestTask_FullCRUD(t *testing.T) {
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		// Убираем проверку resp["user_id"] — его нет в TaskListResponse
 		assert.Equal(t, float64(1), resp["page"])
 		assert.Equal(t, float64(10), resp["page_size"])
 
@@ -152,11 +156,12 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.True(t, ok)
 		assert.Greater(t, len(tasks), 0)
 
-		// Проверим, что задача в списке (не проверяем assigned_to, потому что его нет в TaskShort)
 		firstTask := tasks[0].(map[string]interface{})
 		assert.Equal(t, taskID.String(), firstTask["id"])
+		assert.Equal(t, statusID.String(), firstTask["status_id"])
+		assert.NotContains(t, firstTask, "project_id")
 	})
-	
+
 	// === 5. UpdateTask ===
 	t.Run("updateTask", func(t *testing.T) {
 		newName := "Updated Task Name"
@@ -204,6 +209,11 @@ func TestTask_FullCRUD(t *testing.T) {
 		tasks, ok := resp["tasks"].([]interface{})
 		assert.True(t, ok)
 		assert.Greater(t, len(tasks), 0)
+
+		firstTask := tasks[0].(map[string]interface{})
+		assert.Equal(t, taskID.String(), firstTask["id"])
+		assert.Equal(t, statusID.String(), firstTask["status_id"])
+		assert.NotContains(t, firstTask, "project_id")
 	})
 
 	// === 7. DeleteTask ===
@@ -223,7 +233,6 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.Equal(t, taskID.String(), resp["id"])
 		assert.Equal(t, "Задача удалена", resp["message"])
 
-		// Проверим, что задача действительно удалена
 		var deleted models.Task
 		require.NoError(t, testDB.Unscoped().First(&deleted, "id = ?", taskID).Error)
 		assert.True(t, *deleted.Deleted)

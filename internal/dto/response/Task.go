@@ -7,7 +7,7 @@ import (
 // Полная информация о задаче (для GetTaskByID)
 type GetTaskByIDResponse struct {
 	ID            string    `json:"id"`
-	ProjectID     string    `json:"project_id"`
+	StatusID     string    `json:"status_id"`
 	Name          string    `json:"name"`
 	Description   string    `json:"description"`
 	Priority      int16     `json:"priority"`
@@ -20,20 +20,18 @@ type GetTaskByIDResponse struct {
 	Category      int8      `json:"community"`
 	UpdatedAt     time.Time `json:"updated_at"`
 	CreatedAt     time.Time `json:"created_at"`
-	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 
 // Краткая информация о задаче (для списков)
 type TaskShort struct {
 	ID        string    `json:"id"`
-	ProjectID string    `json:"project_id"`
+	StatusID     string    `json:"status_id"`
 	Name      string    `json:"name"`
 	Priority  int16     `json:"priority"`
 	StartDate time.Time `json:"start_date"`
 	Deadline  time.Time `json:"deadline,omitempty"`
 	UpdatedAt time.Time `json:"updated_at"`
 	CreatedAt     time.Time `json:"created_at"`
-	Statuses  	[]StatusResponse  `json:"statuses,omitempty"`
 }
 
 // Ответ для списка задач с пагинацией

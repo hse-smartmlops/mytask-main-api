@@ -3,7 +3,7 @@ package request
 import "time"
 
 type TaskCreateRequest struct {
-	ProjectID     string     `json:"project_id" validate:"required,uuid4"`
+	StatusID     string     `json:"status_id" validate:"required,uuid4"`
 	Name          *string     `json:"name" validate:"required,min=3,max=100"`
 	Description   *string     `json:"description" validate:"max=500"`
 	Priority      *int16     `json:"priority" validate:"required,min=1,max=10"`
@@ -29,4 +29,9 @@ type TaskUpdateRequest struct {
 type TaskListRequest struct {
 	Page     int `json:"page"`
 	PageSize int `json:"page_size"`
+}
+
+type MoveTaskToAnotherStatus struct {
+	TaskID  string `json:"task_id" validate:"required,uuid4"`
+	ToStatusID string `json:"status_id" validate:"required,uuid4"`
 }

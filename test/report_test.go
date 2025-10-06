@@ -21,17 +21,45 @@ import (
 	"emplacc-api/internal/dto/request"
 )
 
+// createTestStatus создаёт тестовый статус
+func createTestStatus(t *testing.T, db *gorm.DB, boardID uuid.UUID, name string) uuid.UUID {
+	statusID := uuid.New()
+	now := time.Now()
+	del := false
+
+	namePtr := &name
+	
+	zero := 0
+	key := statusID.String()[:8]
+	status := models.Status{
+		ID:        statusID,
+		BoardID:   boardID,
+		Key:       &key,
+		Name:      namePtr,
+		Color:     strPtr("#6C757D"),
+		SortOrder:     &zero,
+		IsDefault: &del,
+		IsActive:  boolPtr(true),
+		IsOpen:    boolPtr(true),
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Deleted:   &del,
+	}
+	require.NoError(t, db.Create(&status).Error)
+	return statusID
+}
+
 // createTestTask создаёт тестовую задачу
-func createTestTask(t *testing.T, db *gorm.DB, projectID, assignedTo uuid.UUID, name string) uuid.UUID {
+func createTestTask(t *testing.T, db *gorm.DB, statusID, assignedTo uuid.UUID, name string) uuid.UUID {
 	taskID := uuid.New()
 	now := time.Now()
 	del := false
 
 	task := models.Task{
 		ID:          taskID,
+		StatusID:    statusID, // ← обязательно, вместо ProjectID
 		Name:        &name,
 		Description: nil,
-		ProjectID:   projectID,
 		AssignedTo:  &assignedTo,
 		CreatedAt:   &now,
 		UpdatedAt:   &now,
@@ -61,6 +89,10 @@ func createTestProblem(t *testing.T, db *gorm.DB, name string, creatorID uuid.UU
 	return problemID
 }
 
+// Вспомогательные функции для указателей
+func strPtr(s string) *string { return &s }
+func boolPtr(b bool) *bool   { return &b }
+
 func TestReport_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
@@ -76,7 +108,9 @@ func TestReport_FullCRUD(t *testing.T) {
 	// Создаём тестовые сущности
 	userID := createTestUser(t, testDB, "user@example.com")
 	projectID := createTestProject(t, testDB, "Test Project")
-	taskID := createTestTask(t, testDB, projectID, userID, "Test Task")
+	boardID := createTestBoard(t, testDB, projectID, "Test Board")
+	statusID := createTestStatus(t, testDB, boardID, "To Do")
+	taskID := createTestTask(t, testDB, statusID, userID, "Test Task")
 	problemID := createTestProblem(t, testDB, "Test Problem", userID)
 	helperID := createTestUser(t, testDB, "helper@example.com")
 
