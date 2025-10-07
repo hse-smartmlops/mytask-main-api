@@ -1,32 +1,38 @@
 package controller
 
 import (
-	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/service"
 	"emplacc-api/internal/utils"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
-	"gorm.io/gorm"
 )
 
-func RegisterProblemRoutes(e *echo.Echo) {
+type ProblemController struct {
+	problemService service.ProblemService
+}
+
+func NewProblemController(problemService service.ProblemService) *ProblemController {
+	return &ProblemController{
+		problemService: problemService,
+	}
+}
+
+func RegisterProblemRoutes(e *echo.Echo, problemService service.ProblemService) {
+	controller := NewProblemController(problemService)
 	problemGroup := e.Group("/problem")
-	problemGroup.Use(KeycloakAuthMiddleware)
 	{
-		problemGroup.GET("/all/:page/:pagesize", GetAllProblems)
-		problemGroup.GET("/:id", GetProblemByID)
-		problemGroup.GET("/user/:id/:page/:pagesize", GetProblemsByUserId)
-		problemGroup.POST("", CreateProblem)
-		problemGroup.PATCH("/:id", UpdateProblem)
-		problemGroup.DELETE("/:id", DeleteProblem)
+		problemGroup.GET("/all/:page/:pagesize", controller.GetAllProblems)
+		problemGroup.GET("/:id", controller.GetProblemByID)
+		problemGroup.GET("/user/:id/:page/:pagesize", controller.GetProblemsByUserId)
+		problemGroup.POST("", controller.CreateProblem)
+		problemGroup.PATCH("/:id", controller.UpdateProblem)
+		problemGroup.DELETE("/:id", controller.DeleteProblem)
 	}
 }
 
@@ -44,11 +50,7 @@ func RegisterProblemRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/all/{page}/{pagesize} [get]
-func GetAllProblems(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (pc *ProblemController) GetAllProblems(c echo.Context) error {
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге страницы"})
@@ -57,26 +59,11 @@ func GetAllProblems(c echo.Context) error {
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге номера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Problem{}).
-		Where("deleted = FALSE").
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count problem): %v", err)
+	problems, totalCount, err := pc.problemService.GetAllProblems(page, pageSize)
+	if err != nil {
+		log.Printf("service error (get all problems): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете проблем"})
-	}
-
-	var problems []models.Problem
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Problem{}).
-		Where("deleted = FALSE").
-		Limit(pageSize).
-		Offset(offset).
-		Find(&problems).Error; err != nil {
-		log.Printf("DB error (find problems): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении проблем из базы данных"})
 	}
 
 	out := response.ProblemListResponse{
@@ -119,11 +106,7 @@ func GetAllProblems(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблем"
 // @Router /problem/user/{id}/{page}/{pagesize} [get]
-func GetProblemsByUserId(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (pc *ProblemController) GetProblemsByUserId(c echo.Context) error {
 	creatorUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
@@ -137,26 +120,11 @@ func GetProblemsByUserId(c echo.Context) error {
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге номера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Problem{}).
-		Where("creator_id = ? AND deleted = FALSE", creatorUUID).
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count problem): %v", err)
+	problems, totalCount, err := pc.problemService.GetProblemsByUserId(creatorUUID, page, pageSize)
+	if err != nil {
+		log.Printf("service error (get problems by user id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете проблем"})
-	}
-
-	var problems []models.Problem
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Problem{}).
-		Where("creator_id = ? AND deleted = FALSE", creatorUUID).
-		Limit(pageSize).
-		Offset(offset).
-		Find(&problems).Error; err != nil {
-		log.Printf("DB error (find problem): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении проблем из базы данных"})
 	}
 
 	out := response.ProblemsByUserId{
@@ -198,25 +166,18 @@ func GetProblemsByUserId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении проблемы"
 // @Router /problem/{id} [get]
-func GetProblemByID(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (pc *ProblemController) GetProblemByID(c echo.Context) error {
 	problemId, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проблемы"})
 	}
 
-	var p models.Problem
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Problem{}).
-		Where("id = ? AND deleted = FALSE", problemId).
-		First(&p).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	p, err := pc.problemService.GetProblemByID(problemId)
+	if err != nil {
+		if err.Error() == "problem not found" {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Проблема не найдена"})
 		}
-		log.Printf("DB error (find problem by id): %v", err)
+		log.Printf("service error (get problem by id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении проблемы из базы данных"})
 	}
 
@@ -249,56 +210,24 @@ func GetProblemByID(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректный идентификатор пользователя"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании проблемы"
 // @Router /problem [post]
-func CreateProblem(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (pc *ProblemController) CreateProblem(c echo.Context) error {
 	var req request.ProblemCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	creatorId, err := uuid.Parse(req.CreatorID)
+	problemID, err := pc.problemService.CreateProblem(req)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
-	}
-
-	now := time.Now()
-	del := false
-
-	var description pq.StringArray
-	if req.Description != nil {
-		description = pq.StringArray(*req.Description)
-	} else {
-		description = pq.StringArray{}
-	}
-
-	p := models.Problem{
-		ID:          uuid.New(),
-		Description: description,
-		CreatorID:   &creatorId,
-		Name:        req.Name,
-		CreatedAt:   &now,
-		Deleted:     &del,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).
-			Model(&models.Problem{}).
-			Create(&p); res.Error != nil {
-			log.Printf("DB error (create problem): %v", res.Error)
-			return res.Error
+		if err.Error() == "invalid creator id" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
 		}
-		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (create problem): %v", txErr)
+		log.Printf("service error (create problem): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании проблемы"})
 	}
 
 	return c.JSON(http.StatusCreated, response.ProblemUniversalResponse{
-		ID:      p.ID.String(),
+		ID:      problemID.String(),
 		Message: "Проблема создана",
 	})
 }
@@ -317,11 +246,7 @@ func CreateProblem(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении проблемы"
 // @Router /problem/{id} [patch]
-func UpdateProblem(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (pc *ProblemController) UpdateProblem(c echo.Context) error {
 	problemId, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проблемы"})
@@ -333,33 +258,15 @@ func UpdateProblem(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := map[string]interface{}{}
-	if req.Description != nil {
-		updateData["description"] = pq.StringArray(*req.Description)
-	}
-
-	if len(updateData) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
-	}
-
-	now := time.Now()
-	updateData["updated_at"] = &now
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.Problem{}).
-			Where("id = ? AND deleted = FALSE", problemId).
-			Updates(updateData)
-		if res.Error != nil {
-			log.Printf("DB error (update problem): %v", res.Error)
-			return res.Error
+	err = pc.problemService.UpdateProblem(problemId, req)
+	if err != nil {
+		if err.Error() == "no fields to update" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
 		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+		if err.Error() == "problem not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
 		}
-		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (update problem): %v", txErr)
+		log.Printf("service error (update problem): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении проблемы"})
 	}
 
@@ -381,60 +288,18 @@ func UpdateProblem(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Проблема не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении проблемы"
 // @Router /problem/{id} [delete]
-func DeleteProblem(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (pc *ProblemController) DeleteProblem(c echo.Context) error {
 	problemId, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проблемы"})
 	}
 
-	delTrue := true
-	now := time.Now()
-	update := map[string]interface{}{
-		"deleted":    &delTrue,
-		"updated_at": &now,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		// помечаем проблему удалённой
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.Problem{}).
-			Where("id = ?", problemId).
-			Updates(update)
-		if res.Error != nil {
-			log.Printf("DB error (delete problem): %v", res.Error)
-			return res.Error
+	err = pc.problemService.DeleteProblem(problemId)
+	if err != nil {
+		if err.Error() == "problem not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
-		}
-
-		// каскадно помечаем связанные сущности
-		if res = tx.Session(&gorm.Session{}).
-			Model(&models.ForumMessage{}).
-			Where("problem_id = ?", problemId).
-			Updates(update); res.Error != nil {
-			log.Printf("DB error (delete problem - forum messages): %v", res.Error)
-			return res.Error
-		}
-
-		if res = tx.Session(&gorm.Session{}).
-			Model(&models.ReportProblem{}).
-			Where("problem_id = ?", problemId).
-			Updates(update); res.Error != nil {
-			log.Printf("DB error (delete problem - report_problem): %v", res.Error)
-			return res.Error
-		}
-
-		return nil
-	}); txErr != nil {
-		if he, ok := txErr.(*echo.HTTPError); ok {
-			return c.JSON(he.Code, he.Message)
-		}
-		log.Printf("DB transaction error (delete problem): %v", txErr)
+		log.Printf("service error (delete problem): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении проблемы"})
 	}
 

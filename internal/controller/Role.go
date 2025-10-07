@@ -1,31 +1,37 @@
 package controller
 
 import (
-	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/service"
 	"emplacc-api/internal/utils"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
-func RegisterRoleRoutes(e *echo.Echo) {
+type RoleController struct {
+	roleService service.RoleService
+}
+
+func NewRoleController(roleService service.RoleService) *RoleController {
+	return &RoleController{
+		roleService: roleService,
+	}
+}
+
+func RegisterRoleRoutes(e *echo.Echo, roleService service.RoleService) {
+	controller := NewRoleController(roleService)
 	group := e.Group("/role")
-	group.Use(KeycloakAuthMiddleware)
 	{
-		group.GET("/all/:page/:pagesize", GetAllRoles)
-		group.GET("/:id", GetRoleById)
-		group.POST("", CreateRole)
-		group.PATCH("/:id", UpdateRole)
-		group.DELETE("/:id", DeleteRole)
+		group.GET("/all/:page/:pagesize", controller.GetAllRoles)
+		group.GET("/:id", controller.GetRoleById)
+		group.POST("", controller.CreateRole)
+		group.PATCH("/:id", controller.UpdateRole)
+		group.DELETE("/:id", controller.DeleteRole)
 	}
 }
 
@@ -43,9 +49,7 @@ func RegisterRoleRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении ролей"
 // @Router /role/all/{page}/{pagesize} [get]
-func GetAllRoles(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
-
+func (rc *RoleController) GetAllRoles(c echo.Context) error {
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге страницы"})
@@ -54,25 +58,11 @@ func GetAllRoles(c echo.Context) error {
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге номера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Role{}).
-		Where("deleted = FALSE").
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count roles): %v", err)
+	roles, totalCount, err := rc.roleService.GetAllRoles(page, pageSize)
+	if err != nil {
+		log.Printf("service error (get all roles): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете ролей"})
-	}
-
-	var roles []models.Role
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Role{}).
-		Where("deleted = FALSE").
-		Limit(pageSize).Offset(offset).
-		Find(&roles).Error; err != nil {
-		log.Printf("DB error (find roles): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении ролей из базы данных"})
 	}
 
 	out := response.GetAllRolesResponse{
@@ -106,24 +96,18 @@ func GetAllRoles(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении роли"
 // @Router /role/{id} [get]
-func GetRoleById(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
-
+func (rc *RoleController) GetRoleById(c echo.Context) error {
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор роли"})
 	}
 
-	var role models.Role
-	res := DBConn.Session(&gorm.Session{}).
-		Model(&models.Role{}).
-		Where("id = ? AND deleted = FALSE", roleID).
-		First(&role)
-	if res.Error != nil {
-		if errors.Is(res.Error, gorm.ErrRecordNotFound) {
+	role, err := rc.roleService.GetRoleById(roleID)
+	if err != nil {
+		if err.Error() == "role not found" {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Роль не найдена"})
 		}
-		log.Printf("DB error (find role by id): %v", res.Error)
+		log.Printf("service error (get role by id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении роли из базы данных"})
 	}
 
@@ -149,37 +133,21 @@ func GetRoleById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании роли"
 // @Router /role [post]
-func CreateRole(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
-
+func (rc *RoleController) CreateRole(c echo.Context) error {
 	var req request.RoleCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	now := time.Now()
-	del := false
-	role := models.Role{
-		ID:          uuid.New(),
-		Name:        req.Name,
-		Description: req.Description,
-		Deleted:     &del,
-		CreatedAt:   &now,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		return tx.Session(&gorm.Session{}).
-			Model(&models.Role{}).
-			Omit(clause.Associations).
-			Create(&role).Error
-	}); txErr != nil {
-		log.Printf("DB transaction error (create role): %v", txErr)
+	roleID, err := rc.roleService.CreateRole(req)
+	if err != nil {
+		log.Printf("service error (create role): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании роли"})
 	}
 
 	return c.JSON(http.StatusCreated, response.RoleUniversalResponse{
-		ID:      role.ID.String(),
+		ID:      roleID.String(),
 		Message: "Роль успешно создана",
 	})
 }
@@ -198,9 +166,7 @@ func CreateRole(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении роли"
 // @Router /role/{id} [patch]
-func UpdateRole(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
-
+func (rc *RoleController) UpdateRole(c echo.Context) error {
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор роли"})
@@ -212,27 +178,15 @@ func UpdateRole(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	update := map[string]interface{}{}
-	if req.Name != nil        { update["name"] = *req.Name }
-	if req.Description != nil { update["description"] = *req.Description }
-	if len(update) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
-	}
-	now := time.Now()
-	update["updated_at"] = &now
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.Role{}).
-			Where("id = ? AND deleted = FALSE", roleID).
-			Updates(update)
-		if res.Error != nil { return res.Error }
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+	err = rc.roleService.UpdateRole(roleID, req)
+	if err != nil {
+		if err.Error() == "no fields to update" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
 		}
-		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (update role): %v", txErr)
+		if err.Error() == "role not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+		}
+		log.Printf("service error (update role): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении роли"})
 	}
 
@@ -255,41 +209,18 @@ func UpdateRole(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Роль не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении роли"
 // @Router /role/{id} [delete]
-func DeleteRole(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
-
+func (rc *RoleController) DeleteRole(c echo.Context) error {
 	roleID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор роли"})
 	}
 
-	delTrue := true
-	now := time.Now()
-	update := map[string]interface{}{"deleted": &delTrue, "updated_at": &now}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		// сама роль
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.Role{}).
-			Where("id = ? AND deleted = FALSE", roleID).
-			Updates(update)
-		if res.Error != nil { return res.Error }
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+	err = rc.roleService.DeleteRole(roleID)
+	if err != nil {
+		if err.Error() == "role not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		// помечаем связи user_roles как удалённые (если используешь soft delete там)
-		if res = tx.Session(&gorm.Session{}).
-			Model(&models.UserRole{}).
-			Where("role_id = ?", roleID).
-			Updates(update); res.Error != nil {
-			return res.Error
-		}
-		return nil
-	}); txErr != nil {
-		if he, ok := txErr.(*echo.HTTPError); ok {
-			return c.JSON(he.Code, he.Message)
-		}
-		log.Printf("DB transaction error (delete role): %v", txErr)
+		log.Printf("service error (delete role): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении роли"})
 	}
 

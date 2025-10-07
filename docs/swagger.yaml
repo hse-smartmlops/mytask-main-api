@@ -201,13 +201,6 @@ definitions:
     - status_id
     - task_id
     type: object
-  request.OAuthRequest:
-    properties:
-      code:
-        type: string
-      redirect_uri:
-        type: string
-    type: object
   request.ProblemCreateRequest:
     properties:
       creator_id:
@@ -232,24 +225,6 @@ definitions:
         type: string
     required:
     - refresh_token
-    type: object
-  request.RegisterRequest:
-    properties:
-      email:
-        type: string
-      first_name:
-        type: string
-      last_name:
-        type: string
-      password:
-        type: string
-      profession:
-        type: string
-    required:
-    - email
-    - first_name
-    - last_name
-    - password
     type: object
   request.RemoveRoleUserRequest:
     properties:
@@ -332,15 +307,6 @@ definitions:
       type_id:
         type: integer
       user_id:
-        type: string
-    type: object
-  request.TOTPRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      totp:
         type: string
     type: object
   request.TaskCreateRequest:
@@ -1709,40 +1675,6 @@ paths:
       summary: Получение информации о текущем пользователе
       tags:
       - Auth
-  /auth/oauth:
-    post:
-      consumes:
-      - application/json
-      description: Выполняет аутентификацию с использованием OAuth кода авторизации
-      parameters:
-      - description: Данные для OAuth аутентификации
-        in: body
-        name: oauth
-        required: true
-        schema:
-          $ref: '#/definitions/request.OAuthRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Успешная OAuth аутентификация
-          schema:
-            $ref: '#/definitions/response.AuthResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Ошибка OAuth аутентификации
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация через OAuth
-      tags:
-      - Auth
   /auth/refresh:
     post:
       consumes:
@@ -1776,77 +1708,6 @@ paths:
               type: string
             type: object
       summary: Обновление access токена
-      tags:
-      - Auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Создает нового пользователя в Keycloak с указанным email
-      parameters:
-      - description: Данные для регистрации
-        in: body
-        name: register
-        required: true
-        schema:
-          $ref: '#/definitions/request.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Пользователь успешно зарегистрирован
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при создании пользователя
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Регистрация нового пользователя
-      tags:
-      - Auth
-  /auth/totp:
-    post:
-      consumes:
-      - application/json
-      description: Выполняет аутентификацию с использованием email, пароля и TOTP
-        кода
-      parameters:
-      - description: Данные для TOTP аутентификации
-        in: body
-        name: totp
-        required: true
-        schema:
-          $ref: '#/definitions/request.TOTPRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Успешная TOTP аутентификация
-          schema:
-            $ref: '#/definitions/response.AuthResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Неверные учетные данные или TOTP код
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация с двухфакторной аутентификацией
       tags:
       - Auth
   /auth/validate:

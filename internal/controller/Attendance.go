@@ -1,33 +1,41 @@
 package controller
 
 import (
-	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/service"
 	utils "emplacc-api/internal/utils"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 )
 
-func RegisterAttendanceRoutes(e *echo.Echo) {
-	attendanceGroup := e.Group("/attendance")
-	attendanceGroup.Use(KeycloakAuthMiddleware)
-	{
-		attendanceGroup.GET("/all/:page/:pagesize", GetAllAttendances)
-		attendanceGroup.GET("/user/:id", GetAttendancesByUserId)
-		attendanceGroup.POST("", CreateAttendance)
-		attendanceGroup.PATCH("/:id", UpdateAttendance)
-		attendanceGroup.DELETE("/:id", DeleteAttendance)
+type AttendanceController struct {
+	attendanceService service.AttendanceService
+}
+
+func NewAttendanceController(attendanceService service.AttendanceService) *AttendanceController {
+	return &AttendanceController{
+		attendanceService: attendanceService,
 	}
 }
 
-// getAllAttendances godoc
+func RegisterAttendanceRoutes(e *echo.Echo, attendanceService service.AttendanceService) {
+	controller := NewAttendanceController(attendanceService)
+	attendanceGroup := e.Group("/attendance")
+	{
+		attendanceGroup.GET("/all/:page/:pagesize", controller.GetAllAttendances)
+		attendanceGroup.GET("/user/:id", controller.GetAttendancesByUserId)
+		attendanceGroup.POST("", controller.CreateAttendance)
+		attendanceGroup.PATCH("/:id", controller.UpdateAttendance)
+		attendanceGroup.DELETE("/:id", controller.DeleteAttendance)
+	}
+}
+
+// GetAllAttendances godoc
 // @Summary Получение всех посещений
 // @Description Получение списка всех посещений с пагинацией (логически не удаленных)
 // @Tags Attendance
@@ -41,11 +49,7 @@ func RegisterAttendanceRoutes(e *echo.Echo) {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/all/{page}/{pagesize} [get]
-func GetAllAttendances(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (ac *AttendanceController) GetAllAttendances(c echo.Context) error {
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
 		log.Printf("failed to parse page: %v", err)
@@ -56,28 +60,10 @@ func GetAllAttendances(c echo.Context) error {
 		log.Printf("failed to parse pagesize: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге размера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	// Базовый запрос
-	dbq := DBConn.Session(&gorm.Session{}).
-		Model(&models.Attendance{}).
-		Where("deleted = FALSE")
-
-	// Count
-	var totalCount int64
-	if err := dbq.Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count attendances): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете посещений"})
-	}
-
-	// Выборка
-	var attendances []models.Attendance
-	if err := dbq.
-		Order("created_at DESC NULLS LAST").
-		Limit(pageSize).
-		Offset(offset).
-		Find(&attendances).Error; err != nil {
-		log.Printf("DB error (find attendances): %v", err)
+	attendances, totalCount, err := ac.attendanceService.GetAllAttendances(page, pageSize)
+	if err != nil {
+		log.Printf("service error (get all attendances): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении посещений из базы данных"})
 	}
 
@@ -106,7 +92,7 @@ func GetAllAttendances(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// getAttendancesByUserId godoc
+// GetAttendancesByUserId godoc
 // @Summary Получение посещений по ID пользователя
 // @Description Получение списка посещений для конкретного пользователя (логически не удаленных)
 // @Tags Attendance
@@ -119,26 +105,16 @@ func GetAllAttendances(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении посещений"
 // @Router /attendance/user/{id} [get]
-func GetAttendancesByUserId(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (ac *AttendanceController) GetAttendancesByUserId(c echo.Context) error {
 	userID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
 	}
 
-	dbq := DBConn.Session(&gorm.Session{}).
-		Model(&models.Attendance{}).
-		Where("deleted = FALSE AND user_id = ?", userID)
-
-	var attendances []models.Attendance
-	if err := dbq.
-		Order("date DESC NULLS LAST, created_at DESC NULLS LAST").
-		Find(&attendances).Error; err != nil {
-		log.Printf("DB error (find attendances by user): %v", err)
+	attendances, err := ac.attendanceService.GetAttendancesByUserId(userID)
+	if err != nil {
+		log.Printf("service error (get attendances by user): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении посещений из базы данных"})
 	}
 
@@ -162,7 +138,7 @@ func GetAttendancesByUserId(c echo.Context) error {
 	return c.JSON(http.StatusOK, resp)
 }
 
-// createAttendance godoc
+// CreateAttendance godoc
 // @Summary Создание посещения
 // @Description Создание нового посещения
 // @Tags Attendance
@@ -175,61 +151,26 @@ func GetAttendancesByUserId(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании посещения"
 // @Router /attendance [post]
-func CreateAttendance(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (ac *AttendanceController) CreateAttendance(c echo.Context) error {
 	var req request.AttendanceCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	userID, err := uuid.Parse(req.UserId)
+	attendanceID, err := ac.attendanceService.CreateAttendance(req)
 	if err != nil {
-		log.Printf("parse user id error: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
-	}
-
-	now := time.Now()
-	del := false
-
-	attendance := models.Attendance{
-		ID:            uuid.New(),
-		UserID:        userID,
-		Date:          req.Date,
-		WorkdayHours:  req.WorkdayHours,
-		PlannedStart:  req.PlannedStart,
-		ActualStart:   req.ActualStart,
-		Commits:       req.Commits,
-		MergeRequests: req.MergeRequests,
-		CodeReviews:   req.CodeReviews,
-		EndWork:       req.EndWork,
-		Deleted:       &del,
-		CreatedAt:     &now,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).
-			Model(&models.Attendance{}).
-			Create(&attendance).Error; err != nil {
-			log.Printf("DB error (create attendance): %v", err)
-			return err
-		}
-		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (create attendance): %v", txErr)
+		log.Printf("service error (create attendance): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании посещения"})
 	}
 
 	return c.JSON(http.StatusCreated, response.AttendanceUniversalResponse{
-		ID:      attendance.ID.String(),
+		ID:      attendanceID.String(),
 		Message: "Attendance created",
 	})
 }
 
-// updateAttendance godoc
+// UpdateAttendance godoc
 // @Summary Обновление посещения
 // @Description Обновление полей посещения по ID
 // @Tags Attendance
@@ -244,11 +185,7 @@ func CreateAttendance(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении посещения"
 // @Router /attendance/{id} [patch]
-func UpdateAttendance(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (ac *AttendanceController) UpdateAttendance(c echo.Context) error {
 	attendanceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
@@ -261,57 +198,12 @@ func UpdateAttendance(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := make(map[string]any)
-	if req.Date != nil {
-		updateData["date"] = req.Date
-	}
-	if req.WorkdayHours != nil {
-		updateData["workday_hours"] = req.WorkdayHours
-	}
-	if req.PlannedStart != nil {
-		updateData["planned_start"] = req.PlannedStart
-	}
-	if req.ActualStart != nil {
-		updateData["actual_start"] = req.ActualStart
-	}
-	// ВНИМАНИЕ: поля Status в модели Attendance нет — не обновляем его
-	if req.Commits != nil {
-		updateData["commits"] = req.Commits
-	}
-	if req.MergeRequests != nil {
-		updateData["merge_requests"] = req.MergeRequests
-	}
-	if req.CodeReviews != nil {
-		updateData["code_reviews"] = req.CodeReviews
-	}
-	if req.EndWork != nil {
-		updateData["end_work"] = req.EndWork
-	}
-
-	if len(updateData) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
-	}
-	now := time.Now()
-	updateData["updated_at"] = &now
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.Attendance{}).
-			Where("id = ? AND deleted = FALSE", attendanceID).
-			Updates(updateData)
-		if res.Error != nil {
-			log.Printf("DB error (update attendance): %v", res.Error)
-			return res.Error
+	err = ac.attendanceService.UpdateAttendance(attendanceID, req)
+	if err != nil {
+		if err.Error() == "Attendance not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Посещение не найдено или уже удалено"})
 		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Посещение не найдено или уже удалено"})
-		}
-		return nil
-	}); txErr != nil {
-		if he, ok := txErr.(*echo.HTTPError); ok {
-			return c.JSON(he.Code, he.Message)
-		}
-		log.Printf("DB transaction error (update attendance): %v", txErr)
+		log.Printf("service error (update attendance): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении посещения"})
 	}
 
@@ -321,7 +213,7 @@ func UpdateAttendance(c echo.Context) error {
 	})
 }
 
-// deleteAttendance godoc
+// DeleteAttendance godoc
 // @Summary Удаление посещения
 // @Description Логическое удаление посещения по ID (поле deleted = true)
 // @Tags Attendance
@@ -335,42 +227,19 @@ func UpdateAttendance(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении посещения"
 // @Router /attendance/{id} [delete]
-func DeleteAttendance(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (ac *AttendanceController) DeleteAttendance(c echo.Context) error {
 	attendanceID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		log.Printf("UUID parse error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор посещения"})
 	}
 
-	now := time.Now()
-	del := true
-	updateData := map[string]any{
-		"deleted":    &del,
-		"updated_at": &now,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.Attendance{}).
-			Where("id = ? AND deleted = FALSE", attendanceID).
-			Updates(updateData)
-		if res.Error != nil {
-			log.Printf("DB error (delete attendance): %v", res.Error)
-			return res.Error
+	err = ac.attendanceService.DeleteAttendance(attendanceID)
+	if err != nil {
+		if err.Error() == "Attendance not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Посещение не найдено или уже удалено"})
 		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, "Посещение не найдено или уже удалено")
-		}
-		return nil
-	}); txErr != nil {
-		if he, ok := txErr.(*echo.HTTPError); ok {
-			return c.JSON(he.Code, he.Message)
-		}
-		log.Printf("DB transaction error (delete attendance): %v", txErr)
+		log.Printf("service error (delete attendance): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении посещения"})
 	}
 
