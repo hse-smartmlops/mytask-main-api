@@ -351,8 +351,8 @@ func CreateProject(c echo.Context) error {
 	}
 
 	statuses := []models.Status{
-		makeStatus(0, "To Do", "#fa0707ff", true),   // Начальный статус
-		makeStatus(1, "Done", "#28A745", false),   // Конечный статус
+		makeStatus(0, "To Do", "#FF0000", true),   // Начальный статус
+		makeStatus(1, "Done", "#00FF00", false),   // Конечный статус
 	}
 
 	// Транзакция: проект → доска → статусы
