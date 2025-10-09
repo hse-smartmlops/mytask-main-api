@@ -262,8 +262,8 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 					CreatedAt:   &now,
 				}
 				// task_id опционально
-				if w.TaskID != nil {
-					if tid, err := uuid.Parse(*w.TaskID); err == nil {
+				if w.TaskID != "" {
+					if tid, err := uuid.Parse(w.TaskID); err == nil {
 						item.TaskID = &tid
 					}
 				}
@@ -278,13 +278,19 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 		if len(req.PlanTomorrow) > 0 {
 			batch := make([]models.TomorrowPlans, 0, len(req.PlanTomorrow))
 			for _, p := range req.PlanTomorrow {
-				batch = append(batch, models.TomorrowPlans{
+				item := models.TomorrowPlans{
 					ID:          uuid.New(),
 					Description: &p.Description,
 					ReportID:    &rep.ID,
 					Deleted:     &delFalse,
 					CreatedAt:   &now,
-				})
+				}
+				if p.TaskId != "" {
+					if tid, err := uuid.Parse(p.TaskId); err == nil {
+						item.TaskID = &tid
+					}
+				}
+				batch = append(batch, item)
 			}
 			if res := tx.Session(&gorm.Session{}).Model(&models.TomorrowPlans{}).Create(&batch); res.Error != nil {
 				return res.Error

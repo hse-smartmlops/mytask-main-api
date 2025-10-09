@@ -415,6 +415,8 @@ definitions:
     properties:
       description:
         type: string
+      task_id:
+        type: string
     type: object
   request.TomorrowPlanReplaceRequest:
     properties:
@@ -1043,7 +1045,7 @@ definitions:
     type: object
   response.StatusByBoardIdResponse:
     properties:
-      project_id:
+      board_id:
         type: string
       statuses:
         items:
@@ -1297,6 +1299,8 @@ definitions:
       description:
         type: string
       id:
+        type: string
+      task_id:
         type: string
     type: object
   response.UserInfo:

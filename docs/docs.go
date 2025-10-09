@@ -6926,6 +6926,9 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
                 }
             }
         },
@@ -7893,7 +7896,7 @@ const docTemplate = `{
         "response.StatusByBoardIdResponse": {
             "type": "object",
             "properties": {
-                "project_id": {
+                "board_id": {
                     "type": "string"
                 },
                 "statuses": {
@@ -8283,6 +8286,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }

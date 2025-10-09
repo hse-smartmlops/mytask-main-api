@@ -132,12 +132,13 @@ func TestReport_FullCRUD(t *testing.T) {
 			CompleteWork: []request.CompletedWorkCreateRequest{
 				{
 					Description: "Completed work 1",
-					TaskID:      &taskId,
+					TaskID:      taskId,
 				},
 			},
 			PlanTomorrow: []request.TomorrowPlanCreateRequest{
 				{
 					Description: "Plan for tomorrow",
+					TaskId: taskId,
 				},
 			},
 			Problems: []string{problemID.String()},

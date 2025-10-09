@@ -6919,6 +6919,9 @@
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
                 }
             }
         },
@@ -7886,7 +7889,7 @@
         "response.StatusByBoardIdResponse": {
             "type": "object",
             "properties": {
-                "project_id": {
+                "board_id": {
                     "type": "string"
                 },
                 "statuses": {
@@ -8276,6 +8279,9 @@
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }
