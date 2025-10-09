@@ -91,6 +91,7 @@ func (rc *ReportController) GetAllReports(c echo.Context) error {
 			complWork = append(complWork, response.CompletedWork{
 				ID:          w.ID.String(),
 				Description: utils.GetString(w.Description),
+				TaskId: w.TaskID.String(),
 			})
 		}
 		var plans []response.TomorrowPlans
@@ -98,6 +99,7 @@ func (rc *ReportController) GetAllReports(c echo.Context) error {
 			plans = append(plans, response.TomorrowPlans{
 				ID:          p.ID.String(),
 				Description: utils.GetString(p.Description),
+				TaskId: p.TaskID.String(),
 			})
 		}
 		var problemsResp []response.ProblemResponse
@@ -191,6 +193,7 @@ func (rc *ReportController) GetAllReportsByUserId(c echo.Context) error {
 			complWork = append(complWork, response.CompletedWork{
 				ID:          w.ID.String(),
 				Description: utils.GetString(w.Description),
+				TaskId: w.TaskID.String(),
 			})
 		}
 		var plans []response.TomorrowPlans
@@ -198,6 +201,7 @@ func (rc *ReportController) GetAllReportsByUserId(c echo.Context) error {
 			plans = append(plans, response.TomorrowPlans{
 				ID:          p.ID.String(),
 				Description: utils.GetString(p.Description),
+				TaskId: p.TaskID.String(),
 			})
 		}
 		var problemsResp []response.ProblemResponse
@@ -278,6 +282,7 @@ func (rc *ReportController) GetReport(c echo.Context) error {
 		complWork = append(complWork, response.CompletedWork{
 			ID:          w.ID.String(),
 			Description: utils.GetString(w.Description),
+			TaskId: w.TaskID.String(),
 		})
 	}
 	var plans []response.TomorrowPlans
@@ -285,6 +290,7 @@ func (rc *ReportController) GetReport(c echo.Context) error {
 		plans = append(plans, response.TomorrowPlans{
 			ID:          p.ID.String(),
 			Description: utils.GetString(p.Description),
+			TaskId: p.TaskID.String(),
 		})
 	}
 	var problemsResp []response.ProblemResponse
@@ -362,6 +368,7 @@ func (rc *ReportController) GetReportsByTaskId(c echo.Context) error {
 			complWork = append(complWork, response.CompletedWork{
 				ID:          w.ID.String(),
 				Description: utils.GetString(w.Description),
+				TaskId: w.TaskID.String(),
 			})
 		}
 		var plans []response.TomorrowPlans
@@ -369,6 +376,7 @@ func (rc *ReportController) GetReportsByTaskId(c echo.Context) error {
 			plans = append(plans, response.TomorrowPlans{
 				ID:          p.ID.String(),
 				Description: utils.GetString(p.Description),
+				TaskId: p.TaskID.String(),
 			})
 		}
 		helpResp := []response.HelpRequestItem{}
@@ -448,6 +456,7 @@ func (rc *ReportController) GetReportsByProjectId(c echo.Context) error {
 			complWork = append(complWork, response.CompletedWork{
 				ID:          w.ID.String(),
 				Description: utils.GetString(w.Description),
+				TaskId: w.TaskID.String(),
 			})
 		}
 		var plans []response.TomorrowPlans
@@ -455,6 +464,7 @@ func (rc *ReportController) GetReportsByProjectId(c echo.Context) error {
 			plans = append(plans, response.TomorrowPlans{
 				ID:          p.ID.String(),
 				Description: utils.GetString(p.Description),
+				TaskId: p.TaskID.String(),
 			})
 		}
 		helpResp := []response.HelpRequestItem{}

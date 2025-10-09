@@ -4554,58 +4554,6 @@ paths:
       summary: Переместить задачу в другой статус (столбец)
       tags:
       - Tasks
-  /task/project/{projectId}/{page}/{pagesize}:
-    get:
-      consumes:
-      - application/json
-      description: Получает список задач, связанных с указанным проектом через доски
-        и статусы
-      parameters:
-      - description: ID проекта
-        in: path
-        name: projectId
-        required: true
-        type: string
-      - description: Номер страницы
-        in: path
-        name: page
-        required: true
-        type: integer
-      - description: Размер страницы
-        in: path
-        name: pagesize
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список задач успешно получен
-          schema:
-            $ref: '#/definitions/response.TaskListResponse'
-        "400":
-          description: Некорректный идентификатор проекта
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении задач
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Получение задач по ID проекта
-      tags:
-      - Tasks
   /task/user/{id}/{page}/{pagesize}:
     get:
       consumes:

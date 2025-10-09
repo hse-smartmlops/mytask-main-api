@@ -159,10 +159,26 @@ func (r *reportRepository) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyR
 }
 
 func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.DailyReport, error) {
+	// Шаг 1: Получить все status_id, принадлежащие доскам данного проекта
+	var statusIDs []uuid.UUID
+	if err := r.db.Session(&gorm.Session{}).
+		Model(&models.Status{}).
+		Select("statuses.id").
+		Joins("JOIN boards ON statuses.board_id = boards.id").
+		Where("boards.project_id = ? AND boards.deleted = ? AND statuses.deleted = ?", projectID, false, false).
+		Scan(&statusIDs).Error; err != nil {
+		return nil, err
+	}
+
+	if len(statusIDs) == 0 {
+		return []models.DailyReport{}, nil
+	}
+
+	// Шаг 2: Найти все задачи, относящиеся к этим статусам
 	var tasks []models.Task
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.Task{}).
-		Where("project_id = ? AND deleted = FALSE", projectID).
+		Where("status_id IN ? AND deleted = ?", statusIDs, false).
 		Find(&tasks).Error; err != nil {
 		return nil, err
 	}
@@ -171,46 +187,52 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 		return []models.DailyReport{}, nil
 	}
 
-	taskIDs := make([]uuid.UUID, 0, len(tasks))
-	for _, t := range tasks {
-		taskIDs = append(taskIDs, t.ID)
+	// Шаг 3: Собрать task IDs
+	taskIDs := make([]uuid.UUID, len(tasks))
+	for i, t := range tasks {
+		taskIDs[i] = t.ID
 	}
 
-	// по задачам проекта берём completed_work, вытягиваем report_id
-	var cw []models.CompletedWork
+	// Шаг 4: Найти CompletedWork по этим задачам
+	var completedWorks []models.CompletedWork
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.CompletedWork{}).
-		Where("deleted = FALSE AND task_id IN ?", taskIDs).
-		Find(&cw).Error; err != nil {
+		Where("task_id IN ? AND deleted = ?", taskIDs, false).
+		Find(&completedWorks).Error; err != nil {
 		return nil, err
 	}
 
-	reportIDs := make(map[uuid.UUID]struct{})
-	for _, w := range cw {
-		if w.ReportID != nil {
-			reportIDs[*w.ReportID] = struct{}{}
-		}
-	}
-
-	if len(reportIDs) == 0 {
+	if len(completedWorks) == 0 {
 		return []models.DailyReport{}, nil
 	}
 
-	ids := make([]uuid.UUID, 0, len(reportIDs))
-	for id := range reportIDs {
-		ids = append(ids, id)
+	// Шаг 5: Собрать уникальные report_id
+	reportIDSet := make(map[uuid.UUID]struct{})
+	for _, cw := range completedWorks {
+		if cw.ReportID != nil {
+			reportIDSet[*cw.ReportID] = struct{}{}
+		}
 	}
 
+	if len(reportIDSet) == 0 {
+		return []models.DailyReport{}, nil
+	}
+
+	reportIDs := make([]uuid.UUID, 0, len(reportIDSet))
+	for id := range reportIDSet {
+		reportIDs = append(reportIDs, id)
+	}
+
+	// Шаг 6: Загрузить отчёты с предзагрузкой связей
 	var reports []models.DailyReport
 	if err := r.db.Session(&gorm.Session{}).
-		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
 		Preload("HelpRequests", "deleted = FALSE").
 		Preload("CompletedWork", "deleted = FALSE").
 		Preload("TomorrowPlans", "deleted = FALSE").
 		Preload("ReportProblems", "deleted = FALSE").
 		Preload("ReportProblems.Problem", "deleted = FALSE").
-		Where("deleted = FALSE AND id IN ?", ids).
+		Where("id IN ? AND deleted = ?", reportIDs, false).
 		Find(&reports).Error; err != nil {
 		return nil, err
 	}

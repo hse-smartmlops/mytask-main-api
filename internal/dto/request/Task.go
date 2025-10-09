@@ -4,10 +4,10 @@ import "time"
 
 type TaskCreateRequest struct {
 	StatusID     string     `json:"status_id" validate:"required,uuid4"`
-	Name          *string     `json:"name" validate:"required,min=3,max=100"`
-	Description   *string     `json:"description" validate:"max=500"`
+	Name          *string    `json:"name" validate:"required,min=3,max=100"`
+	Description   *string    `json:"description" validate:"max=500"`
 	Priority      *int16     `json:"priority" validate:"required,min=1,max=10"`
-	CreatorID     *string     `json:"creator_id" validate:"required,uuid4"`
+	CreatorID     *string    `json:"creator_id" validate:"required,uuid4"`
 	AssignedTo    *string    `json:"assigned_to" validate:"omitempty,uuid4"`
 	Deadline      *time.Time `json:"deadline"`
 	StartDate     *time.Time `json:"start_date" validate:"required"`

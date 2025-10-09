@@ -17,17 +17,17 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestProblem_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	problemRepo := repository.NewProblemRepository(testDB)
+	problemService := service.NewProblemService(problemRepo)
+	problemController := controller.NewProblemController(problemService)
 
 	e := echo.New()
 
@@ -53,7 +53,8 @@ func TestProblem_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateProblem(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := problemController.CreateProblem(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -75,7 +76,7 @@ func TestProblem_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(problemID.String())
 
-		err := controller.GetProblemByID(c)
+		err := problemController.GetProblemByID(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -94,7 +95,7 @@ func TestProblem_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "page", "pagesize")
 		c.SetParamValues(userID.String(), "1", "10")
 
-		err := controller.GetProblemsByUserId(c)
+		err := problemController.GetProblemsByUserId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -125,7 +126,7 @@ func TestProblem_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(problemID.String())
 
-		err := controller.UpdateProblem(c)
+		err := problemController.UpdateProblem(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -142,7 +143,7 @@ func TestProblem_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllProblems(c)
+		err := problemController.GetAllProblems(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -164,7 +165,7 @@ func TestProblem_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(problemID.String())
 
-		err := controller.DeleteProblem(c)
+		err := problemController.DeleteProblem(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

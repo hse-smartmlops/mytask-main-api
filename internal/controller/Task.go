@@ -29,7 +29,6 @@ func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService) {
 	{
 		taskGroup.GET("/all/:page/:pagesize", controller.GetAllTasks)
 		taskGroup.GET("/:id", controller.GetTaskByID)
-		taskGroup.GET("/project/:projectId/:page/:pagesize", controller.GetTasksByProjectID)
 		taskGroup.POST("", controller.CreateTask)
 		taskGroup.PATCH("/:id", controller.UpdateTask)
 		taskGroup.DELETE("/:id", controller.DeleteTask)
@@ -162,6 +161,7 @@ func (tc *TaskController) GetTaskByID(c echo.Context) error {
 	return c.JSON(http.StatusOK, taskResponse)
 }
 
+/*
 // GetTasksByProjectID godoc
 // @Summary Получение задач по ID проекта
 // @Description Получает список задач, связанных с указанным проектом через доски и статусы
@@ -222,7 +222,7 @@ func (tc *TaskController) GetTasksByProjectID(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, taskList)
-}
+}*/
 
 // CreateTask godoc
 // @Summary Создание новой задачи

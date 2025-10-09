@@ -17,17 +17,17 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestRole_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	roleRepo := repository.NewRoleRepository(testDB)
+	roleService := service.NewRoleService(roleRepo)
+	roleController := controller.NewRoleController(roleService)
 
 	e := echo.New()
 
@@ -49,7 +49,8 @@ func TestRole_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateRole(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := roleController.CreateRole(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -71,7 +72,7 @@ func TestRole_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(roleID.String())
 
-		err := controller.GetRoleById(c)
+		err := roleController.GetRoleById(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -100,7 +101,7 @@ func TestRole_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(roleID.String())
 
-		err := controller.UpdateRole(c)
+		err := roleController.UpdateRole(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -117,7 +118,7 @@ func TestRole_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllRoles(c)
+		err := roleController.GetAllRoles(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -139,7 +140,7 @@ func TestRole_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(roleID.String())
 
-		err := controller.DeleteRole(c)
+		err := roleController.DeleteRole(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

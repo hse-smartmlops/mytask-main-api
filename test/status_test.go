@@ -17,17 +17,17 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestStatus_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	statusRepo := repository.NewStatusRepository(testDB)
+	statusService := service.NewStatusService(statusRepo)
+	statusController := controller.NewStatusController(statusService)
 
 	e := echo.New()
 
@@ -55,7 +55,8 @@ func TestStatus_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateStatus(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := statusController.CreateStatus(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -76,7 +77,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(statusID.String())
 
-		err := controller.GetStatusByID(c)
+		err := statusController.GetStatusByID(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -107,7 +108,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(statusID.String())
 
-		err := controller.UpdateStatus(c)
+		err := statusController.UpdateStatus(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -124,7 +125,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllStatuses(c)
+		err := statusController.GetAllStatuses(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -147,7 +148,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("board_id")
 		c.SetParamValues(boardID.String())
 
-		err := controller.GetStatusesByBoardId(c)
+		err := statusController.GetStatusesByBoardId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -176,7 +177,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(statusID.String())
 
-		err := controller.DeleteStatus(c)
+		err := statusController.DeleteStatus(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

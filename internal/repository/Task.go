@@ -234,12 +234,12 @@ func (r *taskRepository) UserExists(userID uuid.UUID) (bool, error) {
 }
 
 func (r *taskRepository) StatusExists(statusID uuid.UUID) (bool, error) {
-	var statusExists bool
+	var count int64
 	if err := r.db.Session(&gorm.Session{}).Model(&models.Status{}).
 		Joins("INNER JOIN boards ON statuses.board_id = boards.id").
 		Where("statuses.id = ? AND statuses.deleted = ? AND boards.deleted = ?", statusID, false, false).
-		Scan(&statusExists).Error; err != nil {
+		Count(&count).Error; err != nil {
 		return false, err
 	}
-	return statusExists, nil
+	return count > 0, nil
 }

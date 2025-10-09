@@ -8,6 +8,7 @@ import (
 
 type TomorrowPlanCreateRequest struct {
 	Description string `json:"description"`
+	TaskId       string    `json:"task_id"`
 }
 
 type CompletedWorkCreateRequest struct{

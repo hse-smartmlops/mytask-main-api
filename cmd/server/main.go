@@ -78,7 +78,7 @@ func main() {
 	userService := service.NewUserService(userRepo)
 	
 	// Keycloak auth middleware for protected endpoints
-	e.Use(controller.KeycloakAuthMiddleware(authService)) // Передаем authService
+	//e.Use(controller.KeycloakAuthMiddleware(authService)) // Передаем authService
 
 	// Swagger: не хардкодим host, оставляем пустым, чтобы UI брал текущий адрес запроса
 	docs.SwaggerInfo.Host = ""

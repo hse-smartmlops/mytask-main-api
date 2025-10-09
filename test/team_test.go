@@ -17,17 +17,17 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestTeam_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	teamRepo := repository.NewTeamRepository(testDB)
+	teamService := service.NewTeamService(teamRepo)
+	teamController := controller.NewTeamController(teamService)
 
 	e := echo.New()
 
@@ -50,7 +50,8 @@ func TestTeam_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateTeam(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := teamController.CreateTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -72,7 +73,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(teamID.String())
 
-		err := controller.GetTeamByID(c)
+		err := teamController.GetTeamByID(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -96,7 +97,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.AddUserToTeam(c)
+		err := teamController.AddUserToTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -113,7 +114,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.GetTeams(c)
+		err := teamController.GetTeams(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -148,7 +149,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.AddProjectToTeam(c)
+		err := teamController.AddProjectToTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -167,7 +168,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		c.SetParamNames("project_id")
 		c.SetParamValues(projectID.String())
 
-		err := controller.GetProjectTeams(c)
+		err := teamController.GetProjectTeams(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -200,7 +201,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(teamID.String())
 
-		err := controller.UpdateTeam(c)
+		err := teamController.UpdateTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -222,7 +223,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.DeleteUserFromTeam(c)
+		err := teamController.DeleteUserFromTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -251,7 +252,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.DeleteProjectFromTeam(c)
+		err := teamController.DeleteProjectFromTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -275,7 +276,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(teamID.String())
 
-		err := controller.DeleteTeam(c)
+		err := teamController.DeleteTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

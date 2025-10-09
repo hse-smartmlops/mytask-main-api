@@ -35,6 +35,7 @@ type ProblemResponse struct {
 type TomorrowPlans struct {
 	ID          string `json:"id"`
 	Description string `json:"description"`
+	TaskId  string           `json:"task_id"`
 }
 
 type CompletedWork struct{

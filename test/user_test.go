@@ -1,3 +1,4 @@
+// user_test.go
 package test
 
 import (
@@ -19,6 +20,8 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 // createTestRole создаёт тестовую роль
@@ -42,20 +45,17 @@ func createTestRole(t *testing.T, db *gorm.DB, name string) uuid.UUID {
 func TestCreateUser_10Users(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	// Мокаем авторизацию
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	userRepo := repository.NewUserRepository(testDB)
+	userService := service.NewUserService(userRepo)
+	userController := controller.NewUserController(userService)
 
 	e := echo.New()
 
 	const total = 10
 	start := time.Now()
 	defer func() {
-		t.Logf("Created %d users via createUser in %v", total, time.Since(start))
+		t.Logf("Created %d users via CreateUser in %v", total, time.Since(start))
 	}()
 
 	for i := 1; i <= total; i++ {
@@ -74,12 +74,13 @@ func TestCreateUser_10Users(t *testing.T) {
 		}
 
 		body, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/users", bytes.NewBuffer(body))
+		req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewBuffer(body))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateUser(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := userController.CreateUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -112,12 +113,10 @@ func TestCreateUser_10Users(t *testing.T) {
 func TestUser_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	userRepo := repository.NewUserRepository(testDB)
+	userService := service.NewUserService(userRepo)
+	userController := controller.NewUserController(userService)
 
 	e := echo.New()
 
@@ -147,7 +146,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateUser(c)
+		err := userController.CreateUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -170,7 +169,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(userID.String())
 
-		err := controller.GetUserById(c)
+		err := userController.GetUserById(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -202,7 +201,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(userID.String())
 
-		err := controller.UpdateUser(c)
+		err := userController.UpdateUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -229,7 +228,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllUsers(c)
+		err := userController.GetAllUsers(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -260,7 +259,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.AddUserRole(c)
+		err := userController.AddUserRole(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -289,7 +288,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.RemoveUserRole(c)
+		err := userController.RemoveUserRole(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -313,7 +312,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(userID.String())
 
-		err := controller.BanUser(c)
+		err := userController.BanUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -351,7 +350,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.RestoreUser(c)
+		err := userController.RestoreUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -380,7 +379,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(userID.String())
 
-		err = controller.DeleteUser(c)
+		err = userController.DeleteUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -390,7 +389,6 @@ func TestUser_FullCRUD(t *testing.T) {
 		assert.Contains(t, resp["message"], "удален")
 
 		// Проверим в БД - записи не должно быть (hard delete)
-		// Используем FirstWithErrorIgnore для избежания логирования ошибки
 		var user models.User
 		result := testDB.Unscoped().First(&user, "id = ?", userID)
 		assert.Error(t, result.Error)

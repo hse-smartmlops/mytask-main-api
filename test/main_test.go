@@ -3,11 +3,9 @@ package test
 import (
 	"fmt"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
-	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 
 	"github.com/stretchr/testify/require"
@@ -31,37 +29,39 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-var (
-	origDBConn    = controller.DBConn
-	origAuthorize = controller.Authorize
-)
-
 func createTestDatabase() {
-    // Используем единый подход для Docker и локальной среды
     host := getEnv("TEST_DB_HOST", "localhost")
     port := getEnv("TEST_DB_PORT", "5432")
     user := getEnv("TEST_DB_USER", "postgres")
     password := getEnv("TEST_DB_PASSWORD", "admin")
     dbname := getEnv("TEST_DB_NAME", "postgres")
 
-    // Подключаемся к служебной БД
-    adminDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", 
+    adminDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
         host, user, password, dbname, port)
-    adminDB, err := gorm.Open(postgres.Open(adminDSN), &gorm.Config{})
+    adminDB, err := gorm.Open(postgres.Open(adminDSN), &gorm.Config{
+        Logger: logger.Discard, // ← отключаем логи и здесь!
+    })
     if err != nil {
         panic("Failed to connect to admin DB: " + err.Error())
     }
+    defer func() {
+        if sqlDB, err := adminDB.DB(); err == nil {
+            sqlDB.Close()
+        }
+    }()
 
-    sqlDB, err := adminDB.DB()
+    // Проверяем, существует ли БД "test"
+    var exists bool
+    err = adminDB.Raw("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname = 'test')").Scan(&exists).Error
     if err != nil {
-        panic("Failed to get *sql.DB: " + err.Error())
+        panic("Failed to check if test DB exists: " + err.Error())
     }
-    defer sqlDB.Close()
 
-    // Создаем тестовую БД если не существует
-    _, err = sqlDB.Exec("CREATE DATABASE test")
-    if err != nil && !strings.Contains(err.Error(), "already exists") {
-        panic("Failed to create test DB: " + err.Error())
+    if !exists {
+        err = adminDB.Exec("CREATE DATABASE test").Error
+        if err != nil {
+            panic("Failed to create test DB: " + err.Error())
+        }
     }
 }
 
@@ -74,49 +74,37 @@ func setupTestDB(t *testing.T) *gorm.DB {
     testDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=test port=%s sslmode=disable TimeZone=UTC", 
         host, user, password, port)
     
-    db, err := gorm.Open(postgres.Open(testDSN), &gorm.Config{})
-    db = db.Session(&gorm.Session{Logger: logger.Discard})
+    db, err := gorm.Open(postgres.Open(testDSN), &gorm.Config{
+        Logger: logger.Discard, // ← ключевое изменение
+    })
     require.NoError(t, err)
 
-    // Очищаем схему
     sqlDB, err := db.DB()
     require.NoError(t, err)
     _, err = sqlDB.Exec("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
     require.NoError(t, err)
 
-    // Миграции
     err = db.AutoMigrate(
-	// 1. Базовые сущности (без внешних ключов или с необязательными)
-		&models.User{},
-		&models.Role{},
-		&models.Team{},
-		&models.Problem{},
-
-		// 2. Джойн-таблицы и сущности, ссылающиеся на базовые
-		&models.UserRole{},
-		&models.TeamMember{},
-		&models.ForumMessage{}, // ссылается на Problem и User
-		&models.Project{},      // ссылается на User (CreatedBy)
-
-		// 3. Сущности второго уровня
-		&models.Board{},        // ссылается на Project
-
-		// 4. Статусы — ссылаются на Board
-		&models.Status{},
-
-		// 5. Задачи — ссылаются на Status, User (AssignedTo, CreatedBy)
-		&models.Task{},
-
-		// 6. Отчёты и связанные с задачами/пользователями
-		&models.Attendance{},
-		&models.DailyReport{},
-		&models.ReportProblem{},
-		&models.HelpRequest{},
-		&models.CompletedWork{},
-		&models.TomorrowPlans{},
-		&models.ProjectTeam{},  // ссылается на Project и Team
-		&models.Subscription{},
-	)
+        &models.User{},
+        &models.Role{},
+        &models.Team{},
+        &models.Problem{},
+        &models.UserRole{},
+        &models.TeamMember{},
+        &models.ForumMessage{},
+        &models.Project{},
+        &models.Board{},
+        &models.Status{},
+        &models.Task{},
+        &models.Attendance{},
+        &models.DailyReport{},
+        &models.ReportProblem{},
+        &models.HelpRequest{},
+        &models.CompletedWork{},
+        &models.TomorrowPlans{},
+        &models.ProjectTeam{},
+        &models.Subscription{},
+    )
     require.NoError(t, err)
 
     return db
