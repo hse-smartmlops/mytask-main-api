@@ -314,28 +314,31 @@ func CreateTask(c echo.Context) error {
 		})
 	}
 
-	// === Валидация и парсинг AssignedTo (исполнитель) ===
-	if req.AssignedTo == nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Отсутствует идентификатор исполнителя"})
-	}
-	assigneeID, err := uuid.Parse(*req.AssignedTo)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор исполнителя"})
-	}
+	var assigneeID *uuid.UUID
 
-	// Проверка существования исполнителя
-	var assigneeCount int64
-	if err := DBConn.Session(&gorm.Session{}).Model(&models.User{}).
-		Where("id = ? AND deleted = ?", assigneeID, false).
-		Count(&assigneeCount).Error; err != nil {
-		log.Printf("DB error (check assignee): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке исполнителя"})
-	}
-	if assigneeCount == 0 {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "Исполнитель не найден"})
-	}
+	// === Обработка AssignedTo (исполнитель) — необязательное поле ===
+	if req.AssignedTo != nil && *req.AssignedTo != "" {
+		parsedAssigneeID, err := uuid.Parse(*req.AssignedTo)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор исполнителя"})
+		}
 
-	// === Валидация и парсинг CreatorID (поручитель) ===
+		// Проверка существования исполнителя
+		var assigneeCount int64
+		if err := DBConn.Session(&gorm.Session{}).Model(&models.User{}).
+			Where("id = ? AND deleted = ?", parsedAssigneeID, false).
+			Count(&assigneeCount).Error; err != nil {
+			log.Printf("DB error (check assignee): %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке исполнителя"})
+		}
+		if assigneeCount == 0 {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Исполнитель не найден"})
+		}
+		assigneeID = &parsedAssigneeID
+	}
+	// Если req.AssignedTo == nil или пустая строка — assigneeID остаётся nil
+
+	// === Валидация и парсинг CreatorID (поручитель) — обязательное поле ===
 	if req.CreatorID == nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Отсутствует идентификатор поручителя"})
 	}
@@ -363,15 +366,15 @@ func CreateTask(c echo.Context) error {
 	}
 
 	// Проверка существования статуса и его принадлежности к неудалённой доске
-	var statusExists bool
+	var statusCount int64
 	if err := DBConn.Session(&gorm.Session{}).Model(&models.Status{}).
 		Joins("INNER JOIN boards ON statuses.board_id = boards.id").
 		Where("statuses.id = ? AND statuses.deleted = ? AND boards.deleted = ?", statusID, false, false).
-		Scan(&statusExists).Error; err != nil {
+		Count(&statusCount).Error; err != nil {
 		log.Printf("DB error (check status): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке статуса"})
 	}
-	if !statusExists {
+	if statusCount < 1 {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "Статус не найден или привязан к удалённой доске"})
 	}
 
@@ -386,7 +389,7 @@ func CreateTask(c echo.Context) error {
 		Name:          req.Name,
 		Description:   req.Description,
 		CreatedBy:     &creatorID,
-		AssignedTo:    &assigneeID,
+		AssignedTo:    assigneeID, // может быть nil
 		Deadline:      req.Deadline,
 		StartDate:     req.StartDate,
 		GitlabIssueID: req.GitlabIssueID,
