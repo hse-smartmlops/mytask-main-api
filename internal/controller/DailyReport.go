@@ -548,62 +548,66 @@ func GetReportsByProjectId(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
 	}
 
-	var tasks []models.Task
+	// Шаг 1: Получить ID задач, принадлежащих проекту через цепочку связей
+	var taskIDs []uuid.UUID
 	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Task{}).
-		Where("project_id = ? AND deleted = FALSE", projectUUID).
-		Find(&tasks).Error; err != nil {
-		log.Printf("DB error (find tasks by project id): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач"})
+		Table("tasks").
+		Select("tasks.id").
+		Joins("JOIN statuses ON tasks.status_id = statuses.id AND statuses.deleted = false").
+		Joins("JOIN boards ON statuses.board_id = boards.id AND boards.deleted = false").
+		Where("boards.project_id = ? AND tasks.deleted = false", projectUUID).
+		Find(&taskIDs).Error; err != nil {
+		log.Printf("DB error (find task IDs by project): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задач проекта"})
 	}
 
-	if len(tasks) == 0 {
+	if len(taskIDs) == 0 {
 		return c.JSON(http.StatusOK, response.ReportListByProjectId{ProjectID: projectUUID.String()})
 	}
 
-	taskIDs := make([]uuid.UUID, 0, len(tasks))
-	for _, t := range tasks {
-		taskIDs = append(taskIDs, t.ID)
-	}
-
-	// по задачам проекта берём completed_work, вытягиваем report_id
+	// Шаг 2: Найти completed_work по этим задачам
 	var cw []models.CompletedWork
 	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.CompletedWork{}).
-		Where("deleted = FALSE AND task_id IN ?", taskIDs).
+		Where("deleted = false AND task_id IN ?", taskIDs).
 		Find(&cw).Error; err != nil {
 		log.Printf("DB error (find completed_work by tasks): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении работ"})
 	}
+
 	reportIDs := make(map[uuid.UUID]struct{})
 	for _, w := range cw {
 		if w.ReportID != nil {
 			reportIDs[*w.ReportID] = struct{}{}
 		}
 	}
+
 	if len(reportIDs) == 0 {
 		return c.JSON(http.StatusOK, response.ReportListByProjectId{ProjectID: projectUUID.String()})
 	}
+
 	ids := make([]uuid.UUID, 0, len(reportIDs))
 	for id := range reportIDs {
 		ids = append(ids, id)
 	}
 
+	// Шаг 3: Загрузить отчёты с предзагрузкой связанных данных
 	var reports []models.DailyReport
 	if err := DBConn.Session(&gorm.Session{}).
 		Model(&models.DailyReport{}).
-		Preload("User", "deleted = FALSE").
-		Preload("HelpRequests", "deleted = FALSE").
-		Preload("CompletedWork", "deleted = FALSE").
-		Preload("TomorrowPlans", "deleted = FALSE").
-		Preload("ReportProblems", "deleted = FALSE").
-		Preload("ReportProblems.Problem", "deleted = FALSE").
-		Where("deleted = FALSE AND id IN ?", ids).
+		Preload("User", "deleted = false").
+		Preload("HelpRequests", "deleted = false").
+		Preload("CompletedWork", "deleted = false").
+		Preload("TomorrowPlans", "deleted = false").
+		Preload("ReportProblems", "deleted = false").
+		Preload("ReportProblems.Problem", "deleted = false").
+		Where("deleted = false AND id IN ?", ids).
 		Find(&reports).Error; err != nil {
 		log.Printf("DB error (find reports by project id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении отчетов"})
 	}
 
+	// Шаг 4: Преобразовать в DTO
 	out := response.ReportListByProjectId{ProjectID: projectUUID.String()}
 	for _, r := range reports {
 		userInfo := response.UserShort{
@@ -666,6 +670,7 @@ func GetReportsByProjectId(c echo.Context) error {
 			Checked:       utils.GetInt8(r.Checked),
 		})
 	}
+
 	return c.JSON(http.StatusOK, out)
 }
 

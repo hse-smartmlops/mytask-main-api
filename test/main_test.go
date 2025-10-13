@@ -38,15 +38,14 @@ var (
 
 func createTestDatabase() {
     // Используем единый подход для Docker и локальной среды
-    host := getEnv("TEST_DB_HOST", "localhost")
     port := getEnv("TEST_DB_PORT", "5432")
     user := getEnv("TEST_DB_USER", "postgres")
     password := getEnv("TEST_DB_PASSWORD", "admin")
     dbname := getEnv("TEST_DB_NAME", "postgres")
 
     // Подключаемся к служебной БД
-    adminDSN := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", 
-        host, user, password, dbname, port)
+    adminDSN := fmt.Sprintf("host=localhost user=%s password=%s dbname=%s port=%s sslmode=disable", 
+         user, password, dbname, port)
     adminDB, err := gorm.Open(postgres.Open(adminDSN), &gorm.Config{})
     if err != nil {
         panic("Failed to connect to admin DB: " + err.Error())
