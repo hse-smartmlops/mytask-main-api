@@ -9,9 +9,10 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+/*
 type authController struct {
 	authService service.AuthService
-}
+}*/
 
 // KeycloakAuthMiddleware validates Authorization header using Keycloak introspection
 // and attempts token exchange if necessary. On success it stores the active token
