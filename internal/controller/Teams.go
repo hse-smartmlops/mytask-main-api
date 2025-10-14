@@ -36,6 +36,7 @@ func RegisterTeamRoutes(e *echo.Echo, teamService service.TeamService) {
 	teamGroup.POST("/project", controller.AddProjectToTeam)
 	teamGroup.DELETE("/project", controller.DeleteProjectFromTeam)
 	teamGroup.GET("/project/:project_id", controller.GetProjectTeams)
+	teamGroup.GET("/user/:id", controller.GetTeamByUserId)
 }
 
 // GetTeams godoc
@@ -356,7 +357,7 @@ func (tc *TeamController) DeleteTeam(c echo.Context) error {
 // @Tags Teams
 // @Accept json
 // @Produce json
-// @Param addUser body request.TeamAddUserRequest true "Данные для добавления пользователя в команду"
+// @Param addUser body request.TeamAddUsersRequest true "Данные для добавления пользователя в команду"
 // @Security BearerAuth
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TeamUniversalUserResponse "Пользователь успешно добавлен в команду"
@@ -364,7 +365,7 @@ func (tc *TeamController) DeleteTeam(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при добавлении пользователя в команду"
 // @Router /team/user [post]
 func (tc *TeamController) AddUserToTeam(c echo.Context) error {
-	var req request.TeamAddUserRequest
+	var req request.TeamAddUsersRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -372,7 +373,7 @@ func (tc *TeamController) AddUserToTeam(c echo.Context) error {
 		})
 	}
 
-	teamMember, err := tc.teamService.AddUserToTeam(req)
+	_, err := tc.teamService.AddUsersToTeam(req.TeamID, req.UserIDs)
 	if err != nil {
 		if err.Error() == "user not found" {
 			log.Printf("DB error (select profession): %v", err)
@@ -390,10 +391,10 @@ func (tc *TeamController) AddUserToTeam(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Не удалось добавить пользователя в команду"})
 	}
 
-	addResponse := response.TeamUniversalUserResponse{
-		TeamID:  teamMember.TeamID.String(),
-		UserID:  teamMember.UserID.String(),
-		Message: "Пользователь добавлен в команду",
+	addResponse := response.UsersAddResponse{
+		TeamID:  req.TeamID,
+		UsersID: req.UserIDs,
+		Message: "Пользователи добавлен в команду",
 	}
 
 	return c.JSON(http.StatusOK, addResponse)
@@ -554,4 +555,72 @@ func (tc *TeamController) DeleteProjectFromTeam(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, deleteResponse)
+}
+
+// GetTeamByUserId godoc
+// @Summary Получение команд пользователя
+// @Description Получает список всех активных команд, в которых состоит пользователь
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Success 200 {object} response.TeamsListResponse "Список команд успешно получен"
+// @Security BearerAuth
+// @Failure 400 {object} map[string]string "Некорректный идентификатор пользователя"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Команды для пользователя не найдены"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении команд"
+// @Router /team/user/{id} [get]
+func (tc *TeamController) GetTeamByUserId(c echo.Context) error {
+	userIDParam := c.Param("id")
+
+	userID, err := uuid.Parse(userIDParam)
+	if err != nil {
+		log.Printf("UUID parse error (userID): %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Некорректный идентификатор пользователя",
+		})
+	}
+
+	teams, err := tc.teamService.GetTeamsByUserID(userID)
+	if err != nil {
+		log.Printf("service error (get teams by user id): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Ошибка при получении команд пользователя",
+		})
+	}
+
+	if len(teams) == 0 {
+		return c.JSON(http.StatusNotFound, map[string]string{
+			"error": "Команды для данного пользователя не найдены",
+		})
+	}
+
+	teamListResponse := response.TeamsListResponse{Teams: make([]response.TeamResponse, 0, len(teams))}
+	for _, team := range teams {
+		members := make([]response.TeamMemberResponse, 0, len(team.TeamMembers))
+		for _, tm := range team.TeamMembers {
+			if tm.User == nil {
+				continue
+			}
+			members = append(members, response.TeamMemberResponse{
+				UserID:         tm.User.ID.String(),
+				Specialization: utils.GetString(tm.Specialization),
+				FirstName:      tm.User.FirstName,
+				LastName:       tm.User.LastName,
+				Email:          tm.User.Email,
+			})
+		}
+
+		teamListResponse.Teams = append(teamListResponse.Teams, response.TeamResponse{
+			ID:          team.ID.String(),
+			Name:        utils.GetString(team.Name),
+			Description: utils.GetString(team.Description),
+			UpdatedAt:   utils.GetTime(team.UpdatedAt),
+			CreatedAt:   utils.GetTime(team.CreatedAt),
+			Members:     members,
+		})
+	}
+
+	return c.JSON(http.StatusOK, teamListResponse)
 }

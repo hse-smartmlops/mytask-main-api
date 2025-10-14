@@ -17,10 +17,11 @@ type TeamService interface {
 	CreateTeam(req request.TeamCreateRequest) (uuid.UUID, error)
 	UpdateTeam(teamUUID uuid.UUID, req request.TeamUpdateRequest) error
 	DeleteTeam(teamIDParam string) error
-	AddUserToTeam(req request.TeamAddUserRequest) (*models.TeamMember, error)
+	AddUsersToTeam(teamId string, userIds []string) ([]models.TeamMember, error)
 	DeleteUserFromTeam(req request.TeamDeleteUserRequest) error
 	AddProjectToTeam(req request.TeamAddProjectRequest) (*models.ProjectTeam, error)
 	DeleteProjectFromTeam(teamID uuid.UUID, projectID uuid.UUID) error
+	GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error)
 }
 
 type teamService struct {
@@ -35,6 +36,10 @@ func NewTeamService(repo repository.TeamRepository) TeamService {
 
 func (s *teamService) GetTeams() ([]models.Team, error) {
 	return s.repo.GetTeams()
+}
+
+func (s *teamService) GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error) {
+	return s.repo.GetTeamsByUserID(userID)
 }
 
 func (s *teamService) GetProjectTeams(projectID uuid.UUID) ([]models.ProjectTeam, error) {
@@ -71,6 +76,32 @@ func (s *teamService) CreateTeam(req request.TeamCreateRequest) (uuid.UUID, erro
 	err := s.repo.CreateTeam(team)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	users, err := s.repo.GetUsersFromArray(req.UsersIDs)
+	if err != nil {
+		return uuid.Nil, errors.New("user not found")
+	}
+
+	if len(req.UsersIDs) != len(users) {
+		return uuid.Nil, errors.New("not all users founded")
+	}
+
+	teamMembers := []models.TeamMember{}
+	if len(users) > 0 {
+		for _, user := range users {
+			teamMembers = append(teamMembers, models.TeamMember{
+			UserID:         user.ID,
+			TeamID:         team.ID,
+			Specialization: &user.Profession,
+			Deleted:        &del,
+			})
+		}
+
+		err = s.repo.CreateTeamMembers(teamMembers)
+		if err != nil {
+			return uuid.Nil, err
+		}
 	}
 
 	return newUUID, nil
@@ -123,32 +154,39 @@ func (s *teamService) DeleteTeam(teamIDParam string) error {
 	return nil
 }
 
-func (s *teamService) AddUserToTeam(req request.TeamAddUserRequest) (*models.TeamMember, error) {
-	user, err := s.repo.GetUser(req.UserID)
+func (s *teamService) AddUsersToTeam(teamId string, userIds []string) ([]models.TeamMember, error) {
+	users, err := s.repo.GetUsersFromArray(userIds)
 	if err != nil {
 		return nil, errors.New("user not found")
 	}
 
-	team, err := s.repo.GetTeam(req.TeamID)
+	if len(userIds) != len(users) {
+		return nil, errors.New("not all users founded")
+	}
+
+	team, err := s.repo.GetTeam(teamId)
 	if err != nil {
 		return nil, errors.New("team not found")
 	}
 
 	del := false
 
-	teamMember := models.TeamMember{
+	teamMembers := []models.TeamMember{}
+	for _, user := range users {
+		teamMembers = append(teamMembers, models.TeamMember{
 		UserID:         user.ID,
 		TeamID:         team.ID,
 		Specialization: &user.Profession,
 		Deleted:        &del,
+		})
 	}
 
-	err = s.repo.CreateTeamMember(teamMember)
+	err = s.repo.CreateTeamMembers(teamMembers)
 	if err != nil {
 		return nil, err
 	}
 
-	return &teamMember, nil
+	return teamMembers, nil
 }
 
 func (s *teamService) DeleteUserFromTeam(req request.TeamDeleteUserRequest) error {

@@ -73,15 +73,11 @@ func (fmc *ForumMessageController) GetAllForumMessages(c echo.Context) error {
 	}
 	for _, m := range forumMessages {
 		description := []string(m.Description)
-		var creatorId string
-		if m.CreatorID != nil {
-			creatorId = m.CreatorID.String()
-		}
 		out.Messages = append(out.Messages, response.ForumMessageResponse{
 			ID:          m.ID.String(),
 			ProblemID:   m.ProblemID.String(),
 			Description: description,
-			CreatorID:   creatorId,
+			CreatorID:   utils.GetUUIDString(m.CreatorID),
 			CreatedAt:   utils.GetTime(m.CreatedAt),
 			UpdatedAt:   utils.GetTime(m.UpdatedAt),
 		})
@@ -133,15 +129,11 @@ func (fmc *ForumMessageController) GetForumMessagesByProblemId(c echo.Context) e
 	}
 	for _, m := range forumMessages {
 		description := []string(m.Description)
-		var creatorId string
-		if m.CreatorID != nil {
-			creatorId = m.CreatorID.String()
-		}
 		out.Messages = append(out.Messages, response.ForumMessageResponse{
 			ID:          m.ID.String(),
 			ProblemID:   m.ProblemID.String(),
 			Description: description,
-			CreatorID:   creatorId,
+			CreatorID:   utils.GetUUIDString(m.CreatorID),
 			CreatedAt:   utils.GetTime(m.CreatedAt),
 			UpdatedAt:   utils.GetTime(m.UpdatedAt),
 		})
@@ -179,16 +171,11 @@ func (fmc *ForumMessageController) GetForumMessageById(c echo.Context) error {
 	}
 
 	description := []string(m.Description)
-	var creatorId string
-	if m.CreatorID != nil {
-		creatorId = m.CreatorID.String()
-	}
-
 	return c.JSON(http.StatusOK, response.ForumMessageResponse{
 		ID:          m.ID.String(),
 		ProblemID:   m.ProblemID.String(),
 		Description: description,
-		CreatorID:   creatorId,
+		CreatorID:   utils.GetUUIDString(m.CreatorID),
 		CreatedAt:   utils.GetTime(m.CreatedAt),
 		UpdatedAt:   utils.GetTime(m.UpdatedAt),
 	})

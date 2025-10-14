@@ -98,6 +98,8 @@ func main() {
 	controller.RegisterSubscriptionRoutes(e, subscriptionService)
 	controller.RegisterStatusRoutes(e, statusService)
 
+	e.Use(controller.KeycloakAuthMiddleware(authService))
+
 	// Swagger UI
 	// Редиректим с /swagger на /swagger/index.html, чтобы работало без явного указания файла
 	e.GET("/swagger", func(c echo.Context) error {

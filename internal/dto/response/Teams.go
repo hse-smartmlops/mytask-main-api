@@ -47,3 +47,9 @@ type TeamUniversalProjectResponse struct {
 	ProjectID string `json:"project_id"`
 	Message   string `json:"message"`
 }
+
+type UsersAddResponse struct {
+	TeamID  string `json:"team_id"`
+	UsersID  []string `json:"users_id"`
+	Message string `json:"message"`
+}

@@ -154,7 +154,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, boardID.String(), resp["board_id"]) // ← должно быть board_id, не project_id
+		assert.Equal(t, boardID.String(), resp["board_id"])
 
 		statuses, ok := resp["statuses"].([]interface{})
 		assert.True(t, ok)

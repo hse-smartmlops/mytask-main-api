@@ -21,9 +21,12 @@ type TeamRepository interface {
 	GetTeam(teamID string) (*models.Team, error)
 	GetProject(projectID string) (*models.Project, error)
 	CreateTeamMember(teamMember models.TeamMember) error
+	CreateTeamMembers(teamMember []models.TeamMember) error
 	DeleteTeamMember(userID uuid.UUID, teamID uuid.UUID) (bool, error)
 	CreateProjectTeam(projectTeam models.ProjectTeam) error
 	DeleteProjectTeam(teamID uuid.UUID, projectID uuid.UUID, updateData map[string]interface{}) (bool, error)
+	GetUsersFromArray(userIDs []string) ([]models.User, error)
+	GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error)
 }
 
 type teamRepository struct {
@@ -41,6 +44,24 @@ func (r *teamRepository) GetTeams() ([]models.Team, error) {
 
 	err := r.db.Session(&gorm.Session{}).
 		Where("deleted = ?", false).
+		Preload("TeamMembers", "deleted = ?", false).
+		Preload("TeamMembers.User", "deleted = ?", false).
+		Find(&teams).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return teams, nil
+}
+
+func (r *teamRepository) GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error) {
+	var teams []models.Team
+
+	err := r.db.Session(&gorm.Session{}).
+		Joins("JOIN team_members ON teams.id = team_members.team_id").
+		Where("team_members.user_id = ? AND teams.deleted = ? AND team_members.deleted = ?", 
+			userID, false, false).
 		Preload("TeamMembers", "deleted = ?", false).
 		Preload("TeamMembers.User", "deleted = ?", false).
 		Find(&teams).Error
@@ -167,6 +188,29 @@ func (r *teamRepository) GetUser(userID string) (*models.User, error) {
 	return &user, nil
 }
 
+func (r *teamRepository) GetUsersFromArray(userIds []string) ([]models.User, error) {
+	if len(userIds) < 1{
+		return []models.User{}, nil
+	}
+	userIDs := []uuid.UUID{}
+	for _, id := range userIds{
+		userUUID, err := uuid.Parse(id)
+		if err != nil {
+			return nil, err
+		}
+		userIDs = append(userIDs, userUUID)
+	}
+
+	var users []models.User
+	if err := r.db.Session(&gorm.Session{}).Model(models.User{}).
+		Where("deleted = FALSE and id IN ?", userIDs).
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+
 func (r *teamRepository) GetTeam(teamID string) (*models.Team, error) {
 	var team models.Team
 	if err := r.db.Session(&gorm.Session{}).Model(models.Team{}).
@@ -188,6 +232,15 @@ func (r *teamRepository) GetProject(projectID string) (*models.Project, error) {
 }
 
 func (r *teamRepository) CreateTeamMember(teamMember models.TeamMember) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).Create(&teamMember); res.Error != nil {
+			return res.Error
+		}
+		return nil
+	})
+}
+
+func (r *teamRepository) CreateTeamMembers(teamMember []models.TeamMember) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).Create(&teamMember); res.Error != nil {
 			return res.Error

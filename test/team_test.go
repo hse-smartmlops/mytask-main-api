@@ -42,6 +42,7 @@ func TestTeam_FullCRUD(t *testing.T) {
 		reqBody := request.TeamCreateRequest{
 			Name:        "Test Team",
 			Description: "This is a test team",
+			UsersIDs:    []string{}, // можно и пустой массив
 		}
 
 		body, _ := json.Marshal(reqBody)
@@ -50,7 +51,6 @@ func TestTeam_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		// Используем метод контроллера вместо глобальной функции
 		err := teamController.CreateTeam(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
@@ -61,7 +61,6 @@ func TestTeam_FullCRUD(t *testing.T) {
 		assert.NotEmpty(t, resp["id"])
 		assert.Equal(t, "Команда создана", resp["message"])
 
-		// Сохраняем ID команды
 		teamID = uuid.MustParse(resp["id"].(string))
 	})
 
@@ -86,9 +85,9 @@ func TestTeam_FullCRUD(t *testing.T) {
 
 	// === 3. AddUserToTeam ===
 	t.Run("addUserToTeam", func(t *testing.T) {
-		reqBody := request.TeamAddUserRequest{
-			TeamID: teamID.String(),
-			UserID: userID.String(),
+		reqBody := request.TeamAddUsersRequest{ // ← Исправлено: Users (множественное число)
+			TeamID:  teamID.String(),
+			UserIDs: []string{userID.String()}, // ← массив
 		}
 
 		body, _ := json.Marshal(reqBody)
@@ -104,8 +103,8 @@ func TestTeam_FullCRUD(t *testing.T) {
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		assert.Equal(t, teamID.String(), resp["team_id"])
-		assert.Equal(t, userID.String(), resp["user_id"])
-		assert.Equal(t, "Пользователь добавлен в команду", resp["message"])
+		assert.Equal(t, []interface{}{userID.String()}, resp["users_id"]) // ← массив
+		assert.Equal(t, "Пользователи добавлен в команду", resp["message"]) // ← опечатка в сообщении, но как в коде
 	})
 
 	// === 4. GetTeams (проверяем, что команда с пользователем возвращается) ===

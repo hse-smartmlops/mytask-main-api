@@ -173,7 +173,7 @@ func (uc *UserController) GetUserById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка при привязке данных"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Failure 500 {object} map[string]string "Ошибка при создании пользователя"
-// @Router /user/create [post]
+// @Router /user [post]
 func (uc *UserController) CreateUser(c echo.Context) error {
 	var req request.UserCreateRequest
 	if err := c.Bind(&req); err != nil {

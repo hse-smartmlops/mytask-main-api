@@ -75,14 +75,10 @@ func (sc *SubscriptionController) GetAllSubscriptions(c echo.Context) error{
 		TotalCount: totalCount,
 	}
 	for _, s := range subs {
-		var subscriptionId string
-		if s.SubscriptionId != nil {
-			subscriptionId = s.SubscriptionId.String()
-		}
 		out.Subscriptions = append(out.Subscriptions, response.SubscriptionResponse{
 			ID:             s.ID.String(),
 			UserId:         s.UserID.String(),
-			SubscriptionId: subscriptionId,
+			SubscriptionId: utils.GetUUIDString(s.SubscriptionId),
 			TypeId:         utils.GetInt8(s.TypeID),
 			CreatedAt:      utils.GetTime(s.CreatedAt),
 		})
@@ -133,14 +129,10 @@ func (sc *SubscriptionController) GetSubscriptionsByUserId(c echo.Context) error
 		TotalCount: totalCount,
 	}
 	for _, s := range subs {
-		var subscriptionId string
-		if s.SubscriptionId != nil {
-			subscriptionId = s.SubscriptionId.String()
-		}
 		out.Subscriptions = append(out.Subscriptions, response.SubscriptionResponse{
 			ID:             s.ID.String(),
 			UserId:         s.UserID.String(),
-			SubscriptionId: subscriptionId,
+			SubscriptionId: utils.GetUUIDString(s.SubscriptionId),
 			TypeId:         utils.GetInt8(s.TypeID),
 			CreatedAt:      utils.GetTime(s.CreatedAt),
 		})
@@ -197,14 +189,10 @@ func (sc *SubscriptionController) GetSubscriptionBySubObject(c echo.Context) err
 		TotalCount:     totalCount,
 	}
 	for _, s := range subs {
-		var subscriptionId string
-		if s.SubscriptionId != nil {
-			subscriptionId = s.SubscriptionId.String()
-		}
 		out.Subscriptions = append(out.Subscriptions, response.SubscriptionResponse{
 			ID:             s.ID.String(),
 			UserId:         s.UserID.String(),
-			SubscriptionId: subscriptionId,
+			SubscriptionId: utils.GetUUIDString(s.SubscriptionId),
 			TypeId:         utils.GetInt8(s.TypeID),
 			CreatedAt:      utils.GetTime(s.CreatedAt),
 		})
@@ -242,14 +230,10 @@ func (sc *SubscriptionController) GetSubscriptionById(c echo.Context) error{
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении подписки"})
 	}
 
-	var subscriptionId string
-	if subscription.SubscriptionId != nil {
-		subscriptionId = subscription.SubscriptionId.String()
-	}
 	return c.JSON(http.StatusOK, response.SubscriptionResponse{
 		ID:             subscription.ID.String(),
 		UserId:         subscription.UserID.String(),
-		SubscriptionId: subscriptionId,
+		SubscriptionId: utils.GetUUIDString(subscription.SubscriptionId),
 		TypeId:         utils.GetInt8(subscription.TypeID),
 		CreatedAt:      utils.GetTime(subscription.CreatedAt),
 	})

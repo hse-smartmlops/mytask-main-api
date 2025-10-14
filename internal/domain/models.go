@@ -187,7 +187,7 @@ type DailyReport struct {
 	Deleted    *bool      `gorm:"type:boolean"`
 
 	User           *User           `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
-	HelpRequests    []HelpRequest    `gorm:"foreignKey:ReportID;references:ID"`
+	HelpRequests   []HelpRequest    `gorm:"foreignKey:ReportID;references:ID"`
 	CompletedWork  []CompletedWork `gorm:"foreignKey:ReportID;references:ID"`
 	TomorrowPlans  []TomorrowPlans `gorm:"foreignKey:ReportID;references:ID"`
 	ReportProblems []ReportProblem `gorm:"foreignKey:ReportID;references:ID"`

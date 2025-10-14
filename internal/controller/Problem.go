@@ -74,15 +74,11 @@ func (pc *ProblemController) GetAllProblems(c echo.Context) error {
 
 	for _, p := range problems {
 		desc := []string(p.Description)
-		var creatorId string
-		if p.CreatorID != nil {
-			creatorId = p.CreatorID.String()
-		}
 		out.Problems = append(out.Problems, response.ProblemResponse{
 			ID:          p.ID.String(),
 			Name:        utils.GetString(p.Name),
 			Description: desc,
-			CreatorId:   creatorId,
+			CreatorId:   utils.GetUUIDString(p.CreatorID),
 			CreatedAt:   utils.GetTime(p.CreatedAt),
 			UpdatedAt:   utils.GetTime(p.UpdatedAt),
 		})
@@ -135,15 +131,11 @@ func (pc *ProblemController) GetProblemsByUserId(c echo.Context) error {
 	}
 	for _, p := range problems {
 		desc := []string(p.Description)
-		var creatorId string
-		if p.CreatorID != nil {
-			creatorId = p.CreatorID.String()
-		}
 		out.Problems = append(out.Problems, response.ProblemResponse{
 			ID:          p.ID.String(),
 			Name:        utils.GetString(p.Name),
 			Description: desc,
-			CreatorId:   creatorId,
+			CreatorId:   utils.GetUUIDString(p.CreatorID),
 			CreatedAt:   utils.GetTime(p.CreatedAt),
 			UpdatedAt:   utils.GetTime(p.UpdatedAt),
 		})
@@ -182,16 +174,12 @@ func (pc *ProblemController) GetProblemByID(c echo.Context) error {
 	}
 
 	desc := []string(p.Description)
-	var creatorId string
-	if p.CreatorID != nil {
-		creatorId = p.CreatorID.String()
-	}
 
 	return c.JSON(http.StatusOK, response.ProblemResponse{
 		ID:          p.ID.String(),
 		Name:        utils.GetString(p.Name),
 		Description: desc,
-		CreatorId:   creatorId,
+		CreatorId:   utils.GetUUIDString(p.CreatorID),
 		CreatedAt:   utils.GetTime(p.CreatedAt),
 		UpdatedAt:   utils.GetTime(p.UpdatedAt),
 	})
