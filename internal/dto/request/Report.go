@@ -11,6 +11,11 @@ type TomorrowPlanCreateRequest struct {
 	TaskId      string    `json:"task_id"`
 }
 
+type ReportsByDateInXLSX struct {
+	StartDate time.Time `json:"start_date"`
+	EndDate   time.Time `json:"end_date"`
+}
+
 type CompletedWorkCreateRequest struct{
 	Description string `json:"description"`
 	TaskID string `json:"task_id"`

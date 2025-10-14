@@ -21,9 +21,9 @@ type TeamRepository interface {
 	GetTeam(teamID string) (*models.Team, error)
 	GetProject(projectID string) (*models.Project, error)
 	CreateTeamMember(teamMember models.TeamMember) error
-	CreateTeamMembers(teamMember []models.TeamMember) error
+	UpsertTeamMembers(teamMember []models.TeamMember) error
 	DeleteTeamMember(userID uuid.UUID, teamID uuid.UUID) (bool, error)
-	CreateProjectTeam(projectTeam models.ProjectTeam) error
+	UpsertProjectTeam(projectTeam models.ProjectTeam) error
 	DeleteProjectTeam(teamID uuid.UUID, projectID uuid.UUID, updateData map[string]interface{}) (bool, error)
 	GetUsersFromArray(userIDs []string) ([]models.User, error)
 	GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error)
@@ -240,12 +240,19 @@ func (r *teamRepository) CreateTeamMember(teamMember models.TeamMember) error {
 	})
 }
 
-func (r *teamRepository) CreateTeamMembers(teamMember []models.TeamMember) error {
+func (r *teamRepository) UpsertTeamMembers(teamMembers []models.TeamMember) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).Create(&teamMember); res.Error != nil {
-			return res.Error
-		}
-		return nil
+		return tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "user_id"},
+				{Name: "team_id"},
+			},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"deleted":        false,
+				"specialization": gorm.Expr("EXCLUDED.specialization"),
+				"updated_at":     gorm.Expr("NOW()"),
+			}),
+		}).Create(&teamMembers).Error
 	})
 }
 
@@ -276,12 +283,18 @@ func (r *teamRepository) DeleteTeamMember(userID uuid.UUID, teamID uuid.UUID) (b
 	return affected > 0, nil
 }
 
-func (r *teamRepository) CreateProjectTeam(projectTeam models.ProjectTeam) error {
+func (r *teamRepository) UpsertProjectTeam(projectTeam models.ProjectTeam) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Create(&projectTeam); res.Error != nil {
-			return res.Error
-		}
-		return nil
+		return tx.Clauses(clause.OnConflict{
+			Columns: []clause.Column{
+				{Name: "project_id"},
+				{Name: "team_id"},
+			},
+			DoUpdates: clause.Assignments(map[string]interface{}{
+				"deleted":    false,
+				"updated_at": gorm.Expr("NOW()"),
+			}),
+		}).Create(&projectTeam).Error
 	})
 }
 

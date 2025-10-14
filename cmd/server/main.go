@@ -37,7 +37,7 @@ func main() {
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
     AllowOrigins: []string{"*"}, // или конкретный фронтенд, например "http://localhost:3000"
-    AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
+    AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS, echo.PATCH},
     AllowHeaders: []string{
         echo.HeaderOrigin,
         echo.HeaderContentType,

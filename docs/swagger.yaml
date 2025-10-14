@@ -281,6 +281,13 @@ definitions:
       user_id:
         type: string
     type: object
+  request.ReportsByDateInXLSX:
+    properties:
+      end_date:
+        type: string
+      start_date:
+        type: string
+    type: object
   request.RestoreUserRequest:
     properties:
       email:
@@ -3161,6 +3168,50 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление выполненной работы
+      tags:
+      - Reports
+  /report/export/xlsx:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Генерирует XLSX-файл с отчётами по выполненным работам за указанный период.
+        Строки — сотрудники, столбцы — даты, ячейки — список выполненных задач за день.
+      parameters:
+      - description: Диапазон дат для экспорта
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportsByDateInXLSX'
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с отчётами
+          schema:
+            type: string
+        "400":
+          description: Некорректные входные данные (например, даты)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен авторизации
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт отчётов по выполненным работам в XLSX
       tags:
       - Reports
   /report/help-request/{id}:

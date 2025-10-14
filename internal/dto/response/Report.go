@@ -77,3 +77,15 @@ type HelpRequestWithAssignerID struct{
 type HelpRequestsForUser struct{
 	HelpRequests []HelpRequestWithAssignerID `json:"help_requests"`
 }
+
+type XLSXReportEntry struct {
+    UserName string
+    Date     time.Time
+    Works    []string
+}
+
+type XLSXReportData struct {
+    Users []string               // порядок пользователей
+    Dates []time.Time            // все даты в диапазоне
+    Grid  map[string]map[time.Time][]string // user → date → работы
+}

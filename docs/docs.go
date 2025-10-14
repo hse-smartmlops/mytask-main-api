@@ -2575,6 +2575,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/report/export/xlsx": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с отчётами по выполненным работам за указанный период.\nСтроки — сотрудники, столбцы — даты, ячейки — список выполненных задач за день.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Экспорт отчётов по выполненным работам в XLSX",
+                "parameters": [
+                    {
+                        "description": "Диапазон дат для экспорта",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ReportsByDateInXLSX"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с отчётами",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные входные данные (например, даты)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен авторизации",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/report/help-request/{id}": {
             "delete": {
                 "security": [
@@ -6796,6 +6862,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "request.ReportsByDateInXLSX": {
+            "type": "object",
+            "properties": {
+                "end_date": {
+                    "type": "string"
+                },
+                "start_date": {
                     "type": "string"
                 }
             }

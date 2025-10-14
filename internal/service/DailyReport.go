@@ -3,8 +3,10 @@ package service
 import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/repository"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,6 +26,7 @@ type ReportService interface {
 	UpdateTomorrowPlans(tpID uuid.UUID, req request.TomorrowPlansUpdateRequest) error
 	GetHelpRequestsForUser(userID uuid.UUID) ([]models.HelpRequest, error)
 	DeleteHelpRequest(requestID uuid.UUID) error
+	GetReportByDateInXLSX(req request.ReportsByDateInXLSX) (*response.XLSXReportData, error)
 }
 
 type reportService struct {
@@ -39,6 +42,85 @@ func NewReportService(repo repository.ReportRepository) ReportService {
 func (s *reportService) GetAllReports(page, pageSize int) ([]models.DailyReport, int64, error) {
 	offset := (page - 1) * pageSize
 	return s.repo.GetAllReports(pageSize, offset)
+}
+
+func (s *reportService) GetReportByDateInXLSX(req request.ReportsByDateInXLSX) (*response.XLSXReportData, error) {
+    reports, err := s.repo.GetReportByDateInXLSX(req.StartDate, req.EndDate)
+    if err != nil {
+        return nil, err
+    }
+
+    // 1. Все даты в диапазоне
+    var dates []time.Time
+    current := req.StartDate
+    for !current.After(req.EndDate) {
+        dates = append(dates, current.Truncate(24*time.Hour))
+        current = current.AddDate(0, 0, 1)
+    }
+
+    // 2. Группировка
+    userMap := make(map[string]map[time.Time][]string)
+    userOrder := []string{}
+
+    for _, report := range reports {
+        if report.User == nil || report.ReportDate == nil {
+            continue
+        }
+
+        firstName := report.User.FirstName
+        lastName := report.User.LastName
+        userName := strings.TrimSpace(firstName + " " + lastName)
+        if userName == "" {
+            userName = report.User.Email
+        }
+        if userName == "" {
+            userName = report.User.ID.String()
+        }
+
+        if _, exists := userMap[userName]; !exists {
+            userMap[userName] = make(map[time.Time][]string)
+            userOrder = append(userOrder, userName)
+        }
+
+        reportDate := report.ReportDate.Truncate(24 * time.Hour)
+
+        for _, work := range report.CompletedWork {
+			isDeleted := work.Deleted != nil && *work.Deleted
+			if isDeleted {
+				continue
+			}
+			if work.Description == nil || *work.Description == "" {
+				continue
+			}
+
+			// === Получаем название проекта ===
+			projectName := "Без проекта"
+			if work.Task != nil &&
+			work.Task.Status != nil &&
+			work.Task.Status.Board != nil &&
+			work.Task.Status.Board.Project != nil {
+				if work.Task.Status.Board.Project.Name != nil && *work.Task.Status.Board.Project.Name != "" {
+					projectName = *work.Task.Status.Board.Project.Name
+				}
+			}
+
+			// === Получаем название задачи ===
+			taskName := "Без названия"
+			if work.Task != nil && work.Task.Name != nil && *work.Task.Name != "" {
+				taskName = *work.Task.Name
+			}
+
+			// === Формируем итоговую строку ===
+			workText := projectName + ": " + taskName + ": " + *work.Description
+			userMap[userName][reportDate] = append(userMap[userName][reportDate], workText)
+		}
+    }
+
+    return &response.XLSXReportData{
+        Users: userOrder,
+        Dates: dates,
+        Grid:  userMap,
+    }, nil
 }
 
 func (s *reportService) GetAllReportsByUserId(userID uuid.UUID, page, pageSize int) ([]models.DailyReport, int64, error) {

@@ -27,6 +27,7 @@ type ReportRepository interface {
 	GetHelpRequestsForUser(userID uuid.UUID) ([]models.HelpRequest, error)
 	DeleteHelpRequest(requestID uuid.UUID) (bool, error)
 	Transaction(txFunc func(ReportRepository) error) error
+	GetReportByDateInXLSX(startDate, endDate time.Time) ([]models.DailyReport, error)
 }
 
 type reportRepository struct {
@@ -65,6 +66,23 @@ func (r *reportRepository) GetAllReports(limit, offset int) ([]models.DailyRepor
 	}
 
 	return reports, totalCount, nil
+}
+
+func (r *reportRepository) GetReportByDateInXLSX(startDate, endDate time.Time) ([]models.DailyReport, error) {
+	var reports []models.DailyReport
+
+	if err := r.db.Session(&gorm.Session{}).
+		Model(&models.DailyReport{}).
+		Preload("User", "deleted = FALSE").
+		Preload("CompletedWork", "deleted = FALSE").
+		Preload("CompletedWork.Task.Status.Board.Project"). // ← вся цепочка!
+		Where("deleted = FALSE AND report_date BETWEEN ? AND ?", startDate, endDate).
+		Order("report_date DESC, created_at DESC").
+		Find(&reports).Error; err != nil {
+		return nil, err
+	}
+
+	return reports, nil
 }
 
 func (r *reportRepository) GetAllReportsByUserId(userID uuid.UUID, limit, offset int) ([]models.DailyReport, int64, error) {

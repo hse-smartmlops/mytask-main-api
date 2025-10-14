@@ -5,12 +5,15 @@ import (
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/service"
 	"emplacc-api/internal/utils"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/xuri/excelize/v2"
 )
 
 type ReportController struct {
@@ -40,6 +43,7 @@ func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService) {
 		reportGroup.GET("/user/:id/:page/:pagesize", controller.GetAllReportsByUserId)
 		reportGroup.GET("/help-requests-by-user-id/:id", controller.GetHelpRequestsForUser)
 		reportGroup.DELETE("/help-request/:id", controller.DeleteHelpRequest)
+		reportGroup.POST("/export/xlsx", controller.GetReportByDateInXLSX)
 	}
 }
 
@@ -823,4 +827,93 @@ func (rc *ReportController) DeleteHelpRequest(c echo.Context) error {
 		ID:      requestID.String(),
 		Message: "Запрос на помощь успешно удален",
 	})
+}
+
+// GetReportByDateInXLSX godoc
+// @Summary Экспорт отчётов по выполненным работам в XLSX
+// @Description Генерирует XLSX-файл с отчётами по выполненным работам за указанный период.
+// @Description Строки — сотрудники, столбцы — даты, ячейки — список выполненных задач за день.
+// @Tags Reports
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Param request body request.ReportsByDateInXLSX true "Диапазон дат для экспорта"
+// @Security BearerAuth
+// @Success 200 {string} file "XLSX-файл с отчётами"
+// @Failure 400 {object} map[string]string "Некорректные входные данные (например, даты)"
+// @Failure 401 {object} map[string]string "Нет или неверный токен авторизации"
+// @Failure 500 {object} map[string]string "Ошибка при генерации отчёта"
+// @Router /report/export/xlsx [post]
+func (rc *ReportController) GetReportByDateInXLSX(c echo.Context) error {
+    var req request.ReportsByDateInXLSX
+    if err := c.Bind(&req); err != nil {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
+    }
+
+    data, err := rc.reportService.GetReportByDateInXLSX(req)
+    if err != nil {
+        log.Printf("service error (get report data for XLSX): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
+    }
+
+
+    f := excelize.NewFile()
+    sheet := "Отчёты"
+    f.SetSheetName(f.GetSheetName(0), sheet)
+
+    headers := []interface{}{"Сотрудник"}
+    for _, d := range data.Dates {
+        headers = append(headers, d.Format("02.01.2006"))
+    }
+    if err := f.SetSheetRow(sheet, "A1", &headers); err != nil {
+        log.Printf("XLSX header error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании XLSX"})
+    }
+
+    for rowIdx, userName := range data.Users {
+        row := make([]interface{}, len(data.Dates)+1)
+        row[0] = userName
+
+        for colIdx, date := range data.Dates {
+            works := data.Grid[userName][date]
+            if len(works) == 0 {
+                row[colIdx+1] = ""
+            } else {
+                row[colIdx+1] = strings.Join(works, "\n")
+            }
+        }
+
+        axis := fmt.Sprintf("A%d", rowIdx+2)
+        if err := f.SetSheetRow(sheet, axis, &row); err != nil {
+            log.Printf("XLSX row error: %v", err)
+            return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+        }
+    }
+
+    if len(data.Users) > 0 {
+        for i := 1; i <= len(data.Dates)+1; i++ {
+            colName, _ := excelize.ColumnNumberToName(i)
+            f.SetColWidth(sheet, colName, colName, 30)
+        }
+
+        styleID, _ := f.NewStyle(&excelize.Style{
+            Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+        })
+        lastRow := len(data.Users) + 1
+        lastCol, _ := excelize.ColumnNumberToName(len(data.Dates) + 1)
+        f.SetCellStyle(sheet, "B2", lastCol+strconv.Itoa(lastRow), styleID)
+    }
+
+    buf, err := f.WriteToBuffer()
+    if err != nil {
+        log.Printf("XLSX buffer error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+
+    filename := fmt.Sprintf("reports_%s_%s.xlsx",
+        req.StartDate.Format("2006-01-02"),
+        req.EndDate.Format("2006-01-02"))
+
+    c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
+    return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
 }

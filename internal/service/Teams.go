@@ -98,7 +98,7 @@ func (s *teamService) CreateTeam(req request.TeamCreateRequest) (uuid.UUID, erro
 			})
 		}
 
-		err = s.repo.CreateTeamMembers(teamMembers)
+		err = s.repo.UpsertTeamMembers(teamMembers)
 		if err != nil {
 			return uuid.Nil, err
 		}
@@ -170,18 +170,18 @@ func (s *teamService) AddUsersToTeam(teamId string, userIds []string) ([]models.
 	}
 
 	del := false
-
-	teamMembers := []models.TeamMember{}
-	for _, user := range users {
-		teamMembers = append(teamMembers, models.TeamMember{
-		UserID:         user.ID,
-		TeamID:         team.ID,
-		Specialization: &user.Profession,
-		Deleted:        &del,
-		})
+	teamMembers := make([]models.TeamMember, len(users))
+	for i, user := range users {
+		teamMembers[i] = models.TeamMember{
+			UserID:         user.ID,
+			TeamID:         team.ID,
+			Specialization: &user.Profession,
+			Deleted:        &del,
+		}
 	}
 
-	err = s.repo.CreateTeamMembers(teamMembers)
+	// Используем UPSERT вместо Create
+	err = s.repo.UpsertTeamMembers(teamMembers)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,8 @@ func (s *teamService) AddProjectToTeam(req request.TeamAddProjectRequest) (*mode
 		Deleted:   &del,
 	}
 
-	err = s.repo.CreateProjectTeam(projectTeam)
+	// Используем UPSERT вместо Create
+	err = s.repo.UpsertProjectTeam(projectTeam)
 	if err != nil {
 		return nil, err
 	}

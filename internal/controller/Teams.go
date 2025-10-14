@@ -375,26 +375,29 @@ func (tc *TeamController) AddUserToTeam(c echo.Context) error {
 
 	_, err := tc.teamService.AddUsersToTeam(req.TeamID, req.UserIDs)
 	if err != nil {
-		if err.Error() == "user not found" {
-			log.Printf("DB error (select profession): %v", err)
+		log.Printf("Failed to add users to team: %v", err)
+
+		switch err.Error() {
+		case "user not found", "not all users founded":
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"error": "Ошибка при получении данных пользователя",
 			})
-		}
-		if err.Error() == "team not found" {
-			log.Printf("DB error (select team): %v", err)
+		case "team not found":
 			return c.JSON(http.StatusBadRequest, map[string]string{
-				"error": "Ошибка при получении команды",
+				"error": "Команда не найдена",
+			})
+		default:
+			// Только настоящие внутренние ошибки → 500
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Не удалось добавить пользователей в команду",
 			})
 		}
-		log.Printf("service error (add user to team): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Не удалось добавить пользователя в команду"})
 	}
 
 	addResponse := response.UsersAddResponse{
 		TeamID:  req.TeamID,
 		UsersID: req.UserIDs,
-		Message: "Пользователи добавлен в команду",
+		Message: "Пользователи добавлены в команду", // исправлена грамматика
 	}
 
 	return c.JSON(http.StatusOK, addResponse)
@@ -476,20 +479,23 @@ func (tc *TeamController) AddProjectToTeam(c echo.Context) error {
 
 	projectTeam, err := tc.teamService.AddProjectToTeam(req)
 	if err != nil {
-		if err.Error() == "team not found" {
-			log.Printf("DB error (select team): %v", err)
+		log.Printf("Failed to add project to team: %v", err)
+
+		switch err.Error() {
+		case "team not found":
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Команда не найдена",
+			})
+		case "project not found":
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Проект не найден",
+			})
+		default:
+			// Только настоящие внутренние ошибки → 500
 			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении команды",
+				"error": "Ошибка при привязке проекта к команде",
 			})
 		}
-		if err.Error() == "project not found" {
-			log.Printf("DB error (select project): %v", err)
-			return c.JSON(http.StatusInternalServerError, map[string]string{
-				"error": "Ошибка при получении проекта",
-			})
-		}
-		log.Printf("service error (add project to team): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при привязке проекта к команде"})
 	}
 
 	addResponse := response.TeamUniversalProjectResponse{
