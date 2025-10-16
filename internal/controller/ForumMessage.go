@@ -1,32 +1,38 @@
 package controller
 
 import (
-	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/service"
 	"emplacc-api/internal/utils"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/lib/pq"
-	"gorm.io/gorm"
 )
 
-func RegisterForumMessagesRoutes(e *echo.Echo) {
+type ForumMessageController struct {
+	forumMessageService service.ForumMessageService
+}
+
+func NewForumMessageController(forumMessageService service.ForumMessageService) *ForumMessageController {
+	return &ForumMessageController{
+		forumMessageService: forumMessageService,
+	}
+}
+
+func RegisterForumMessagesRoutes(e *echo.Echo, forumMessageService service.ForumMessageService) {
+	controller := NewForumMessageController(forumMessageService)
 	forumMessageGroup := e.Group("/forum-messages")
-	forumMessageGroup.Use(KeycloakAuthMiddleware)
 	{
-		forumMessageGroup.GET("/all/:page/:pagesize", GetAllForumMessages)
-		forumMessageGroup.GET("/problem/:id/:page/:pagesize", GetForumMessagesByProblemId)
-		forumMessageGroup.GET("/:id", GetForumMessageById)
-		forumMessageGroup.POST("", CreateForumMessage)
-		forumMessageGroup.PATCH("/:id", UpdateForumMessage)
-		forumMessageGroup.DELETE("/:id", DeleteForumMessage)
+		forumMessageGroup.GET("/all/:page/:pagesize", controller.GetAllForumMessages)
+		forumMessageGroup.GET("/problem/:id/:page/:pagesize", controller.GetForumMessagesByProblemId)
+		forumMessageGroup.GET("/:id", controller.GetForumMessageById)
+		forumMessageGroup.POST("", controller.CreateForumMessage)
+		forumMessageGroup.PATCH("/:id", controller.UpdateForumMessage)
+		forumMessageGroup.DELETE("/:id", controller.DeleteForumMessage)
 	}
 }
 
@@ -44,11 +50,7 @@ func RegisterForumMessagesRoutes(e *echo.Echo) {
 // @Failure 400 {object} map[string]string "Ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
 // @Router /forum-messages/all/{page}/{pagesize} [get]
-func GetAllForumMessages(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (fmc *ForumMessageController) GetAllForumMessages(c echo.Context) error {
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге страницы"})
@@ -57,26 +59,11 @@ func GetAllForumMessages(c echo.Context) error {
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге размера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.ForumMessage{}).
-		Where("deleted = FALSE").
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count forum messages): %v", err)
+	forumMessages, totalCount, err := fmc.forumMessageService.GetAllForumMessages(page, pageSize)
+	if err != nil {
+		log.Printf("service error (get all forum messages): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете сообщений форума"})
-	}
-
-	var forumMessages []models.ForumMessage
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.ForumMessage{}).
-		Where("deleted = FALSE").
-		Limit(pageSize).
-		Offset(offset).
-		Find(&forumMessages).Error; err != nil {
-		log.Printf("DB error (find forum messages): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении сообщений форума из базы данных"})
 	}
 
 	out := response.ForumMessageListResponse{
@@ -86,15 +73,11 @@ func GetAllForumMessages(c echo.Context) error {
 	}
 	for _, m := range forumMessages {
 		description := []string(m.Description)
-		var creatorId string
-		if m.CreatorID != nil {
-			creatorId = m.CreatorID.String()
-		}
 		out.Messages = append(out.Messages, response.ForumMessageResponse{
 			ID:          m.ID.String(),
 			ProblemID:   m.ProblemID.String(),
 			Description: description,
-			CreatorID:   creatorId,
+			CreatorID:   utils.GetUUIDString(m.CreatorID),
 			CreatedAt:   utils.GetTime(m.CreatedAt),
 			UpdatedAt:   utils.GetTime(m.UpdatedAt),
 		})
@@ -117,11 +100,7 @@ func GetAllForumMessages(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор проблемы или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщений форума"
 // @Router /forum-messages/problem/{id}/{page}/{pagesize} [get]
-func GetForumMessagesByProblemId(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (fmc *ForumMessageController) GetForumMessagesByProblemId(c echo.Context) error {
 	problemID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Неверный формат идентификатора проблемы"})
@@ -135,26 +114,11 @@ func GetForumMessagesByProblemId(c echo.Context) error {
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге размера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.ForumMessage{}).
-		Where("deleted = FALSE AND problem_id = ?", problemID).
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count forum messages): %v", err)
+	forumMessages, totalCount, err := fmc.forumMessageService.GetForumMessagesByProblemId(problemID, page, pageSize)
+	if err != nil {
+		log.Printf("service error (get forum messages by problem id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчете сообщений форума"})
-	}
-
-	var forumMessages []models.ForumMessage
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.ForumMessage{}).
-		Where("deleted = FALSE AND problem_id = ?", problemID).
-		Limit(pageSize).
-		Offset(offset).
-		Find(&forumMessages).Error; err != nil {
-		log.Printf("DB error (find forum messages): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении сообщений форума из базы данных"})
 	}
 
 	out := response.ForumMessageListByProblemIdResponse{
@@ -165,15 +129,11 @@ func GetForumMessagesByProblemId(c echo.Context) error {
 	}
 	for _, m := range forumMessages {
 		description := []string(m.Description)
-		var creatorId string
-		if m.CreatorID != nil {
-			creatorId = m.CreatorID.String()
-		}
 		out.Messages = append(out.Messages, response.ForumMessageResponse{
 			ID:          m.ID.String(),
 			ProblemID:   m.ProblemID.String(),
 			Description: description,
-			CreatorID:   creatorId,
+			CreatorID:   utils.GetUUIDString(m.CreatorID),
 			CreatedAt:   utils.GetTime(m.CreatedAt),
 			UpdatedAt:   utils.GetTime(m.UpdatedAt),
 		})
@@ -195,39 +155,27 @@ func GetForumMessagesByProblemId(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Сообщение форума не найдено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении сообщения форума"
 // @Router /forum-messages/{id} [get]
-func GetForumMessageById(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (fmc *ForumMessageController) GetForumMessageById(c echo.Context) error {
 	messageID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Неверный формат идентификатора сообщения"})
 	}
 
-	var m models.ForumMessage
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.ForumMessage{}).
-		Where("id = ? AND deleted = FALSE", messageID).
-		First(&m).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
+	m, err := fmc.forumMessageService.GetForumMessageById(messageID)
+	if err != nil {
+		if err.Error() == "forum message not found" {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Сообщение не найдено"})
 		}
-		log.Printf("DB error (find forum message): %v", err)
+		log.Printf("service error (get forum message): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении сообщения форума из базы данных"})
 	}
 
 	description := []string(m.Description)
-	var creatorId string
-	if m.CreatorID != nil {
-		creatorId = m.CreatorID.String()
-	}
-
 	return c.JSON(http.StatusOK, response.ForumMessageResponse{
 		ID:          m.ID.String(),
 		ProblemID:   m.ProblemID.String(),
 		Description: description,
-		CreatorID:   creatorId,
+		CreatorID:   utils.GetUUIDString(m.CreatorID),
 		CreatedAt:   utils.GetTime(m.CreatedAt),
 		UpdatedAt:   utils.GetTime(m.UpdatedAt),
 	})
@@ -246,65 +194,27 @@ func GetForumMessageById(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании сообщения форума"
 // @Router /forum-messages [post]
-func CreateForumMessage(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (fmc *ForumMessageController) CreateForumMessage(c echo.Context) error {
 	var req request.CreateForumMessageRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	problemId, err := uuid.Parse(req.ProblemID)
+	messageID, err := fmc.forumMessageService.CreateForumMessage(req)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проблемы"})
-	}
-
-	var creatorId *uuid.UUID
-	if req.CreatorID != "" {
-		v, err := uuid.Parse(req.CreatorID)
-		if err != nil {
+		if err.Error() == "invalid problem id" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проблемы"})
+		}
+		if err.Error() == "invalid creator id" {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор создателя"})
 		}
-		creatorId = &v
-	}
-
-	now := time.Now()
-	del := false
-
-	var description pq.StringArray
-	if req.Description != nil {
-		description = pq.StringArray(*req.Description)
-	} else {
-		description = pq.StringArray{}
-	}
-
-	fm := models.ForumMessage{
-		ID:          uuid.New(),
-		ProblemID:   problemId,
-		Description: description,
-		CreatorID:   creatorId,
-		CreatedAt:   &now,
-		Deleted:     &del,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).
-			Model(&models.ForumMessage{}).
-			Create(&fm); res.Error != nil {
-			log.Printf("DB error (create forum message): %v", res.Error)
-			return res.Error
-		}
-		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (create forum message): %v", txErr)
+		log.Printf("service error (create forum message): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании сообщения форума"})
 	}
 
 	return c.JSON(http.StatusCreated, response.ForumMessageUniversalResponse{
-		ID:      fm.ID.String(),
+		ID:      messageID.String(),
 		Message: "Сообщение форума создано",
 	})
 }
@@ -323,11 +233,7 @@ func CreateForumMessage(c echo.Context) error {
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении сообщения форума"
 // @Router /forum-messages/{id} [patch]
-func UpdateForumMessage(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (fmc *ForumMessageController) UpdateForumMessage(c echo.Context) error {
 	messageID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Неверный формат идентификатора сообщения"})
@@ -339,47 +245,21 @@ func UpdateForumMessage(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	updateData := map[string]interface{}{}
-	if req.ProblemID != nil {
-		pid, err := uuid.Parse(*req.ProblemID)
-		if err != nil {
+	err = fmc.forumMessageService.UpdateForumMessage(messageID, req)
+	if err != nil {
+		if err.Error() == "no fields to update" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
+		}
+		if err.Error() == "forum message not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+		}
+		if err.Error() == "invalid problem id" {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проблемы"})
 		}
-		updateData["problem_id"] = pid
-	}
-	if req.Description != nil {
-		updateData["description"] = pq.StringArray(*req.Description)
-	}
-	if req.CreatorID != nil {
-		cid, err := uuid.Parse(*req.CreatorID)
-		if err != nil {
+		if err.Error() == "invalid creator id" {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор создателя"})
 		}
-		updateData["creator_id"] = cid
-	}
-
-	if len(updateData) == 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не указаны поля для обновления"})
-	}
-
-	now := time.Now()
-	updateData["updated_at"] = &now
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.ForumMessage{}).
-			Where("id = ? AND deleted = FALSE", messageID).
-			Updates(updateData)
-		if res.Error != nil {
-			log.Printf("DB error (update forum message): %v", res.Error)
-			return res.Error
-		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
-		}
-		return nil
-	}); txErr != nil {
-		log.Printf("DB transaction error (update forum message): %v", txErr)
+		log.Printf("service error (update forum message): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении сообщения форума"})
 	}
 
@@ -402,41 +282,18 @@ func UpdateForumMessage(c echo.Context) error {
 // @Failure 404 {object} map[string]string "Сообщение форума не найдено"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении сообщения форума"
 // @Router /forum-messages/{id} [delete]
-func DeleteForumMessage(c echo.Context) error {
-	if err := Authorize(c); err != nil {
-		return err
-	}
-
+func (fmc *ForumMessageController) DeleteForumMessage(c echo.Context) error {
 	messageID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Неверный формат идентификатора сообщения"})
 	}
 
-	delTrue := true
-	now := time.Now()
-	update := map[string]interface{}{
-		"deleted":    &delTrue,
-		"updated_at": &now,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.ForumMessage{}).
-			Where("id = ?", messageID).
-			Updates(update)
-		if res.Error != nil {
-			log.Printf("DB error (delete forum message): %v", res.Error)
-			return res.Error
+	err = fmc.forumMessageService.DeleteForumMessage(messageID)
+	if err != nil {
+		if err.Error() == "forum message not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
-		}
-		return nil
-	}); txErr != nil {
-		if he, ok := txErr.(*echo.HTTPError); ok {
-			return c.JSON(he.Code, he.Message)
-		}
-		log.Printf("DB transaction error (delete forum message): %v", txErr)
+		log.Printf("service error (delete forum message): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении сообщения форума"})
 	}
 

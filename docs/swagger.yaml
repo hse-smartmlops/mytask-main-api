@@ -9,20 +9,6 @@ definitions:
       user_id:
         type: string
     type: object
-  request.AddStatusToBoardRequest:
-    properties:
-      board_id:
-        type: string
-      status_id:
-        type: string
-    type: object
-  request.AddStatusToTaskRequest:
-    properties:
-      status_id:
-        type: string
-      task_id:
-        type: string
-    type: object
   request.AttendanceCreateRequest:
     properties:
       actual_start:
@@ -79,8 +65,6 @@ definitions:
   request.BoardUpdateRequest:
     properties:
       description:
-        type: string
-      filter:
         type: string
       name:
         type: string
@@ -150,6 +134,8 @@ definitions:
     type: object
   request.CreateStatusRequest:
     properties:
+      board_id:
+        type: string
       color:
         type: string
       is_active:
@@ -160,6 +146,8 @@ definitions:
         type: boolean
       name:
         type: string
+      order:
+        type: integer
     required:
     - color
     - name
@@ -203,12 +191,15 @@ definitions:
     - email
     - password
     type: object
-  request.OAuthRequest:
+  request.MoveTaskToAnotherStatus:
     properties:
-      code:
+      status_id:
         type: string
-      redirect_uri:
+      task_id:
         type: string
+    required:
+    - status_id
+    - task_id
     type: object
   request.ProblemCreateRequest:
     properties:
@@ -234,24 +225,6 @@ definitions:
         type: string
     required:
     - refresh_token
-    type: object
-  request.RegisterRequest:
-    properties:
-      email:
-        type: string
-      first_name:
-        type: string
-      last_name:
-        type: string
-      password:
-        type: string
-      profession:
-        type: string
-    required:
-    - email
-    - first_name
-    - last_name
-    - password
     type: object
   request.RemoveRoleUserRequest:
     properties:
@@ -308,6 +281,13 @@ definitions:
       user_id:
         type: string
     type: object
+  request.ReportsByDateInXLSX:
+    properties:
+      end_date:
+        type: string
+      start_date:
+        type: string
+    type: object
   request.RestoreUserRequest:
     properties:
       email:
@@ -336,15 +316,6 @@ definitions:
       user_id:
         type: string
     type: object
-  request.TOTPRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      totp:
-        type: string
-    type: object
   request.TaskCreateRequest:
     properties:
       assigned_to:
@@ -368,16 +339,16 @@ definitions:
         maximum: 10
         minimum: 1
         type: integer
-      project_id:
-        type: string
       start_date:
+        type: string
+      status_id:
         type: string
     required:
     - creator_id
     - name
     - priority
-    - project_id
     - start_date
+    - status_id
     type: object
   request.TaskUpdateRequest:
     properties:
@@ -410,12 +381,14 @@ definitions:
       team_id:
         type: string
     type: object
-  request.TeamAddUserRequest:
+  request.TeamAddUsersRequest:
     properties:
       team_id:
         type: string
-      user_id:
-        type: string
+      user_ids:
+        items:
+          type: string
+        type: array
     type: object
   request.TeamCreateRequest:
     properties:
@@ -423,6 +396,10 @@ definitions:
         type: string
       name:
         type: string
+      user_ids:
+        items:
+          type: string
+        type: array
     required:
     - name
     type: object
@@ -450,6 +427,8 @@ definitions:
   request.TomorrowPlanCreateRequest:
     properties:
       description:
+        type: string
+      task_id:
         type: string
     type: object
   request.TomorrowPlanReplaceRequest:
@@ -491,6 +470,8 @@ definitions:
     type: object
   request.UpdateStatusRequest:
     properties:
+      board_id:
+        type: string
       color:
         type: string
       is_active:
@@ -501,6 +482,8 @@ definitions:
         type: boolean
       name:
         type: string
+      order:
+        type: integer
     type: object
   request.UpdateUserRequest:
     properties:
@@ -549,24 +532,6 @@ definitions:
       role_id:
         type: string
       user_id:
-        type: string
-    type: object
-  response.AddStatusToBoardResponse:
-    properties:
-      board_id:
-        type: string
-      message:
-        type: string
-      status_id:
-        type: string
-    type: object
-  response.AddStatusToTaskResponse:
-    properties:
-      message:
-        type: string
-      status_id:
-        type: string
-      task_id:
         type: string
     type: object
   response.AttendanceResponse:
@@ -826,15 +791,11 @@ definitions:
         type: string
       priority:
         type: integer
-      project_id:
-        type: string
       start_date:
         description: DATE в БД
         type: string
-      statuses:
-        items:
-          $ref: '#/definitions/response.StatusResponse'
-        type: array
+      status_id:
+        type: string
       time_spent:
         description: INTERVAL в БД
         type: string
@@ -1097,21 +1058,12 @@ definitions:
     type: object
   response.StatusByBoardIdResponse:
     properties:
-      project_id:
+      board_id:
         type: string
       statuses:
         items:
           $ref: '#/definitions/response.StatusResponse'
         type: array
-    type: object
-  response.StatusByTaskIdResponse:
-    properties:
-      statuses:
-        items:
-          $ref: '#/definitions/response.StatusResponse'
-        type: array
-      task_id:
-        type: string
     type: object
   response.StatusListResponse:
     properties:
@@ -1121,7 +1073,7 @@ definitions:
         type: integer
       statuses:
         items:
-          $ref: '#/definitions/response.StatusResponse'
+          $ref: '#/definitions/response.StatusShort'
         type: array
       total_count:
         type: integer
@@ -1144,6 +1096,35 @@ definitions:
         type: string
       name:
         type: string
+      order:
+        type: integer
+      tasks:
+        items:
+          $ref: '#/definitions/response.TaskShort'
+        type: array
+      updated_at:
+        type: string
+    type: object
+  response.StatusShort:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      order:
+        type: integer
       updated_at:
         type: string
     type: object
@@ -1244,14 +1225,10 @@ definitions:
         type: string
       priority:
         type: integer
-      project_id:
-        type: string
       start_date:
         type: string
-      statuses:
-        items:
-          $ref: '#/definitions/response.StatusResponse'
-        type: array
+      status_id:
+        type: string
       updated_at:
         type: string
     type: object
@@ -1335,6 +1312,8 @@ definitions:
       description:
         type: string
       id:
+        type: string
+      task_id:
         type: string
     type: object
   response.UserInfo:
@@ -1713,40 +1692,6 @@ paths:
       summary: Получение информации о текущем пользователе
       tags:
       - Auth
-  /auth/oauth:
-    post:
-      consumes:
-      - application/json
-      description: Выполняет аутентификацию с использованием OAuth кода авторизации
-      parameters:
-      - description: Данные для OAuth аутентификации
-        in: body
-        name: oauth
-        required: true
-        schema:
-          $ref: '#/definitions/request.OAuthRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Успешная OAuth аутентификация
-          schema:
-            $ref: '#/definitions/response.AuthResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Ошибка OAuth аутентификации
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация через OAuth
-      tags:
-      - Auth
   /auth/refresh:
     post:
       consumes:
@@ -1780,77 +1725,6 @@ paths:
               type: string
             type: object
       summary: Обновление access токена
-      tags:
-      - Auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Создает нового пользователя в Keycloak с указанным email
-      parameters:
-      - description: Данные для регистрации
-        in: body
-        name: register
-        required: true
-        schema:
-          $ref: '#/definitions/request.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Пользователь успешно зарегистрирован
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при создании пользователя
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Регистрация нового пользователя
-      tags:
-      - Auth
-  /auth/totp:
-    post:
-      consumes:
-      - application/json
-      description: Выполняет аутентификацию с использованием email, пароля и TOTP
-        кода
-      parameters:
-      - description: Данные для TOTP аутентификации
-        in: body
-        name: totp
-        required: true
-        schema:
-          $ref: '#/definitions/request.TOTPRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Успешная TOTP аутентификация
-          schema:
-            $ref: '#/definitions/response.AuthResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Неверные учетные данные или TOTP код
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация с двухфакторной аутентификацией
       tags:
       - Auth
   /auth/validate:
@@ -1924,7 +1798,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Логическое удаление доски по ID (поле deleted = true)
+      description: Логическое удаление доски по ID (поле deleted = true), а также
+        всех её статусов и задач
       parameters:
       - description: ID доски
         in: path
@@ -2042,6 +1917,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Доска не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Ошибка сервера при обновлении доски
           schema:
@@ -2125,12 +2006,6 @@ paths:
             type: object
         "401":
           description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Доска не найдена
           schema:
             additionalProperties:
               type: string
@@ -2692,7 +2567,8 @@ paths:
     post:
       consumes:
       - application/json
-      description: Создает новый проект с указанными параметрами
+      description: 'Создает новый проект с указанными параметрами и автоматически
+        создаёт главную доску с двумя статусами: начальным и конечным'
       parameters:
       - description: Данные для создания проекта
         in: body
@@ -2734,8 +2610,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Логическое удаление проекта по ID, включая связанные данные (поле
-        deleted = true)
+      description: Логическое удаление проекта по ID, включая все связанные доски,
+        статусы и задачи (поле deleted = true)
       parameters:
       - description: ID проекта
         in: path
@@ -3292,6 +3168,50 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление выполненной работы
+      tags:
+      - Reports
+  /report/export/xlsx:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Генерирует XLSX-файл с отчётами по выполненным работам за указанный период.
+        Строки — сотрудники, столбцы — даты, ячейки — список выполненных задач за день.
+      parameters:
+      - description: Диапазон дат для экспорта
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportsByDateInXLSX'
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с отчётами
+          schema:
+            type: string
+        "400":
+          description: Некорректные входные данные (например, даты)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен авторизации
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт отчётов по выполненным работам в XLSX
       tags:
       - Reports
   /report/help-request/{id}:
@@ -3894,8 +3814,8 @@ paths:
     delete:
       consumes:
       - application/json
-      description: Логическое удаление статуса по ID, включая связанные данные (поле
-        deleted = true)
+      description: Логическое удаление статуса по ID, включая все связанные задачи
+        (поле deleted = true)
       parameters:
       - description: ID статуса
         in: path
@@ -3939,7 +3859,8 @@ paths:
       tags:
       - Statuses
     get:
-      description: Получение информации о статусе по его ID
+      description: Получение информации о статусе по его ID, включая все связанные
+        задачи
       parameters:
       - description: ID статуса
         in: path
@@ -4034,93 +3955,10 @@ paths:
       summary: Обновление статуса
       tags:
       - Statuses
-  /status/add-to-board:
-    post:
-      consumes:
-      - application/json
-      description: Создание связи между статусом и доской
-      parameters:
-      - description: Данные для добавления статуса к доске
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/request.AddStatusToBoardRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Статус успешно добавлен к доске
-          schema:
-            $ref: '#/definitions/response.AddStatusToBoardResponse'
-        "400":
-          description: Ошибка при привязке данных или парсинге UUID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при добавлении статуса к доске
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Добавление статуса к доске
-      tags:
-      - Statuses
-  /status/add-to-task:
-    post:
-      consumes:
-      - application/json
-      description: Создание связи между статусом и задачей
-      parameters:
-      - description: Данные для добавления статуса к задаче
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/request.AddStatusToTaskRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Статус успешно добавлен к задаче
-          schema:
-            $ref: '#/definitions/response.AddStatusToTaskResponse'
-        "400":
-          description: Ошибка при привязке данных или парсинге UUID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при добавлении статуса к задаче
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Добавление статуса к задаче
-      tags:
-      - Statuses
   /status/all/{page}/{pagesize}:
     get:
-      description: Получение списка всех статусов с пагинацией (только неудаленные)
+      description: Получение списка всех статусов с пагинацией (только неудаленные),
+        отсортированных по полю order
       parameters:
       - description: Номер страницы
         in: path
@@ -4162,109 +4000,10 @@ paths:
       summary: Получение всех статусов
       tags:
       - Statuses
-  /status/delete-from-board/{board_id}/{status_id}:
-    delete:
-      description: Удаление связи между статусом и доской (мягкое удаление)
-      parameters:
-      - description: ID доски
-        in: path
-        name: board_id
-        required: true
-        type: string
-      - description: ID статуса
-        in: path
-        name: status_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Статус успешно удалён с доски
-          schema:
-            $ref: '#/definitions/response.StatusUniversalResponse'
-        "400":
-          description: Ошибка при парсинге UUID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Связь не найдена или уже удалена
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при удалении статуса с доски
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Удаление статуса с доски
-      tags:
-      - Statuses
-  /status/delete-from-task/{task_id}/{status_id}:
-    delete:
-      description: Удаление связи между статусом и задачей (мягкое удаление)
-      parameters:
-      - description: ID задачи
-        in: path
-        name: task_id
-        required: true
-        type: string
-      - description: ID статуса
-        in: path
-        name: status_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Статус успешно удалён из задачи
-          schema:
-            $ref: '#/definitions/response.StatusUniversalResponse'
-        "400":
-          description: Ошибка при парсинге UUID
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Связь не найдена или уже удалена
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при удалении статуса из задачи
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Удаление статуса из задачи
-      tags:
-      - Statuses
-  /status/project/{board_id}:
+  /status/board/{board_id}:
     get:
-      description: Получение списка статусов, связанных с доской по ее ID
+      description: Получение списка статусов, связанных с доской по её ID, включая
+        все задачи для каждого статуса
       parameters:
       - description: ID доски
         in: path
@@ -4299,45 +4038,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение статусов по ID доски
-      tags:
-      - Statuses
-  /status/task/{task_id}:
-    get:
-      description: Получение списка статусов, связанных с задачей по ее ID
-      parameters:
-      - description: ID задачи
-        in: path
-        name: task_id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список статусов для задачи
-          schema:
-            $ref: '#/definitions/response.StatusByTaskIdResponse'
-        "400":
-          description: Ошибка при парсинге ID задачи
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении статусов
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Получение статусов по ID задачи
       tags:
       - Statuses
   /subscription:
@@ -4656,7 +4356,7 @@ paths:
               type: string
             type: object
         "404":
-          description: Исполнитель или поручитель не найден
+          description: Исполнитель, поручитель или статус не найдены
           schema:
             additionalProperties:
               type: string
@@ -4717,7 +4417,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Получает данные задачи по её уникальному идентификатору
+      description: Получает данные задачи по её уникальному идентификатору, включая
+        статус и пользователей
       parameters:
       - description: ID задачи
         in: path
@@ -4858,36 +4559,29 @@ paths:
       summary: Получение списка всех задач
       tags:
       - Tasks
-  /task/project/{projectId}/{page}/{pagesize}:
-    get:
+  /task/move:
+    post:
       consumes:
       - application/json
-      description: Получает список задач, связанных с указанным проектом
+      description: Перемещает задачу в указанный статус на той же доске
       parameters:
-      - description: ID проекта
-        in: path
-        name: projectId
+      - description: Данные для перемещения задачи
+        in: body
+        name: request
         required: true
-        type: string
-      - description: Номер страницы
-        in: path
-        name: page
-        required: true
-        type: integer
-      - description: Размер страницы
-        in: path
-        name: pagesize
-        required: true
-        type: integer
+        schema:
+          $ref: '#/definitions/request.MoveTaskToAnotherStatus'
       produces:
       - application/json
       responses:
         "200":
-          description: Список задач успешно получен
+          description: Задача успешно перемещена
           schema:
-            $ref: '#/definitions/response.TaskListResponse'
+            additionalProperties:
+              type: string
+            type: object
         "400":
-          description: Некорректный идентификатор проекта
+          description: Некорректные данные запроса
           schema:
             additionalProperties:
               type: string
@@ -4898,15 +4592,27 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: Задача или статус не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Нельзя переместить задачу в статус с другой доски
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
-          description: Ошибка сервера при получении задач
+          description: Ошибка сервера при перемещении задачи
           schema:
             additionalProperties:
               type: string
             type: object
       security:
       - BearerAuth: []
-      summary: Получение задач по ID проекта
+      summary: Переместить задачу в другой статус (столбец)
       tags:
       - Tasks
   /task/user/{id}/{page}/{pagesize}:
@@ -5360,7 +5066,7 @@ paths:
         name: addUser
         required: true
         schema:
-          $ref: '#/definitions/request.TeamAddUserRequest'
+          $ref: '#/definitions/request.TeamAddUsersRequest'
       produces:
       - application/json
       responses:
@@ -5391,6 +5097,97 @@ paths:
       summary: Добавление пользователя в команду
       tags:
       - Teams
+  /team/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех активных команд, в которых состоит пользователь
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список команд успешно получен
+          schema:
+            $ref: '#/definitions/response.TeamsListResponse'
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Команды для пользователя не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении команд
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение команд пользователя
+      tags:
+      - Teams
+  /user:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт пользователя с автоматически сгенерированным UUID
+      parameters:
+      - description: Данные для создания пользователя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.UserCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно создан
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Ошибка при привязке данных
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при создании пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание нового пользователя
+      tags:
+      - Users
   /user/{id}:
     delete:
       consumes:
@@ -5569,50 +5366,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех пользователей
-      tags:
-      - Users
-  /user/create:
-    post:
-      consumes:
-      - application/json
-      description: Создаёт пользователя с автоматически сгенерированным UUID
-      parameters:
-      - description: Данные для создания пользователя
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/request.UserCreateRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Пользователь успешно создан
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Ошибка при привязке данных
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка при создании пользователя
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Создание нового пользователя
       tags:
       - Users
   /user/full-delete/{id}:

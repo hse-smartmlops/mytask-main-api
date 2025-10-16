@@ -18,17 +18,18 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestTask_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	taskRepo := repository.NewTaskRepository(testDB)
+	taskService := service.NewTaskService(taskRepo)
+	taskController := controller.NewTaskController(taskService)
 
 	e := echo.New()
 
@@ -36,6 +37,8 @@ func TestTask_FullCRUD(t *testing.T) {
 	userID := createTestUser(t, testDB, "user@example.com")
 	creatorID := createTestUser(t, testDB, "creator@example.com")
 	projectID := createTestProject(t, testDB, "Test Project")
+	boardID := createTestBoard(t, testDB, projectID, "Test Board")
+	statusID := createTestStatus(t, testDB, boardID, "To Do")
 
 	var taskID uuid.UUID
 
@@ -49,9 +52,10 @@ func TestTask_FullCRUD(t *testing.T) {
 		deadline := time.Now().Add(24 * time.Hour)
 		creatorId := creatorID.String()
 		userId := userID.String()
+		statusId := statusID.String() // ← обязательно
 
 		reqBody := request.TaskCreateRequest{
-			ProjectID:     projectID.String(),
+			StatusID:      statusId,    // ← вместо ProjectID
 			Name:          &name,
 			Description:   &description,
 			Priority:      &priority,
@@ -68,7 +72,8 @@ func TestTask_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateTask(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := taskController.CreateTask(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -78,7 +83,6 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.NotEmpty(t, resp["id"])
 		assert.Equal(t, "Задача создана", resp["message"])
 
-		// Сохраняем ID задачи
 		taskID = uuid.MustParse(resp["id"].(string))
 	})
 
@@ -90,19 +94,22 @@ func TestTask_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(taskID.String())
 
-		err := controller.GetTaskByID(c)
+		err := taskController.GetTaskByID(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 		assert.Equal(t, taskID.String(), resp["id"])
-		assert.Equal(t, projectID.String(), resp["project_id"])
+		assert.Equal(t, statusID.String(), resp["status_id"]) // ← проверяем status_id, а не project_id
 		assert.Equal(t, "Test Task", resp["name"])
 		assert.Equal(t, "This is a test task", resp["description"])
 		assert.Equal(t, float64(5), resp["priority"])
+		// Убедись, что нет поля project_id
+		assert.NotContains(t, resp, "project_id")
 	})
 
+	/*
 	// === 3. GetTasksByProjectID ===
 	t.Run("getTasksByProjectId", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/task/project/%s/1/10", projectID), nil)
@@ -111,13 +118,12 @@ func TestTask_FullCRUD(t *testing.T) {
 		c.SetParamNames("projectId", "page", "pagesize")
 		c.SetParamValues(projectID.String(), "1", "10")
 
-		err := controller.GetTasksByProjectID(c)
+		err := taskController.GetTasksByProjectID(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		// Убираем проверку resp["project_id"] — его нет в TaskListResponse
 		assert.Equal(t, float64(1), resp["page"])
 		assert.Equal(t, float64(10), resp["page_size"])
 
@@ -125,10 +131,13 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.True(t, ok)
 		assert.Greater(t, len(tasks), 0)
 
-		// Проверим, что задача принадлежит проекту
+		// Проверим, что задача содержит status_id, но не project_id
 		firstTask := tasks[0].(map[string]interface{})
-		assert.Equal(t, projectID.String(), firstTask["project_id"])
+		assert.Equal(t, taskID.String(), firstTask["id"])
+		assert.Equal(t, statusID.String(), firstTask["status_id"])
+		assert.NotContains(t, firstTask, "project_id") // ← убедись, что его нет
 	})
+	*/
 
 	// === 4. GetTasksByUserId ===
 	t.Run("getTasksByUserId", func(t *testing.T) {
@@ -138,13 +147,12 @@ func TestTask_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "page", "pagesize")
 		c.SetParamValues(userID.String(), "1", "10")
 
-		err := controller.GetTasksByUserId(c)
+		err := taskController.GetTasksByUserId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		// Убираем проверку resp["user_id"] — его нет в TaskListResponse
 		assert.Equal(t, float64(1), resp["page"])
 		assert.Equal(t, float64(10), resp["page_size"])
 
@@ -152,11 +160,12 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.True(t, ok)
 		assert.Greater(t, len(tasks), 0)
 
-		// Проверим, что задача в списке (не проверяем assigned_to, потому что его нет в TaskShort)
 		firstTask := tasks[0].(map[string]interface{})
 		assert.Equal(t, taskID.String(), firstTask["id"])
+		assert.Equal(t, statusID.String(), firstTask["status_id"])
+		assert.NotContains(t, firstTask, "project_id")
 	})
-	
+
 	// === 5. UpdateTask ===
 	t.Run("updateTask", func(t *testing.T) {
 		newName := "Updated Task Name"
@@ -175,7 +184,7 @@ func TestTask_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(taskID.String())
 
-		err := controller.UpdateTask(c)
+		err := taskController.UpdateTask(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -192,7 +201,7 @@ func TestTask_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllTasks(c)
+		err := taskController.GetAllTasks(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -204,9 +213,65 @@ func TestTask_FullCRUD(t *testing.T) {
 		tasks, ok := resp["tasks"].([]interface{})
 		assert.True(t, ok)
 		assert.Greater(t, len(tasks), 0)
+
+		firstTask := tasks[0].(map[string]interface{})
+		assert.Equal(t, taskID.String(), firstTask["id"])
+		assert.Equal(t, statusID.String(), firstTask["status_id"])
+		assert.NotContains(t, firstTask, "project_id")
 	})
 
-	// === 7. DeleteTask ===
+	// === 7. TaskMoveFunc ===
+	t.Run("taskMoveFunc", func(t *testing.T) {
+		// Создадим новый статус для перемещения
+		newStatusID := createTestStatus(t, testDB, boardID, "In Progress")
+
+		reqBody := request.MoveTaskToAnotherStatus{
+			TaskID:     taskID.String(),
+			ToStatusID: newStatusID.String(),
+		}
+
+		body, _ := json.Marshal(reqBody)
+		req := httptest.NewRequest(http.MethodPost, "/task/move", bytes.NewBuffer(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		err := taskController.TaskMoveFunc(c)
+		assert.NoError(t, err)
+		assert.Equal(t, http.StatusOK, rec.Code)
+
+		// Проверим, что задача действительно переместилась — ЧИТАЕМ ИЗ БД
+		var movedTask models.Task
+		require.NoError(t, testDB.Where("id = ?", taskID).First(&movedTask).Error)
+		assert.Equal(t, newStatusID, movedTask.StatusID)
+
+		// Опционально: проверим, что в ответе есть корректная структура
+		var resp response.StatusByBoardIdResponse
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+		assert.Equal(t, boardID.String(), resp.BoardId)
+		assert.Greater(t, len(resp.Statuses), 0)
+
+		// Найдём статус, в который переместили задачу
+		var found bool
+		for _, s := range resp.Statuses {
+			if s.ID == newStatusID.String() {
+				found = true
+				// Проверим, что задача есть в списке задач этого статуса
+				var taskFound bool
+				for _, task := range s.Tasks {
+					if task.ID == taskID.String() {
+						taskFound = true
+						break
+					}
+				}
+				assert.True(t, taskFound, "Задача должна быть в списке задач нового статуса")
+				break
+			}
+		}
+		assert.True(t, found, "Новый статус должен быть в ответе")
+	})
+
+	// === 8. DeleteTask ===
 	t.Run("deleteTask", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/task/%s", taskID), nil)
 		rec := httptest.NewRecorder()
@@ -214,7 +279,7 @@ func TestTask_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(taskID.String())
 
-		err := controller.DeleteTask(c)
+		err := taskController.DeleteTask(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -223,7 +288,6 @@ func TestTask_FullCRUD(t *testing.T) {
 		assert.Equal(t, taskID.String(), resp["id"])
 		assert.Equal(t, "Задача удалена", resp["message"])
 
-		// Проверим, что задача действительно удалена
 		var deleted models.Task
 		require.NoError(t, testDB.Unscoped().First(&deleted, "id = ?", taskID).Error)
 		assert.True(t, *deleted.Deleted)

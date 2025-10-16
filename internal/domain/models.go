@@ -74,7 +74,6 @@ type Project struct {
 	UpdatedAt       *time.Time `gorm:"type:timestamp"`
 
 	Boards       []Board       `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
-	Tasks        []Task        `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
 	ProjectTeams []ProjectTeam `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
 
 	CreatedByUser *User `gorm:"foreignKey:CreatedBy;references:ID"`
@@ -92,7 +91,7 @@ type Board struct {
 	Project *Project `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
 
 	// явная джойн-таблица
-	StatusBoards []StatusBoard `gorm:"foreignKey:BoardID;references:ID;constraint:OnDelete:CASCADE"`
+	Statuses   []Status `gorm:"foreignKey:BoardID;references:ID;constraint:OnDelete:CASCADE"`
 }
 
 type Task struct {
@@ -106,18 +105,15 @@ type Task struct {
 	TimeSpent     *string    `gorm:"type:interval"`
 	StartDate     *time.Time
 	GitlabIssueID *int
-	ProjectID     uuid.UUID  `gorm:"type:uuid;index"`
+	StatusID       uuid.UUID  `gorm:"type:uuid;index"`
 	Category      *int8
 	Deleted       *bool      `gorm:"type:boolean"`
 	CreatedAt     *time.Time `gorm:"type:timestamp"`
 	UpdatedAt     *time.Time `gorm:"type:timestamp"`
 
-	Project        *Project `gorm:"foreignKey:ProjectID;references:ID;constraint:OnDelete:CASCADE"`
+	Status *Status `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE"`
 	CreatedByUser  *User    `gorm:"foreignKey:CreatedBy;references:ID"`
 	AssignedToUser *User    `gorm:"foreignKey:AssignedTo;references:ID"`
-
-	// явная джойн-таблица
-	StatusTasks []StatusTask `gorm:"foreignKey:TaskID;references:ID"`
 }
 
 //
@@ -191,7 +187,7 @@ type DailyReport struct {
 	Deleted    *bool      `gorm:"type:boolean"`
 
 	User           *User           `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
-	HelpRequests    []HelpRequest    `gorm:"foreignKey:ReportID;references:ID"`
+	HelpRequests   []HelpRequest    `gorm:"foreignKey:ReportID;references:ID"`
 	CompletedWork  []CompletedWork `gorm:"foreignKey:ReportID;references:ID"`
 	TomorrowPlans  []TomorrowPlans `gorm:"foreignKey:ReportID;references:ID"`
 	ReportProblems []ReportProblem `gorm:"foreignKey:ReportID;references:ID"`
@@ -271,6 +267,7 @@ type CompletedWork struct {
 
 type TomorrowPlans struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	TaskID      *uuid.UUID  `gorm:"type:uuid"`
 	Description *string    `gorm:"type:text"`
 	Deleted     *bool      `gorm:"type:boolean;default:false"`
 	ReportID    *uuid.UUID `gorm:"type:uuid"`
@@ -278,6 +275,7 @@ type TomorrowPlans struct {
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 
 	Report *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Task   *Task        `gorm:"foreignKey:TaskID;references:ID"`
 }
 
 type Subscription struct {
@@ -297,6 +295,8 @@ type Subscription struct {
 
 type Status struct {
 	ID        uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	BoardID   uuid.UUID  `gorm:"type:uuid;index;not null"` // <-- ДОБАВЛЕНО
+	SortOrder     *int        `gorm:"type:int"`
 	Key       *string    `gorm:"type:varchar(8);uniqueIndex"`
 	Name      *string    `gorm:"type:varchar(50)"`
 	Color     *string    `gorm:"type:varchar(16)"`
@@ -307,32 +307,10 @@ type Status struct {
 	UpdatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
 	Deleted   *bool      `gorm:"type:boolean;default:false"`
 
-	// убрали many2many, оставили только явные join-коллекции
-	StatusBoards []StatusBoard `gorm:"foreignKey:StatusID;references:ID"`
-	StatusTasks  []StatusTask  `gorm:"foreignKey:StatusID;references:ID"`
+	// Связь: Status принадлежит Board
+	Board *Board `gorm:"foreignKey:BoardID;references:ID;constraint:OnDelete:CASCADE"`
+
+	// Связь: много задач могут иметь этот статус
+	Tasks []Task `gorm:"foreignKey:StatusID;references:ID"`
 }
 
-type StatusBoard struct {
-	StatusID uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	BoardID  uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	CreatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
-	UpdatedAt *time.Time `gorm:"type:timestamp;default:CURRENT_TIMESTAMP"`
-	Deleted   *bool      `gorm:"type:boolean;default:false"`
-
-	Status *Status `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE"`
-	Board  *Board  `gorm:"foreignKey:BoardID;references:ID;constraint:OnDelete:CASCADE"`
-}
-
-type StatusTask struct {
-	StatusID uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	TaskID   uuid.UUID  `gorm:"type:uuid;primaryKey"`
-	Deleted  *bool      `gorm:"type:boolean;default:false"`
-	CreatedAt *time.Time `gorm:"type:timestamp"`
-	UpdatedAt *time.Time `gorm:"type:timestamp"`
-
-	Status *Status `gorm:"foreignKey:StatusID;references:ID;constraint:OnDelete:CASCADE"`
-	Task   *Task   `gorm:"foreignKey:TaskID;references:ID;constraint:OnDelete:CASCADE"`
-}
-
-func (StatusTask) TableName() string  { return "status_tasks" }
-func (StatusBoard) TableName() string { return "status_boards" }

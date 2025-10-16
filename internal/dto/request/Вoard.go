@@ -9,7 +9,6 @@ type BoardCreateRequest struct {
 type BoardUpdateRequest struct {
 	Name        *string `json:"name"`
 	Description *string `json:"description"`
-	Filter      *string `json:"filter"`
 }
 
 type BoardListRequest struct {

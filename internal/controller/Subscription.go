@@ -1,31 +1,38 @@
 package controller
 
 import (
-	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/service"
 	"emplacc-api/internal/utils"
-	"errors"
 	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 )
 
-func RegisterSubscriptionRoutes(e *echo.Echo){
+type SubscriptionController struct {
+	subscriptionService service.SubscriptionService
+}
+
+func NewSubscriptionController(subscriptionService service.SubscriptionService) *SubscriptionController {
+	return &SubscriptionController{
+		subscriptionService: subscriptionService,
+	}
+}
+
+func RegisterSubscriptionRoutes(e *echo.Echo, subscriptionService service.SubscriptionService) {
+	controller := NewSubscriptionController(subscriptionService)
 	subscriptionGroup := e.Group("/subscription")
-	subscriptionGroup.Use(KeycloakAuthMiddleware)
 	{
-		subscriptionGroup.GET("/all/:page/:pagesize", GetAllSubscriptions)
-		subscriptionGroup.GET("/:id", GetSubscriptionById)
-		subscriptionGroup.GET("/user/:id/:page/:pagesize", GetSubscriptionsByUserId)
-		subscriptionGroup.GET("/sub-object/:id/:type/:page/:pagesize", GetSubscriptionBySubObject)
-		subscriptionGroup.POST("", CreateSubscription)
-		subscriptionGroup.DELETE("/:id", DeleteSubscription)
+		subscriptionGroup.GET("/all/:page/:pagesize", controller.GetAllSubscriptions)
+		subscriptionGroup.GET("/:id", controller.GetSubscriptionById)
+		subscriptionGroup.GET("/user/:id/:page/:pagesize", controller.GetSubscriptionsByUserId)
+		subscriptionGroup.GET("/sub-object/:id/:type/:page/:pagesize", controller.GetSubscriptionBySubObject)
+		subscriptionGroup.POST("", controller.CreateSubscription)
+		subscriptionGroup.DELETE("/:id", controller.DeleteSubscription)
 	}
 }
 
@@ -43,9 +50,7 @@ func RegisterSubscriptionRoutes(e *echo.Echo){
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListResponse "Список подписок успешно получен"
 // @Router /subscription/all/{page}/{pagesize} [get]
-func GetAllSubscriptions(c echo.Context) error{
-	if err := Authorize(c); err != nil { return err }
-
+func (sc *SubscriptionController) GetAllSubscriptions(c echo.Context) error{
 	pageReq := c.Param("page")
 	pageSizeReq := c.Param("pagesize")
 
@@ -57,25 +62,11 @@ func GetAllSubscriptions(c echo.Context) error{
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге размера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Subscription{}).
-		Where("deleted = FALSE").
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count subscriptions): %v", err)
+	subs, totalCount, err := sc.subscriptionService.GetAllSubscriptions(page, pageSize)
+	if err != nil {
+		log.Printf("service error (get all subscriptions): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте подписок"})
-	}
-
-	var subs []models.Subscription
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Subscription{}).
-		Where("deleted = FALSE").
-		Limit(pageSize).Offset(offset).
-		Find(&subs).Error; err != nil {
-		log.Printf("DB error (find subscriptions): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении подписок"})
 	}
 
 	out := response.SubscriptionListResponse{
@@ -84,14 +75,10 @@ func GetAllSubscriptions(c echo.Context) error{
 		TotalCount: totalCount,
 	}
 	for _, s := range subs {
-		var subscriptionId string
-		if s.SubscriptionId != nil {
-			subscriptionId = s.SubscriptionId.String()
-		}
 		out.Subscriptions = append(out.Subscriptions, response.SubscriptionResponse{
 			ID:             s.ID.String(),
 			UserId:         s.UserID.String(),
-			SubscriptionId: subscriptionId,
+			SubscriptionId: utils.GetUUIDString(s.SubscriptionId),
 			TypeId:         utils.GetInt8(s.TypeID),
 			CreatedAt:      utils.GetTime(s.CreatedAt),
 		})
@@ -115,9 +102,7 @@ func GetAllSubscriptions(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListByUserIdResponse "Список подписок успешно получен"
 // @Router /subscription/user/{id}/{page}/{pagesize} [get]
-func GetSubscriptionsByUserId(c echo.Context) error{
-	if err := Authorize(c); err != nil { return err }
-
+func (sc *SubscriptionController) GetSubscriptionsByUserId(c echo.Context) error{
 	userUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор подписки"})
@@ -130,25 +115,11 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге размера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Subscription{}).
-		Where("deleted = FALSE AND user_id = ?", userUUID).
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count subscriptions by user): %v", err)
+	subs, totalCount, err := sc.subscriptionService.GetSubscriptionsByUserId(userUUID, page, pageSize)
+	if err != nil {
+		log.Printf("service error (get subscriptions by user): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте подписок"})
-	}
-
-	var subs []models.Subscription
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Subscription{}).
-		Where("deleted = FALSE AND user_id = ?", userUUID).
-		Limit(pageSize).Offset(offset).
-		Find(&subs).Error; err != nil {
-		log.Printf("DB error (find subscriptions by user): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении подписок"})
 	}
 
 	out := response.SubscriptionListByUserIdResponse{
@@ -158,14 +129,10 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 		TotalCount: totalCount,
 	}
 	for _, s := range subs {
-		var subscriptionId string
-		if s.SubscriptionId != nil {
-			subscriptionId = s.SubscriptionId.String()
-		}
 		out.Subscriptions = append(out.Subscriptions, response.SubscriptionResponse{
 			ID:             s.ID.String(),
 			UserId:         s.UserID.String(),
-			SubscriptionId: subscriptionId,
+			SubscriptionId: utils.GetUUIDString(s.SubscriptionId),
 			TypeId:         utils.GetInt8(s.TypeID),
 			CreatedAt:      utils.GetTime(s.CreatedAt),
 		})
@@ -190,9 +157,7 @@ func GetSubscriptionsByUserId(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписок"
 // @Success 200 {object} response.SubscriptionListBySubObjectResponse "Список подписок успешно получен"
 // @Router /subscription/sub-object/{id}/{type}/{page}/{pagesize} [get]
-func GetSubscriptionBySubObject(c echo.Context) error{
-	if err := Authorize(c); err != nil { return err }
-
+func (sc *SubscriptionController) GetSubscriptionBySubObject(c echo.Context) error{
 	subObjUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор объекта"})
@@ -209,25 +174,11 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 	if err != nil || pageSize <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге размера страницы"})
 	}
-	offset := (page - 1) * pageSize
 
-	var totalCount int64
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Subscription{}).
-		Where("deleted = FALSE AND subscription_id = ? AND type_id = ?", subObjUUID, typeId).
-		Count(&totalCount).Error; err != nil {
-		log.Printf("DB error (count subscriptions by sub-object): %v", err)
+	subs, totalCount, err := sc.subscriptionService.GetSubscriptionBySubObject(subObjUUID, int8(typeId), page, pageSize)
+	if err != nil {
+		log.Printf("service error (get subscription by sub-object): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подсчёте подписок"})
-	}
-
-	var subs []models.Subscription
-	if err := DBConn.Session(&gorm.Session{}).
-		Model(&models.Subscription{}).
-		Where("deleted = FALSE AND subscription_id = ? AND type_id = ?", subObjUUID, typeId).
-		Limit(pageSize).Offset(offset).
-		Find(&subs).Error; err != nil {
-		log.Printf("DB error (find subscriptions by sub-object): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении подписок"})
 	}
 
 	out := response.SubscriptionListBySubObjectResponse{
@@ -238,14 +189,10 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 		TotalCount:     totalCount,
 	}
 	for _, s := range subs {
-		var subscriptionId string
-		if s.SubscriptionId != nil {
-			subscriptionId = s.SubscriptionId.String()
-		}
 		out.Subscriptions = append(out.Subscriptions, response.SubscriptionResponse{
 			ID:             s.ID.String(),
 			UserId:         s.UserID.String(),
-			SubscriptionId: subscriptionId,
+			SubscriptionId: utils.GetUUIDString(s.SubscriptionId),
 			TypeId:         utils.GetInt8(s.TypeID),
 			CreatedAt:      utils.GetTime(s.CreatedAt),
 		})
@@ -268,35 +215,25 @@ func GetSubscriptionBySubObject(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении подписки"
 // @Success 200 {object} response.SubscriptionResponse "Подписка успешно получена"
 // @Router /subscription/{id} [get]
-func GetSubscriptionById(c echo.Context) error{
-	if err := Authorize(c); err != nil { return err }
-
+func (sc *SubscriptionController) GetSubscriptionById(c echo.Context) error{
 	subId, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор подписки"})
 	}
 
-	var subscription models.Subscription
-	result := DBConn.Session(&gorm.Session{}).
-		Model(&models.Subscription{}).
-		Where("deleted = FALSE AND id = ?", subId).
-		First(&subscription)
-	if result.Error != nil {
-		if errors.Is(result.Error, gorm.ErrRecordNotFound){
+	subscription, err := sc.subscriptionService.GetSubscriptionById(subId)
+	if err != nil {
+		if err.Error() == "subscription not found" {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Подписка не найдена"})
 		}
-		log.Printf("DB error (find subscription by id): %v", result.Error)
+		log.Printf("service error (get subscription by id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении подписки"})
 	}
 
-	var subscriptionId string
-	if subscription.SubscriptionId != nil {
-		subscriptionId = subscription.SubscriptionId.String()
-	}
 	return c.JSON(http.StatusOK, response.SubscriptionResponse{
 		ID:             subscription.ID.String(),
 		UserId:         subscription.UserID.String(),
-		SubscriptionId: subscriptionId,
+		SubscriptionId: utils.GetUUIDString(subscription.SubscriptionId),
 		TypeId:         utils.GetInt8(subscription.TypeID),
 		CreatedAt:      utils.GetTime(subscription.CreatedAt),
 	})
@@ -315,80 +252,36 @@ func GetSubscriptionById(c echo.Context) error{
 // @Failure 500 {object} map[string]string "Ошибка сервера при создании подписки"
 // @Success 201 {object} response.SubscriptionUniversalResponse "Подписка успешно создана"
 // @Router /subscription [post]
-func CreateSubscription(c echo.Context) error{
-	if err := Authorize(c); err != nil { return err }
-
+func (sc *SubscriptionController) CreateSubscription(c echo.Context) error{
 	var req request.SubscriptionCreateRequest
 	if err := c.Bind(&req); err != nil {
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
-	newUUID := uuid.New()
-	now := time.Now()
-	del := false
-
-	userId, err := uuid.Parse(req.UserId)
+	subID, err := sc.subscriptionService.CreateSubscription(req)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
-	}
-	subId, err := uuid.Parse(req.SubscriptionId)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор подписки"})
-	}
-	typeId := *req.TypeId
-
-	switch typeId {
-	case 0:
-		var task models.Task
-		res := DBConn.Session(&gorm.Session{}).
-			Model(&models.Task{}).
-			Where("id = ? AND deleted = FALSE", subId).
-			First(&task)
-		if res.Error != nil {
-			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
-			}
-			log.Printf("DB error (check task): %v", res.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке задачи"})
+		if err.Error() == "invalid user id" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
 		}
-	case 1:
-		var problem models.Problem
-		res := DBConn.Session(&gorm.Session{}).
-			Model(&models.Problem{}).
-			Where("id = ? AND deleted = FALSE", subId).
-			First(&problem)
-		if res.Error != nil {
-			if errors.Is(res.Error, gorm.ErrRecordNotFound) {
-				return c.JSON(http.StatusNotFound, map[string]string{"error": "Проблема не найдена"})
-			}
-			log.Printf("DB error (check problem): %v", res.Error)
-			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при проверке проблемы"})
+		if err.Error() == "invalid subscription id" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор подписки"})
 		}
-	default:
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный тип объекта"})
-	}
-
-	sub := models.Subscription{
-		ID:             newUUID,
-		UserID:         userId,
-		SubscriptionId: &subId,
-		TypeID:         req.TypeId,
-		CreatedAt:      &now,
-		Deleted:        &del,
-	}
-
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		return tx.Session(&gorm.Session{}).
-			Model(&models.Subscription{}).
-			Create(&sub).Error
-	}); txErr != nil {
-		log.Printf("DB transaction error (create subscription): %v", txErr)
+		if err.Error() == "task not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+		}
+		if err.Error() == "problem not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Проблема не найдена"})
+		}
+		if err.Error() == "invalid type object" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный тип объекта"})
+		}
+		log.Printf("service error (create subscription): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании подписки"})
 	}
 
 	return c.JSON(http.StatusCreated, response.SubscriptionUniversalResponse{
-		ID:      sub.ID.String(),
+		ID:      subID.String(),
 		Message: "Подписка создана",
 	})
 }
@@ -406,32 +299,18 @@ func CreateSubscription(c echo.Context) error{
 // @Failure 404 {object} map[string]string "Подписка не найдена"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении подписки"
 // @Router /subscription/{id} [delete]
-func DeleteSubscription(c echo.Context) error {
-	if err := Authorize(c); err != nil { return err }
-
+func (sc *SubscriptionController) DeleteSubscription(c echo.Context) error {
 	subUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор подписки"})
 	}
 
-	updateData := map[string]interface{}{"deleted": true}
-	if txErr := DBConn.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
-			Model(&models.Subscription{}).
-			Where("id = ?", subUUID).
-			Updates(updateData)
-		if res.Error != nil {
-			return res.Error
+	err = sc.subscriptionService.DeleteSubscription(subUUID)
+	if err != nil {
+		if err.Error() == "subscription not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
 		}
-		if res.RowsAffected == 0 {
-			return echo.NewHTTPError(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
-		}
-		return nil
-	}); txErr != nil {
-		if he, ok := txErr.(*echo.HTTPError); ok {
-			return c.JSON(he.Code, he.Message)
-		}
-		log.Printf("DB transaction error (delete subscription): %v", txErr)
+		log.Printf("service error (delete subscription): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении подписки"})
 	}
 

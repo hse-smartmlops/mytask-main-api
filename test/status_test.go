@@ -17,17 +17,17 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestStatus_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	statusRepo := repository.NewStatusRepository(testDB)
+	statusService := service.NewStatusService(statusRepo)
+	statusController := controller.NewStatusController(statusService)
 
 	e := echo.New()
 
@@ -35,13 +35,13 @@ func TestStatus_FullCRUD(t *testing.T) {
 	userID := createTestUser(t, testDB, "user@example.com")
 	projectID := createTestProject(t, testDB, "Test Project")
 	boardID := createTestBoard(t, testDB, projectID, "Test Board")
-	taskID := createTestTask(t, testDB, projectID, userID, "Test Task")
 
 	var statusID uuid.UUID
 
 	// === 1. CreateStatus ===
 	t.Run("createStatus", func(t *testing.T) {
 		reqBody := request.CreateStatusRequest{
+			BoardId:   boardID.String(), // ← обязательно указать доску
 			Name:      "Test Status",
 			Color:     "#FF0000",
 			IsDefault: false,
@@ -55,7 +55,8 @@ func TestStatus_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateStatus(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := statusController.CreateStatus(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -65,7 +66,6 @@ func TestStatus_FullCRUD(t *testing.T) {
 		assert.NotEmpty(t, resp["id"])
 		assert.Equal(t, "Статус успешно создан", resp["message"])
 
-		// Сохраняем ID статуса
 		statusID = uuid.MustParse(resp["id"].(string))
 	})
 
@@ -77,7 +77,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(statusID.String())
 
-		err := controller.GetStatusByID(c)
+		err := statusController.GetStatusByID(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -86,6 +86,8 @@ func TestStatus_FullCRUD(t *testing.T) {
 		assert.Equal(t, statusID.String(), resp["id"])
 		assert.Equal(t, "Test Status", resp["name"])
 		assert.Equal(t, "#FF0000", resp["color"])
+		// Убедись, что в ответе есть задачи (даже пустой массив)
+		assert.Contains(t, resp, "tasks")
 	})
 
 	// === 3. UpdateStatus ===
@@ -106,7 +108,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(statusID.String())
 
-		err := controller.UpdateStatus(c)
+		err := statusController.UpdateStatus(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -123,7 +125,7 @@ func TestStatus_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllStatuses(c)
+		err := statusController.GetAllStatuses(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -137,151 +139,45 @@ func TestStatus_FullCRUD(t *testing.T) {
 		assert.Greater(t, len(statuses), 0)
 	})
 
-	// === 5. AddStatusToTask ===
-	t.Run("addStatusToTask", func(t *testing.T) {
-		reqBody := request.AddStatusToTaskRequest{
-			TaskId:   taskID.String(),
-			StatusId: statusID.String(),
-		}
-
-		body, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/status/add-to-task", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-
-		err := controller.AddStatusToTask(c)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusCreated, rec.Code)
-
-		var resp map[string]interface{}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, taskID.String(), resp["task_id"])
-		assert.Equal(t, statusID.String(), resp["status_id"])
-		assert.Equal(t, "Статус успешно добавлен к задаче", resp["message"])
-	})
-
-	// === 6. GetStatusesByTaskId ===
-	t.Run("getStatusesByTaskId", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/status/task/%s", taskID), nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("task_id")
-		c.SetParamValues(taskID.String())
-
-		err := controller.GetStatusesByTaskId(c)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var resp map[string]interface{}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, taskID.String(), resp["task_id"])
-
-		statuses, ok := resp["statuses"].([]interface{})
-		assert.True(t, ok)
-		assert.Greater(t, len(statuses), 0)
-	})
-
-	// === 7. AddStatusToBoard ===
-	t.Run("addStatusToBoard", func(t *testing.T) {
-		reqBody := request.AddStatusToBoardRequest{
-			BoardId:  boardID.String(),
-			StatusId: statusID.String(),
-		}
-
-		body, _ := json.Marshal(reqBody)
-		req := httptest.NewRequest(http.MethodPost, "/status/add-to-board", bytes.NewBuffer(body))
-		req.Header.Set("Content-Type", "application/json")
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-
-		err := controller.AddStatusToBoard(c)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusCreated, rec.Code)
-
-		var resp map[string]interface{}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, boardID.String(), resp["board_id"])
-		assert.Equal(t, statusID.String(), resp["status_id"])
-		assert.Equal(t, "Статус успешно добавлен к доске", resp["message"])
-	})
-
-	// === 8. GetStatusesByBoardId ===
+	// === 5. GetStatusesByBoardId ===
 	t.Run("getStatusesByBoardId", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/status/project/%s", boardID), nil)
+		// Исправленный URL: /status/board/{board_id}
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/status/board/%s", boardID), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		c.SetParamNames("board_id")
 		c.SetParamValues(boardID.String())
 
-		err := controller.GetStatusesByBoardId(c)
+		err := statusController.GetStatusesByBoardId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, boardID.String(), resp["project_id"]) // JSON-тег: project_id
+		assert.Equal(t, boardID.String(), resp["board_id"])
 
 		statuses, ok := resp["statuses"].([]interface{})
 		assert.True(t, ok)
 		assert.Greater(t, len(statuses), 0)
+
+		// Проверим, что статус содержит задачи (даже если их нет)
+		firstStatus := statuses[0].(map[string]interface{})
+		assert.Contains(t, firstStatus, "tasks")
 	})
 
-	// === 9. DeleteStatusFromTask ===
-	t.Run("deleteStatusFromTask", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/status/delete-from-task/%s/%s", taskID, statusID), nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("task_id", "status_id")
-		c.SetParamValues(taskID.String(), statusID.String())
-
-		err := controller.DeleteStatusFromTask(c)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var resp map[string]interface{}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, statusID.String(), resp["id"])
-		assert.Equal(t, "Статус задачи успешно удалён", resp["message"])
-
-		// Проверим, что связь действительно удалена
-		var deleted models.StatusTask
-		require.NoError(t, testDB.Unscoped().Where("status_id = ? AND task_id = ?", statusID, taskID).First(&deleted).Error)
-		assert.True(t, *deleted.Deleted)
-	})
-
-	// === 10. DeleteStatusFromBoard ===
-	t.Run("deleteStatusFromBoard", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/status/delete-from-board/%s/%s", boardID, statusID), nil)
-		rec := httptest.NewRecorder()
-		c := e.NewContext(req, rec)
-		c.SetParamNames("board_id", "status_id")
-		c.SetParamValues(boardID.String(), statusID.String())
-
-		err := controller.DeleteStatusFromBoard(c)
-		assert.NoError(t, err)
-		assert.Equal(t, http.StatusOK, rec.Code)
-
-		var resp map[string]interface{}
-		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		assert.Equal(t, statusID.String(), resp["id"])
-		assert.Equal(t, "Статус доски успешно удалён", resp["message"])
-
-		// Проверим, что связь действительно удалена
-		var deleted models.StatusBoard
-		require.NoError(t, testDB.Unscoped().Where("status_id = ? AND board_id = ?", statusID, boardID).First(&deleted).Error)
-		assert.True(t, *deleted.Deleted)
-	})
-
-	// === 11. DeleteStatus ===
+	// === 6. DeleteStatus ===
 	t.Run("deleteStatus", func(t *testing.T) {
+		// Создадим задачу, чтобы проверить каскадное удаление
+		taskName := "Task for deletion test"
+		taskID := createTestTask(t, testDB, statusID, userID, taskName)
+
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/status/%s", statusID), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 		c.SetParamNames("id")
 		c.SetParamValues(statusID.String())
 
-		err := controller.DeleteStatus(c)
+		err := statusController.DeleteStatus(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -290,9 +186,14 @@ func TestStatus_FullCRUD(t *testing.T) {
 		assert.Equal(t, statusID.String(), resp["id"])
 		assert.Equal(t, "Статус успешно удалён", resp["message"])
 
-		// Проверим, что статус действительно удалён
-		var deleted models.Status
-		require.NoError(t, testDB.Unscoped().First(&deleted, "id = ?", statusID).Error)
-		assert.True(t, *deleted.Deleted)
+		// Проверим, что статус удалён
+		var deletedStatus models.Status
+		require.NoError(t, testDB.Unscoped().First(&deletedStatus, "id = ?", statusID).Error)
+		assert.True(t, *deletedStatus.Deleted)
+
+		// Проверим, что задача тоже удалена (каскад)
+		var deletedTask models.Task
+		require.NoError(t, testDB.Unscoped().First(&deletedTask, "id = ?", taskID).Error)
+		assert.True(t, *deletedTask.Deleted)
 	})
 }

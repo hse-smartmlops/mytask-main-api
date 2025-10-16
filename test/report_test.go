@@ -19,19 +19,49 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
+// createTestStatus создаёт тестовый статус
+func createTestStatus(t *testing.T, db *gorm.DB, boardID uuid.UUID, name string) uuid.UUID {
+	statusID := uuid.New()
+	now := time.Now()
+	del := false
+
+	namePtr := &name
+	
+	zero := 0
+	key := statusID.String()[:8]
+	status := models.Status{
+		ID:        statusID,
+		BoardID:   boardID,
+		Key:       &key,
+		Name:      namePtr,
+		Color:     strPtr("#6C757D"),
+		SortOrder:     &zero,
+		IsDefault: &del,
+		IsActive:  boolPtr(true),
+		IsOpen:    boolPtr(true),
+		CreatedAt: &now,
+		UpdatedAt: &now,
+		Deleted:   &del,
+	}
+	require.NoError(t, db.Create(&status).Error)
+	return statusID
+}
+
 // createTestTask создаёт тестовую задачу
-func createTestTask(t *testing.T, db *gorm.DB, projectID, assignedTo uuid.UUID, name string) uuid.UUID {
+func createTestTask(t *testing.T, db *gorm.DB, statusID, assignedTo uuid.UUID, name string) uuid.UUID {
 	taskID := uuid.New()
 	now := time.Now()
 	del := false
 
 	task := models.Task{
 		ID:          taskID,
+		StatusID:    statusID, // ← обязательно, вместо ProjectID
 		Name:        &name,
 		Description: nil,
-		ProjectID:   projectID,
 		AssignedTo:  &assignedTo,
 		CreatedAt:   &now,
 		UpdatedAt:   &now,
@@ -61,22 +91,26 @@ func createTestProblem(t *testing.T, db *gorm.DB, name string, creatorID uuid.UU
 	return problemID
 }
 
+// Вспомогательные функции для указателей
+func strPtr(s string) *string { return &s }
+func boolPtr(b bool) *bool   { return &b }
+
 func TestReport_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	reportRepo := repository.NewReportRepository(testDB)
+	reportService := service.NewReportService(reportRepo)
+	reportController := controller.NewReportController(reportService)
 
 	e := echo.New()
 
 	// Создаём тестовые сущности
 	userID := createTestUser(t, testDB, "user@example.com")
 	projectID := createTestProject(t, testDB, "Test Project")
-	taskID := createTestTask(t, testDB, projectID, userID, "Test Task")
+	boardID := createTestBoard(t, testDB, projectID, "Test Board")
+	statusID := createTestStatus(t, testDB, boardID, "To Do")
+	taskID := createTestTask(t, testDB, statusID, userID, "Test Task")
 	problemID := createTestProblem(t, testDB, "Test Problem", userID)
 	helperID := createTestUser(t, testDB, "helper@example.com")
 
@@ -98,12 +132,13 @@ func TestReport_FullCRUD(t *testing.T) {
 			CompleteWork: []request.CompletedWorkCreateRequest{
 				{
 					Description: "Completed work 1",
-					TaskID:      &taskId,
+					TaskID:      taskId,
 				},
 			},
 			PlanTomorrow: []request.TomorrowPlanCreateRequest{
 				{
 					Description: "Plan for tomorrow",
+					TaskId: taskId,
 				},
 			},
 			Problems: []string{problemID.String()},
@@ -122,7 +157,8 @@ func TestReport_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateReport(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := reportController.CreateReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -143,7 +179,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(reportID.String())
 
-		err := controller.GetReport(c)
+		err := reportController.GetReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -177,7 +213,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(taskID.String())
 
-		err := controller.GetReportsByTaskId(c)
+		err := reportController.GetReportsByTaskId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -198,7 +234,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(projectID.String())
 
-		err := controller.GetReportsByProjectId(c)
+		err := reportController.GetReportsByProjectId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -230,7 +266,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(reportID.String())
 
-		err := controller.UpdateReport(c)
+		err := reportController.UpdateReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -257,7 +293,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(helpRequestID.String())
 
-		err := controller.UpdateHelpRequest(c)
+		err := reportController.UpdateHelpRequest(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -283,7 +319,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(completedWorkID.String())
 
-		err := controller.UpdateCompletedWork(c)
+		err := reportController.UpdateCompletedWork(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -309,7 +345,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(tomorrowPlanID.String())
 
-		err := controller.UpdateTomorrowPlans(c)
+		err := reportController.UpdateTomorrowPlans(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -327,7 +363,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(helperID.String())
 
-		err := controller.GetHelpRequestsForUser(c)
+		err := reportController.GetHelpRequestsForUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -350,7 +386,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(helpRequestID.String())
 
-		err := controller.DeleteHelpRequest(c)
+		err := reportController.DeleteHelpRequest(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -373,7 +409,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "page", "pagesize")
 		c.SetParamValues(userID.String(), "1", "10")
 
-		err := controller.GetAllReportsByUserId(c)
+		err := reportController.GetAllReportsByUserId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -395,7 +431,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(reportID.String())
 
-		err := controller.DeleteReport(c)
+		err := reportController.DeleteReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

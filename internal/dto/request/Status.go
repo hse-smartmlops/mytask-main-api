@@ -6,6 +6,8 @@ type CreateStatusRequest struct {
 	IsDefault bool   `json:"is_default"`
 	IsActive  bool   `json:"is_active"`
 	IsOpen    bool   `json:"is_open"`
+	BoardId   string `json:"board_id"`
+	Order     int    `json:"order"`
 }
 
 type UpdateStatusRequest struct {
@@ -14,6 +16,8 @@ type UpdateStatusRequest struct {
 	IsDefault *bool   `json:"is_default"`
 	IsActive  *bool   `json:"is_active"`
 	IsOpen    *bool   `json:"is_open"`
+	BoardId   *string `json:"board_id"`
+	Order     *int    `json:"order"`
 }
 
 type AddStatusToTaskRequest struct {
@@ -23,11 +27,6 @@ type AddStatusToTaskRequest struct {
 
 type AddStatusToBoardRequest struct {
 	BoardId  string `json:"board_id"`
-	StatusId string `json:"status_id"`
-}
-
-type DeleteStatusFromTaskRequest struct {
-	TaskId   string `json:"task_id"`
 	StatusId string `json:"status_id"`
 }
 
