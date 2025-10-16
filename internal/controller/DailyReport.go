@@ -507,6 +507,7 @@ func (rc *ReportController) GetReportsByProjectId(c echo.Context) error {
 			Checked:       utils.GetInt8(r.Checked),
 		})
 	}
+
 	return c.JSON(http.StatusOK, out)
 }
 
