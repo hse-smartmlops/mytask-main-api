@@ -201,13 +201,6 @@ definitions:
     - status_id
     - task_id
     type: object
-  request.OAuthRequest:
-    properties:
-      code:
-        type: string
-      redirect_uri:
-        type: string
-    type: object
   request.ProblemCreateRequest:
     properties:
       creator_id:
@@ -232,24 +225,6 @@ definitions:
         type: string
     required:
     - refresh_token
-    type: object
-  request.RegisterRequest:
-    properties:
-      email:
-        type: string
-      first_name:
-        type: string
-      last_name:
-        type: string
-      password:
-        type: string
-      profession:
-        type: string
-    required:
-    - email
-    - first_name
-    - last_name
-    - password
     type: object
   request.RemoveRoleUserRequest:
     properties:
@@ -306,6 +281,13 @@ definitions:
       user_id:
         type: string
     type: object
+  request.ReportsByDateInXLSX:
+    properties:
+      end_date:
+        type: string
+      start_date:
+        type: string
+    type: object
   request.RestoreUserRequest:
     properties:
       email:
@@ -332,15 +314,6 @@ definitions:
       type_id:
         type: integer
       user_id:
-        type: string
-    type: object
-  request.TOTPRequest:
-    properties:
-      email:
-        type: string
-      password:
-        type: string
-      totp:
         type: string
     type: object
   request.TaskCreateRequest:
@@ -408,12 +381,14 @@ definitions:
       team_id:
         type: string
     type: object
-  request.TeamAddUserRequest:
+  request.TeamAddUsersRequest:
     properties:
       team_id:
         type: string
-      user_id:
-        type: string
+      user_ids:
+        items:
+          type: string
+        type: array
     type: object
   request.TeamCreateRequest:
     properties:
@@ -421,6 +396,10 @@ definitions:
         type: string
       name:
         type: string
+      user_ids:
+        items:
+          type: string
+        type: array
     required:
     - name
     type: object
@@ -448,6 +427,8 @@ definitions:
   request.TomorrowPlanCreateRequest:
     properties:
       description:
+        type: string
+      task_id:
         type: string
     type: object
   request.TomorrowPlanReplaceRequest:
@@ -1077,7 +1058,7 @@ definitions:
     type: object
   response.StatusByBoardIdResponse:
     properties:
-      project_id:
+      board_id:
         type: string
       statuses:
         items:
@@ -1331,6 +1312,8 @@ definitions:
       description:
         type: string
       id:
+        type: string
+      task_id:
         type: string
     type: object
   response.UserInfo:
@@ -1709,40 +1692,6 @@ paths:
       summary: Получение информации о текущем пользователе
       tags:
       - Auth
-  /auth/oauth:
-    post:
-      consumes:
-      - application/json
-      description: Выполняет аутентификацию с использованием OAuth кода авторизации
-      parameters:
-      - description: Данные для OAuth аутентификации
-        in: body
-        name: oauth
-        required: true
-        schema:
-          $ref: '#/definitions/request.OAuthRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Успешная OAuth аутентификация
-          schema:
-            $ref: '#/definitions/response.AuthResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Ошибка OAuth аутентификации
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация через OAuth
-      tags:
-      - Auth
   /auth/refresh:
     post:
       consumes:
@@ -1776,77 +1725,6 @@ paths:
               type: string
             type: object
       summary: Обновление access токена
-      tags:
-      - Auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Создает нового пользователя в Keycloak с указанным email
-      parameters:
-      - description: Данные для регистрации
-        in: body
-        name: register
-        required: true
-        schema:
-          $ref: '#/definitions/request.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Пользователь успешно зарегистрирован
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при создании пользователя
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Регистрация нового пользователя
-      tags:
-      - Auth
-  /auth/totp:
-    post:
-      consumes:
-      - application/json
-      description: Выполняет аутентификацию с использованием email, пароля и TOTP
-        кода
-      parameters:
-      - description: Данные для TOTP аутентификации
-        in: body
-        name: totp
-        required: true
-        schema:
-          $ref: '#/definitions/request.TOTPRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Успешная TOTP аутентификация
-          schema:
-            $ref: '#/definitions/response.AuthResponse'
-        "400":
-          description: Ошибка в запросе
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Неверные учетные данные или TOTP код
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Аутентификация с двухфакторной аутентификацией
       tags:
       - Auth
   /auth/validate:
@@ -3292,6 +3170,50 @@ paths:
       summary: Обновление выполненной работы
       tags:
       - Reports
+  /report/export/xlsx:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Генерирует XLSX-файл с отчётами по выполненным работам за указанный период.
+        Строки — сотрудники, столбцы — даты, ячейки — список выполненных задач за день.
+      parameters:
+      - description: Диапазон дат для экспорта
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportsByDateInXLSX'
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с отчётами
+          schema:
+            type: string
+        "400":
+          description: Некорректные входные данные (например, даты)
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен авторизации
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт отчётов по выполненным работам в XLSX
+      tags:
+      - Reports
   /report/help-request/{id}:
     delete:
       consumes:
@@ -4693,58 +4615,6 @@ paths:
       summary: Переместить задачу в другой статус (столбец)
       tags:
       - Tasks
-  /task/project/{projectId}/{page}/{pagesize}:
-    get:
-      consumes:
-      - application/json
-      description: Получает список задач, связанных с указанным проектом через доски
-        и статусы
-      parameters:
-      - description: ID проекта
-        in: path
-        name: projectId
-        required: true
-        type: string
-      - description: Номер страницы
-        in: path
-        name: page
-        required: true
-        type: integer
-      - description: Размер страницы
-        in: path
-        name: pagesize
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список задач успешно получен
-          schema:
-            $ref: '#/definitions/response.TaskListResponse'
-        "400":
-          description: Некорректный идентификатор проекта
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка сервера при получении задач
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Получение задач по ID проекта
-      tags:
-      - Tasks
   /task/user/{id}/{page}/{pagesize}:
     get:
       consumes:
@@ -5196,7 +5066,7 @@ paths:
         name: addUser
         required: true
         schema:
-          $ref: '#/definitions/request.TeamAddUserRequest'
+          $ref: '#/definitions/request.TeamAddUsersRequest'
       produces:
       - application/json
       responses:
@@ -5227,6 +5097,97 @@ paths:
       summary: Добавление пользователя в команду
       tags:
       - Teams
+  /team/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список всех активных команд, в которых состоит пользователь
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список команд успешно получен
+          schema:
+            $ref: '#/definitions/response.TeamsListResponse'
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Команды для пользователя не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении команд
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение команд пользователя
+      tags:
+      - Teams
+  /user:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт пользователя с автоматически сгенерированным UUID
+      parameters:
+      - description: Данные для создания пользователя
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.UserCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Пользователь успешно создан
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Ошибка при привязке данных
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при создании пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Создание нового пользователя
+      tags:
+      - Users
   /user/{id}:
     delete:
       consumes:
@@ -5405,50 +5366,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех пользователей
-      tags:
-      - Users
-  /user/create:
-    post:
-      consumes:
-      - application/json
-      description: Создаёт пользователя с автоматически сгенерированным UUID
-      parameters:
-      - description: Данные для создания пользователя
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/request.UserCreateRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Пользователь успешно создан
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Ошибка при привязке данных
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Ошибка при создании пользователя
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Создание нового пользователя
       tags:
       - Users
   /user/full-delete/{id}:

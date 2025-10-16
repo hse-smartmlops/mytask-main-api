@@ -187,7 +187,7 @@ type DailyReport struct {
 	Deleted    *bool      `gorm:"type:boolean"`
 
 	User           *User           `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
-	HelpRequests    []HelpRequest    `gorm:"foreignKey:ReportID;references:ID"`
+	HelpRequests   []HelpRequest    `gorm:"foreignKey:ReportID;references:ID"`
 	CompletedWork  []CompletedWork `gorm:"foreignKey:ReportID;references:ID"`
 	TomorrowPlans  []TomorrowPlans `gorm:"foreignKey:ReportID;references:ID"`
 	ReportProblems []ReportProblem `gorm:"foreignKey:ReportID;references:ID"`
@@ -267,6 +267,7 @@ type CompletedWork struct {
 
 type TomorrowPlans struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	TaskID      *uuid.UUID  `gorm:"type:uuid"`
 	Description *string    `gorm:"type:text"`
 	Deleted     *bool      `gorm:"type:boolean;default:false"`
 	ReportID    *uuid.UUID `gorm:"type:uuid"`
@@ -274,6 +275,7 @@ type TomorrowPlans struct {
 	CreatedAt   *time.Time `gorm:"type:timestamp"`
 
 	Report *DailyReport `gorm:"foreignKey:ReportID;references:ID"`
+	Task   *Task        `gorm:"foreignKey:TaskID;references:ID"`
 }
 
 type Subscription struct {

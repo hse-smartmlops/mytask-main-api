@@ -19,9 +19,11 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
-// createTestProject создаёт тестовый проект (Project.Deleted = bool)
+// createTestProject создаёт тестовый проект
 func createTestProject(t *testing.T, db *gorm.DB, name string) uuid.UUID {
 	projectID := uuid.New()
 	now := time.Now()
@@ -30,7 +32,7 @@ func createTestProject(t *testing.T, db *gorm.DB, name string) uuid.UUID {
 		ID:          projectID,
 		Name:        &name,
 		Description: nil,
-		Deleted:     &del, // bool, не *bool!
+		Deleted:     &del,
 		CreatedAt:   &now,
 		UpdatedAt:   &now,
 	}
@@ -38,7 +40,7 @@ func createTestProject(t *testing.T, db *gorm.DB, name string) uuid.UUID {
 	return projectID
 }
 
-// createTestBoard создаёт тестовую доску (все поля — указатели, где нужно)
+// createTestBoard создаёт тестовую доску
 func createTestBoard(t *testing.T, db *gorm.DB, projectID uuid.UUID, name string) uuid.UUID {
 	boardID := uuid.New()
 	now := time.Now()
@@ -60,13 +62,12 @@ func createTestBoard(t *testing.T, db *gorm.DB, projectID uuid.UUID, name string
 func TestBoard_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
+	// Создаем зависимости для новой архитектуры
+	boardRepo := repository.NewBoardRepository(testDB)
+	boardService := service.NewBoardService(boardRepo)
+	boardController := controller.NewBoardController(boardService)
 
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
-
+	// Создаём Echo instance
 	e := echo.New()
 
 	// Создаём проект
@@ -77,10 +78,10 @@ func TestBoard_FullCRUD(t *testing.T) {
 	t.Run("createBoard", func(t *testing.T) {
 		boardName := "Test Board"
 		boardDesc := "Description for test board"
-		projectIDStr := projectID.String() // ← сохраняем в переменную
+		projectIDStr := projectID.String()
 
 		reqBody := request.BoardCreateRequest{
-			ProjectID:   &projectIDStr, // ← безопасный указатель
+			ProjectID:   &projectIDStr,
 			Name:        &boardName,
 			Description: &boardDesc,
 		}
@@ -90,7 +91,7 @@ func TestBoard_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateBoard(c)
+		err := boardController.CreateBoard(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -113,7 +114,7 @@ func TestBoard_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(boardID.String())
 
-		err := controller.GetBoardById(c)
+		err := boardController.GetBoardById(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -133,7 +134,7 @@ func TestBoard_FullCRUD(t *testing.T) {
 		c.SetParamNames("projectId")
 		c.SetParamValues(projectID.String())
 
-		err := controller.GetBoardByProjectId(c)
+		err := boardController.GetBoardByProjectId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -167,7 +168,7 @@ func TestBoard_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(boardID.String())
 
-		err := controller.UpdateBoard(c)
+		err := boardController.UpdateBoard(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -186,17 +187,17 @@ func TestBoard_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(boardID.String())
 
-		err := controller.DeleteBoard(c)
+		err := boardController.DeleteBoard(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		// Проверим, что deleted = true (используем Unscoped!)
+		// Проверим, что deleted = true
 		var deleted models.Board
 		require.NoError(t, testDB.Unscoped().First(&deleted, "id = ?", boardID).Error)
 		assert.True(t, *deleted.Deleted)
 	})
 
-	// === 6. GetAllBoards (проверим пагинацию и исключение удалённых) ===
+	// === 6. GetAllBoards ===
 	t.Run("getAllBoards", func(t *testing.T) {
 		// Создадим ещё одну доску, чтобы было что пагинировать
 		createTestBoard(t, testDB, projectID, "Second Board")
@@ -207,7 +208,7 @@ func TestBoard_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllBoards(c)
+		err := boardController.GetAllBoards(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -218,7 +219,7 @@ func TestBoard_FullCRUD(t *testing.T) {
 
 		boards, ok := resp["boards"].([]interface{})
 		assert.True(t, ok)
-		// Должна быть только одна доска (вторая не удалена, первая — удалена)
+		// Должна быть только одна активная доска (вторая создана, первая - удалена)
 		assert.Equal(t, 1, len(boards))
 	})
 }

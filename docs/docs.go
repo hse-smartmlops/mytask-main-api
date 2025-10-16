@@ -525,58 +525,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/oauth": {
-            "post": {
-                "description": "Выполняет аутентификацию с использованием OAuth кода авторизации",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Аутентификация через OAuth",
-                "parameters": [
-                    {
-                        "description": "Данные для OAuth аутентификации",
-                        "name": "oauth",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.OAuthRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Успешная OAuth аутентификация",
-                        "schema": {
-                            "$ref": "#/definitions/response.AuthResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Ошибка OAuth аутентификации",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/auth/refresh": {
             "post": {
                 "description": "Получение нового access_token и refresh_token на основе существующего refresh_token",
@@ -619,113 +567,6 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Неверный или истёкший refresh_token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/register": {
-            "post": {
-                "description": "Создает нового пользователя в Keycloak с указанным email",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Регистрация нового пользователя",
-                "parameters": [
-                    {
-                        "description": "Данные для регистрации",
-                        "name": "register",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Пользователь успешно зарегистрирован",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при создании пользователя",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/totp": {
-            "post": {
-                "description": "Выполняет аутентификацию с использованием email, пароля и TOTP кода",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Аутентификация с двухфакторной аутентификацией",
-                "parameters": [
-                    {
-                        "description": "Данные для TOTP аутентификации",
-                        "name": "totp",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.TOTPRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Успешная TOTP аутентификация",
-                        "schema": {
-                            "$ref": "#/definitions/response.AuthResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка в запросе",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Неверные учетные данные или TOTP код",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2724,6 +2565,72 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении выполненной работы",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/report/export/xlsx": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с отчётами по выполненным работам за указанный период.\nСтроки — сотрудники, столбцы — даты, ячейки — список выполненных задач за день.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Экспорт отчётов по выполненным работам в XLSX",
+                "parameters": [
+                    {
+                        "description": "Диапазон дат для экспорта",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ReportsByDateInXLSX"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с отчётами",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные входные данные (например, даты)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен авторизации",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4881,84 +4788,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/task/project/{projectId}/{page}/{pagesize}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Получает список задач, связанных с указанным проектом через доски и статусы",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Tasks"
-                ],
-                "summary": "Получение задач по ID проекта",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID проекта",
-                        "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Размер страницы",
-                        "name": "pagesize",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список задач успешно получен",
-                        "schema": {
-                            "$ref": "#/definitions/response.TaskListResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Некорректный идентификатор проекта",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Нет или неверный токен",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при получении задач",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/task/user/{id}/{page}/{pagesize}": {
             "get": {
                 "security": [
@@ -5601,7 +5430,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/request.TeamAddUserRequest"
+                            "$ref": "#/definitions/request.TeamAddUsersRequest"
                         }
                     }
                 ],
@@ -5705,6 +5534,79 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при удалении пользователя из команды",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/team/user/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список всех активных команд, в которых состоит пользователь",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Teams"
+                ],
+                "summary": "Получение команд пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список команд успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.TeamsListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Команды для пользователя не найдены",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении команд",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -5921,6 +5823,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/user": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Создаёт пользователя с автоматически сгенерированным UUID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Создание нового пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные для создания пользователя",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.UserCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Пользователь успешно создан",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при привязке данных",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при создании пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/user/all/{page}/{pagesize}": {
             "get": {
                 "security": [
@@ -5982,75 +5953,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при получении пользователей",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/user/create": {
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Создаёт пользователя с автоматически сгенерированным UUID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Создание нового пользователя",
-                "parameters": [
-                    {
-                        "description": "Данные для создания пользователя",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/request.UserCreateRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Пользователь успешно создан",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Ошибка при привязке данных",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Нет или неверный токен",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка при создании пользователя",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6841,17 +6743,6 @@ const docTemplate = `{
                 }
             }
         },
-        "request.OAuthRequest": {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string"
-                },
-                "redirect_uri": {
-                    "type": "string"
-                }
-            }
-        },
         "request.ProblemCreateRequest": {
             "type": "object",
             "properties": {
@@ -6887,32 +6778,6 @@ const docTemplate = `{
             ],
             "properties": {
                 "refresh_token": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.RegisterRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "first_name",
-                "last_name",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "profession": {
                     "type": "string"
                 }
             }
@@ -7001,6 +6866,17 @@ const docTemplate = `{
                 }
             }
         },
+        "request.ReportsByDateInXLSX": {
+            "type": "object",
+            "properties": {
+                "end_date": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
+                }
+            }
+        },
         "request.RestoreUserRequest": {
             "type": "object",
             "properties": {
@@ -7041,20 +6917,6 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "user_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "request.TOTPRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "totp": {
                     "type": "string"
                 }
             }
@@ -7151,14 +7013,17 @@ const docTemplate = `{
                 }
             }
         },
-        "request.TeamAddUserRequest": {
+        "request.TeamAddUsersRequest": {
             "type": "object",
             "properties": {
                 "team_id": {
                     "type": "string"
                 },
-                "user_id": {
-                    "type": "string"
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -7173,6 +7038,12 @@ const docTemplate = `{
                 },
                 "name": {
                     "type": "string"
+                },
+                "user_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -7213,6 +7084,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "description": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }
@@ -8181,7 +8055,7 @@ const docTemplate = `{
         "response.StatusByBoardIdResponse": {
             "type": "object",
             "properties": {
-                "project_id": {
+                "board_id": {
                     "type": "string"
                 },
                 "statuses": {
@@ -8571,6 +8445,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }

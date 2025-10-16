@@ -19,6 +19,8 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 // createTestStatus создаёт тестовый статус
@@ -96,12 +98,10 @@ func boolPtr(b bool) *bool   { return &b }
 func TestReport_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	reportRepo := repository.NewReportRepository(testDB)
+	reportService := service.NewReportService(reportRepo)
+	reportController := controller.NewReportController(reportService)
 
 	e := echo.New()
 
@@ -132,12 +132,13 @@ func TestReport_FullCRUD(t *testing.T) {
 			CompleteWork: []request.CompletedWorkCreateRequest{
 				{
 					Description: "Completed work 1",
-					TaskID:      &taskId,
+					TaskID:      taskId,
 				},
 			},
 			PlanTomorrow: []request.TomorrowPlanCreateRequest{
 				{
 					Description: "Plan for tomorrow",
+					TaskId: taskId,
 				},
 			},
 			Problems: []string{problemID.String()},
@@ -156,7 +157,8 @@ func TestReport_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateReport(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := reportController.CreateReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -177,7 +179,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(reportID.String())
 
-		err := controller.GetReport(c)
+		err := reportController.GetReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -211,7 +213,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(taskID.String())
 
-		err := controller.GetReportsByTaskId(c)
+		err := reportController.GetReportsByTaskId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -232,7 +234,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(projectID.String())
 
-		err := controller.GetReportsByProjectId(c)
+		err := reportController.GetReportsByProjectId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -264,7 +266,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(reportID.String())
 
-		err := controller.UpdateReport(c)
+		err := reportController.UpdateReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -291,7 +293,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(helpRequestID.String())
 
-		err := controller.UpdateHelpRequest(c)
+		err := reportController.UpdateHelpRequest(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -317,7 +319,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(completedWorkID.String())
 
-		err := controller.UpdateCompletedWork(c)
+		err := reportController.UpdateCompletedWork(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -343,7 +345,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(tomorrowPlanID.String())
 
-		err := controller.UpdateTomorrowPlans(c)
+		err := reportController.UpdateTomorrowPlans(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -361,7 +363,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(helperID.String())
 
-		err := controller.GetHelpRequestsForUser(c)
+		err := reportController.GetHelpRequestsForUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -384,7 +386,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(helpRequestID.String())
 
-		err := controller.DeleteHelpRequest(c)
+		err := reportController.DeleteHelpRequest(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -407,7 +409,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "page", "pagesize")
 		c.SetParamValues(userID.String(), "1", "10")
 
-		err := controller.GetAllReportsByUserId(c)
+		err := reportController.GetAllReportsByUserId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -429,7 +431,7 @@ func TestReport_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(reportID.String())
 
-		err := controller.DeleteReport(c)
+		err := reportController.DeleteReport(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

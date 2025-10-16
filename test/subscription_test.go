@@ -17,17 +17,17 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestSubscription_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	subscriptionRepo := repository.NewSubscriptionRepository(testDB)
+	subscriptionService := service.NewSubscriptionService(subscriptionRepo)
+	subscriptionController := controller.NewSubscriptionController(subscriptionService)
 
 	e := echo.New()
 
@@ -35,7 +35,9 @@ func TestSubscription_FullCRUD(t *testing.T) {
 	userID := createTestUser(t, testDB, "user@example.com")
 	// Создадим задачу и проблему, чтобы протестировать типы 0 и 1 в CreateSubscription
 	projectID := createTestProject(t, testDB, "Test Project")
-	taskID := createTestTask(t, testDB, projectID, userID, "Test Task")
+	boardID := createTestBoard(t, testDB, projectID, "Test Board")
+	statusID := createTestStatus(t, testDB, boardID, "To Do")
+	taskID := createTestTask(t, testDB, statusID, userID, "Test Task")
 	problemID := createTestProblem(t, testDB, "Test Problem", userID)
 
 	var subscriptionID uuid.UUID
@@ -56,7 +58,8 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateSubscription(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := subscriptionController.CreateSubscription(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -86,7 +89,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateSubscription(c)
+		err := subscriptionController.CreateSubscription(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -105,7 +108,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(subscriptionID.String())
 
-		err := controller.GetSubscriptionById(c)
+		err := subscriptionController.GetSubscriptionById(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -125,7 +128,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "page", "pagesize")
 		c.SetParamValues(userID.String(), "1", "10")
 
-		err := controller.GetSubscriptionsByUserId(c)
+		err := subscriptionController.GetSubscriptionsByUserId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -148,7 +151,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "type", "page", "pagesize")
 		c.SetParamValues(taskID.String(), "0", "1", "10")
 
-		err := controller.GetSubscriptionBySubObject(c)
+		err := subscriptionController.GetSubscriptionBySubObject(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -172,7 +175,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "type", "page", "pagesize")
 		c.SetParamValues(problemID.String(), "1", "1", "10")
 
-		err := controller.GetSubscriptionBySubObject(c)
+		err := subscriptionController.GetSubscriptionBySubObject(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -196,7 +199,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllSubscriptions(c)
+		err := subscriptionController.GetAllSubscriptions(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -218,7 +221,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(subscriptionID.String())
 
-		err := controller.DeleteSubscription(c)
+		err := subscriptionController.DeleteSubscription(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

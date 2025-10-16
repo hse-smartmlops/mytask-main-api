@@ -17,18 +17,19 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestForumMessage_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
+	// Создаем зависимости для новой архитектуры
+	forumMessageRepo := repository.NewForumMessageRepository(testDB)
+	forumMessageService := service.NewForumMessageService(forumMessageRepo)
+	forumMessageController := controller.NewForumMessageController(forumMessageService)
 
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
-
+	// Создаём Echo instance
 	e := echo.New()
 
 	// Создаём тестовые сущности
@@ -53,7 +54,7 @@ func TestForumMessage_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateForumMessage(c)
+		err := forumMessageController.CreateForumMessage(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -75,7 +76,7 @@ func TestForumMessage_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(messageID.String())
 
-		err := controller.GetForumMessageById(c)
+		err := forumMessageController.GetForumMessageById(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -94,7 +95,7 @@ func TestForumMessage_FullCRUD(t *testing.T) {
 		c.SetParamNames("id", "page", "pagesize")
 		c.SetParamValues(problemID.String(), "1", "10")
 
-		err := controller.GetForumMessagesByProblemId(c)
+		err := forumMessageController.GetForumMessagesByProblemId(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -125,7 +126,7 @@ func TestForumMessage_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(messageID.String())
 
-		err := controller.UpdateForumMessage(c)
+		err := forumMessageController.UpdateForumMessage(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -142,7 +143,7 @@ func TestForumMessage_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllForumMessages(c)
+		err := forumMessageController.GetAllForumMessages(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -164,7 +165,7 @@ func TestForumMessage_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(messageID.String())
 
-		err := controller.DeleteForumMessage(c)
+		err := forumMessageController.DeleteForumMessage(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 

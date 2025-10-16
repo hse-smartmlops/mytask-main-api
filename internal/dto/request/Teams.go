@@ -6,6 +6,7 @@ package request
 type TeamCreateRequest struct {
 	Name        string `json:"name" binding:"required"`
 	Description string `json:"description"`
+	UsersIDs    []string `json:"user_ids"`
 }
 
 type GetAllProjectsRequest struct {
@@ -21,9 +22,9 @@ type TeamUpdateRequest struct {
 	Description *string `json:"description"`
 }
 
-type TeamAddUserRequest struct {
+type TeamAddUsersRequest struct {
 	TeamID string `json:"team_id"`
-	UserID string `json:"user_id"`
+	UserIDs []string `json:"user_ids"`
 }
 
 type TeamDeleteUserRequest struct {

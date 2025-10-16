@@ -19,17 +19,17 @@ import (
 	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/repository"
+	"emplacc-api/internal/service"
 )
 
 func TestProject_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Подменяем глобальную БД и авторизацию
-	controller.DBConn = testDB
-	defer func() { controller.DBConn = origDBConn }()
-
-	controller.Authorize = func(c echo.Context) error { return nil }
-	defer func() { controller.Authorize = origAuthorize }()
+	// Создаем зависимости для новой архитектуры
+	projectRepo := repository.NewProjectRepository(testDB)
+	projectService := service.NewProjectService(projectRepo)
+	projectController := controller.NewProjectController(projectService)
 
 	e := echo.New()
 
@@ -63,7 +63,8 @@ func TestProject_FullCRUD(t *testing.T) {
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 
-		err := controller.CreateProject(c)
+		// Используем метод контроллера вместо глобальной функции
+		err := projectController.CreateProject(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusCreated, rec.Code)
 
@@ -85,7 +86,7 @@ func TestProject_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(projectID.String())
 
-		err := controller.GetProjectByID(c)
+		err := projectController.GetProjectByID(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -115,7 +116,7 @@ func TestProject_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(projectID.String())
 
-		err := controller.UpdateProject(c)
+		err := projectController.UpdateProject(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -132,7 +133,7 @@ func TestProject_FullCRUD(t *testing.T) {
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
-		err := controller.GetAllProjects(c)
+		err := projectController.GetAllProjects(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -158,7 +159,7 @@ func TestProject_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(userID.String())
 
-		err := controller.GetProjectsByUser(c)
+		err := projectController.GetProjectsByUser(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -176,7 +177,7 @@ func TestProject_FullCRUD(t *testing.T) {
 		c.SetParamNames("team_id")
 		c.SetParamValues(teamID.String())
 
-		err := controller.GetTeamProjects(c)
+		err := projectController.GetTeamProjects(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -197,7 +198,7 @@ func TestProject_FullCRUD(t *testing.T) {
 		c.SetParamNames("id")
 		c.SetParamValues(projectID.String())
 
-		err := controller.DeleteProject(c)
+		err := projectController.DeleteProject(c)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, rec.Code)
 
@@ -237,9 +238,9 @@ func createTestTeamMember(t *testing.T, db *gorm.DB, userID, teamID uuid.UUID) {
 	del := false
 
 	member := models.TeamMember{
-		UserID:  userID,
-		TeamID:  teamID,
-		Deleted: &del,
+		UserID:    userID,
+		TeamID:    teamID,
+		Deleted:   &del,
 		CreatedAt: &now,
 		UpdatedAt: &now,
 	}
