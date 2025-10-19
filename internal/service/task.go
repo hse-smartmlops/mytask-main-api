@@ -1,0 +1,146 @@
+package service
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"emplacc-api/internal/app"
+	"emplacc-api/internal/domain"
+	"emplacc-api/internal/domain/models"
+
+	"github.com/google/uuid"
+)
+
+type taskService struct {
+	repo app.TaskRepository
+}
+
+func NewTaskService(repo app.TaskRepository) app.TaskService {
+	return &taskService{repo: repo}
+}
+
+func (s *taskService) ListTasks(ctx context.Context, params app.PaginationParams) (*app.Page[models.Task], error) {
+	if params.Page <= 0 {
+		params.Page = 1
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = 20
+	}
+	return s.repo.ListTasks(ctx, params)
+}
+
+func (s *taskService) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, error) {
+	task, err := s.repo.GetTaskByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if task == nil {
+		return nil, domain.ErrNotFound
+	}
+	return task, nil
+}
+
+func (s *taskService) ListTasksByProject(ctx context.Context, projectID uuid.UUID, params app.PaginationParams) (*app.Page[models.Task], error) {
+	if params.Page <= 0 {
+		params.Page = 1
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = 20
+	}
+	return s.repo.ListTasksByProject(ctx, projectID, params)
+}
+
+func (s *taskService) ListTasksByUser(ctx context.Context, userID uuid.UUID, params app.PaginationParams) (*app.Page[models.Task], error) {
+	if params.Page <= 0 {
+		params.Page = 1
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = 20
+	}
+	return s.repo.ListTasksByUser(ctx, userID, params)
+}
+
+func (s *taskService) CreateTask(ctx context.Context, input app.CreateTaskInput) (*models.Task, error) {
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return nil, domain.ErrInvalidInput
+	}
+
+	now := time.Now().UTC()
+	deleted := false
+
+	task := &models.Task{
+		ID:            uuid.New(),
+		StatusID:      input.StatusID,
+		Priority:      input.Priority,
+		Name:          stringPtr(name),
+		Description:   cloneStringPtr(input.Description),
+		CreatedBy:     input.CreatedBy,
+		AssignedTo:    input.AssignedTo,
+		Deadline:      input.Deadline,
+		StartDate:     input.StartDate,
+		GitlabIssueID: input.GitlabIssueID,
+		Category:      input.Category,
+		CreatedAt:     &now,
+		UpdatedAt:     &now,
+		Deleted:       &deleted,
+	}
+
+	if err := s.repo.CreateTask(ctx, task); err != nil {
+		return nil, err
+	}
+
+	return s.repo.GetTaskByID(ctx, task.ID)
+}
+
+func (s *taskService) UpdateTask(ctx context.Context, id uuid.UUID, input app.UpdateTaskInput) (*models.Task, error) {
+	updates := make(map[string]interface{})
+
+	if input.StatusID != nil {
+		updates["status_id"] = *input.StatusID
+	}
+	if input.Priority != nil {
+		updates["priority"] = input.Priority
+	}
+	if input.Name != nil {
+		name := strings.TrimSpace(*input.Name)
+		if name == "" {
+			return nil, domain.ErrInvalidInput
+		}
+		updates["name"] = name
+	}
+	if input.Description != nil {
+		updates["description"] = cloneStringPtr(input.Description)
+	}
+	if input.CreatedBy != nil {
+		updates["created_by"] = input.CreatedBy
+	}
+	if input.AssignedTo != nil {
+		updates["assigned_to"] = input.AssignedTo
+	}
+	if input.Deadline != nil {
+		updates["deadline"] = input.Deadline
+	}
+	if input.StartDate != nil {
+		updates["start_date"] = input.StartDate
+	}
+	if input.GitlabIssueID != nil {
+		updates["gitlab_issue_id"] = input.GitlabIssueID
+	}
+	if input.Category != nil {
+		updates["category"] = input.Category
+	}
+
+	if len(updates) == 0 {
+		return s.repo.GetTaskByID(ctx, id)
+	}
+
+	return s.repo.UpdateTask(ctx, id, updates)
+}
+
+func (s *taskService) DeleteTask(ctx context.Context, id uuid.UUID) error {
+	return s.repo.SoftDeleteTask(ctx, id)
+}
+
+var _ app.TaskService = (*taskService)(nil)

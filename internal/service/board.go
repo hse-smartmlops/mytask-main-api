@@ -1,0 +1,100 @@
+package service
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"emplacc-api/internal/app"
+	"emplacc-api/internal/domain"
+	"emplacc-api/internal/domain/models"
+
+	"github.com/google/uuid"
+)
+
+type boardService struct {
+	repo app.BoardRepository
+}
+
+func NewBoardService(repo app.BoardRepository) app.BoardService {
+	return &boardService{repo: repo}
+}
+
+func (s *boardService) ListBoards(ctx context.Context, params app.PaginationParams) (*app.Page[models.Board], error) {
+	if params.Page <= 0 {
+		params.Page = 1
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = 20
+	}
+	return s.repo.ListBoards(ctx, params)
+}
+
+func (s *boardService) GetBoard(ctx context.Context, id uuid.UUID) (*models.Board, error) {
+	board, err := s.repo.GetBoardByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if board == nil {
+		return nil, domain.ErrNotFound
+	}
+	return board, nil
+}
+
+func (s *boardService) ListBoardsByProject(ctx context.Context, projectID uuid.UUID) ([]models.Board, error) {
+	return s.repo.ListBoardsByProject(ctx, projectID)
+}
+
+func (s *boardService) CreateBoard(ctx context.Context, input app.CreateBoardInput) (*models.Board, error) {
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return nil, domain.ErrInvalidInput
+	}
+
+	now := time.Now().UTC()
+	deleted := false
+
+	board := &models.Board{
+		ID:          uuid.New(),
+		ProjectID:   input.ProjectID,
+		Name:        stringPtr(name),
+		Description: cloneStringPtr(input.Description),
+		CreatedAt:   &now,
+		UpdatedAt:   &now,
+		Deleted:     &deleted,
+	}
+
+	if err := s.repo.CreateBoard(ctx, board); err != nil {
+		return nil, err
+	}
+
+	return board, nil
+}
+
+func (s *boardService) UpdateBoard(ctx context.Context, id uuid.UUID, input app.UpdateBoardInput) (*models.Board, error) {
+	updates := make(map[string]interface{})
+
+	if input.Name != nil {
+		name := strings.TrimSpace(*input.Name)
+		if name == "" {
+			return nil, domain.ErrInvalidInput
+		}
+		updates["name"] = &name
+	}
+
+	if input.Description != nil {
+		updates["description"] = cloneStringPtr(input.Description)
+	}
+
+	if len(updates) == 0 {
+		return s.repo.GetBoardByID(ctx, id)
+	}
+
+	return s.repo.UpdateBoard(ctx, id, updates)
+}
+
+func (s *boardService) DeleteBoard(ctx context.Context, id uuid.UUID) error {
+	return s.repo.SoftDeleteBoard(ctx, id)
+}
+
+var _ app.BoardService = (*boardService)(nil)
