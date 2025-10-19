@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,14 +13,14 @@ import (
 )
 
 type boardService struct {
-	repo app.BoardRepository
+	repo ports.BoardRepository
 }
 
-func NewBoardService(repo app.BoardRepository) app.BoardService {
+func NewBoardService(repo ports.BoardRepository) ports.BoardService {
 	return &boardService{repo: repo}
 }
 
-func (s *boardService) ListBoards(ctx context.Context, params app.PaginationParams) (*app.Page[models.Board], error) {
+func (s *boardService) ListBoards(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Board], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -45,7 +45,7 @@ func (s *boardService) ListBoardsByProject(ctx context.Context, projectID uuid.U
 	return s.repo.ListBoardsByProject(ctx, projectID)
 }
 
-func (s *boardService) CreateBoard(ctx context.Context, input app.CreateBoardInput) (*models.Board, error) {
+func (s *boardService) CreateBoard(ctx context.Context, input ports.CreateBoardInput) (*models.Board, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -71,7 +71,7 @@ func (s *boardService) CreateBoard(ctx context.Context, input app.CreateBoardInp
 	return board, nil
 }
 
-func (s *boardService) UpdateBoard(ctx context.Context, id uuid.UUID, input app.UpdateBoardInput) (*models.Board, error) {
+func (s *boardService) UpdateBoard(ctx context.Context, id uuid.UUID, input ports.UpdateBoardInput) (*models.Board, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -97,4 +97,4 @@ func (s *boardService) DeleteBoard(ctx context.Context, id uuid.UUID) error {
 	return s.repo.SoftDeleteBoard(ctx, id)
 }
 
-var _ app.BoardService = (*boardService)(nil)
+var _ ports.BoardService = (*boardService)(nil)

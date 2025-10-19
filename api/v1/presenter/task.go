@@ -3,7 +3,7 @@ package presenter
 import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
 
 	"github.com/google/uuid"
@@ -54,7 +54,7 @@ func ToTaskDTO(task *models.Task) response.Task {
 	}
 }
 
-func MapTasksPage(page *app.Page[models.Task]) (dto.Pagination, response.TasksPage) {
+func MapTasksPage(page *ports.Page[models.Task]) (dto.Pagination, response.TasksPage) {
 	if page == nil {
 		return dto.Pagination{}, response.TasksPage{}
 	}
@@ -80,8 +80,8 @@ func toUserSummary(user *models.User) *response.UserSummary {
 	}
 	return &response.UserSummary{
 		ID:        user.ID.String(),
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
+		FirstName: &user.FirstName,
+		LastName:  &user.LastName,
 		Email:     user.Email,
 	}
 }
@@ -92,4 +92,21 @@ func uuidPtrToString(value *uuid.UUID) *string {
 	}
 	str := value.String()
 	return &str
+}
+
+func ToTaskShort(task *models.Task) response.TaskShort {
+	if task == nil {
+		return response.TaskShort{}
+	}
+
+	return response.TaskShort{
+		ID:        task.ID.String(),
+		StatusID:  task.StatusID.String(),
+		Name:      valueOrEmpty(task.Name),
+		Priority:  valueOrZeroInt16(task.Priority),
+		StartDate: valueOrZeroTime(task.StartDate),
+		Deadline:  valueOrZeroTime(task.Deadline),
+		UpdatedAt: valueOrZeroTime(task.UpdatedAt),
+		CreatedAt: valueOrZeroTime(task.CreatedAt),
+	}
 }

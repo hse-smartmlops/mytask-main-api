@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -21,7 +21,22 @@ func NewTeamRepository(db *gorm.DB) *TeamRepository {
 	return &TeamRepository{db: db}
 }
 
-func (r *TeamRepository) ListTeams(ctx context.Context, params app.PaginationParams) (*app.Page[models.Team], error) {
+func (r *TeamRepository) ListAllTeams(ctx context.Context) ([]models.Team, error) {
+	var teams []models.Team
+	err := r.db.WithContext(ctx).
+		Model(&models.Team{}).
+		Where("teams.deleted = FALSE OR teams.deleted IS NULL").
+		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
+		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
+		Order("teams.created_at DESC NULLS LAST").
+		Find(&teams).Error
+	if err != nil {
+		return nil, err
+	}
+	return teams, nil
+}
+
+func (r *TeamRepository) ListTeams(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Team], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Team{}).Where("teams.deleted = FALSE OR teams.deleted IS NULL")
@@ -40,7 +55,7 @@ func (r *TeamRepository) ListTeams(ctx context.Context, params app.PaginationPar
 		return nil, err
 	}
 
-	return &app.Page[models.Team]{
+	return &ports.Page[models.Team]{
 		Items:      teams,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -71,6 +86,22 @@ func (r *TeamRepository) ListTeamsByProject(ctx context.Context, projectID uuid.
 		Model(&models.Team{}).
 		Joins("JOIN project_teams ON project_teams.team_id = teams.id").
 		Where("(teams.deleted = FALSE OR teams.deleted IS NULL) AND (project_teams.deleted = FALSE OR project_teams.deleted IS NULL) AND project_teams.project_id = ?", projectID).
+		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
+		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
+		Order("teams.created_at DESC NULLS LAST").
+		Find(&teams).Error
+	if err != nil {
+		return nil, err
+	}
+	return teams, nil
+}
+
+func (r *TeamRepository) ListTeamsByUser(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
+	var teams []models.Team
+	err := r.db.WithContext(ctx).
+		Model(&models.Team{}).
+		Joins("JOIN team_members ON team_members.team_id = teams.id").
+		Where("(teams.deleted = FALSE OR teams.deleted IS NULL) AND (team_members.deleted = FALSE OR team_members.deleted IS NULL) AND team_members.user_id = ?", userID).
 		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
 		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Order("teams.created_at DESC NULLS LAST").
@@ -121,7 +152,7 @@ func (r *TeamRepository) SoftDeleteTeam(ctx context.Context, id uuid.UUID) error
 	return nil
 }
 
-func (r *TeamRepository) AddUserToTeam(ctx context.Context, input app.TeamMemberInput) error {
+func (r *TeamRepository) AddUserToTeam(ctx context.Context, input ports.TeamMemberInput) error {
 	now := time.Now().UTC()
 	deleted := false
 
@@ -157,7 +188,7 @@ func (r *TeamRepository) RemoveUserFromTeam(ctx context.Context, teamID, userID 
 	return nil
 }
 
-func (r *TeamRepository) AddTeamToProject(ctx context.Context, input app.TeamProjectInput) error {
+func (r *TeamRepository) AddTeamToProject(ctx context.Context, input ports.TeamProjectInput) error {
 	now := time.Now().UTC()
 	deleted := false
 
@@ -192,4 +223,4 @@ func (r *TeamRepository) RemoveTeamFromProject(ctx context.Context, teamID, proj
 	return nil
 }
 
-var _ app.TeamRepository = (*TeamRepository)(nil)
+var _ ports.TeamRepository = (*TeamRepository)(nil)

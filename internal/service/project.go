@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,14 +13,14 @@ import (
 )
 
 type projectService struct {
-	repo app.ProjectRepository
+	repo ports.ProjectRepository
 }
 
-func NewProjectService(repo app.ProjectRepository) app.ProjectService {
+func NewProjectService(repo ports.ProjectRepository) ports.ProjectService {
 	return &projectService{repo: repo}
 }
 
-func (s *projectService) ListProjects(ctx context.Context, params app.PaginationParams) (*app.Page[models.Project], error) {
+func (s *projectService) ListProjects(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Project], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -41,7 +41,7 @@ func (s *projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.
 	return project, nil
 }
 
-func (s *projectService) CreateProject(ctx context.Context, input app.CreateProjectInput) (*models.Project, error) {
+func (s *projectService) CreateProject(ctx context.Context, input ports.CreateProjectInput) (*models.Project, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -70,7 +70,7 @@ func (s *projectService) CreateProject(ctx context.Context, input app.CreateProj
 	return project, nil
 }
 
-func (s *projectService) UpdateProject(ctx context.Context, id uuid.UUID, input app.UpdateProjectInput) (*models.Project, error) {
+func (s *projectService) UpdateProject(ctx context.Context, id uuid.UUID, input ports.UpdateProjectInput) (*models.Project, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -108,4 +108,4 @@ func (s *projectService) DeleteProject(ctx context.Context, id uuid.UUID) error 
 	return s.repo.SoftDeleteProject(ctx, id)
 }
 
-var _ app.ProjectService = (*projectService)(nil)
+var _ ports.ProjectService = (*projectService)(nil)

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,14 +13,14 @@ import (
 )
 
 type teamService struct {
-	repo app.TeamRepository
+	repo ports.TeamRepository
 }
 
-func NewTeamService(repo app.TeamRepository) app.TeamService {
+func NewTeamService(repo ports.TeamRepository) ports.TeamService {
 	return &teamService{repo: repo}
 }
 
-func (s *teamService) ListTeams(ctx context.Context, params app.PaginationParams) (*app.Page[models.Team], error) {
+func (s *teamService) ListTeams(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Team], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -28,6 +28,10 @@ func (s *teamService) ListTeams(ctx context.Context, params app.PaginationParams
 		params.PageSize = 20
 	}
 	return s.repo.ListTeams(ctx, params)
+}
+
+func (s *teamService) ListAllTeams(ctx context.Context) ([]models.Team, error) {
+	return s.repo.ListAllTeams(ctx)
 }
 
 func (s *teamService) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, error) {
@@ -45,7 +49,14 @@ func (s *teamService) ListTeamsByProject(ctx context.Context, projectID uuid.UUI
 	return s.repo.ListTeamsByProject(ctx, projectID)
 }
 
-func (s *teamService) CreateTeam(ctx context.Context, input app.CreateTeamInput) (*models.Team, error) {
+func (s *teamService) ListTeamsByUser(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
+	if userID == uuid.Nil {
+		return nil, domain.ErrInvalidInput
+	}
+	return s.repo.ListTeamsByUser(ctx, userID)
+}
+
+func (s *teamService) CreateTeam(ctx context.Context, input ports.CreateTeamInput) (*models.Team, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -70,7 +81,7 @@ func (s *teamService) CreateTeam(ctx context.Context, input app.CreateTeamInput)
 	return s.repo.GetTeamByID(ctx, team.ID)
 }
 
-func (s *teamService) UpdateTeam(ctx context.Context, id uuid.UUID, input app.UpdateTeamInput) (*models.Team, error) {
+func (s *teamService) UpdateTeam(ctx context.Context, id uuid.UUID, input ports.UpdateTeamInput) (*models.Team, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -96,7 +107,7 @@ func (s *teamService) DeleteTeam(ctx context.Context, id uuid.UUID) error {
 	return s.repo.SoftDeleteTeam(ctx, id)
 }
 
-func (s *teamService) AddUserToTeam(ctx context.Context, input app.TeamMemberInput) error {
+func (s *teamService) AddUserToTeam(ctx context.Context, input ports.TeamMemberInput) error {
 	if input.TeamID == uuid.Nil || input.UserID == uuid.Nil {
 		return domain.ErrInvalidInput
 	}
@@ -118,7 +129,7 @@ func (s *teamService) RemoveUserFromTeam(ctx context.Context, teamID, userID uui
 	return s.repo.RemoveUserFromTeam(ctx, teamID, userID)
 }
 
-func (s *teamService) AddTeamToProject(ctx context.Context, input app.TeamProjectInput) error {
+func (s *teamService) AddTeamToProject(ctx context.Context, input ports.TeamProjectInput) error {
 	if input.TeamID == uuid.Nil || input.ProjectID == uuid.Nil {
 		return domain.ErrInvalidInput
 	}
@@ -132,4 +143,4 @@ func (s *teamService) RemoveTeamFromProject(ctx context.Context, teamID, project
 	return s.repo.RemoveTeamFromProject(ctx, teamID, projectID)
 }
 
-var _ app.TeamService = (*teamService)(nil)
+var _ ports.TeamService = (*teamService)(nil)

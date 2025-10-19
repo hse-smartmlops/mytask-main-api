@@ -3,7 +3,7 @@ package presenter
 import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
 )
 
@@ -19,8 +19,8 @@ func ToTeamDTO(team *models.Team) response.Team {
 		}
 		members = append(members, response.TeamMember{
 			UserID:         member.UserID.String(),
-			FirstName:      member.User.FirstName,
-			LastName:       member.User.LastName,
+			FirstName:      &member.User.FirstName,
+			LastName:       &member.User.LastName,
 			Email:          member.User.Email,
 			Specialization: member.Specialization,
 		})
@@ -36,7 +36,7 @@ func ToTeamDTO(team *models.Team) response.Team {
 	}
 }
 
-func MapTeamsPage(page *app.Page[models.Team]) (dto.Pagination, response.TeamsPage) {
+func MapTeamsPage(page *ports.Page[models.Team]) (dto.Pagination, response.TeamsPage) {
 	if page == nil {
 		return dto.Pagination{}, response.TeamsPage{}
 	}
@@ -54,4 +54,12 @@ func MapTeamsPage(page *app.Page[models.Team]) (dto.Pagination, response.TeamsPa
 	}
 
 	return pagination, response.TeamsPage{Teams: items}
+}
+
+func MapTeamsList(teams []models.Team) response.TeamsPage {
+	items := make([]response.Team, len(teams))
+	for i := range teams {
+		items[i] = ToTeamDTO(&teams[i])
+	}
+	return response.TeamsPage{Teams: items}
 }

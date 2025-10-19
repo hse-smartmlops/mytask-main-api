@@ -7,7 +7,7 @@ import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/presenter"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 
 	"github.com/google/uuid"
@@ -15,14 +15,17 @@ import (
 )
 
 type ProjectHandler struct {
-	service app.ProjectService
+	service ports.ProjectService
 }
 
-func NewProjectHandler(service app.ProjectService) *ProjectHandler {
+func NewProjectHandler(service ports.ProjectService) *ProjectHandler {
 	return &ProjectHandler{service: service}
 }
 
-func RegisterProjectRoutes(group *echo.Group, service app.ProjectService) {
+// @Summary Register Project Routes
+// @Description Register routes for project management
+// @Tags Projects
+func RegisterProjectRoutes(group *echo.Group, service ports.ProjectService) {
 	handler := NewProjectHandler(service)
 
 	group.GET("/projects", handler.ListProjects)
@@ -32,8 +35,18 @@ func RegisterProjectRoutes(group *echo.Group, service app.ProjectService) {
 	group.DELETE("/projects/:id", handler.DeleteProject)
 }
 
+// @Summary List Projects
+// @Description Retrieve a paginated list of projects
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(20)
+// @Success 200 {object} dto.ProjectsListResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /projects [get]
 func (h *ProjectHandler) ListProjects(c echo.Context) error {
-	params := app.PaginationParams{
+	params := ports.PaginationParams{
 		Page:     parsePositiveInt(c.QueryParam("page"), 1),
 		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
 	}
@@ -47,6 +60,17 @@ func (h *ProjectHandler) ListProjects(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
 }
 
+// @Summary Get Project
+// @Description Retrieve a project by its ID
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Success 200 {object} dto.ProjectResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /projects/{id} [get]
 func (h *ProjectHandler) GetProject(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -64,6 +88,16 @@ func (h *ProjectHandler) GetProject(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToProjectDTO(project)))
 }
 
+// @Summary Create Project
+// @Description Create a new project
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param project body request.CreateProject true "Project creation payload"
+// @Success 201 {object} dto.ProjectResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /projects [post]
 func (h *ProjectHandler) CreateProject(c echo.Context) error {
 	var req request.CreateProject
 	if err := c.Bind(&req); err != nil {
@@ -79,7 +113,7 @@ func (h *ProjectHandler) CreateProject(c echo.Context) error {
 		createdBy = &id
 	}
 
-	project, err := h.service.CreateProject(c.Request().Context(), app.CreateProjectInput{
+	project, err := h.service.CreateProject(c.Request().Context(), ports.CreateProjectInput{
 		Name:            req.Name,
 		Description:     req.Description,
 		GitlabProjectID: req.GitlabProjectID,
@@ -97,6 +131,18 @@ func (h *ProjectHandler) CreateProject(c echo.Context) error {
 	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToProjectDTO(project)))
 }
 
+// @Summary Update Project
+// @Description Update an existing project
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Param project body request.UpdateProject true "Project update payload"
+// @Success 200 {object} dto.ProjectResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /projects/{id} [patch]
 func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -108,7 +154,7 @@ func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
 	}
 
-	project, err := h.service.UpdateProject(c.Request().Context(), id, app.UpdateProjectInput{
+	project, err := h.service.UpdateProject(c.Request().Context(), id, ports.UpdateProjectInput{
 		Name:            req.Name,
 		Description:     req.Description,
 		GitlabProjectID: req.GitlabProjectID,
@@ -129,6 +175,17 @@ func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToProjectDTO(project)))
 }
 
+// @Summary Delete Project
+// @Description Delete a project by its ID
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param id path string true "Project ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /projects/{id} [delete]
 func (h *ProjectHandler) DeleteProject(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {

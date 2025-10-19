@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,14 +13,14 @@ import (
 )
 
 type taskService struct {
-	repo app.TaskRepository
+	repo ports.TaskRepository
 }
 
-func NewTaskService(repo app.TaskRepository) app.TaskService {
+func NewTaskService(repo ports.TaskRepository) ports.TaskService {
 	return &taskService{repo: repo}
 }
 
-func (s *taskService) ListTasks(ctx context.Context, params app.PaginationParams) (*app.Page[models.Task], error) {
+func (s *taskService) ListTasks(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Task], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -41,7 +41,7 @@ func (s *taskService) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, 
 	return task, nil
 }
 
-func (s *taskService) ListTasksByProject(ctx context.Context, projectID uuid.UUID, params app.PaginationParams) (*app.Page[models.Task], error) {
+func (s *taskService) ListTasksByProject(ctx context.Context, projectID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -51,7 +51,7 @@ func (s *taskService) ListTasksByProject(ctx context.Context, projectID uuid.UUI
 	return s.repo.ListTasksByProject(ctx, projectID, params)
 }
 
-func (s *taskService) ListTasksByUser(ctx context.Context, userID uuid.UUID, params app.PaginationParams) (*app.Page[models.Task], error) {
+func (s *taskService) ListTasksByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -61,7 +61,7 @@ func (s *taskService) ListTasksByUser(ctx context.Context, userID uuid.UUID, par
 	return s.repo.ListTasksByUser(ctx, userID, params)
 }
 
-func (s *taskService) CreateTask(ctx context.Context, input app.CreateTaskInput) (*models.Task, error) {
+func (s *taskService) CreateTask(ctx context.Context, input ports.CreateTaskInput) (*models.Task, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -94,7 +94,7 @@ func (s *taskService) CreateTask(ctx context.Context, input app.CreateTaskInput)
 	return s.repo.GetTaskByID(ctx, task.ID)
 }
 
-func (s *taskService) UpdateTask(ctx context.Context, id uuid.UUID, input app.UpdateTaskInput) (*models.Task, error) {
+func (s *taskService) UpdateTask(ctx context.Context, id uuid.UUID, input ports.UpdateTaskInput) (*models.Task, error) {
 	updates := make(map[string]interface{})
 
 	if input.StatusID != nil {
@@ -143,4 +143,4 @@ func (s *taskService) DeleteTask(ctx context.Context, id uuid.UUID) error {
 	return s.repo.SoftDeleteTask(ctx, id)
 }
 
-var _ app.TaskService = (*taskService)(nil)
+var _ ports.TaskService = (*taskService)(nil)

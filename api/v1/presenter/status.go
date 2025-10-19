@@ -3,7 +3,7 @@ package presenter
 import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
 )
 
@@ -27,7 +27,7 @@ func ToStatusDTO(status *models.Status) response.Status {
 	}
 }
 
-func MapStatusesPage(page *app.Page[models.Status]) (dto.Pagination, response.StatusesPage) {
+func MapStatusesPage(page *ports.Page[models.Status]) (dto.Pagination, response.StatusesPage) {
 	if page == nil {
 		return dto.Pagination{}, response.StatusesPage{}
 	}

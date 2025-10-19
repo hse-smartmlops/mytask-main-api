@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -12,14 +12,14 @@ import (
 )
 
 type subscriptionService struct {
-	repo app.SubscriptionRepository
+	repo ports.SubscriptionRepository
 }
 
-func NewSubscriptionService(repo app.SubscriptionRepository) app.SubscriptionService {
+func NewSubscriptionService(repo ports.SubscriptionRepository) ports.SubscriptionService {
 	return &subscriptionService{repo: repo}
 }
 
-func (s *subscriptionService) ListSubscriptions(ctx context.Context, params app.PaginationParams) (*app.Page[models.Subscription], error) {
+func (s *subscriptionService) ListSubscriptions(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -40,7 +40,7 @@ func (s *subscriptionService) GetSubscription(ctx context.Context, id uuid.UUID)
 	return sub, nil
 }
 
-func (s *subscriptionService) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, params app.PaginationParams) (*app.Page[models.Subscription], error) {
+func (s *subscriptionService) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -50,7 +50,7 @@ func (s *subscriptionService) ListSubscriptionsByUser(ctx context.Context, userI
 	return s.repo.ListSubscriptionsByUser(ctx, userID, params)
 }
 
-func (s *subscriptionService) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, params app.PaginationParams) (*app.Page[models.Subscription], error) {
+func (s *subscriptionService) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -60,7 +60,7 @@ func (s *subscriptionService) ListSubscriptionsByTarget(ctx context.Context, sub
 	return s.repo.ListSubscriptionsByTarget(ctx, subscriptionID, typeID, params)
 }
 
-func (s *subscriptionService) CreateSubscription(ctx context.Context, input app.CreateSubscriptionInput) (*models.Subscription, error) {
+func (s *subscriptionService) CreateSubscription(ctx context.Context, input ports.CreateSubscriptionInput) (*models.Subscription, error) {
 	if input.UserID == uuid.Nil {
 		return nil, domain.ErrInvalidInput
 	}
@@ -92,4 +92,4 @@ func (s *subscriptionService) DeleteSubscription(ctx context.Context, id uuid.UU
 	return s.repo.SoftDeleteSubscription(ctx, id)
 }
 
-var _ app.SubscriptionService = (*subscriptionService)(nil)
+var _ ports.SubscriptionService = (*subscriptionService)(nil)

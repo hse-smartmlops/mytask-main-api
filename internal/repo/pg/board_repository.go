@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -20,7 +20,7 @@ func NewBoardRepository(db *gorm.DB) *BoardRepository {
 	return &BoardRepository{db: db}
 }
 
-func (r *BoardRepository) ListBoards(ctx context.Context, params app.PaginationParams) (*app.Page[models.Board], error) {
+func (r *BoardRepository) ListBoards(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Board], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Board{}).Where("deleted = FALSE OR deleted IS NULL")
@@ -32,13 +32,14 @@ func (r *BoardRepository) ListBoards(ctx context.Context, params app.PaginationP
 	offset := (params.Page - 1) * params.PageSize
 	if err := base.Order("created_at DESC NULLS LAST").
 		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
+		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
 		Limit(params.PageSize).
 		Offset(offset).
 		Find(&boards).Error; err != nil {
 		return nil, err
 	}
 
-	return &app.Page[models.Board]{
+	return &ports.Page[models.Board]{
 		Items:      boards,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -51,6 +52,7 @@ func (r *BoardRepository) GetBoardByID(ctx context.Context, id uuid.UUID) (*mode
 	err := r.db.WithContext(ctx).
 		Model(&models.Board{}).
 		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
+		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
 		Where("id = ? AND (deleted = FALSE OR deleted IS NULL)", id).
 		First(&board).Error
 	if err != nil {
@@ -67,6 +69,7 @@ func (r *BoardRepository) ListBoardsByProject(ctx context.Context, projectID uui
 	err := r.db.WithContext(ctx).
 		Model(&models.Board{}).
 		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
+		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
 		Where("project_id = ? AND (deleted = FALSE OR deleted IS NULL)", projectID).
 		Order("created_at DESC NULLS LAST").
 		Find(&boards).Error
@@ -116,4 +119,4 @@ func (r *BoardRepository) SoftDeleteBoard(ctx context.Context, id uuid.UUID) err
 	return nil
 }
 
-var _ app.BoardRepository = (*BoardRepository)(nil)
+var _ ports.BoardRepository = (*BoardRepository)(nil)

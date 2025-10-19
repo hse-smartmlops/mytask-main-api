@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -20,7 +20,7 @@ func NewStatusRepository(db *gorm.DB) *StatusRepository {
 	return &StatusRepository{db: db}
 }
 
-func (r *StatusRepository) ListStatuses(ctx context.Context, params app.PaginationParams) (*app.Page[models.Status], error) {
+func (r *StatusRepository) ListStatuses(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Status], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Status{}).Where("statuses.deleted = FALSE OR statuses.deleted IS NULL")
@@ -38,7 +38,7 @@ func (r *StatusRepository) ListStatuses(ctx context.Context, params app.Paginati
 		return nil, err
 	}
 
-	return &app.Page[models.Status]{
+	return &ports.Page[models.Status]{
 		Items:      statuses,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -114,4 +114,4 @@ func (r *StatusRepository) SoftDeleteStatus(ctx context.Context, id uuid.UUID) e
 	return nil
 }
 
-var _ app.StatusRepository = (*StatusRepository)(nil)
+var _ ports.StatusRepository = (*StatusRepository)(nil)

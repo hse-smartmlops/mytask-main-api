@@ -3,7 +3,7 @@ package presenter
 import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
 )
 
@@ -39,7 +39,7 @@ func ToBoardDTO(board *models.Board) response.Board {
 	}
 }
 
-func MapBoardsPage(page *app.Page[models.Board]) (dto.Pagination, response.BoardsPage) {
+func MapBoardsPage(page *ports.Page[models.Board]) (dto.Pagination, response.BoardsPage) {
 	if page == nil {
 		return dto.Pagination{}, response.BoardsPage{}
 	}

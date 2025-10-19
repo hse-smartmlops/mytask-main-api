@@ -3,7 +3,7 @@ package presenter
 import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
 )
 
@@ -26,7 +26,7 @@ func ToRoleDTO(role *models.Role) response.Role {
 	}
 }
 
-func MapRolesPage(page *app.Page[models.Role]) (dto.Pagination, response.RolesPage) {
+func MapRolesPage(page *ports.Page[models.Role]) (dto.Pagination, response.RolesPage) {
 	if page == nil {
 		return dto.Pagination{}, response.RolesPage{}
 	}

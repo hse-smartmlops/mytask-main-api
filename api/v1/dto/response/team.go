@@ -22,3 +22,26 @@ type TeamMember struct {
 type TeamsPage struct {
 	Teams []Team `json:"teams"`
 }
+
+type TeamMessage struct {
+	ID      string `json:"id"`
+	Message string `json:"message"`
+}
+
+type TeamUserMessage struct {
+	TeamID  string `json:"team_id"`
+	UserID  string `json:"user_id"`
+	Message string `json:"message"`
+}
+
+type TeamProjectMessage struct {
+	TeamID    string `json:"team_id"`
+	ProjectID string `json:"project_id"`
+	Message   string `json:"message"`
+}
+
+type UsersAdd struct {
+	TeamID  string   `json:"team_id"`
+	UserIDs []string `json:"users_id"`
+	Message string   `json:"message"`
+}

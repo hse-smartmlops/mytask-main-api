@@ -28,3 +28,8 @@ type BoardStatus struct {
 type BoardsPage struct {
 	Boards []Board `json:"boards"`
 }
+
+type BoardMessage struct {
+	ID      string `json:"id"`
+	Message string `json:"message"`
+}

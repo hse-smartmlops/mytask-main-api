@@ -42,7 +42,7 @@ func Run(ctx context.Context) error {
 		}
 	}
 
-	container := NewContainer(db)
+	container := NewContainer(cfg, db)
 
 	tracerProvider, tracerShutdown, err := setupTracing(ctx, cfg, logger)
 	if err != nil {

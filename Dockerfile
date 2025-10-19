@@ -1,5 +1,5 @@
 # Этап сборки
-FROM golang:1.25-alpine AS builder
+FROM golang:1.24.5-alpine AS builder
 RUN apk add --no-cache git ca-certificates bash tzdata
 
 WORKDIR /app
@@ -30,5 +30,5 @@ WORKDIR /app
 # Копирование бинарного файла из builder stage
 COPY --from=builder /app/server ./
 # Копирование .env файла, если он нужен напрямую в корень или в /app
-COPY --from=builder /app/.env ./ 
+COPY --from=builder /app/.env ./
 CMD ["./server"]

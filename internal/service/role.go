@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,14 +13,14 @@ import (
 )
 
 type roleService struct {
-	repo app.RoleRepository
+	repo ports.RoleRepository
 }
 
-func NewRoleService(repo app.RoleRepository) app.RoleService {
+func NewRoleService(repo ports.RoleRepository) ports.RoleService {
 	return &roleService{repo: repo}
 }
 
-func (s *roleService) ListRoles(ctx context.Context, params app.PaginationParams) (*app.Page[models.Role], error) {
+func (s *roleService) ListRoles(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Role], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -41,7 +41,7 @@ func (s *roleService) GetRole(ctx context.Context, id uuid.UUID) (*models.Role, 
 	return role, nil
 }
 
-func (s *roleService) CreateRole(ctx context.Context, input app.CreateRoleInput) (*models.Role, error) {
+func (s *roleService) CreateRole(ctx context.Context, input ports.CreateRoleInput) (*models.Role, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -66,7 +66,7 @@ func (s *roleService) CreateRole(ctx context.Context, input app.CreateRoleInput)
 	return role, nil
 }
 
-func (s *roleService) UpdateRole(ctx context.Context, id uuid.UUID, input app.UpdateRoleInput) (*models.Role, error) {
+func (s *roleService) UpdateRole(ctx context.Context, id uuid.UUID, input ports.UpdateRoleInput) (*models.Role, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -97,4 +97,4 @@ func (s *roleService) DeleteRole(ctx context.Context, id uuid.UUID) error {
 	return s.repo.SoftDeleteRole(ctx, id)
 }
 
-var _ app.RoleService = (*roleService)(nil)
+var _ ports.RoleService = (*roleService)(nil)

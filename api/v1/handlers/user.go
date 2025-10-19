@@ -7,21 +7,24 @@ import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/presenter"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 
 	"github.com/labstack/echo/v4"
 )
 
 type UserHandler struct {
-	service app.UserService
+	service ports.UserService
 }
 
-func NewUserHandler(service app.UserService) *UserHandler {
+func NewUserHandler(service ports.UserService) *UserHandler {
 	return &UserHandler{service: service}
 }
 
-func RegisterUserRoutes(group *echo.Group, service app.UserService) {
+// @Summary Register User Routes
+// @Description Register routes for user management
+// @Tags Users
+func RegisterUserRoutes(group *echo.Group, service ports.UserService) {
 	handler := NewUserHandler(service)
 
 	group.GET("/users", handler.ListUsers)
@@ -29,11 +32,21 @@ func RegisterUserRoutes(group *echo.Group, service app.UserService) {
 	group.POST("/users", handler.CreateUser)
 }
 
+// @Summary List Users
+// @Description Retrieve a paginated list of users
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(20)
+// @Success 200 {object} dto.UsersListResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users [get]
 func (h *UserHandler) ListUsers(c echo.Context) error {
 	page := parsePositiveInt(c.QueryParam("page"), 1)
 	pageSize := parsePositiveInt(c.QueryParam("page_size"), 20)
 
-	result, err := h.service.ListUsers(c.Request().Context(), app.PaginationParams{
+	result, err := h.service.ListUsers(c.Request().Context(), ports.PaginationParams{
 		Page:     page,
 		PageSize: pageSize,
 	})
@@ -47,6 +60,17 @@ func (h *UserHandler) ListUsers(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
+// @Summary Get User
+// @Description Retrieve a user by their ID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/{id} [get]
 func (h *UserHandler) GetUser(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -64,13 +88,23 @@ func (h *UserHandler) GetUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToUserDTO(user)))
 }
 
+// @Summary Create User
+// @Description Create a new user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user body request.CreateUser true "User creation payload"
+// @Success 201 {object} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users [post]
 func (h *UserHandler) CreateUser(c echo.Context) error {
 	var req request.CreateUser
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
 	}
 
-	input := app.CreateUserInput{
+	input := ports.CreateUserInput{
 		Email:         req.Email,
 		IsActive:      req.IsActive,
 		TgID:          req.TgID,

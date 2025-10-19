@@ -20,3 +20,10 @@ type User struct {
 type UsersPage struct {
 	Users []User `json:"users"`
 }
+
+type UserSummary struct {
+	ID        string  `json:"id"`
+	FirstName *string `json:"first_name,omitempty"`
+	LastName  *string `json:"last_name,omitempty"`
+	Email     string  `json:"email"`
+}

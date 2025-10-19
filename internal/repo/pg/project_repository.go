@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -20,7 +20,7 @@ func NewProjectRepository(db *gorm.DB) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }
 
-func (r *ProjectRepository) ListProjects(ctx context.Context, params app.PaginationParams) (*app.Page[models.Project], error) {
+func (r *ProjectRepository) ListProjects(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Project], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Project{}).Where("deleted = FALSE OR deleted IS NULL")
@@ -37,7 +37,7 @@ func (r *ProjectRepository) ListProjects(ctx context.Context, params app.Paginat
 		return nil, err
 	}
 
-	return &app.Page[models.Project]{
+	return &ports.Page[models.Project]{
 		Items:      projects,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -100,4 +100,4 @@ func (r *ProjectRepository) SoftDeleteProject(ctx context.Context, id uuid.UUID)
 	return nil
 }
 
-var _ app.ProjectRepository = (*ProjectRepository)(nil)
+var _ ports.ProjectRepository = (*ProjectRepository)(nil)

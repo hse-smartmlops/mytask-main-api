@@ -3,7 +3,7 @@ package presenter
 import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
 )
 
@@ -28,7 +28,7 @@ func ToUserDTO(user *models.User) response.User {
 	}
 }
 
-func MapUsersPage(page *app.Page[models.User]) (dto.Pagination, response.UsersPage) {
+func MapUsersPage(page *ports.Page[models.User]) (dto.Pagination, response.UsersPage) {
 	if page == nil {
 		return dto.Pagination{}, response.UsersPage{}
 	}

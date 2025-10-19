@@ -3,28 +3,28 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strings"
-	"time"
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/presenter"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 type TaskHandler struct {
-	service app.TaskService
+	service ports.TaskService
 }
 
-func NewTaskHandler(service app.TaskService) *TaskHandler {
+func NewTaskHandler(service ports.TaskService) *TaskHandler {
 	return &TaskHandler{service: service}
 }
 
-func RegisterTaskRoutes(group *echo.Group, service app.TaskService) {
+// @Summary Register Task Routes
+// @Description Register routes for task management
+// @Tags Tasks
+func RegisterTaskRoutes(group *echo.Group, service ports.TaskService) {
 	handler := NewTaskHandler(service)
 
 	group.GET("/tasks", handler.ListTasks)
@@ -36,8 +36,18 @@ func RegisterTaskRoutes(group *echo.Group, service app.TaskService) {
 	group.DELETE("/tasks/:id", handler.DeleteTask)
 }
 
+// @Summary List Tasks
+// @Description Retrieve a paginated list of tasks
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(20)
+// @Success 200 {object} dto.TasksListResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks [get]
 func (h *TaskHandler) ListTasks(c echo.Context) error {
-	params := app.PaginationParams{
+	params := ports.PaginationParams{
 		Page:     parsePositiveInt(c.QueryParam("page"), 1),
 		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
 	}
@@ -51,6 +61,17 @@ func (h *TaskHandler) ListTasks(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
 }
 
+// @Summary Get Task
+// @Description Retrieve a task by its ID
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID"
+// @Success 200 {object} dto.TaskResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks/{id} [get]
 func (h *TaskHandler) GetTask(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -68,13 +89,25 @@ func (h *TaskHandler) GetTask(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTaskDTO(task)))
 }
 
+// @Summary List Tasks By Project
+// @Description Retrieve a paginated list of tasks associated with a specific project
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param project_id path string true "Project ID"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(20)
+// @Success 200 {object} dto.TasksListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /projects/{project_id}/tasks [get]
 func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 	projectID, err := parseUUID(c.Param("project_id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	params := app.PaginationParams{
+	params := ports.PaginationParams{
 		Page:     parsePositiveInt(c.QueryParam("page"), 1),
 		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
 	}
@@ -88,13 +121,25 @@ func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
 }
 
+// @Summary List Tasks By User
+// @Description Retrieve a paginated list of tasks associated with a specific user
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(20)
+// @Success 200 {object} dto.TasksListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/{user_id}/tasks [get]
 func (h *TaskHandler) ListTasksByUser(c echo.Context) error {
 	userID, err := parseUUID(c.Param("user_id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	params := app.PaginationParams{
+	params := ports.PaginationParams{
 		Page:     parsePositiveInt(c.QueryParam("page"), 1),
 		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
 	}
@@ -108,6 +153,16 @@ func (h *TaskHandler) ListTasksByUser(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
 }
 
+// @Summary Create Task
+// @Description Create a new task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param task body request.CreateTask true "Task creation payload"
+// @Success 201 {object} dto.TaskResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks [post]
 func (h *TaskHandler) CreateTask(c echo.Context) error {
 	var req request.CreateTask
 	if err := c.Bind(&req); err != nil {
@@ -135,7 +190,7 @@ func (h *TaskHandler) CreateTask(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "start_date must be RFC3339 timestamp"))
 	}
 
-	input := app.CreateTaskInput{
+	input := ports.CreateTaskInput{
 		StatusID:      statusID,
 		Priority:      req.Priority,
 		Name:          req.Name,
@@ -159,6 +214,18 @@ func (h *TaskHandler) CreateTask(c echo.Context) error {
 	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToTaskDTO(task)))
 }
 
+// @Summary Update Task
+// @Description Update an existing task
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID"
+// @Param task body request.UpdateTask true "Task data"
+// @Success 200 {object} dto.TaskResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks/{id} [patch]
 func (h *TaskHandler) UpdateTask(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -191,7 +258,7 @@ func (h *TaskHandler) UpdateTask(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "start_date must be RFC3339 timestamp"))
 	}
 
-	input := app.UpdateTaskInput{
+	input := ports.UpdateTaskInput{
 		StatusID:      statusID,
 		Priority:      req.Priority,
 		Name:          req.Name,
@@ -219,6 +286,17 @@ func (h *TaskHandler) UpdateTask(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTaskDTO(task)))
 }
 
+// @Summary Delete Task
+// @Description Delete a task by its ID
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param id path string true "Task ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks/{id} [delete]
 func (h *TaskHandler) DeleteTask(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -233,34 +311,4 @@ func (h *TaskHandler) DeleteTask(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
-}
-
-func parseUUIDPointer(value *string) (*uuid.UUID, error) {
-	if value == nil {
-		return nil, nil
-	}
-	trimmed := strings.TrimSpace(*value)
-	if trimmed == "" {
-		return nil, nil
-	}
-	id, err := uuid.Parse(trimmed)
-	if err != nil {
-		return nil, err
-	}
-	return &id, nil
-}
-
-func parseTimePointer(value *string) (*time.Time, error) {
-	if value == nil {
-		return nil, nil
-	}
-	trimmed := strings.TrimSpace(*value)
-	if trimmed == "" {
-		return nil, nil
-	}
-	parsed, err := time.Parse(time.RFC3339, trimmed)
-	if err != nil {
-		return nil, err
-	}
-	return &parsed, nil
 }

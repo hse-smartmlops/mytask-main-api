@@ -3,7 +3,7 @@ package pg
 import (
 	"context"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -19,7 +19,7 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) ListUsers(ctx context.Context, params app.PaginationParams) (*app.Page[models.User], error) {
+func (r *UserRepository) ListUsers(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.User], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.User{}).Where("deleted = FALSE")
@@ -36,7 +36,7 @@ func (r *UserRepository) ListUsers(ctx context.Context, params app.PaginationPar
 		return nil, err
 	}
 
-	return &app.Page[models.User]{
+	return &ports.Page[models.User]{
 		Items:      users,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -63,4 +63,4 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) erro
 	return r.db.WithContext(ctx).Create(user).Error
 }
 
-var _ app.UserRepository = (*UserRepository)(nil)
+var _ ports.UserRepository = (*UserRepository)(nil)

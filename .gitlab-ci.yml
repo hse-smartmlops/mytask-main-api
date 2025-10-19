@@ -1,4 +1,0 @@
-include:
-  - project: 'maxlane/template'
-    ref: 'master'
-    file: '.gitlab-ci.yml'

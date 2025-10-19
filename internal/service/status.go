@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,14 +13,14 @@ import (
 )
 
 type statusService struct {
-	repo app.StatusRepository
+	repo ports.StatusRepository
 }
 
-func NewStatusService(repo app.StatusRepository) app.StatusService {
+func NewStatusService(repo ports.StatusRepository) ports.StatusService {
 	return &statusService{repo: repo}
 }
 
-func (s *statusService) ListStatuses(ctx context.Context, params app.PaginationParams) (*app.Page[models.Status], error) {
+func (s *statusService) ListStatuses(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Status], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -45,7 +45,7 @@ func (s *statusService) ListStatusesByBoard(ctx context.Context, boardID uuid.UU
 	return s.repo.ListStatusesByBoard(ctx, boardID)
 }
 
-func (s *statusService) CreateStatus(ctx context.Context, input app.CreateStatusInput) (*models.Status, error) {
+func (s *statusService) CreateStatus(ctx context.Context, input ports.CreateStatusInput) (*models.Status, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -76,7 +76,7 @@ func (s *statusService) CreateStatus(ctx context.Context, input app.CreateStatus
 	return s.repo.GetStatusByID(ctx, status.ID)
 }
 
-func (s *statusService) UpdateStatus(ctx context.Context, id uuid.UUID, input app.UpdateStatusInput) (*models.Status, error) {
+func (s *statusService) UpdateStatus(ctx context.Context, id uuid.UUID, input ports.UpdateStatusInput) (*models.Status, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -116,4 +116,4 @@ func (s *statusService) DeleteStatus(ctx context.Context, id uuid.UUID) error {
 	return s.repo.SoftDeleteStatus(ctx, id)
 }
 
-var _ app.StatusService = (*statusService)(nil)
+var _ ports.StatusService = (*statusService)(nil)

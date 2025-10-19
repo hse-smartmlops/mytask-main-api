@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 
 	"github.com/labstack/echo/v4"
 )
 
-func KeycloakAuth(validator app.TokenValidator) echo.MiddlewareFunc {
+func KeycloakAuth(validator ports.TokenValidator) echo.MiddlewareFunc {
 	if validator == nil {
 		return func(next echo.HandlerFunc) echo.HandlerFunc {
 			return func(c echo.Context) error {

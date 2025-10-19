@@ -16,3 +16,13 @@ func cloneStringPtr(value *string) *string {
 	}
 	return &v
 }
+
+func sanitizeDescription(items []string) []string {
+	clean := make([]string, 0, len(items))
+	for _, item := range items {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			clean = append(clean, trimmed)
+		}
+	}
+	return clean
+}

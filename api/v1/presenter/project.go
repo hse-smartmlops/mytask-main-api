@@ -3,7 +3,7 @@ package presenter
 import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
 
 	"github.com/google/uuid"
@@ -27,7 +27,7 @@ func ToProjectDTO(project *models.Project) response.Project {
 	}
 }
 
-func MapProjectsPage(page *app.Page[models.Project]) (dto.Pagination, response.ProjectsPage) {
+func MapProjectsPage(page *ports.Page[models.Project]) (dto.Pagination, response.ProjectsPage) {
 	if page == nil {
 		return dto.Pagination{}, response.ProjectsPage{}
 	}

@@ -3,27 +3,29 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/presenter"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 type TeamHandler struct {
-	service app.TeamService
+	service ports.TeamService
 }
 
-func NewTeamHandler(service app.TeamService) *TeamHandler {
+func NewTeamHandler(service ports.TeamService) *TeamHandler {
 	return &TeamHandler{service: service}
 }
 
-func RegisterTeamRoutes(group *echo.Group, service app.TeamService) {
+// @Summary Register Team Routes
+// @Description Register routes for team management
+// @Tags Teams
+func RegisterTeamRoutes(group *echo.Group, service ports.TeamService) {
 	handler := NewTeamHandler(service)
 
 	group.GET("/teams", handler.ListTeams)
@@ -38,8 +40,18 @@ func RegisterTeamRoutes(group *echo.Group, service app.TeamService) {
 	group.DELETE("/teams/:id/projects/:project_id", handler.RemoveTeamFromProject)
 }
 
+// @Summary List Teams
+// @Description Retrieve a paginated list of teams
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(20)
+// @Success 200 {object} dto.TeamsListResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams [get]
 func (h *TeamHandler) ListTeams(c echo.Context) error {
-	params := app.PaginationParams{
+	params := ports.PaginationParams{
 		Page:     parsePositiveInt(c.QueryParam("page"), 1),
 		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
 	}
@@ -53,6 +65,17 @@ func (h *TeamHandler) ListTeams(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
 }
 
+// @Summary Get Team
+// @Description Retrieve a team by its ID
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Success 200 {object} dto.TeamResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams/{id} [get]
 func (h *TeamHandler) GetTeam(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -70,6 +93,16 @@ func (h *TeamHandler) GetTeam(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTeamDTO(team)))
 }
 
+// @Summary List Teams By Project
+// @Description Retrieve a list of teams associated with a specific project
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param project_id path string true "Project ID"
+// @Success 200 {object} dto.TeamsListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /projects/{project_id}/teams [get]
 func (h *TeamHandler) ListTeamsByProject(c echo.Context) error {
 	projectID, err := parseUUID(c.Param("project_id"))
 	if err != nil {
@@ -89,13 +122,23 @@ func (h *TeamHandler) ListTeamsByProject(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(items))
 }
 
+// @Summary Create Team
+// @Description Create a new team
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param team body request.CreateTeam true "Team creation payload"
+// @Success 201 {object} dto.TeamResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams [post]
 func (h *TeamHandler) CreateTeam(c echo.Context) error {
 	var req request.CreateTeam
 	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
 	}
 
-	input := app.CreateTeamInput{
+	input := ports.CreateTeamInput{
 		Name:        req.Name,
 		Description: sanitizeStringPtr(req.Description),
 	}
@@ -111,6 +154,18 @@ func (h *TeamHandler) CreateTeam(c echo.Context) error {
 	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToTeamDTO(team)))
 }
 
+// @Summary Update Team
+// @Description Update an existing team
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param team body request.UpdateTeam true "Team data"
+// @Success 200 {object} dto.TeamResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams/{id} [patch]
 func (h *TeamHandler) UpdateTeam(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -122,7 +177,7 @@ func (h *TeamHandler) UpdateTeam(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
 	}
 
-	input := app.UpdateTeamInput{
+	input := ports.UpdateTeamInput{
 		Name:        sanitizeStringPtr(req.Name),
 		Description: sanitizeStringPtr(req.Description),
 	}
@@ -142,6 +197,17 @@ func (h *TeamHandler) UpdateTeam(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTeamDTO(team)))
 }
 
+// @Summary Delete Team
+// @Description Delete a team by its ID
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams/{id} [delete]
 func (h *TeamHandler) DeleteTeam(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -158,6 +224,17 @@ func (h *TeamHandler) DeleteTeam(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// @Summary Add User to Team
+// @Description Add a user to a team
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param member body request.AddTeamMember true "Team member data"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams/{id}/members [post]
 func (h *TeamHandler) AddUserToTeam(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -174,7 +251,7 @@ func (h *TeamHandler) AddUserToTeam(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "user_id must be a valid UUID"))
 	}
 
-	input := app.TeamMemberInput{
+	input := ports.TeamMemberInput{
 		TeamID:         teamID,
 		UserID:         userID,
 		Specialization: sanitizeStringPtr(req.Specialization),
@@ -190,6 +267,18 @@ func (h *TeamHandler) AddUserToTeam(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// @Summary Remove User from Team
+// @Description Remove a user from a team
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param user_id path string true "User ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams/{id}/members/{user_id} [delete]
 func (h *TeamHandler) RemoveUserFromTeam(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -210,6 +299,17 @@ func (h *TeamHandler) RemoveUserFromTeam(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// @Summary Add Team to Project
+// @Description Associate a team with a project
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param project body request.AddTeamProject true "Team-Project association data"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams/{id}/projects [post]
 func (h *TeamHandler) AddTeamToProject(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -226,7 +326,7 @@ func (h *TeamHandler) AddTeamToProject(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "project_id must be a valid UUID"))
 	}
 
-	input := app.TeamProjectInput{
+	input := ports.TeamProjectInput{
 		TeamID:    teamID,
 		ProjectID: projectID,
 	}
@@ -241,6 +341,17 @@ func (h *TeamHandler) AddTeamToProject(c echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// @Summary Add Team to Project
+// @Description Associate a team with a project
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "Team ID"
+// @Param project body request.AddTeamProject true "Team-Project association data"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /teams/{id}/projects [post]
 func (h *TeamHandler) RemoveTeamFromProject(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -259,16 +370,4 @@ func (h *TeamHandler) RemoveTeamFromProject(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
-}
-
-func sanitizeStringPtr(value *string) *string {
-	if value == nil {
-		return nil
-	}
-	trimmed := strings.TrimSpace(*value)
-	if trimmed == "" {
-		return nil
-	}
-	res := trimmed
-	return &res
 }

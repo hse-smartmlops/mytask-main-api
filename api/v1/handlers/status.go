@@ -3,27 +3,29 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/presenter"
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 
 	"github.com/labstack/echo/v4"
 )
 
 type StatusHandler struct {
-	service app.StatusService
+	service ports.StatusService
 }
 
-func NewStatusHandler(service app.StatusService) *StatusHandler {
+func NewStatusHandler(service ports.StatusService) *StatusHandler {
 	return &StatusHandler{service: service}
 }
 
-func RegisterStatusRoutes(group *echo.Group, service app.StatusService) {
+// @Summary Register Status Routes
+// @Description Register routes for status management
+// @Tags Statuses
+func RegisterStatusRoutes(group *echo.Group, service ports.StatusService) {
 	handler := NewStatusHandler(service)
 
 	group.GET("/statuses", handler.ListStatuses)
@@ -34,8 +36,18 @@ func RegisterStatusRoutes(group *echo.Group, service app.StatusService) {
 	group.DELETE("/statuses/:id", handler.DeleteStatus)
 }
 
+// @Summary List Statuses
+// @Description Retrieve a paginated list of statuses
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param page query int false "Page number" default(1)
+// @Param page_size query int false "Page size" default(20)
+// @Success 200 {object} dto.StatusesListResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /statuses [get]
 func (h *StatusHandler) ListStatuses(c echo.Context) error {
-	params := app.PaginationParams{
+	params := ports.PaginationParams{
 		Page:     parsePositiveInt(c.QueryParam("page"), 1),
 		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
 	}
@@ -49,6 +61,17 @@ func (h *StatusHandler) ListStatuses(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
 }
 
+// @Summary Get Status
+// @Description Retrieve a specific status by its ID
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param id path string true "Status ID"
+// @Success 200 {object} dto.StatusResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /statuses/{id} [get]
 func (h *StatusHandler) GetStatus(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -66,6 +89,16 @@ func (h *StatusHandler) GetStatus(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToStatusDTO(status)))
 }
 
+// @Summary List Statuses By Board
+// @Description Retrieve a list of statuses associated with a specific board
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param board_id path string true "Board ID"
+// @Success 200 {object} dto.StatusesListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /boards/{board_id}/statuses [get]
 func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 	boardID, err := parseUUID(c.Param("board_id"))
 	if err != nil {
@@ -85,6 +118,16 @@ func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(items))
 }
 
+// @Summary Create Status
+// @Description Create a new status
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param status body request.CreateStatus true "Status creation payload"
+// @Success 201 {object} dto.StatusResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /statuses [post]
 func (h *StatusHandler) CreateStatus(c echo.Context) error {
 	var req request.CreateStatus
 	if err := c.Bind(&req); err != nil {
@@ -96,7 +139,7 @@ func (h *StatusHandler) CreateStatus(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "board_id must be a valid UUID"))
 	}
 
-	input := app.CreateStatusInput{
+	input := ports.CreateStatusInput{
 		BoardID:   boardID,
 		Name:      req.Name,
 		Key:       sanitizeStringPtr(req.Key),
@@ -118,6 +161,18 @@ func (h *StatusHandler) CreateStatus(c echo.Context) error {
 	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToStatusDTO(status)))
 }
 
+// @Summary Update Status
+// @Description Update an existing status
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param id path string true "Status ID"
+// @Param status body request.UpdateStatus true "Status data"
+// @Success 200 {object} dto.StatusResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /statuses/{id} [patch]
 func (h *StatusHandler) UpdateStatus(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -129,7 +184,7 @@ func (h *StatusHandler) UpdateStatus(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
 	}
 
-	input := app.UpdateStatusInput{
+	input := ports.UpdateStatusInput{
 		Name:      sanitizeStringPtr(req.Name),
 		Key:       sanitizeStringPtr(req.Key),
 		Color:     sanitizeStringPtr(req.Color),
@@ -154,6 +209,17 @@ func (h *StatusHandler) UpdateStatus(c echo.Context) error {
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToStatusDTO(status)))
 }
 
+// @Summary Delete Status
+// @Description Delete a status by its ID
+// @Tags Statuses
+// @Accept json
+// @Produce json
+// @Param id path string true "Status ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /statuses/{id} [delete]
 func (h *StatusHandler) DeleteStatus(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -168,16 +234,4 @@ func (h *StatusHandler) DeleteStatus(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
-}
-
-func sanitizeStringPtr(value *string) *string {
-	if value == nil {
-		return nil
-	}
-	trimmed := strings.TrimSpace(*value)
-	if trimmed == "" {
-		return nil
-	}
-	res := trimmed
-	return &res
 }

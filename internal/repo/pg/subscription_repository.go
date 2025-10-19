@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -20,7 +20,7 @@ func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
 	return &SubscriptionRepository{db: db}
 }
 
-func (r *SubscriptionRepository) ListSubscriptions(ctx context.Context, params app.PaginationParams) (*app.Page[models.Subscription], error) {
+func (r *SubscriptionRepository) ListSubscriptions(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Subscription{}).Where("subscriptions.deleted = FALSE OR subscriptions.deleted IS NULL")
@@ -38,7 +38,7 @@ func (r *SubscriptionRepository) ListSubscriptions(ctx context.Context, params a
 		return nil, err
 	}
 
-	return &app.Page[models.Subscription]{
+	return &ports.Page[models.Subscription]{
 		Items:      subs,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -62,7 +62,7 @@ func (r *SubscriptionRepository) GetSubscriptionByID(ctx context.Context, id uui
 	return &sub, nil
 }
 
-func (r *SubscriptionRepository) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, params app.PaginationParams) (*app.Page[models.Subscription], error) {
+func (r *SubscriptionRepository) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Subscription{}).
@@ -81,7 +81,7 @@ func (r *SubscriptionRepository) ListSubscriptionsByUser(ctx context.Context, us
 		return nil, err
 	}
 
-	return &app.Page[models.Subscription]{
+	return &ports.Page[models.Subscription]{
 		Items:      subs,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -89,7 +89,7 @@ func (r *SubscriptionRepository) ListSubscriptionsByUser(ctx context.Context, us
 	}, nil
 }
 
-func (r *SubscriptionRepository) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, params app.PaginationParams) (*app.Page[models.Subscription], error) {
+func (r *SubscriptionRepository) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Subscription{}).
@@ -111,7 +111,7 @@ func (r *SubscriptionRepository) ListSubscriptionsByTarget(ctx context.Context, 
 		return nil, err
 	}
 
-	return &app.Page[models.Subscription]{
+	return &ports.Page[models.Subscription]{
 		Items:      subs,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -142,4 +142,4 @@ func (r *SubscriptionRepository) SoftDeleteSubscription(ctx context.Context, id 
 	return nil
 }
 
-var _ app.SubscriptionRepository = (*SubscriptionRepository)(nil)
+var _ ports.SubscriptionRepository = (*SubscriptionRepository)(nil)

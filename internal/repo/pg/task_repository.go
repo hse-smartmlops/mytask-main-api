@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -20,7 +20,7 @@ func NewTaskRepository(db *gorm.DB) *TaskRepository {
 	return &TaskRepository{db: db}
 }
 
-func (r *TaskRepository) ListTasks(ctx context.Context, params app.PaginationParams) (*app.Page[models.Task], error) {
+func (r *TaskRepository) ListTasks(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Task], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Task{}).Where("tasks.deleted = FALSE OR tasks.deleted IS NULL")
@@ -41,7 +41,7 @@ func (r *TaskRepository) ListTasks(ctx context.Context, params app.PaginationPar
 		return nil, err
 	}
 
-	return &app.Page[models.Task]{
+	return &ports.Page[models.Task]{
 		Items:      tasks,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -68,7 +68,7 @@ func (r *TaskRepository) GetTaskByID(ctx context.Context, id uuid.UUID) (*models
 	return &task, nil
 }
 
-func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.UUID, params app.PaginationParams) (*app.Page[models.Task], error) {
+func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Task{}).
@@ -92,7 +92,7 @@ func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.
 		return nil, err
 	}
 
-	return &app.Page[models.Task]{
+	return &ports.Page[models.Task]{
 		Items:      tasks,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -100,7 +100,7 @@ func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.
 	}, nil
 }
 
-func (r *TaskRepository) ListTasksByUser(ctx context.Context, userID uuid.UUID, params app.PaginationParams) (*app.Page[models.Task], error) {
+func (r *TaskRepository) ListTasksByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Task{}).
@@ -122,7 +122,7 @@ func (r *TaskRepository) ListTasksByUser(ctx context.Context, userID uuid.UUID, 
 		return nil, err
 	}
 
-	return &app.Page[models.Task]{
+	return &ports.Page[models.Task]{
 		Items:      tasks,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -170,4 +170,4 @@ func (r *TaskRepository) SoftDeleteTask(ctx context.Context, id uuid.UUID) error
 	return nil
 }
 
-var _ app.TaskRepository = (*TaskRepository)(nil)
+var _ ports.TaskRepository = (*TaskRepository)(nil)

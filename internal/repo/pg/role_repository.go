@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -20,7 +20,7 @@ func NewRoleRepository(db *gorm.DB) *RoleRepository {
 	return &RoleRepository{db: db}
 }
 
-func (r *RoleRepository) ListRoles(ctx context.Context, params app.PaginationParams) (*app.Page[models.Role], error) {
+func (r *RoleRepository) ListRoles(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Role], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Role{}).Where("deleted = FALSE OR deleted IS NULL")
@@ -37,7 +37,7 @@ func (r *RoleRepository) ListRoles(ctx context.Context, params app.PaginationPar
 		return nil, err
 	}
 
-	return &app.Page[models.Role]{
+	return &ports.Page[models.Role]{
 		Items:      roles,
 		Page:       params.Page,
 		PageSize:   params.PageSize,
@@ -104,4 +104,4 @@ func timePtr(t time.Time) *time.Time {
 	return &t
 }
 
-var _ app.RoleRepository = (*RoleRepository)(nil)
+var _ ports.RoleRepository = (*RoleRepository)(nil)

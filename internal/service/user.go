@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/app"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,14 +13,14 @@ import (
 )
 
 type userService struct {
-	repo app.UserRepository
+	repo ports.UserRepository
 }
 
-func NewUserService(repo app.UserRepository) app.UserService {
+func NewUserService(repo ports.UserRepository) ports.UserService {
 	return &userService{repo: repo}
 }
 
-func (s *userService) ListUsers(ctx context.Context, params app.PaginationParams) (*app.Page[models.User], error) {
+func (s *userService) ListUsers(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.User], error) {
 	if params.Page <= 0 {
 		params.Page = 1
 	}
@@ -41,7 +41,7 @@ func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, 
 	return user, nil
 }
 
-func (s *userService) CreateUser(ctx context.Context, input app.CreateUserInput) (*models.User, error) {
+func (s *userService) CreateUser(ctx context.Context, input ports.CreateUserInput) (*models.User, error) {
 	email := strings.TrimSpace(input.Email)
 	if email == "" {
 		return nil, domain.ErrInvalidInput
