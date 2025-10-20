@@ -19,7 +19,8 @@ services:
     hostname: emplacc-api
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: emplacc-api/Dockerfile
+    image: rikitikitavee17/emplacc-server:latest
     container_name: server
     restart: always
     env_file:
@@ -28,9 +29,24 @@ services:
       - "8081:8081"
     depends_on:
       - postgres_new
+      - grpc-service  # добавляем зависимость
     command: /app/server
     networks:
       - emplacc-net
 
+  grpc-service:
+    hostname: grpc-service
+    build:
+      context: ./reports_llm_ms  # контекст - папка llm_for_description
+      dockerfile: Dockerfile
+    image: rikitikitavee17/emplacc-grpc-service:latest
+    container_name: grpc-service
+    restart: always
+    env_file:
+      - ./reports_llm_ms/.env  # специфичный .env для gRPC сервиса
+    ports:
+      - "50051:50051"
+    networks:
+      - emplacc-net
 networks:
   emplacc-net:
