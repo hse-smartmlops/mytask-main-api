@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
@@ -103,7 +102,7 @@ func (h *BoardHandler) GetBoard(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /boards [post]
 func (h *BoardHandler) CreateBoard(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateBoard](c, middleware.ValidateCreateBoardPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateBoardPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -142,7 +141,7 @@ func (h *BoardHandler) UpdateBoard(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}
 
-	req, err := middleware.BindAndValidate[request.UpdateBoard](c, middleware.ValidateUpdateBoardPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateBoardPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -123,7 +122,7 @@ func (h *ForumMessageHandler) ListMessagesByProblem(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /forum-messages [post]
 func (h *ForumMessageHandler) CreateMessage(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateForumMessage](c, middleware.ValidateCreateForumMessagePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateForumMessagePayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -163,7 +162,7 @@ func (h *ForumMessageHandler) UpdateMessage(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid forum message identifier"))
 	}
 
-	req, err := middleware.BindAndValidate[request.UpdateForumMessage](c, middleware.ValidateUpdateForumMessagePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateForumMessagePayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

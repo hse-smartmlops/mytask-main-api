@@ -9,6 +9,7 @@ import (
 
 	v1 "emplacc-api/api/v1"
 	"emplacc-api/internal/config"
+	appmetrics "emplacc-api/pkg/metrics"
 	"emplacc-api/pkg/swagger"
 	"emplacc-api/pkg/tracing"
 
@@ -44,6 +45,7 @@ func NewHTTPServer(cfg *config.Config, logger *slog.Logger, deps HTTPServerDeps)
 	e.Use(middleware.Recover())
 	e.Use(middleware.Logger())
 	e.Use(middleware.CORSWithConfig(buildCORSConfig(cfg)))
+	e.Use(appmetrics.Middleware())
 
 	registerCommonEndpoints(e, cfg)
 
@@ -139,9 +141,7 @@ func registerCommonEndpoints(e *echo.Echo, cfg *config.Config) {
 		return c.NoContent(http.StatusOK)
 	})
 
-	e.GET("/metrics", func(c echo.Context) error {
-		return c.NoContent(http.StatusNoContent)
-	})
+	e.GET("/metrics", echo.WrapHandler(appmetrics.Handler()))
 
 	if cfg.Swagger.Enabled {
 		swagger.Configure(swagger.Config{

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -97,7 +96,7 @@ func (h *RoleHandler) GetRole(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /roles [post]
 func (h *RoleHandler) CreateRole(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateRole](c, middleware.ValidateCreateRolePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateRolePayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -134,7 +133,7 @@ func (h *RoleHandler) UpdateRole(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid role identifier"))
 	}
 
-	req, err := middleware.BindAndValidate[request.UpdateRole](c, middleware.ValidateUpdateRolePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateRolePayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -103,7 +102,7 @@ func (h *UserHandler) GetUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users [post]
 func (h *UserHandler) CreateUser(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateUser](c, middleware.ValidateCreateUserPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateUserPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

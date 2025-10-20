@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"emplacc-api/api/v1/dto"
@@ -14,6 +13,7 @@ import (
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
+	"emplacc-api/internal/domain/models"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -37,9 +37,7 @@ func RegisterDailyReportRoutes(group *echo.Group, service ports.DailyReportServi
 	group.GET("/report/:id", handler.GetReport)
 	group.PATCH("/report/:id", handler.UpdateReport)
 	group.DELETE("/report/:id", handler.DeleteReport)
-	group.GET("/report/all/:page/:page_size", handler.ListReports)
 	group.GET("/report/all", handler.ListReports)
-	group.GET("/report/user/:id/:page/:page_size", handler.ListReportsByUser)
 	group.GET("/report/user/:id", handler.ListReportsByUser)
 	group.GET("/report/project/:id", handler.ListReportsByProject)
 	group.GET("/report/task/:id", handler.ListReportsByTask)
@@ -58,20 +56,92 @@ func RegisterDailyReportRoutes(group *echo.Group, service ports.DailyReportServi
 // @Produce json
 // @Param page query int false "Page number" default(1)
 // @Param page_size query int false "Page size" default(20)
+// @Param user_id query string false "Filter by user ID"
+// @Param project_id query string false "Filter by project ID"
+// @Param task_id query string false "Filter by task ID"
+// @Param start_date query string false "Filter by start date (YYYY-MM-DD)"
+// @Param end_date query string false "Filter by end date (YYYY-MM-DD)"
 // @Success 200 {object} dto.ReportsListResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/all [get]
 func (h *DailyReportHandler) ListReports(c echo.Context) error {
-	page, pageSize := parseLegacyPagination(c.Param("page"), c.Param("page_size"), c.QueryParam("page"), c.QueryParam("page_size"))
-	params := ports.PaginationParams{Page: page, PageSize: pageSize}
+	ctx := c.Request().Context()
+	userParam := strings.TrimSpace(c.QueryParam("user_id"))
+	projectParam := strings.TrimSpace(c.QueryParam("project_id"))
+	taskParam := strings.TrimSpace(c.QueryParam("task_id"))
+	startParam := strings.TrimSpace(c.QueryParam("start_date"))
+	endParam := strings.TrimSpace(c.QueryParam("end_date"))
 
-	reports, err := h.service.ListReports(c.Request().Context(), params)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports"))
+	if userParam != "" {
+		userID, err := parseUUID(userParam)
+		if err != nil {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "user_id must be a valid UUID"))
+		}
+		pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+		params := ports.PaginationParams{Page: pageNum, PageSize: size}
+
+		result, err := h.service.ListReportsByUser(ctx, userID, params)
+		if err != nil {
+			return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports for user"))
+		}
+
+		pagination, payload := presenter.MapReportsPage(result)
+		return respondPaginated(c, http.StatusOK, payload, pagination)
 	}
 
-	pagination, payload := presenter.MapReportsPage(reports)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	if projectParam != "" {
+		projectID, err := parseUUID(projectParam)
+		if err != nil {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "project_id must be a valid UUID"))
+		}
+		reports, err := h.service.ListReportsByProject(ctx, projectID)
+		if err != nil {
+			return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by project"))
+		}
+		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports)})
+	}
+
+	if taskParam != "" {
+		taskID, err := parseUUID(taskParam)
+		if err != nil {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "task_id must be a valid UUID"))
+		}
+		reports, err := h.service.ListReportsByTask(ctx, taskID)
+		if err != nil {
+			return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by task"))
+		}
+		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports)})
+	}
+
+	if startParam != "" || endParam != "" {
+		if startParam == "" || endParam == "" {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "start_date and end_date must both be provided"))
+		}
+		startDate, err := parseDateValue(startParam)
+		if err != nil {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "start_date must be a valid date"))
+		}
+		endDate, err := parseDateValue(endParam)
+		if err != nil {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "end_date must be a valid date"))
+		}
+		reports, err := h.service.ListReportsByDateRange(ctx, startDate, endDate)
+		if err != nil {
+			return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by date range"))
+		}
+		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports)})
+	}
+
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
+
+	result, err := h.service.ListReports(ctx, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports"))
+	}
+
+	pagination, payload := presenter.MapReportsPage(result)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary List Reports By User
@@ -88,24 +158,20 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/user/{id} [get]
 func (h *DailyReportHandler) ListReportsByUser(c echo.Context) error {
-	id := strings.TrimSpace(c.Param("id"))
-	if id == "" {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "user id is required"))
-	}
-	userID, err := uuid.Parse(id)
+	userID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	page, pageSize := parseLegacyPagination(c.Param("page"), c.Param("page_size"), c.QueryParam("page"), c.QueryParam("page_size"))
-	params := ports.PaginationParams{Page: page, PageSize: pageSize}
+	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: page, PageSize: size}
 	reports, err := h.service.ListReportsByUser(c.Request().Context(), userID, params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports for user"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports for user"))
 	}
 
 	pagination, payload := presenter.MapReportsPage(reports)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary List Reports By Project
@@ -122,12 +188,12 @@ func (h *DailyReportHandler) ListReportsByUser(c echo.Context) error {
 func (h *DailyReportHandler) ListReportsByProject(c echo.Context) error {
 	projectID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
 	reports, err := h.service.ListReportsByProject(c.Request().Context(), projectID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by project"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by project"))
 	}
 
 	payload := make([]response.Report, len(reports))
@@ -135,7 +201,7 @@ func (h *DailyReportHandler) ListReportsByProject(c echo.Context) error {
 		payload[i] = presenter.ToReportDTO(&reports[i])
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response.ReportsPage{Reports: payload}))
+	return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: payload})
 }
 
 // @Summary List Reports By Task
@@ -152,12 +218,12 @@ func (h *DailyReportHandler) ListReportsByProject(c echo.Context) error {
 func (h *DailyReportHandler) ListReportsByTask(c echo.Context) error {
 	taskID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
 	}
 
 	reports, err := h.service.ListReportsByTask(c.Request().Context(), taskID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by task"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by task"))
 	}
 
 	payload := make([]response.Report, len(reports))
@@ -165,7 +231,7 @@ func (h *DailyReportHandler) ListReportsByTask(c echo.Context) error {
 		payload[i] = presenter.ToReportDTO(&reports[i])
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response.ReportsPage{Reports: payload}))
+	return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: payload})
 }
 
 // @Summary Create Report
@@ -179,56 +245,29 @@ func (h *DailyReportHandler) ListReportsByTask(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report [post]
 func (h *DailyReportHandler) CreateReport(c echo.Context) error {
-	var req request.ReportCreate
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	userID, err := uuid.Parse(strings.TrimSpace(req.UserID))
-	if err != nil || userID == uuid.Nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "user_id must be a valid UUID"))
-	}
-
-	reportDate, err := parseDatePointer(req.ReportDate)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateReportCreatePayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "report_date must be a valid date"))
-	}
-
-	completed, err := mapCompletedWorkInputs(req.CompletedWork)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	helpRequests, err := mapHelpRequestInputs(req.HelpRequests)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	plans, err := mapTomorrowPlanInputs(req.TomorrowPlans)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	problems, err := parseUUIDList(req.Problems)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "problems must contain valid UUIDs"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.CreateDailyReportInput{
-		UserID:        userID,
-		ReportDate:    reportDate,
-		CompletedWork: completed,
-		HelpRequests:  helpRequests,
-		TomorrowPlans: plans,
-		Problems:      problems,
+		UserID:        req.UserUUID,
+		ReportDate:    req.ReportDateValue,
+		CompletedWork: toCompletedWorkInputs(req.CompletedWork),
+		HelpRequests:  toHelpRequestInputs(req.HelpRequests),
+		TomorrowPlans: toTomorrowPlanInputs(req.TomorrowPlans),
+		Problems:      req.ProblemUUIDs,
 	}
 
 	report, err := h.service.CreateReport(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("report_create_failed", "failed to create report"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("report_create_failed", "failed to create report"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToReportDTO(report)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToReportDTO(report))
 }
 
 // @Summary Get Report
@@ -245,18 +284,18 @@ func (h *DailyReportHandler) CreateReport(c echo.Context) error {
 func (h *DailyReportHandler) GetReport(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
 	}
 
 	report, err := h.service.GetReport(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to get report"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to get report"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToReportDTO(report)))
+	return respondSuccess(c, http.StatusOK, presenter.ToReportDTO(report))
 }
 
 // @Summary Update Report
@@ -274,64 +313,36 @@ func (h *DailyReportHandler) GetReport(c echo.Context) error {
 func (h *DailyReportHandler) UpdateReport(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
 	}
 
-	var req request.ReportUpdate
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	var checked *int8
-	if req.Checked != nil {
-		value := int8(*req.Checked)
-		checked = &value
-	}
-
-	reportDate, err := parseDatePointer(req.ReportDate)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateReportUpdatePayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "report_date must be a valid date"))
-	}
-
-	completed, err := mapCompletedWorkInputs(req.CompletedWork)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	helpRequests, err := mapHelpRequestInputs(req.HelpRequests)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	plans, err := mapTomorrowPlanInputs(req.TomorrowPlans)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	problems, err := parseUUIDList(req.Problems)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "problems must contain valid UUIDs"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateDailyReportInput{
-		Checked:       checked,
-		ReportDate:    reportDate,
-		CompletedWork: completed,
-		HelpRequests:  helpRequests,
-		TomorrowPlans: plans,
-		Problems:      problems,
+		Checked:       req.CheckedValue,
+		ReportDate:    req.ReportDateValue,
+		CompletedWork: toCompletedWorkInputs(req.CompletedWork),
+		HelpRequests:  toHelpRequestInputs(req.HelpRequests),
+		TomorrowPlans: toTomorrowPlanInputs(req.TomorrowPlans),
+		Problems:      req.ProblemUUIDs,
 	}
 
 	report, err := h.service.UpdateReport(c.Request().Context(), id, input)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("report_update_failed", "failed to update report"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("report_update_failed", "failed to update report"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToReportDTO(report)))
+	return respondSuccess(c, http.StatusOK, presenter.ToReportDTO(report))
 }
 
 // @Summary Delete Report
@@ -348,17 +359,17 @@ func (h *DailyReportHandler) UpdateReport(c echo.Context) error {
 func (h *DailyReportHandler) DeleteReport(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
 	}
 
 	if err := h.service.DeleteReport(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("report_delete_failed", "failed to delete report"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("report_delete_failed", "failed to delete report"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response.ReportUniversal{ID: id.String(), Message: "report deleted"}))
+	return respondSuccess(c, http.StatusOK, response.ReportUniversal{ID: id.String(), Message: "report deleted"})
 }
 
 // @Summary Update Completed Work
@@ -376,37 +387,32 @@ func (h *DailyReportHandler) DeleteReport(c echo.Context) error {
 func (h *DailyReportHandler) UpdateCompletedWork(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid completed work identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid completed work identifier"))
 	}
 
-	var req request.CompletedWorkUpdate
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	taskID, err := parseUUIDPointer(req.TaskID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCompletedWorkUpdatePayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "task_id must be a valid UUID"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateCompletedWorkInput{
-		Description: sanitizeStringPtr(req.Description),
-		TaskID:      taskID,
+		Description: req.Description,
+		TaskID:      req.TaskUUID,
 	}
 
 	item, err := h.service.UpdateCompletedWork(c.Request().Context(), id, input)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("completed_work_not_found", "completed work not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("completed_work_not_found", "completed work not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("completed_work_update_failed", "failed to update completed work"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("completed_work_update_failed", "failed to update completed work"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response.CompletedWorkItem{
+	return respondSuccess(c, http.StatusOK, response.CompletedWorkItem{
 		ID:          item.ID.String(),
 		Description: item.Description,
 		TaskID:      uuidPtrToString(item.TaskID),
-	}))
+	})
 }
 
 // @Summary Update Help Request
@@ -424,39 +430,34 @@ func (h *DailyReportHandler) UpdateCompletedWork(c echo.Context) error {
 func (h *DailyReportHandler) UpdateHelpRequest(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid help request identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid help request identifier"))
 	}
 
-	var req request.HelpRequestUpdate
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	helperID, err := parseUUIDPointer(req.HelperID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateHelpRequestUpdatePayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "helper_id must be a valid UUID"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateHelpRequestInput{
-		Description: sanitizeStringPtr(req.Description),
-		HelperID:    helperID,
-		Status:      sanitizeStringPtr(req.Status),
+		Description: req.Description,
+		HelperID:    req.HelperUUID,
+		Status:      req.Status,
 	}
 
 	item, err := h.service.UpdateHelpRequest(c.Request().Context(), id, input)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("help_request_not_found", "help request not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("help_request_not_found", "help request not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("help_request_update_failed", "failed to update help request"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("help_request_update_failed", "failed to update help request"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response.HelpRequestItem{
+	return respondSuccess(c, http.StatusOK, response.HelpRequestItem{
 		ID:          item.ID.String(),
 		Description: item.Description,
 		HelperID:    uuidPtrToString(item.HelperID),
 		Status:      item.Status,
-	}))
+	})
 }
 
 // @Summary Delete Help Request
@@ -473,17 +474,17 @@ func (h *DailyReportHandler) UpdateHelpRequest(c echo.Context) error {
 func (h *DailyReportHandler) DeleteHelpRequest(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid help request identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid help request identifier"))
 	}
 
 	if err := h.service.DeleteHelpRequest(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("help_request_not_found", "help request not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("help_request_not_found", "help request not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("help_request_delete_failed", "failed to delete help request"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("help_request_delete_failed", "failed to delete help request"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response.ReportUniversal{ID: id.String(), Message: "help request deleted"}))
+	return respondSuccess(c, http.StatusOK, response.ReportUniversal{ID: id.String(), Message: "help request deleted"})
 }
 
 // @Summary List Help Requests By Helper
@@ -499,15 +500,15 @@ func (h *DailyReportHandler) DeleteHelpRequest(c echo.Context) error {
 func (h *DailyReportHandler) ListHelpRequestsByHelper(c echo.Context) error {
 	helperID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid helper identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid helper identifier"))
 	}
 
 	items, err := h.service.ListHelpRequestsByHelper(c.Request().Context(), helperID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("help_requests_fetch_failed", "failed to list help requests"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("help_requests_fetch_failed", "failed to list help requests"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.MapHelpRequestsForUser(items)))
+	return respondSuccess(c, http.StatusOK, presenter.MapHelpRequestsForUser(items))
 }
 
 // @Summary Update Tomorrow Plan
@@ -525,37 +526,32 @@ func (h *DailyReportHandler) ListHelpRequestsByHelper(c echo.Context) error {
 func (h *DailyReportHandler) UpdateTomorrowPlan(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid tomorrow plan identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid tomorrow plan identifier"))
 	}
 
-	var req request.TomorrowPlanUpdate
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	taskID, err := parseUUIDPointer(req.TaskID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateTomorrowPlanUpdatePayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "task_id must be a valid UUID"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateTomorrowPlanInput{
-		Description: sanitizeStringPtr(req.Description),
-		TaskID:      taskID,
+		Description: req.Description,
+		TaskID:      req.TaskUUID,
 	}
 
 	item, err := h.service.UpdateTomorrowPlan(c.Request().Context(), id, input)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("tomorrow_plan_not_found", "tomorrow plan not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("tomorrow_plan_not_found", "tomorrow plan not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("tomorrow_plan_update_failed", "failed to update tomorrow plan"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tomorrow_plan_update_failed", "failed to update tomorrow plan"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(response.TomorrowPlanItem{
+	return respondSuccess(c, http.StatusOK, response.TomorrowPlanItem{
 		ID:          item.ID.String(),
 		Description: item.Description,
 		TaskID:      uuidPtrToString(item.TaskID),
-	}))
+	})
 }
 
 // @Summary Export Reports to XLSX
@@ -570,22 +566,13 @@ func (h *DailyReportHandler) UpdateTomorrowPlan(c echo.Context) error {
 // @Router /report/export/xlsx [post]
 
 func (h *DailyReportHandler) ExportReportsXLSX(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.ReportsByDate](c, middleware.ValidateReportsByDatePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateReportsByDatePayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
 
-	start, err := parseDateValue(req.StartDate)
-	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "start_date must be a valid date"))
-	}
-	end, err := parseDateValue(req.EndDate)
-	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "end_date must be a valid date"))
-	}
-
-	input := ports.ReportsByDateInput{StartDate: start, EndDate: end}
-	fileName := fmt.Sprintf("reports_%s_%s.xlsx", start.Format("2006-01-02"), end.Format("2006-01-02"))
+	input := ports.ReportsByDateInput{StartDate: req.StartValue, EndDate: req.EndValue}
+	fileName := fmt.Sprintf("reports_%s_%s.xlsx", req.StartValue.Format("2006-01-02"), req.EndValue.Format("2006-01-02"))
 
 	data, err := h.service.ExportReportsToXLSX(c.Request().Context(), input, fileName)
 	if err != nil {
@@ -602,120 +589,64 @@ func (h *DailyReportHandler) ExportReportsXLSX(c echo.Context) error {
 	return c.Blob(http.StatusOK, contentType, data)
 }
 
-func mapCompletedWorkInputs(items []request.ReportCompletedWork) ([]ports.CompletedWorkInput, error) {
+func toCompletedWorkInputs(items []request.ReportCompletedWork) []ports.CompletedWorkInput {
 	if len(items) == 0 {
-		return nil, nil
+		return nil
 	}
 	result := make([]ports.CompletedWorkInput, len(items))
 	for i := range items {
 		item := items[i]
-		var idPtr *uuid.UUID
-		if item.ID != nil {
-			id, err := parseUUID(*item.ID)
-			if err != nil {
-				return nil, errors.New("complete_work.id must be a valid UUID")
-			}
-			idPtr = &id
-		}
-		taskID, err := parseUUIDPointer(item.TaskID)
-		if err != nil {
-			return nil, errors.New("complete_work.task_id must be a valid UUID")
-		}
 		result[i] = ports.CompletedWorkInput{
-			ID:          idPtr,
-			Description: sanitizeStringPtr(item.Description),
-			TaskID:      taskID,
+			ID:          item.IDUUID,
+			Description: item.Description,
+			TaskID:      item.TaskUUID,
 		}
 	}
-	return result, nil
+	return result
 }
 
-func mapHelpRequestInputs(items []request.ReportHelpRequest) ([]ports.HelpRequestInput, error) {
+func toHelpRequestInputs(items []request.ReportHelpRequest) []ports.HelpRequestInput {
 	if len(items) == 0 {
-		return nil, nil
+		return nil
 	}
 	result := make([]ports.HelpRequestInput, len(items))
 	for i := range items {
 		item := items[i]
-		var idPtr *uuid.UUID
-		if item.ID != nil {
-			id, err := parseUUID(*item.ID)
-			if err != nil {
-				return nil, errors.New("help.id must be a valid UUID")
-			}
-			idPtr = &id
-		}
-		helperID, err := parseUUIDPointer(item.HelperID)
-		if err != nil {
-			return nil, errors.New("help.helper_id must be a valid UUID")
-		}
 		result[i] = ports.HelpRequestInput{
-			ID:          idPtr,
-			Description: sanitizeStringPtr(item.Description),
-			HelperID:    helperID,
-			Status:      sanitizeStringPtr(item.Status),
+			ID:          item.IDUUID,
+			Description: item.Description,
+			HelperID:    item.HelperUUID,
+			Status:      item.Status,
 		}
 	}
-	return result, nil
+	return result
 }
 
-func mapTomorrowPlanInputs(items []request.ReportTomorrowPlan) ([]ports.TomorrowPlanInput, error) {
+func toTomorrowPlanInputs(items []request.ReportTomorrowPlan) []ports.TomorrowPlanInput {
 	if len(items) == 0 {
-		return nil, nil
+		return nil
 	}
 	result := make([]ports.TomorrowPlanInput, len(items))
 	for i := range items {
 		item := items[i]
-		var idPtr *uuid.UUID
-		if item.ID != nil {
-			id, err := parseUUID(*item.ID)
-			if err != nil {
-				return nil, errors.New("plan_tomorrow.id must be a valid UUID")
-			}
-			idPtr = &id
-		}
-		taskID, err := parseUUIDPointer(item.TaskID)
-		if err != nil {
-			return nil, errors.New("plan_tomorrow.task_id must be a valid UUID")
-		}
 		result[i] = ports.TomorrowPlanInput{
-			ID:          idPtr,
-			Description: sanitizeStringPtr(item.Description),
-			TaskID:      taskID,
+			ID:          item.IDUUID,
+			Description: item.Description,
+			TaskID:      item.TaskUUID,
 		}
 	}
-	return result, nil
+	return result
 }
 
-func parseUUIDList(values []string) ([]uuid.UUID, error) {
-	if len(values) == 0 {
-		return nil, nil
+func mapReportModels(items []models.DailyReport) []response.Report {
+	if len(items) == 0 {
+		return nil
 	}
-	result := make([]uuid.UUID, len(values))
-	for i := range values {
-		id, err := parseUUID(strings.TrimSpace(values[i]))
-		if err != nil {
-			return nil, err
-		}
-		result[i] = id
+	result := make([]response.Report, len(items))
+	for i := range items {
+		result[i] = presenter.ToReportDTO(&items[i])
 	}
-	return result, nil
-}
-
-func parseLegacyPagination(pageParam, pageSizeParam, qPage, qPageSize string) (int, int) {
-	page := parsePositiveInt(qPage, 1)
-	pageSize := parsePositiveInt(qPageSize, 20)
-	if pageParam != "" {
-		if parsed, err := strconv.Atoi(pageParam); err == nil && parsed > 0 {
-			page = parsed
-		}
-	}
-	if pageSizeParam != "" {
-		if parsed, err := strconv.Atoi(pageSizeParam); err == nil && parsed > 0 {
-			pageSize = parsed
-		}
-	}
-	return page, pageSize
+	return result
 }
 
 func uuidPtrToString(value *uuid.UUID) *string {

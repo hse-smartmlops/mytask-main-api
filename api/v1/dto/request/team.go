@@ -1,5 +1,7 @@
 package request
 
+import "github.com/google/uuid"
+
 type CreateTeam struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`
@@ -13,10 +15,14 @@ type UpdateTeam struct {
 type AddTeamMember struct {
 	UserID         string  `json:"user_id"`
 	Specialization *string `json:"specialization,omitempty"`
+
+	UserUUID uuid.UUID `json:"-"`
 }
 
 type AddTeamProject struct {
 	ProjectID string `json:"project_id"`
+
+	ProjectUUID uuid.UUID `json:"-"`
 }
 
 type LegacyCreateTeam struct {

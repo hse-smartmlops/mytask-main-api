@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
@@ -53,7 +52,7 @@ func RegisterAuthRoutes(group *echo.Group, service ports.AuthService) {
 // @Failure 401 {object} dto.ErrorResponse
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.AuthLogin](c, middleware.ValidateAuthLoginPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateAuthLoginPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -127,7 +126,7 @@ func (h *AuthHandler) Me(c echo.Context) error {
 // @Failure 401 {object} dto.ErrorResponse
 // @Router /auth/refresh [post]
 func (h *AuthHandler) Refresh(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.AuthRefresh](c, middleware.ValidateAuthRefreshPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateAuthRefreshPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

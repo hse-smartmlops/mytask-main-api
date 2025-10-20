@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -46,18 +46,16 @@ func RegisterSubscriptionRoutes(group *echo.Group, service ports.SubscriptionSer
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /subscriptions [get]
 func (h *SubscriptionHandler) ListSubscriptions(c echo.Context) error {
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
-	page, err := h.service.ListSubscriptions(c.Request().Context(), params)
+	result, err := h.service.ListSubscriptions(c.Request().Context(), params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to list subscriptions"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to list subscriptions"))
 	}
 
-	pagination, payload := presenter.MapSubscriptionsPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	pagination, payload := presenter.MapSubscriptionsPage(result)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Subscription
@@ -74,18 +72,18 @@ func (h *SubscriptionHandler) ListSubscriptions(c echo.Context) error {
 func (h *SubscriptionHandler) GetSubscription(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid subscription identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid subscription identifier"))
 	}
 
 	sub, err := h.service.GetSubscription(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("subscription_not_found", "subscription not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("subscription_not_found", "subscription not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to get subscription"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to get subscription"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToSubscriptionDTO(sub)))
+	return respondSuccess(c, http.StatusOK, presenter.ToSubscriptionDTO(sub))
 }
 
 // @Summary List Subscriptions By User
@@ -103,21 +101,19 @@ func (h *SubscriptionHandler) GetSubscription(c echo.Context) error {
 func (h *SubscriptionHandler) ListSubscriptionsByUser(c echo.Context) error {
 	userID, err := parseUUID(c.Param("user_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
-	page, err := h.service.ListSubscriptionsByUser(c.Request().Context(), userID, params)
+	result, err := h.service.ListSubscriptionsByUser(c.Request().Context(), userID, params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to list subscriptions for user"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to list subscriptions for user"))
 	}
 
-	pagination, payload := presenter.MapSubscriptionsPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	pagination, payload := presenter.MapSubscriptionsPage(result)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary List Subscriptions By Target
@@ -136,27 +132,25 @@ func (h *SubscriptionHandler) ListSubscriptionsByUser(c echo.Context) error {
 func (h *SubscriptionHandler) ListSubscriptionsByTarget(c echo.Context) error {
 	targetID, err := parseUUID(c.Param("subscription_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid subscription target identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid subscription target identifier"))
 	}
 
 	typeParam := c.QueryParam("type_id")
 	typeID, err := parseOptionalInt8(typeParam)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_query", "type_id must be a valid 8-bit integer"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "type_id must be a valid 8-bit integer"))
 	}
 
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
-	page, err := h.service.ListSubscriptionsByTarget(c.Request().Context(), targetID, typeID, params)
+	result, err := h.service.ListSubscriptionsByTarget(c.Request().Context(), targetID, typeID, params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to list subscriptions by target"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to list subscriptions by target"))
 	}
 
-	pagination, payload := presenter.MapSubscriptionsPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	pagination, payload := presenter.MapSubscriptionsPage(result)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Create Subscription
@@ -170,36 +164,26 @@ func (h *SubscriptionHandler) ListSubscriptionsByTarget(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /subscriptions [post]
 func (h *SubscriptionHandler) CreateSubscription(c echo.Context) error {
-	var req request.CreateSubscription
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	userID, err := parseUUID(req.UserID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateSubscriptionPayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "user_id must be a valid UUID"))
-	}
-
-	subscriptionID, err := parseUUIDPointer(req.SubscriptionID)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "subscription_id must be a valid UUID"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.CreateSubscriptionInput{
-		UserID:         userID,
-		SubscriptionID: subscriptionID,
+		UserID:         req.UserUUID,
+		SubscriptionID: req.SubscriptionUUID,
 		TypeID:         req.TypeID,
 	}
 
 	sub, err := h.service.CreateSubscription(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("subscription_create_failed", "failed to create subscription"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("subscription_create_failed", "failed to create subscription"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToSubscriptionDTO(sub)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToSubscriptionDTO(sub))
 }
 
 // @Summary Delete Subscription
@@ -216,14 +200,14 @@ func (h *SubscriptionHandler) CreateSubscription(c echo.Context) error {
 func (h *SubscriptionHandler) DeleteSubscription(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid subscription identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid subscription identifier"))
 	}
 
 	if err := h.service.DeleteSubscription(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("subscription_not_found", "subscription not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("subscription_not_found", "subscription not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("subscription_delete_failed", "failed to delete subscription"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("subscription_delete_failed", "failed to delete subscription"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

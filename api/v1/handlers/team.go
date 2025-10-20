@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -51,18 +51,16 @@ func RegisterTeamRoutes(group *echo.Group, service ports.TeamService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /teams [get]
 func (h *TeamHandler) ListTeams(c echo.Context) error {
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	page, err := h.service.ListTeams(c.Request().Context(), params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
 	}
 
 	pagination, payload := presenter.MapTeamsPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Team
@@ -79,18 +77,18 @@ func (h *TeamHandler) ListTeams(c echo.Context) error {
 func (h *TeamHandler) GetTeam(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
 	}
 
 	team, err := h.service.GetTeam(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("team_not_found", "team not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("team_not_found", "team not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to get team"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to get team"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTeamDTO(team)))
+	return respondSuccess(c, http.StatusOK, presenter.ToTeamDTO(team))
 }
 
 // @Summary List Teams By Project
@@ -106,12 +104,12 @@ func (h *TeamHandler) GetTeam(c echo.Context) error {
 func (h *TeamHandler) ListTeamsByProject(c echo.Context) error {
 	projectID, err := parseUUID(c.Param("project_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
 	teams, err := h.service.ListTeamsByProject(c.Request().Context(), projectID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
 	}
 
 	items := make([]response.Team, len(teams))
@@ -119,7 +117,7 @@ func (h *TeamHandler) ListTeamsByProject(c echo.Context) error {
 		items[i] = presenter.ToTeamDTO(&teams[i])
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(items))
+	return respondSuccess(c, http.StatusOK, items)
 }
 
 // @Summary Create Team
@@ -133,25 +131,25 @@ func (h *TeamHandler) ListTeamsByProject(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /teams [post]
 func (h *TeamHandler) CreateTeam(c echo.Context) error {
-	var req request.CreateTeam
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateTeamPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.CreateTeamInput{
 		Name:        req.Name,
-		Description: sanitizeStringPtr(req.Description),
+		Description: req.Description,
 	}
 
 	team, err := h.service.CreateTeam(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("team_create_failed", "failed to create team"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("team_create_failed", "failed to create team"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToTeamDTO(team)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToTeamDTO(team))
 }
 
 // @Summary Update Team
@@ -169,32 +167,32 @@ func (h *TeamHandler) CreateTeam(c echo.Context) error {
 func (h *TeamHandler) UpdateTeam(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
 	}
 
-	var req request.UpdateTeam
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateTeamPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateTeamInput{
-		Name:        sanitizeStringPtr(req.Name),
-		Description: sanitizeStringPtr(req.Description),
+		Name:        req.Name,
+		Description: req.Description,
 	}
 
 	team, err := h.service.UpdateTeam(c.Request().Context(), id, input)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("team_not_found", "team not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("team_not_found", "team not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("team_update_failed", "failed to update team"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("team_update_failed", "failed to update team"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTeamDTO(team)))
+	return respondSuccess(c, http.StatusOK, presenter.ToTeamDTO(team))
 }
 
 // @Summary Delete Team
@@ -211,14 +209,14 @@ func (h *TeamHandler) UpdateTeam(c echo.Context) error {
 func (h *TeamHandler) DeleteTeam(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
 	}
 
 	if err := h.service.DeleteTeam(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("team_not_found", "team not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("team_not_found", "team not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("team_delete_failed", "failed to delete team"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("team_delete_failed", "failed to delete team"))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -238,30 +236,25 @@ func (h *TeamHandler) DeleteTeam(c echo.Context) error {
 func (h *TeamHandler) AddUserToTeam(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
 	}
 
-	var req request.AddTeamMember
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	userID, err := parseUUID(req.UserID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateAddTeamMemberPayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "user_id must be a valid UUID"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.TeamMemberInput{
 		TeamID:         teamID,
-		UserID:         userID,
-		Specialization: sanitizeStringPtr(req.Specialization),
+		UserID:         req.UserUUID,
+		Specialization: req.Specialization,
 	}
 
 	if err := h.service.AddUserToTeam(c.Request().Context(), input); err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("team_member_add_failed", "failed to add member"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("team_member_add_failed", "failed to add member"))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -282,18 +275,18 @@ func (h *TeamHandler) AddUserToTeam(c echo.Context) error {
 func (h *TeamHandler) RemoveUserFromTeam(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
 	}
 	userID, err := parseUUID(c.Param("user_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
 	if err := h.service.RemoveUserFromTeam(c.Request().Context(), teamID, userID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("team_member_not_found", "team member not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("team_member_not_found", "team member not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("team_member_remove_failed", "failed to remove member"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("team_member_remove_failed", "failed to remove member"))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -313,29 +306,24 @@ func (h *TeamHandler) RemoveUserFromTeam(c echo.Context) error {
 func (h *TeamHandler) AddTeamToProject(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
 	}
 
-	var req request.AddTeamProject
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	projectID, err := parseUUID(req.ProjectID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateAddTeamProjectPayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "project_id must be a valid UUID"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.TeamProjectInput{
 		TeamID:    teamID,
-		ProjectID: projectID,
+		ProjectID: req.ProjectUUID,
 	}
 
 	if err := h.service.AddTeamToProject(c.Request().Context(), input); err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("team_project_add_failed", "failed to attach team to project"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("team_project_add_failed", "failed to attach team to project"))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -355,18 +343,18 @@ func (h *TeamHandler) AddTeamToProject(c echo.Context) error {
 func (h *TeamHandler) RemoveTeamFromProject(c echo.Context) error {
 	teamID, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
 	}
 	projectID, err := parseUUID(c.Param("project_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
 	if err := h.service.RemoveTeamFromProject(c.Request().Context(), teamID, projectID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("team_project_not_found", "team-project link not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("team_project_not_found", "team-project link not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("team_project_remove_failed", "failed to detach team from project"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("team_project_remove_failed", "failed to detach team from project"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

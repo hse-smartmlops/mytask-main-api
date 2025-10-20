@@ -30,6 +30,7 @@ type Container struct {
 	ForumMessageService ports.ForumMessageService
 	tokenValidator      ports.TokenValidator
 	rateLimiter         echo.MiddlewareFunc
+	traceMetaEnabled    bool
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) *Container {
@@ -71,6 +72,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) 
 		ForumMessageService: service.NewForumMessageService(forumRepo),
 		tokenValidator:      authService,
 		rateLimiter:         rateLimiter,
+		traceMetaEnabled:    cfg.Tracing.Enabled,
 	}
 }
 
@@ -91,5 +93,6 @@ func (c *Container) V1Deps() v1.Deps {
 		ForumMessageService: c.ForumMessageService,
 		AuthMiddleware:      v1middleware.KeycloakAuth(c.tokenValidator),
 		RateLimiter:         c.rateLimiter,
+		TraceMetaEnabled:    c.traceMetaEnabled,
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -47,18 +47,17 @@ func RegisterTaskRoutes(group *echo.Group, service ports.TaskService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /tasks [get]
 func (h *TaskHandler) ListTasks(c echo.Context) error {
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
-
-	page, err := h.service.ListTasks(c.Request().Context(), params)
+	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	result, err := h.service.ListTasks(c.Request().Context(), ports.PaginationParams{
+		Page:     page,
+		PageSize: size,
+	})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
 	}
 
-	pagination, payload := presenter.MapTasksPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	pagination, payload := presenter.MapTasksPage(result)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Task
@@ -75,18 +74,18 @@ func (h *TaskHandler) ListTasks(c echo.Context) error {
 func (h *TaskHandler) GetTask(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
 	}
 
 	task, err := h.service.GetTask(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("task_not_found", "task not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("task_not_found", "task not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to get task"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to get task"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTaskDTO(task)))
+	return respondSuccess(c, http.StatusOK, presenter.ToTaskDTO(task))
 }
 
 // @Summary List Tasks By Project
@@ -104,21 +103,17 @@ func (h *TaskHandler) GetTask(c echo.Context) error {
 func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 	projectID, err := parseUUID(c.Param("project_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
-
-	page, err := h.service.ListTasksByProject(c.Request().Context(), projectID, params)
+	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	result, err := h.service.ListTasksByProject(c.Request().Context(), projectID, ports.PaginationParams{Page: page, PageSize: size})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
 	}
 
-	pagination, payload := presenter.MapTasksPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	pagination, payload := presenter.MapTasksPage(result)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary List Tasks By User
@@ -136,21 +131,17 @@ func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 func (h *TaskHandler) ListTasksByUser(c echo.Context) error {
 	userID, err := parseUUID(c.Param("user_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
-
-	page, err := h.service.ListTasksByUser(c.Request().Context(), userID, params)
+	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	result, err := h.service.ListTasksByUser(c.Request().Context(), userID, ports.PaginationParams{Page: page, PageSize: size})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
 	}
 
-	pagination, payload := presenter.MapTasksPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	pagination, payload := presenter.MapTasksPage(result)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Create Task
@@ -164,41 +155,20 @@ func (h *TaskHandler) ListTasksByUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /tasks [post]
 func (h *TaskHandler) CreateTask(c echo.Context) error {
-	var req request.CreateTask
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	statusID, err := parseUUID(req.StatusID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateTaskPayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "status_id must be a valid UUID"))
-	}
-	createdBy, err := parseUUIDPointer(req.CreatedBy)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "created_by must be a valid UUID"))
-	}
-	assignedTo, err := parseUUIDPointer(req.AssignedTo)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "assigned_to must be a valid UUID"))
-	}
-	deadline, err := parseTimePointer(req.Deadline)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "deadline must be RFC3339 timestamp"))
-	}
-	startDate, err := parseTimePointer(req.StartDate)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "start_date must be RFC3339 timestamp"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.CreateTaskInput{
-		StatusID:      statusID,
+		StatusID:      req.StatusUUID,
 		Priority:      req.Priority,
 		Name:          req.Name,
 		Description:   req.Description,
-		CreatedBy:     createdBy,
-		AssignedTo:    assignedTo,
-		Deadline:      deadline,
-		StartDate:     startDate,
+		CreatedBy:     req.CreatedByUUID,
+		AssignedTo:    req.AssignedToUUID,
+		Deadline:      req.DeadlineTime,
+		StartDate:     req.StartDateTime,
 		GitlabIssueID: req.GitlabIssueID,
 		Category:      req.Category,
 	}
@@ -206,12 +176,12 @@ func (h *TaskHandler) CreateTask(c echo.Context) error {
 	task, err := h.service.CreateTask(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("task_create_failed", "failed to create task"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("task_create_failed", "failed to create task"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToTaskDTO(task)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToTaskDTO(task))
 }
 
 // @Summary Update Task
@@ -229,44 +199,23 @@ func (h *TaskHandler) CreateTask(c echo.Context) error {
 func (h *TaskHandler) UpdateTask(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
 	}
 
-	var req request.UpdateTask
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	statusID, err := parseUUIDPointer(req.StatusID)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateTaskPayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "status_id must be a valid UUID"))
-	}
-	createdBy, err := parseUUIDPointer(req.CreatedBy)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "created_by must be a valid UUID"))
-	}
-	assignedTo, err := parseUUIDPointer(req.AssignedTo)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "assigned_to must be a valid UUID"))
-	}
-	deadline, err := parseTimePointer(req.Deadline)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "deadline must be RFC3339 timestamp"))
-	}
-	startDate, err := parseTimePointer(req.StartDate)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "start_date must be RFC3339 timestamp"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateTaskInput{
-		StatusID:      statusID,
+		StatusID:      req.StatusUUID,
 		Priority:      req.Priority,
 		Name:          req.Name,
 		Description:   req.Description,
-		CreatedBy:     createdBy,
-		AssignedTo:    assignedTo,
-		Deadline:      deadline,
-		StartDate:     startDate,
+		CreatedBy:     req.CreatedByUUID,
+		AssignedTo:    req.AssignedToUUID,
+		Deadline:      req.DeadlineTime,
+		StartDate:     req.StartDateTime,
 		GitlabIssueID: req.GitlabIssueID,
 		Category:      req.Category,
 	}
@@ -275,15 +224,15 @@ func (h *TaskHandler) UpdateTask(c echo.Context) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("task_not_found", "task not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("task_not_found", "task not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("task_update_failed", "failed to update task"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("task_update_failed", "failed to update task"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToTaskDTO(task)))
+	return respondSuccess(c, http.StatusOK, presenter.ToTaskDTO(task))
 }
 
 // @Summary Delete Task
@@ -300,14 +249,14 @@ func (h *TaskHandler) UpdateTask(c echo.Context) error {
 func (h *TaskHandler) DeleteTask(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
 	}
 
 	if err := h.service.DeleteTask(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("task_not_found", "task not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("task_not_found", "task not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("task_delete_failed", "failed to delete task"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("task_delete_failed", "failed to delete task"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

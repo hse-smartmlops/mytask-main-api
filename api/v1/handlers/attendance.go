@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -133,7 +132,7 @@ func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /attendance [post]
 func (h *AttendanceHandler) CreateAttendance(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateAttendance](c, middleware.ValidateCreateAttendancePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateAttendancePayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -180,7 +179,7 @@ func (h *AttendanceHandler) UpdateAttendance(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid attendance identifier"))
 	}
 
-	req, err := middleware.BindAndValidate[request.UpdateAttendance](c, middleware.ValidateUpdateAttendancePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateAttendancePayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

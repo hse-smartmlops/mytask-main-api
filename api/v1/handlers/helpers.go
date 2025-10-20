@@ -9,16 +9,10 @@ import (
 )
 
 var (
-	parsePositiveInt   = v1helpers.ParsePositiveInt
 	parseUUID          = v1helpers.ParseUUID
 	parseOptionalInt8  = v1helpers.ParseOptionalInt8
 	parseUUIDPointer   = v1helpers.ParseUUIDPointer
-	parseTimePointer   = v1helpers.ParseTimePointer
-	sanitizeStringPtr  = v1helpers.SanitizeStringPtr
-	parseDatePointer   = v1helpers.ParseDatePointer
-	parseTimeOfDayPtr  = v1helpers.ParseTimeOfDayPointer
 	parseDateValue     = v1helpers.ParseDateValue
-	toInt16Ptr         = v1helpers.ToInt16Ptr
 	extractBearerToken = v1helpers.ExtractBearerToken
 )
 

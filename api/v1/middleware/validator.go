@@ -16,7 +16,40 @@ import (
 )
 
 // ValidatorFunc represents custom validation logic for a request DTO.
-type ValidatorFunc[T any] func(*T) error
+type ValidatorFunc[T BindableRequest] func(*T) error
+
+type BindableRequest interface {
+	request.AuthLogin |
+		request.AuthRefresh |
+		request.CreateAttendance |
+		request.UpdateAttendance |
+		request.CreateBoard |
+		request.UpdateBoard |
+		request.CreateForumMessage |
+		request.UpdateForumMessage |
+		request.CreateProblem |
+		request.UpdateProblem |
+		request.CreateProject |
+		request.UpdateProject |
+		request.CreateRole |
+		request.UpdateRole |
+		request.CreateStatus |
+		request.UpdateStatus |
+		request.CreateTask |
+		request.UpdateTask |
+		request.CreateTeam |
+		request.UpdateTeam |
+		request.AddTeamMember |
+		request.AddTeamProject |
+		request.CreateSubscription |
+		request.CreateUser |
+		request.ReportCreate |
+		request.ReportUpdate |
+		request.CompletedWorkUpdate |
+		request.HelpRequestUpdate |
+		request.TomorrowPlanUpdate |
+		request.ReportsByDate
+}
 
 // ValidationError is returned when request validation fails.
 type ValidationError struct {
@@ -31,7 +64,7 @@ func (e ValidationError) Error() string {
 }
 
 // BindAndValidate binds the request body to T and runs provided validator functions.
-func BindAndValidate[T any](c echo.Context, validators ...ValidatorFunc[T]) (T, error) {
+func BindAndValidate[T BindableRequest](c echo.Context, validators ...ValidatorFunc[T]) (T, error) {
 	var req T
 	if err := c.Bind(&req); err != nil {
 		return req, err
@@ -53,9 +86,13 @@ func BindAndValidate[T any](c echo.Context, validators ...ValidatorFunc[T]) (T, 
 func RespondValidationError(c echo.Context, err error) error {
 	var validationErr ValidationError
 	if errors.As(err, &validationErr) {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", validationErr.Error()))
+		resp := dto.NewError("invalid_payload", validationErr.Error())
+		resp.Meta.TraceID = traceIDFromContext(c)
+		return c.JSON(http.StatusBadRequest, resp)
 	}
-	return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+	resp := dto.NewError("invalid_payload", err.Error())
+	resp.Meta.TraceID = traceIDFromContext(c)
+	return c.JSON(http.StatusBadRequest, resp)
 }
 
 func wrapValidationError(err error) error {
@@ -115,6 +152,19 @@ func ValidateReportsByDatePayload(req *request.ReportsByDate) error {
 	if req.StartDate == "" || req.EndDate == "" {
 		return ValidationError{Message: "start_date and end_date are required"}
 	}
+	start, err := v1helpers.ParseDateValue(req.StartDate)
+	if err != nil {
+		return ValidationError{Message: "start_date must be a valid date"}
+	}
+	end, err := v1helpers.ParseDateValue(req.EndDate)
+	if err != nil {
+		return ValidationError{Message: "end_date must be a valid date"}
+	}
+	if end.Before(start) {
+		return ValidationError{Message: "end_date must be on or after start_date"}
+	}
+	req.StartValue = start
+	req.EndValue = end
 	return nil
 }
 
@@ -415,6 +465,66 @@ func ValidateUpdateBoardPayload(req *request.UpdateBoard) error {
 	return nil
 }
 
+func ValidateCreateTeamPayload(req *request.CreateTeam) error {
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		return ValidationError{Message: "name is required"}
+	}
+	req.Description = v1helpers.SanitizeStringPtr(req.Description)
+	return nil
+}
+
+func ValidateUpdateTeamPayload(req *request.UpdateTeam) error {
+	var hasField bool
+
+	if req.Name != nil {
+		trimmed := strings.TrimSpace(*req.Name)
+		if trimmed == "" {
+			return ValidationError{Message: "name cannot be empty"}
+		}
+		req.Name = &trimmed
+		hasField = true
+	}
+	if req.Description != nil {
+		req.Description = v1helpers.SanitizeStringPtr(req.Description)
+		if req.Description != nil {
+			hasField = true
+		}
+	}
+
+	if !hasField {
+		return ValidationError{Message: "no fields to update"}
+	}
+	return nil
+}
+
+func ValidateAddTeamMemberPayload(req *request.AddTeamMember) error {
+	req.UserID = strings.TrimSpace(req.UserID)
+	if req.UserID == "" {
+		return ValidationError{Message: "user_id is required"}
+	}
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return ValidationError{Message: "user_id must be a valid UUID"}
+	}
+	req.UserUUID = userID
+	req.Specialization = v1helpers.SanitizeStringPtr(req.Specialization)
+	return nil
+}
+
+func ValidateAddTeamProjectPayload(req *request.AddTeamProject) error {
+	req.ProjectID = strings.TrimSpace(req.ProjectID)
+	if req.ProjectID == "" {
+		return ValidationError{Message: "project_id is required"}
+	}
+	projectID, err := uuid.Parse(req.ProjectID)
+	if err != nil {
+		return ValidationError{Message: "project_id must be a valid UUID"}
+	}
+	req.ProjectUUID = projectID
+	return nil
+}
+
 func ValidateCreateStatusPayload(req *request.CreateStatus) error {
 	req.BoardID = strings.TrimSpace(req.BoardID)
 	if req.BoardID == "" {
@@ -490,6 +600,26 @@ func ValidateLegacyCreateBoardPayload(req *request.CreateBoard) error {
 			req.Description = &trimmed
 		}
 	}
+
+	return nil
+}
+
+func ValidateCreateSubscriptionPayload(req *request.CreateSubscription) error {
+	req.UserID = strings.TrimSpace(req.UserID)
+	if req.UserID == "" {
+		return ValidationError{Message: "user_id is required"}
+	}
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return ValidationError{Message: "user_id must be a valid UUID"}
+	}
+	req.UserUUID = userID
+
+	parsed, err := sanitizeOptionalUUID(&req.SubscriptionID, "subscription_id")
+	if err != nil {
+		return err
+	}
+	req.SubscriptionUUID = parsed
 
 	return nil
 }
@@ -652,6 +782,421 @@ func ValidateUpdateAttendancePayload(req *request.UpdateAttendance) error {
 		return ValidationError{Message: "no fields to update"}
 	}
 	return nil
+}
+
+func ValidateCreateTaskPayload(req *request.CreateTask) error {
+	req.StatusID = strings.TrimSpace(req.StatusID)
+	if req.StatusID == "" {
+		return ValidationError{Message: "status_id is required"}
+	}
+	statusID, err := uuid.Parse(req.StatusID)
+	if err != nil {
+		return ValidationError{Message: "status_id must be a valid UUID"}
+	}
+	req.StatusUUID = statusID
+
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		return ValidationError{Message: "name is required"}
+	}
+	req.Description = v1helpers.SanitizeStringPtr(req.Description)
+
+	if req.CreatedBy != nil {
+		trimmed := strings.TrimSpace(*req.CreatedBy)
+		if trimmed == "" {
+			req.CreatedBy = nil
+		} else {
+			creator, err := uuid.Parse(trimmed)
+			if err != nil {
+				return ValidationError{Message: "created_by must be a valid UUID"}
+			}
+			req.CreatedByUUID = &creator
+		}
+	}
+
+	if req.AssignedTo != nil {
+		trimmed := strings.TrimSpace(*req.AssignedTo)
+		if trimmed == "" {
+			req.AssignedTo = nil
+		} else {
+			assigned, err := uuid.Parse(trimmed)
+			if err != nil {
+				return ValidationError{Message: "assigned_to must be a valid UUID"}
+			}
+			req.AssignedToUUID = &assigned
+		}
+	}
+
+	deadline, err := v1helpers.ParseTimePointer(req.Deadline)
+	if err != nil {
+		return ValidationError{Message: "deadline must be RFC3339 timestamp"}
+	}
+	req.DeadlineTime = deadline
+
+	start, err := v1helpers.ParseTimePointer(req.StartDate)
+	if err != nil {
+		return ValidationError{Message: "start_date must be RFC3339 timestamp"}
+	}
+	req.StartDateTime = start
+
+	return nil
+}
+
+func ValidateUpdateTaskPayload(req *request.UpdateTask) error {
+	var hasField bool
+
+	if req.StatusID != nil {
+		trimmed := strings.TrimSpace(*req.StatusID)
+		if trimmed == "" {
+			return ValidationError{Message: "status_id cannot be empty"}
+		}
+		statusID, err := uuid.Parse(trimmed)
+		if err != nil {
+			return ValidationError{Message: "status_id must be a valid UUID"}
+		}
+		req.StatusUUID = &statusID
+		hasField = true
+	}
+
+	if req.Name != nil {
+		trimmed := strings.TrimSpace(*req.Name)
+		if trimmed == "" {
+			return ValidationError{Message: "name cannot be empty"}
+		}
+		req.Name = &trimmed
+		hasField = true
+	}
+
+	if req.Description != nil {
+		req.Description = v1helpers.SanitizeStringPtr(req.Description)
+		if req.Description != nil {
+			hasField = true
+		}
+	}
+
+	if req.CreatedBy != nil {
+		trimmed := strings.TrimSpace(*req.CreatedBy)
+		if trimmed == "" {
+			req.CreatedBy = nil
+		} else {
+			creator, err := uuid.Parse(trimmed)
+			if err != nil {
+				return ValidationError{Message: "created_by must be a valid UUID"}
+			}
+			req.CreatedByUUID = &creator
+		}
+		hasField = true
+	}
+
+	if req.AssignedTo != nil {
+		trimmed := strings.TrimSpace(*req.AssignedTo)
+		if trimmed == "" {
+			req.AssignedTo = nil
+		} else {
+			assigned, err := uuid.Parse(trimmed)
+			if err != nil {
+				return ValidationError{Message: "assigned_to must be a valid UUID"}
+			}
+			req.AssignedToUUID = &assigned
+		}
+		hasField = true
+	}
+
+	if req.Deadline != nil {
+		deadline, err := v1helpers.ParseTimePointer(req.Deadline)
+		if err != nil {
+			return ValidationError{Message: "deadline must be RFC3339 timestamp"}
+		}
+		req.DeadlineTime = deadline
+		hasField = true
+	}
+	if req.StartDate != nil {
+		start, err := v1helpers.ParseTimePointer(req.StartDate)
+		if err != nil {
+			return ValidationError{Message: "start_date must be RFC3339 timestamp"}
+		}
+		req.StartDateTime = start
+		hasField = true
+	}
+
+	if req.Priority != nil || req.GitlabIssueID != nil || req.Category != nil {
+		hasField = true
+	}
+
+	if !hasField {
+		return ValidationError{Message: "no fields to update"}
+	}
+	return nil
+}
+
+func ValidateReportCreatePayload(req *request.ReportCreate) error {
+	req.UserID = strings.TrimSpace(req.UserID)
+	if req.UserID == "" {
+		return ValidationError{Message: "user_id is required"}
+	}
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		return ValidationError{Message: "user_id must be a valid UUID"}
+	}
+	req.UserUUID = userID
+
+	if req.ReportDate != nil {
+		trimmed := strings.TrimSpace(*req.ReportDate)
+		if trimmed == "" {
+			req.ReportDate = nil
+			req.ReportDateValue = nil
+		} else {
+			req.ReportDate = &trimmed
+			date, err := v1helpers.ParseDatePointer(req.ReportDate)
+			if err != nil {
+				return ValidationError{Message: "report_date must be a valid date"}
+			}
+			req.ReportDateValue = date
+		}
+	}
+
+	if err := sanitizeReportCompletedWorkItems(req.CompletedWork, "complete_work"); err != nil {
+		return err
+	}
+	if err := sanitizeReportHelpRequests(req.HelpRequests, "help"); err != nil {
+		return err
+	}
+	if err := sanitizeReportTomorrowPlans(req.TomorrowPlans, "plan_tomorrow"); err != nil {
+		return err
+	}
+
+	problems, err := sanitizeUUIDList(req.Problems, "problems must contain valid UUIDs")
+	if err != nil {
+		return err
+	}
+	req.ProblemUUIDs = problems
+
+	return nil
+}
+
+func ValidateReportUpdatePayload(req *request.ReportUpdate) error {
+	if req.Checked != nil {
+		if *req.Checked < -128 || *req.Checked > 127 {
+			return ValidationError{Message: "checked must be between -128 and 127"}
+		}
+		value := int8(*req.Checked)
+		req.CheckedValue = &value
+	}
+
+	if req.ReportDate != nil {
+		trimmed := strings.TrimSpace(*req.ReportDate)
+		if trimmed == "" {
+			req.ReportDate = nil
+			req.ReportDateValue = nil
+		} else {
+			req.ReportDate = &trimmed
+			date, err := v1helpers.ParseDatePointer(req.ReportDate)
+			if err != nil {
+				return ValidationError{Message: "report_date must be a valid date"}
+			}
+			req.ReportDateValue = date
+		}
+	}
+
+	if err := sanitizeReportCompletedWorkItems(req.CompletedWork, "complete_work"); err != nil {
+		return err
+	}
+	if err := sanitizeReportHelpRequests(req.HelpRequests, "help"); err != nil {
+		return err
+	}
+	if err := sanitizeReportTomorrowPlans(req.TomorrowPlans, "plan_tomorrow"); err != nil {
+		return err
+	}
+
+	problems, err := sanitizeUUIDList(req.Problems, "problems must contain valid UUIDs")
+	if err != nil {
+		return err
+	}
+	req.ProblemUUIDs = problems
+
+	if req.CheckedValue == nil && req.ReportDateValue == nil && len(req.CompletedWork) == 0 && len(req.HelpRequests) == 0 && len(req.TomorrowPlans) == 0 && len(req.ProblemUUIDs) == 0 {
+		return ValidationError{Message: "no fields to update"}
+	}
+
+	return nil
+}
+
+func ValidateCompletedWorkUpdatePayload(req *request.CompletedWorkUpdate) error {
+	var hasField bool
+
+	req.Description = v1helpers.SanitizeStringPtr(req.Description)
+	if req.Description != nil {
+		hasField = true
+	}
+
+	taskID, err := sanitizeOptionalUUID(&req.TaskID, "task_id")
+	if err != nil {
+		return err
+	}
+	req.TaskUUID = taskID
+	if req.TaskUUID != nil {
+		hasField = true
+	}
+
+	if !hasField {
+		return ValidationError{Message: "no fields to update"}
+	}
+	return nil
+}
+
+func ValidateHelpRequestUpdatePayload(req *request.HelpRequestUpdate) error {
+	var hasField bool
+
+	req.Description = v1helpers.SanitizeStringPtr(req.Description)
+	if req.Description != nil {
+		hasField = true
+	}
+
+	helperID, err := sanitizeOptionalUUID(&req.HelperID, "helper_id")
+	if err != nil {
+		return err
+	}
+	req.HelperUUID = helperID
+	if req.HelperUUID != nil {
+		hasField = true
+	}
+
+	req.Status = v1helpers.SanitizeStringPtr(req.Status)
+	if req.Status != nil {
+		hasField = true
+	}
+
+	if !hasField {
+		return ValidationError{Message: "no fields to update"}
+	}
+	return nil
+}
+
+func ValidateTomorrowPlanUpdatePayload(req *request.TomorrowPlanUpdate) error {
+	var hasField bool
+
+	req.Description = v1helpers.SanitizeStringPtr(req.Description)
+	if req.Description != nil {
+		hasField = true
+	}
+
+	taskID, err := sanitizeOptionalUUID(&req.TaskID, "task_id")
+	if err != nil {
+		return err
+	}
+	req.TaskUUID = taskID
+	if req.TaskUUID != nil {
+		hasField = true
+	}
+
+	if !hasField {
+		return ValidationError{Message: "no fields to update"}
+	}
+	return nil
+}
+
+func sanitizeReportCompletedWorkItems(items []request.ReportCompletedWork, field string) error {
+	for i := range items {
+		entry := &items[i]
+
+		id, err := sanitizeOptionalUUID(&entry.ID, field+".id")
+		if err != nil {
+			return err
+		}
+		entry.IDUUID = id
+
+		taskID, err := sanitizeOptionalUUID(&entry.TaskID, field+".task_id")
+		if err != nil {
+			return err
+		}
+		entry.TaskUUID = taskID
+
+		entry.Description = v1helpers.SanitizeStringPtr(entry.Description)
+	}
+	return nil
+}
+
+func sanitizeReportHelpRequests(items []request.ReportHelpRequest, field string) error {
+	for i := range items {
+		entry := &items[i]
+
+		id, err := sanitizeOptionalUUID(&entry.ID, field+".id")
+		if err != nil {
+			return err
+		}
+		entry.IDUUID = id
+
+		helperID, err := sanitizeOptionalUUID(&entry.HelperID, field+".helper_id")
+		if err != nil {
+			return err
+		}
+		entry.HelperUUID = helperID
+
+		entry.Description = v1helpers.SanitizeStringPtr(entry.Description)
+		entry.Status = v1helpers.SanitizeStringPtr(entry.Status)
+	}
+	return nil
+}
+
+func sanitizeReportTomorrowPlans(items []request.ReportTomorrowPlan, field string) error {
+	for i := range items {
+		entry := &items[i]
+
+		id, err := sanitizeOptionalUUID(&entry.ID, field+".id")
+		if err != nil {
+			return err
+		}
+		entry.IDUUID = id
+
+		taskID, err := sanitizeOptionalUUID(&entry.TaskID, field+".task_id")
+		if err != nil {
+			return err
+		}
+		entry.TaskUUID = taskID
+
+		entry.Description = v1helpers.SanitizeStringPtr(entry.Description)
+	}
+	return nil
+}
+
+func sanitizeOptionalUUID(value **string, field string) (*uuid.UUID, error) {
+	if value == nil || *value == nil {
+		return nil, nil
+	}
+
+	trimmed := strings.TrimSpace(**value)
+	if trimmed == "" {
+		*value = nil
+		return nil, nil
+	}
+
+	parsed, err := uuid.Parse(trimmed)
+	if err != nil {
+		return nil, ValidationError{Message: fmt.Sprintf("%s must be a valid UUID", field)}
+	}
+
+	copyValue := trimmed
+	*value = &copyValue
+	return &parsed, nil
+}
+
+func sanitizeUUIDList(values []string, errMsg string) ([]uuid.UUID, error) {
+	if len(values) == 0 {
+		return nil, nil
+	}
+	result := make([]uuid.UUID, len(values))
+	for i := range values {
+		trimmed := strings.TrimSpace(values[i])
+		if trimmed == "" {
+			return nil, ValidationError{Message: errMsg}
+		}
+		id, err := uuid.Parse(trimmed)
+		if err != nil {
+			return nil, ValidationError{Message: errMsg}
+		}
+		result[i] = id
+	}
+	return result, nil
 }
 
 func BindAvatarUpload(c echo.Context, fieldName string, maxSize int64) (*request.AvatarUpload, error) {

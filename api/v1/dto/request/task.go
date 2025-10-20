@@ -1,5 +1,11 @@
 package request
 
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
+
 type CreateTask struct {
 	StatusID      string  `json:"status_id"`
 	Priority      *int16  `json:"priority,omitempty"`
@@ -11,6 +17,12 @@ type CreateTask struct {
 	StartDate     *string `json:"start_date,omitempty"`
 	GitlabIssueID *int    `json:"gitlab_issue_id,omitempty"`
 	Category      *int8   `json:"category,omitempty"`
+
+	StatusUUID    uuid.UUID  `json:"-"`
+	CreatedByUUID *uuid.UUID `json:"-"`
+	AssignedToUUID *uuid.UUID `json:"-"`
+	DeadlineTime  *time.Time `json:"-"`
+	StartDateTime *time.Time `json:"-"`
 }
 
 type UpdateTask struct {
@@ -24,4 +36,10 @@ type UpdateTask struct {
 	StartDate     *string `json:"start_date,omitempty"`
 	GitlabIssueID *int    `json:"gitlab_issue_id,omitempty"`
 	Category      *int8   `json:"category,omitempty"`
+
+	StatusUUID     *uuid.UUID `json:"-"`
+	CreatedByUUID  *uuid.UUID `json:"-"`
+	AssignedToUUID *uuid.UUID `json:"-"`
+	DeadlineTime   *time.Time `json:"-"`
+	StartDateTime  *time.Time `json:"-"`
 }

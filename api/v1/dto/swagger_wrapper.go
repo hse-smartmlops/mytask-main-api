@@ -22,14 +22,6 @@ type TaskResponse struct {
 	SuccessResponse[response.Task]
 }
 
-type TaskShortResponse struct {
-	SuccessResponse[response.TaskShort]
-}
-
-type TaskStatusResponse struct {
-	SuccessResponse[response.TaskStatus]
-}
-
 type ReportsListResponse struct {
 	SuccessResponse[response.ReportsPage]
 }
@@ -42,10 +34,6 @@ type ReportResponse struct {
 	SuccessResponse[response.Report]
 }
 
-type ReportsListByProjectResponse struct {
-	SuccessResponse[[]response.Report]
-}
-
 type TomorrowPlanItemResponse struct {
 	SuccessResponse[response.TomorrowPlanItem]
 }
@@ -54,16 +42,8 @@ type HelpRequestItemResponse struct {
 	SuccessResponse[response.HelpRequestItem]
 }
 
-type HelpRequestWithAssignerResponse struct {
-	SuccessResponse[response.HelpRequestWithAssigner]
-}
-
 type HelpRequestsForUserResponse struct {
 	SuccessResponse[response.HelpRequestsForUser]
-}
-
-type ProblemItemResponse struct {
-	SuccessResponse[response.ProblemItem]
 }
 
 type ReportUniversalResponse struct {
@@ -82,24 +62,12 @@ type BoardResponse struct {
 	SuccessResponse[response.Board]
 }
 
-type BoardStatusResponse struct {
-	SuccessResponse[response.BoardStatus]
-}
-
-type BoardMessageResponse struct {
-	SuccessResponse[response.BoardMessage]
-}
-
 type UsersListResponse struct {
 	SuccessResponse[response.UsersPage]
 }
 
 type UserResponse struct {
 	SuccessResponse[response.User]
-}
-
-type UserSummaryResponse struct {
-	SuccessResponse[response.UserSummary]
 }
 
 type SubscriptionsListResponse struct {
@@ -132,26 +100,6 @@ type TeamsListResponse struct {
 
 type TeamResponse struct {
 	SuccessResponse[response.Team]
-}
-
-type TeamMemberResponse struct {
-	SuccessResponse[response.TeamMember]
-}
-
-type TeamMessageResponse struct {
-	SuccessResponse[response.TeamMessage]
-}
-
-type TeamUserMessageResponse struct {
-	SuccessResponse[response.TeamUserMessage]
-}
-
-type TeamProjectMessageResponse struct {
-	SuccessResponse[response.TeamProjectMessage]
-}
-
-type UsersAddResponse struct {
-	SuccessResponse[response.UsersAdd]
 }
 
 type ProjectsListResponse struct {

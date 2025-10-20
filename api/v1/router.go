@@ -24,10 +24,13 @@ type Deps struct {
 	ForumMessageService ports.ForumMessageService
 	AuthMiddleware      echo.MiddlewareFunc
 	RateLimiter         echo.MiddlewareFunc
+	TraceMetaEnabled    bool
 }
 
 func RegisterRoutes(group *echo.Group, deps Deps) {
-	group.Use(middleware.TraceMeta())
+	if deps.TraceMetaEnabled {
+		group.Use(middleware.TraceMeta())
+	}
 	if deps.RateLimiter != nil {
 		group.Use(deps.RateLimiter)
 	}

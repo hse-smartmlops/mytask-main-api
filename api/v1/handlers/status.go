@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
@@ -126,7 +125,7 @@ func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /statuses [post]
 func (h *StatusHandler) CreateStatus(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateStatus](c, middleware.ValidateCreateStatusPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateStatusPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -170,7 +169,7 @@ func (h *StatusHandler) UpdateStatus(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid status identifier"))
 	}
-	req, err := middleware.BindAndValidate[request.UpdateStatus](c, middleware.ValidateUpdateStatusPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateStatusPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

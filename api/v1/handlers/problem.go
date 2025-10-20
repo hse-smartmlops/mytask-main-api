@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -97,7 +96,7 @@ func (h *ProblemHandler) GetProblem(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /problems [post]
 func (h *ProblemHandler) CreateProblem(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateProblem](c, middleware.ValidateCreateProblemPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateProblemPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -139,7 +138,7 @@ func (h *ProblemHandler) UpdateProblem(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
 	}
 
-	req, err := middleware.BindAndValidate[request.UpdateProblem](c, middleware.ValidateUpdateProblemPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateProblemPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
-	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -99,7 +98,7 @@ func (h *ProjectHandler) GetProject(c echo.Context) error {
 // @Router /projects [post]
 
 func (h *ProjectHandler) CreateProject(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateProject](c, middleware.ValidateCreateProjectPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateProjectPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -146,7 +145,7 @@ func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	req, err := middleware.BindAndValidate[request.UpdateProject](c, middleware.ValidateUpdateProjectPayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateUpdateProjectPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
