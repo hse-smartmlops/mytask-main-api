@@ -15,7 +15,7 @@ import (
 	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
-	"emplacc-api/pkg/exel"
+	excel "emplacc-api/pkg/excel"
 
 	"github.com/google/uuid"
 )
@@ -353,11 +353,11 @@ func buildDailyReportsWorkbook(reports []models.DailyReport, startDate, endDate 
 	buffer := &bytes.Buffer{}
 	writer := zip.NewWriter(buffer)
 	files := map[string]string{
-		"[Content_Types].xml":        exel.ContentTypesXML,
-		"_rels/.rels":                exel.RelationshipsXML,
-		"xl/workbook.xml":            exel.WorkbookXML,
-		"xl/_rels/workbook.xml.rels": exel.WorkbookRelationshipsXML,
-		"xl/styles.xml":              exel.StylesXML,
+		"[Content_Types].xml":        excel.ContentTypesXML,
+		"_rels/.rels":                excel.RelationshipsXML,
+		"xl/workbook.xml":            excel.WorkbookXML,
+		"xl/_rels/workbook.xml.rels": excel.WorkbookRelationshipsXML,
+		"xl/styles.xml":              excel.StylesXML,
 		"xl/worksheets/sheet1.xml":   sheetXML,
 	}
 
@@ -422,8 +422,8 @@ func describeCompletedWork(item *models.CompletedWork) string {
 
 func buildSheetXML(users []string, dates []time.Time, data map[string]map[string][]string) string {
 	builder := &strings.Builder{}
-	builder.WriteString(exel.XmlHeader)
-	builder.WriteString("<worksheet " + exel.Namespace + "><sheetData>")
+	builder.WriteString(excel.XmlHeader)
+	builder.WriteString("<worksheet " + excel.Namespace + "><sheetData>")
 
 	builder.WriteString(`<row r="1">`)
 	writeInlineCell(builder, "A1", "User")

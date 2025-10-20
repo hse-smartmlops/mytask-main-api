@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package emplacc.v1;
+option go_package = "emplacc-main-api/pkg/pb/v1;v1";
+
+// MCP сервер (v1). Синхронный ответ + серверный стрим.
+service MCPService {
+    // Синхронная обработка задачи (удобно для коротких задач).
+    rpc ProcessTask (ProcessTaskRequest) returns (ProcessTaskResponse) {}
+
+    // Потоковая обработка (статусы/чанки/финал).
+    rpc StreamProcessTask (ProcessTaskRequest) returns (stream ProcessTaskEvent) {}
+}
+
+// === Requests / Responses ===
+
+message ProcessTaskRequest {
+    // Совместимость со старым контрактом:
+    // 1: description, 2: text — сохранены.
+    string description = 1;            // краткое описание задачи
+    string text        = 2;            // основной текст
+
+    // Новые поля:
+    string task_id     = 3;            // идемпотентность/трейс
+    map<string, string> meta = 4;      // произвольные метаданные (tenant, user, etc.)
+    int64 timeout_ms   = 5;            // желаемый таймаут на обработку
+    string content_type = 6;           // тип содержимого text (например, "text/plain" или "text/markdown")
+}
+
+message ProcessTaskResponse {
+    string result       = 1;           // итоговый результат
+    string content_type = 2;           // тип результата (если важно)
+}
+
+// === Streaming ===
+
+message ProcessTaskEvent {
+    oneof event {
+        Status status = 1;   // изменения статуса (QUEUED/RUNNING/...)
+        Chunk  chunk  = 2;   // порция результата (стриминг)
+        Final  final  = 3;   // финальный результат
+        Error  error  = 4;   // ошибка обработки
+    }
+}
+
+message Status {
+    string state   = 1;    // e.g. "QUEUED", "RUNNING", "COMPLETED"
+    string message = 2;    // человекочитаемое сообщение
+    int32  progress = 3;   // 0..100 (если применимо)
+}
+
+message Chunk {
+    string data = 1;       // часть результата (текстовый чанк)
+    int32  index = 2;      // порядковый номер чанка
+}
+
+message Final {
+    string result       = 1;  // финальный текст
+    string content_type = 2;  // тип финального текста
+}
+
+message Error {
+    int32  code    = 1;    // код ошибки
+    string message = 2;    // описание
+}

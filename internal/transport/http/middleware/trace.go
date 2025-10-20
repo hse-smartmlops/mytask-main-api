@@ -55,7 +55,7 @@ func TraceMeta() echo.MiddlewareFunc {
 				return nil
 			}
 
-			if traceID := traceIDFromContext(c); traceID != "" {
+			if traceID := TraceIDFromContext(c); traceID != "" {
 				var payload map[string]interface{}
 				if err := json.Unmarshal(body, &payload); err == nil {
 					meta, _ := payload["meta"].(map[string]interface{})
@@ -82,7 +82,7 @@ func TraceMeta() echo.MiddlewareFunc {
 	}
 }
 
-func traceIDFromContext(c echo.Context) string {
+func TraceIDFromContext(c echo.Context) string {
 	if traceID := c.Response().Header().Get(echo.HeaderXRequestID); traceID != "" {
 		return traceID
 	}

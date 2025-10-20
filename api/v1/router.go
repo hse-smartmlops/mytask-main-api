@@ -2,8 +2,9 @@ package v1
 
 import (
 	"emplacc-api/api/v1/handlers"
-	"emplacc-api/api/v1/middleware"
+
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/transport/http/middleware"
 
 	"github.com/labstack/echo/v4"
 )

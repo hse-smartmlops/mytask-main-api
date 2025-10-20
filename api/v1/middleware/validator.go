@@ -10,6 +10,7 @@ import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
 	v1helpers "emplacc-api/api/v1/helpers"
+	middleware "emplacc-api/internal/transport/http/middleware"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -87,11 +88,11 @@ func RespondValidationError(c echo.Context, err error) error {
 	var validationErr ValidationError
 	if errors.As(err, &validationErr) {
 		resp := dto.NewError("invalid_payload", validationErr.Error())
-		resp.Meta.TraceID = traceIDFromContext(c)
+		resp.Meta.TraceID = middleware.TraceIDFromContext(c)
 		return c.JSON(http.StatusBadRequest, resp)
 	}
 	resp := dto.NewError("invalid_payload", err.Error())
-	resp.Meta.TraceID = traceIDFromContext(c)
+	resp.Meta.TraceID = middleware.TraceIDFromContext(c)
 	return c.JSON(http.StatusBadRequest, resp)
 }
 
