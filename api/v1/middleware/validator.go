@@ -4,9 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"emplacc-api/api/v1/dto"
+	"emplacc-api/api/v1/dto/request"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -85,4 +88,102 @@ func trim(value string) string {
 		return value
 	}
 	return value[start:end]
+}
+
+func ValidateAuthLoginPayload(req *request.AuthLogin) error {
+	req.Email = strings.TrimSpace(req.Email)
+	req.Password = strings.TrimSpace(req.Password)
+	if req.Email == "" || req.Password == "" {
+		return ValidationError{Message: "email and password are required"}
+	}
+	return nil
+}
+
+func ValidateAuthRefreshPayload(req *request.AuthRefresh) error {
+	req.RefreshToken = strings.TrimSpace(req.RefreshToken)
+	if req.RefreshToken == "" {
+		return ValidationError{Message: "refresh_token is required"}
+	}
+	return nil
+}
+
+func ValidateCreateBoardPayload(req *request.CreateBoard) error {
+	req.ProjectID = strings.TrimSpace(req.ProjectID)
+	if req.ProjectID == "" {
+		return ValidationError{Message: "project_id is required"}
+	}
+	if _, err := uuid.Parse(req.ProjectID); err != nil {
+		return ValidationError{Message: "project_id must be a valid UUID"}
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		return ValidationError{Message: "name is required"}
+	}
+
+	if req.Description != nil {
+		trimmed := strings.TrimSpace(*req.Description)
+		if trimmed == "" {
+			req.Description = nil
+		} else {
+			req.Description = &trimmed
+		}
+	}
+
+	return nil
+}
+
+func ValidateUpdateBoardPayload(req *request.UpdateBoard) error {
+	var hasField bool
+
+	if req.Name != nil {
+		trimmed := strings.TrimSpace(*req.Name)
+		if trimmed == "" {
+			return ValidationError{Message: "name cannot be empty"}
+		}
+		req.Name = &trimmed
+		hasField = true
+	}
+
+	if req.Description != nil {
+		trimmed := strings.TrimSpace(*req.Description)
+		if trimmed == "" {
+			req.Description = nil
+		} else {
+			req.Description = &trimmed
+		}
+		hasField = true
+	}
+
+	if !hasField {
+		return ValidationError{Message: "no fields to update"}
+	}
+
+	return nil
+}
+
+func ValidateLegacyCreateBoardPayload(req *request.CreateBoard) error {
+	req.ProjectID = strings.TrimSpace(req.ProjectID)
+	if req.ProjectID == "" {
+		return ValidationError{Message: "project_id is required"}
+	}
+	if _, err := uuid.Parse(req.ProjectID); err != nil {
+		return ValidationError{Message: "project_id must be a valid UUID"}
+	}
+
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
+		return ValidationError{Message: "name is required"}
+	}
+
+	if req.Description != nil {
+		trimmed := strings.TrimSpace(*req.Description)
+		if trimmed == "" {
+			req.Description = nil
+		} else {
+			req.Description = &trimmed
+		}
+	}
+
+	return nil
 }

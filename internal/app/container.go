@@ -5,6 +5,8 @@ import (
 	v1middleware "emplacc-api/api/v1/middleware"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/config"
+	authrepo "emplacc-api/internal/repo/auth"
+	minioRepo "emplacc-api/internal/repo/minio"
 	"emplacc-api/internal/repo/pg"
 	"emplacc-api/internal/service"
 
@@ -28,7 +30,7 @@ type Container struct {
 	tokenValidator      ports.TokenValidator
 }
 
-func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
+func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) *Container {
 	attendanceRepo := pg.NewAttendanceRepository(db)
 	userRepo := pg.NewUserRepository(db)
 	roleRepo := pg.NewRoleRepository(db)
@@ -41,12 +43,18 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 	problemRepo := pg.NewProblemRepository(db)
 	forumRepo := pg.NewForumMessageRepository(db)
 	reportRepo := pg.NewDailyReportRepository(db)
-	authService := service.NewAuthService(cfg.Keycloak, userRepo)
+	authRepo := authrepo.NewKeycloakRepository(cfg.Keycloak)
+	minioStorage := storage
+	if minioStorage == nil {
+		minioStorage, _ = minioRepo.NewStorage(cfg.Minio)
+	}
+
+	authService := service.NewAuthService(cfg.Keycloak, authRepo, userRepo)
 
 	return &Container{
 		AttendanceService:   service.NewAttendanceService(attendanceRepo),
 		AuthService:         authService,
-		UserService:         service.NewUserService(userRepo),
+		UserService:         service.NewUserService(userRepo, minioStorage, cfg.Minio),
 		RoleService:         service.NewRoleService(roleRepo),
 		ProjectService:      service.NewProjectService(projectRepo),
 		BoardService:        service.NewBoardService(boardRepo),
@@ -55,7 +63,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB) *Container {
 		TeamService:         service.NewTeamService(teamRepo),
 		SubscriptionService: service.NewSubscriptionService(subRepo),
 		ProblemService:      service.NewProblemService(problemRepo),
-		DailyReportService:  service.NewDailyReportService(reportRepo),
+		DailyReportService:  service.NewDailyReportService(reportRepo, minioStorage, cfg.Minio),
 		ForumMessageService: service.NewForumMessageService(forumRepo),
 		tokenValidator:      authService,
 	}

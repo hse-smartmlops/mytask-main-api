@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"sort"
@@ -11,18 +12,22 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
+	"emplacc-api/pkg/exel"
 
 	"github.com/google/uuid"
 )
 
 type dailyReportService struct {
-	repo ports.DailyReportRepository
+	repo    ports.DailyReportRepository
+	storage ports.ObjectStorage
+	cfg     config.MinioConfig
 }
 
-func NewDailyReportService(repo ports.DailyReportRepository) ports.DailyReportService {
-	return &dailyReportService{repo: repo}
+func NewDailyReportService(repo ports.DailyReportRepository, storage ports.ObjectStorage, cfg config.MinioConfig) ports.DailyReportService {
+	return &dailyReportService{repo: repo, storage: storage, cfg: cfg}
 }
 
 func (s *dailyReportService) ListReports(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
@@ -81,16 +86,43 @@ func (s *dailyReportService) CreateReport(ctx context.Context, input ports.Creat
 	}
 
 	sanitizeReportInputs(&input)
-	return s.repo.CreateReport(ctx, input)
+	report, err := s.repo.CreateReport(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.syncReportFile(ctx, report); err != nil {
+		return nil, err
+	}
+
+	return report, nil
 }
 
 func (s *dailyReportService) UpdateReport(ctx context.Context, id uuid.UUID, input ports.UpdateDailyReportInput) (*models.DailyReport, error) {
 	sanitizeUpdateReportInputs(&input)
-	return s.repo.UpdateReport(ctx, id, input)
+	report, err := s.repo.UpdateReport(ctx, id, input)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.syncReportFile(ctx, report); err != nil {
+		return nil, err
+	}
+
+	return report, nil
 }
 
 func (s *dailyReportService) DeleteReport(ctx context.Context, id uuid.UUID) error {
-	return s.repo.SoftDeleteReport(ctx, id)
+	report, err := s.repo.GetReportByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err := s.repo.SoftDeleteReport(ctx, id); err != nil {
+		return err
+	}
+
+	return s.removeReportFile(ctx, report)
 }
 
 func (s *dailyReportService) UpdateCompletedWork(ctx context.Context, id uuid.UUID, input ports.UpdateCompletedWorkInput) (*models.CompletedWork, error) {
@@ -126,10 +158,152 @@ func (s *dailyReportService) ExportReportsToXLSX(ctx context.Context, input port
 	return buildDailyReportsWorkbook(reports, input.StartDate, input.EndDate)
 }
 
+func (s *dailyReportService) DownloadReportFile(ctx context.Context, id uuid.UUID) (*ports.ReportFile, error) {
+	report, err := s.repo.GetReportByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	filename := fmt.Sprintf("%s.json", id.String())
+
+	if s.storage == nil {
+		data, err := serializeReport(report)
+		if err != nil {
+			return nil, err
+		}
+		return &ports.ReportFile{FileName: filename, ContentType: "application/json", Data: data}, nil
+	}
+
+	bucket, object := splitStoragePath(report.StorageObject)
+	if bucket == "" || object == "" {
+		if err := s.syncReportFile(ctx, report); err != nil {
+			return nil, err
+		}
+		bucket, object = splitStoragePath(report.StorageObject)
+	}
+
+	data, contentType, err := s.storage.Get(ctx, bucket, object)
+	if err != nil {
+		payload, serr := serializeReport(report)
+		if serr != nil {
+			return nil, err
+		}
+		if uploadErr := s.storage.Upload(ctx, s.reportBucket(), reportObjectKey(report.ID), payload, "application/json", map[string]string{"report_id": report.ID.String()}); uploadErr == nil {
+			path := fmt.Sprintf("%s/%s", s.reportBucket(), reportObjectKey(report.ID))
+			_ = s.repo.UpdateReportStorage(ctx, report.ID, path)
+			report.StorageObject = path
+		}
+		return &ports.ReportFile{FileName: filename, ContentType: "application/json", Data: payload}, nil
+	}
+
+	if strings.TrimSpace(contentType) == "" {
+		contentType = "application/json"
+	}
+
+	return &ports.ReportFile{FileName: filename, ContentType: contentType, Data: data}, nil
+}
+
 func sanitizeReportInputs(input *ports.CreateDailyReportInput) {
 	input.CompletedWork = sanitizeCompletedWorkInputs(input.CompletedWork)
 	input.HelpRequests = sanitizeHelpRequestInputs(input.HelpRequests)
 	input.TomorrowPlans = sanitizeTomorrowPlanInputs(input.TomorrowPlans)
+}
+
+func (s *dailyReportService) syncReportFile(ctx context.Context, report *models.DailyReport) error {
+	if s.storage == nil || report == nil {
+		return nil
+	}
+
+	data, err := serializeReport(report)
+	if err != nil {
+		return err
+	}
+
+	bucket := s.reportBucket()
+	object := reportObjectKey(report.ID)
+	path := fmt.Sprintf("%s/%s", bucket, object)
+
+	if err := s.storage.Upload(ctx, bucket, object, data, "application/json", map[string]string{"report_id": report.ID.String()}); err != nil {
+		return err
+	}
+
+	if err := s.repo.UpdateReportStorage(ctx, report.ID, path); err != nil {
+		return err
+	}
+
+	report.StorageObject = path
+	return nil
+}
+
+func (s *dailyReportService) removeReportFile(ctx context.Context, report *models.DailyReport) error {
+	if s.storage == nil || report == nil {
+		return nil
+	}
+
+	bucket, object := splitStoragePath(report.StorageObject)
+	if bucket == "" || object == "" {
+		return nil
+	}
+
+	return s.storage.Delete(ctx, bucket, object)
+}
+
+func (s *dailyReportService) reportBucket() string {
+	bucket := strings.TrimSpace(s.cfg.ReportBucket)
+	if bucket == "" {
+		return "reports"
+	}
+	return bucket
+}
+
+func serializeReport(report *models.DailyReport) ([]byte, error) {
+	if report == nil {
+		return nil, domain.ErrInvalidInput
+	}
+
+	payload := reportFilePayload{
+		ID:            report.ID.String(),
+		UserID:        report.UserID.String(),
+		Checked:       report.Checked,
+		ReportDate:    report.ReportDate,
+		CreatedAt:     report.CreatedAt,
+		UpdatedAt:     report.UpdatedAt,
+		CompletedWork: report.CompletedWork,
+		HelpRequests:  report.HelpRequests,
+		TomorrowPlans: report.TomorrowPlans,
+		Problems:      report.ReportProblems,
+	}
+
+	return json.Marshal(payload)
+}
+
+func reportObjectKey(id uuid.UUID) string {
+	return fmt.Sprintf("%s.json", id.String())
+}
+
+func splitStoragePath(path string) (string, string) {
+	trimmed := strings.TrimSpace(path)
+	if trimmed == "" {
+		return "", ""
+	}
+	parts := strings.SplitN(trimmed, "/", 2)
+	if len(parts) != 2 {
+		return "", ""
+	}
+	return parts[0], parts[1]
+}
+
+type reportFilePayload struct {
+	ID            string                 `json:"id"`
+	UserID        string                 `json:"user_id"`
+	Checked       *int8                  `json:"checked,omitempty"`
+	ReportDate    *time.Time             `json:"report_date,omitempty"`
+	CreatedAt     *time.Time             `json:"created_at,omitempty"`
+	UpdatedAt     *time.Time             `json:"updated_at,omitempty"`
+	CompletedWork []models.CompletedWork `json:"completed_work,omitempty"`
+	HelpRequests  []models.HelpRequest   `json:"help_requests,omitempty"`
+	TomorrowPlans []models.TomorrowPlans `json:"tomorrow_plans,omitempty"`
+	Problems      []models.ReportProblem `json:"problems,omitempty"`
 }
 
 func sanitizeUpdateReportInputs(input *ports.UpdateDailyReportInput) {
@@ -200,11 +374,11 @@ func buildDailyReportsWorkbook(reports []models.DailyReport, startDate, endDate 
 	buffer := &bytes.Buffer{}
 	writer := zip.NewWriter(buffer)
 	files := map[string]string{
-		"[Content_Types].xml":        contentTypesXML,
-		"_rels/.rels":                relationshipsXML,
-		"xl/workbook.xml":            workbookXML,
-		"xl/_rels/workbook.xml.rels": workbookRelationshipsXML,
-		"xl/styles.xml":              stylesXML,
+		"[Content_Types].xml":        exel.ContentTypesXML,
+		"_rels/.rels":                exel.RelationshipsXML,
+		"xl/workbook.xml":            exel.WorkbookXML,
+		"xl/_rels/workbook.xml.rels": exel.WorkbookRelationshipsXML,
+		"xl/styles.xml":              exel.StylesXML,
 		"xl/worksheets/sheet1.xml":   sheetXML,
 	}
 
@@ -268,14 +442,9 @@ func describeCompletedWork(item *models.CompletedWork) string {
 }
 
 func buildSheetXML(users []string, dates []time.Time, data map[string]map[string][]string) string {
-	const (
-		xmlHeader = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>`
-		namespace = `xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"`
-	)
-
 	builder := &strings.Builder{}
-	builder.WriteString(xmlHeader)
-	builder.WriteString("<worksheet " + namespace + "><sheetData>")
+	builder.WriteString(exel.XmlHeader)
+	builder.WriteString("<worksheet " + exel.Namespace + "><sheetData>")
 
 	builder.WriteString(`<row r="1">`)
 	writeInlineCell(builder, "A1", "User")
@@ -321,38 +490,10 @@ func columnName(index int) string {
 	result := ""
 	for index > 0 {
 		index--
-		result = string('A'+(index%26)) + result
+		result = string(rune('A'+(index%26))) + result
 		index /= 26
 	}
 	return result
 }
-
-const (
-	contentTypesXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-	<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-	<Default Extension="xml" ContentType="application/xml"/>
-	<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-	<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-	<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
-</Types>`
-	relationshipsXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-	<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>`
-	workbookXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-	<sheets>
-		<sheet name="Reports" sheetId="1" r:id="rId1"/>
-	</sheets>
-</workbook>`
-	workbookRelationshipsXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-	<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-	<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
-</Relationships>`
-	stylesXML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"></styleSheet>`
-)
 
 var _ ports.DailyReportService = (*dailyReportService)(nil)

@@ -66,3 +66,40 @@ func Migrate(db *gorm.DB, logger *slog.Logger) error {
 	logger.Info("database migrations applied")
 	return nil
 }
+
+func Rollback(db *gorm.DB, logger *slog.Logger) error {
+	tables := []interface{}{
+		&models.ReportProblem{},
+		&models.TomorrowPlans{},
+		&models.CompletedWork{},
+		&models.HelpRequest{},
+		&models.DailyReport{},
+		&models.Attendance{},
+		&models.Task{},
+		&models.Status{},
+		&models.Board{},
+		&models.ProjectTeam{},
+		&models.TeamMember{},
+		&models.Team{},
+		&models.Subscription{},
+		&models.ForumMessage{},
+		&models.Problem{},
+		&models.Project{},
+		&models.UserRole{},
+		&models.Role{},
+		&models.User{},
+	}
+
+	for _, table := range tables {
+		if !db.Migrator().HasTable(table) {
+			continue
+		}
+		if err := db.Migrator().DropTable(table); err != nil {
+			logger.Error("drop table failed", slog.String("error", err.Error()))
+			return err
+		}
+	}
+
+	logger.Info("database migrations rolled back")
+	return nil
+}

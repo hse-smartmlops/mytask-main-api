@@ -40,16 +40,32 @@ type CreateUserInput struct {
 	LastName      *string
 }
 
+type SaveUserAvatarInput struct {
+	Data        []byte
+	ContentType string
+}
+
+type UserAvatarFile struct {
+	FileName    string
+	ContentType string
+	Data        []byte
+}
+
 type UserRepository interface {
 	ListUsers(ctx context.Context, params PaginationParams) (*Page[models.User], error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error)
 	CreateUser(ctx context.Context, user *models.User) error
+	UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatarPath string) error
+	ClearUserAvatar(ctx context.Context, id uuid.UUID) error
 }
 
 type UserService interface {
 	ListUsers(ctx context.Context, params PaginationParams) (*Page[models.User], error)
 	GetUser(ctx context.Context, id uuid.UUID) (*models.User, error)
 	CreateUser(ctx context.Context, input CreateUserInput) (*models.User, error)
+	SaveAvatar(ctx context.Context, id uuid.UUID, input SaveUserAvatarInput) (*models.User, error)
+	DeleteAvatar(ctx context.Context, id uuid.UUID) (*models.User, error)
+	GetAvatar(ctx context.Context, id uuid.UUID) (*UserAvatarFile, error)
 }
 
 type AuthTokens struct {
@@ -59,6 +75,14 @@ type AuthTokens struct {
 	RefreshExpiresIn int
 	TokenType        string
 	ExpiresAt        time.Time
+}
+
+type AuthRepositoryTokens struct {
+	AccessToken      string
+	RefreshToken     string
+	ExpiresIn        int
+	RefreshExpiresIn int
+	TokenType        string
 }
 
 type AuthLoginResult struct {
@@ -81,12 +105,27 @@ type AuthUserInfo struct {
 	EmailVerified     bool
 }
 
+type AuthRepository interface {
+	Login(ctx context.Context, email, password string) (*AuthRepositoryTokens, error)
+	RefreshToken(ctx context.Context, refreshToken string) (*AuthRepositoryTokens, error)
+	Logout(ctx context.Context, refreshToken string) error
+	UserInfo(ctx context.Context, token string) (*AuthUserInfo, error)
+	Introspect(ctx context.Context, token string) (bool, error)
+	ExchangeToken(ctx context.Context, subjectToken string) (*AuthRepositoryTokens, error)
+}
+
 type AuthService interface {
 	TokenValidator
 	Login(ctx context.Context, email, password string) (*AuthLoginResult, error)
 	Logout(ctx context.Context, refreshToken string) error
 	GetUserInfo(ctx context.Context, token string) (*AuthUserInfo, error)
 	RefreshToken(ctx context.Context, refreshToken string) (*AuthRefreshResult, error)
+}
+
+type ObjectStorage interface {
+	Upload(ctx context.Context, bucket, object string, data []byte, contentType string, metadata map[string]string) error
+	Delete(ctx context.Context, bucket, object string) error
+	Get(ctx context.Context, bucket, object string) ([]byte, string, error)
 }
 
 type CreateRoleInput struct {
@@ -449,10 +488,17 @@ type DailyReportRepository interface {
 	CreateReport(ctx context.Context, input CreateDailyReportInput) (*models.DailyReport, error)
 	UpdateReport(ctx context.Context, id uuid.UUID, input UpdateDailyReportInput) (*models.DailyReport, error)
 	SoftDeleteReport(ctx context.Context, id uuid.UUID) error
+	UpdateReportStorage(ctx context.Context, id uuid.UUID, storageObject string) error
 	UpdateCompletedWork(ctx context.Context, id uuid.UUID, input UpdateCompletedWorkInput) (*models.CompletedWork, error)
 	UpdateHelpRequest(ctx context.Context, id uuid.UUID, input UpdateHelpRequestInput) (*models.HelpRequest, error)
 	SoftDeleteHelpRequest(ctx context.Context, id uuid.UUID) error
 	UpdateTomorrowPlan(ctx context.Context, id uuid.UUID, input UpdateTomorrowPlanInput) (*models.TomorrowPlans, error)
+}
+
+type ReportFile struct {
+	FileName    string
+	ContentType string
+	Data        []byte
 }
 
 type DailyReportService interface {
@@ -471,6 +517,7 @@ type DailyReportService interface {
 	DeleteHelpRequest(ctx context.Context, id uuid.UUID) error
 	UpdateTomorrowPlan(ctx context.Context, id uuid.UUID, input UpdateTomorrowPlanInput) (*models.TomorrowPlans, error)
 	ExportReportsToXLSX(ctx context.Context, input ReportsByDateInput) ([]byte, error)
+	DownloadReportFile(ctx context.Context, id uuid.UUID) (*ReportFile, error)
 }
 
 type CreateProblemInput struct {

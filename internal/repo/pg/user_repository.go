@@ -2,6 +2,7 @@ package pg
 
 import (
 	"context"
+	"time"
 
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -61,6 +62,40 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models
 
 func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
+}
+
+func (r *UserRepository) UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatarPath string) error {
+	updates := map[string]interface{}{
+		"avatar_path": avatarPath,
+		"updated_at":  time.Now().UTC(),
+	}
+	res := r.db.WithContext(ctx).Model(&models.User{}).
+		Where("id = ? AND deleted = FALSE", id).
+		Updates(updates)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
+func (r *UserRepository) ClearUserAvatar(ctx context.Context, id uuid.UUID) error {
+	updates := map[string]interface{}{
+		"avatar_path": "",
+		"updated_at":  time.Now().UTC(),
+	}
+	res := r.db.WithContext(ctx).Model(&models.User{}).
+		Where("id = ? AND deleted = FALSE", id).
+		Updates(updates)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
 }
 
 var _ ports.UserRepository = (*UserRepository)(nil)

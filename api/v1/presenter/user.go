@@ -1,6 +1,9 @@
 package presenter
 
 import (
+	"fmt"
+	"strings"
+
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/internal/app/ports"
@@ -10,6 +13,12 @@ import (
 func ToUserDTO(user *models.User) response.User {
 	if user == nil {
 		return response.User{}
+	}
+
+	var avatarURL *string
+	if strings.TrimSpace(user.AvatarPath) != "" {
+		url := fmt.Sprintf("/v1/users/%s/avatar", user.ID.String())
+		avatarURL = &url
 	}
 
 	return response.User{
@@ -25,6 +34,7 @@ func ToUserDTO(user *models.User) response.User {
 		LastLogin:     user.LastLogin,
 		CreatedAt:     user.CreatedAt,
 		UpdatedAt:     user.UpdatedAt,
+		AvatarURL:     avatarURL,
 	}
 }
 

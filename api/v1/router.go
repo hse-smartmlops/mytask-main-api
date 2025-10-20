@@ -2,6 +2,7 @@ package v1
 
 import (
 	"emplacc-api/api/v1/handlers"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/internal/app/ports"
 
 	"github.com/labstack/echo/v4"
@@ -25,6 +26,7 @@ type Deps struct {
 }
 
 func RegisterRoutes(group *echo.Group, deps Deps) {
+	group.Use(middleware.TraceMeta())
 	if deps.AuthService != nil {
 		handlers.RegisterAuthRoutes(group, deps.AuthService)
 	}

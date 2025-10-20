@@ -36,6 +36,7 @@ func RegisterDailyReportRoutes(group *echo.Group, service ports.DailyReportServi
 	group.GET("/report/:id", handler.GetReport)
 	group.PATCH("/report/:id", handler.UpdateReport)
 	group.DELETE("/report/:id", handler.DeleteReport)
+	group.GET("/report/:id/download", handler.DownloadReportFile)
 	group.GET("/report/all/:page/:page_size", handler.ListReports)
 	group.GET("/report/all", handler.ListReports)
 	group.GET("/report/user/:id/:page/:page_size", handler.ListReportsByUser)
@@ -256,6 +257,35 @@ func (h *DailyReportHandler) GetReport(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToReportDTO(report)))
+}
+
+// @Summary Download Report File
+// @Description Download the file associated with a daily report
+// @Tags Reports
+// @Accept json
+// @Produce octet-stream
+// @Param id path string true "Report ID"
+// @Success 200 {file} file
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /report/{id}/download [get]
+func (h *DailyReportHandler) DownloadReportFile(c echo.Context) error {
+	id, err := parseUUID(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
+	}
+
+	file, err := h.service.DownloadReportFile(c.Request().Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return c.JSON(http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
+		}
+		return c.JSON(http.StatusInternalServerError, dto.NewError("report_file_failed", "failed to download report"))
+	}
+
+	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.FileName))
+	return c.Blob(http.StatusOK, file.ContentType, file.Data)
 }
 
 // @Summary Update Report

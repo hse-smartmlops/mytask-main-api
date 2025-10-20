@@ -9,6 +9,7 @@ import (
 	appdb "emplacc-api/internal/app/db"
 	"emplacc-api/internal/config"
 	"emplacc-api/internal/migrations"
+	minioRepo "emplacc-api/internal/repo/minio"
 	pkglogger "emplacc-api/pkg/logger"
 	"emplacc-api/pkg/tracing"
 
@@ -42,7 +43,12 @@ func Run(ctx context.Context) error {
 		}
 	}
 
-	container := NewContainer(cfg, db)
+	storage, err := minioRepo.NewStorage(cfg.Minio)
+	if err != nil {
+		logger.Warn("failed to initialize object storage", slog.String("error", err.Error()))
+	}
+
+	container := NewContainer(cfg, db, storage)
 
 	tracerProvider, tracerShutdown, err := setupTracing(ctx, cfg, logger)
 	if err != nil {

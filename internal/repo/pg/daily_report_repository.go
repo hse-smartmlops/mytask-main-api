@@ -261,6 +261,23 @@ func (r *DailyReportRepository) SoftDeleteReport(ctx context.Context, id uuid.UU
 	})
 }
 
+func (r *DailyReportRepository) UpdateReportStorage(ctx context.Context, id uuid.UUID, storageObject string) error {
+	updates := map[string]interface{}{
+		"storage_object": storageObject,
+		"updated_at":     timePtr(time.Now().UTC()),
+	}
+	res := r.db.WithContext(ctx).Model(&models.DailyReport{}).
+		Where("id = ? AND (deleted = FALSE OR deleted IS NULL)", id).
+		Updates(updates)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return domain.ErrNotFound
+	}
+	return nil
+}
+
 func (r *DailyReportRepository) UpdateCompletedWork(ctx context.Context, id uuid.UUID, input ports.UpdateCompletedWorkInput) (*models.CompletedWork, error) {
 	updates := map[string]interface{}{"updated_at": timePtr(time.Now().UTC())}
 	if input.Description != nil {

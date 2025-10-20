@@ -1,12 +1,16 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"emplacc-api/api/v1/dto"
+
 	"github.com/google/uuid"
+	"github.com/labstack/echo/v4"
 )
 
 func parsePositiveInt(value string, fallback int) int {
@@ -167,4 +171,64 @@ func resolvePagination(pathPage, pathSize, queryPage, querySize string, defaultP
 	}
 
 	return page, size
+}
+
+func extractBearerToken(header string) (string, error) {
+	if strings.TrimSpace(header) == "" {
+		return "", errors.New("authorization header is required")
+	}
+	const prefix = "Bearer "
+	if strings.HasPrefix(header, prefix) {
+		token := strings.TrimSpace(header[len(prefix):])
+		if token == "" {
+			return "", errors.New("authorization header contains empty token")
+		}
+		return token, nil
+	}
+	trimmed := strings.TrimSpace(header)
+	if trimmed == "" {
+		return "", errors.New("authorization header contains empty token")
+	}
+	return trimmed, nil
+}
+
+func resolveAuthToken(c echo.Context) string {
+	if raw := c.Get("auth_token"); raw != nil {
+		if token, ok := raw.(string); ok {
+			trimmed := strings.TrimSpace(token)
+			if trimmed != "" {
+				return trimmed
+			}
+		}
+	}
+
+	token, err := extractBearerToken(c.Request().Header.Get(echo.HeaderAuthorization))
+	if err != nil {
+		return ""
+	}
+	return token
+}
+
+func respondSuccess[T any](c echo.Context, status int, data T) error {
+	resp := dto.NewSuccessResponse(data)
+	resp.Meta.TraceID = requestTraceID(c)
+	return c.JSON(status, resp)
+}
+
+func respondPaginated[T any](c echo.Context, status int, data T, pagination dto.Pagination) error {
+	resp := dto.NewPaginatedResponse(data, pagination)
+	resp.Meta.TraceID = requestTraceID(c)
+	return c.JSON(status, resp)
+}
+
+func respondError(c echo.Context, status int, err dto.ErrorResponse) error {
+	err.Meta.TraceID = requestTraceID(c)
+	return c.JSON(status, err)
+}
+
+func requestTraceID(c echo.Context) string {
+	if traceID := c.Response().Header().Get(echo.HeaderXRequestID); traceID != "" {
+		return traceID
+	}
+	return c.Request().Header.Get(echo.HeaderXRequestID)
 }

@@ -18,6 +18,7 @@ type Config struct {
 	Swagger    SwaggerConfig
 	Tracing    TracingConfig
 	Keycloak   KeycloakConfig
+	Minio      MinioConfig
 	Pagination PaginationConfig
 }
 
@@ -55,8 +56,13 @@ type DatabaseConfig struct {
 }
 
 type LoggerConfig struct {
-	Level  string
-	Format string
+	Level      string
+	Format     string
+	File       string
+	MaxSizeMB  int
+	MaxBackups int
+	MaxAgeDays int
+	Compress   bool
 }
 
 type SwaggerConfig struct {
@@ -92,6 +98,16 @@ type KeycloakConfig struct {
 	TokenExchangeEnabled bool
 }
 
+type MinioConfig struct {
+	Endpoint     string
+	AccessKey    string
+	SecretKey    string
+	UseSSL       bool
+	Region       string
+	AvatarBucket string
+	ReportBucket string
+}
+
 func Load() (*Config, error) {
 	_ = godotenv.Load(".env")
 
@@ -118,6 +134,21 @@ func Load() (*Config, error) {
 	connMaxLifetime, err := toDuration(getEnv("DB_CONN_MAX_LIFETIME", "1h"))
 	if err != nil {
 		return nil, fmt.Errorf("parse DB_CONN_MAX_LIFETIME: %w", err)
+	}
+
+	logMaxSize, err := toInt(getEnv("LOG_MAX_SIZE_MB", "50"))
+	if err != nil {
+		return nil, fmt.Errorf("parse LOG_MAX_SIZE_MB: %w", err)
+	}
+
+	logMaxBackups, err := toInt(getEnv("LOG_MAX_BACKUPS", "5"))
+	if err != nil {
+		return nil, fmt.Errorf("parse LOG_MAX_BACKUPS: %w", err)
+	}
+
+	logMaxAge, err := toInt(getEnv("LOG_MAX_AGE_DAYS", "30"))
+	if err != nil {
+		return nil, fmt.Errorf("parse LOG_MAX_AGE_DAYS: %w", err)
 	}
 
 	readTimeout, err := toDuration(getEnv("SERVER_READ_TIMEOUT", "15s"))
@@ -182,8 +213,13 @@ func Load() (*Config, error) {
 			AutoMigrate:     toBool(getEnv("DB_AUTO_MIGRATE", "true")),
 		},
 		Logger: LoggerConfig{
-			Level:  getEnv("LOG_LEVEL", "info"),
-			Format: getEnv("LOG_FORMAT", "text"),
+			Level:      getEnv("LOG_LEVEL", "info"),
+			Format:     getEnv("LOG_FORMAT", "text"),
+			File:       getEnv("LOG_FILE", ""),
+			MaxSizeMB:  logMaxSize,
+			MaxBackups: logMaxBackups,
+			MaxAgeDays: logMaxAge,
+			Compress:   toBool(getEnv("LOG_COMPRESS", "true")),
 		},
 		Swagger: SwaggerConfig{
 			Enabled:     toBool(getEnv("SWAGGER_ENABLED", "true")),
@@ -209,6 +245,15 @@ func Load() (*Config, error) {
 			BackendClientID:      getEnv("KEYCLOAK_BACKEND_CLIENT_ID", ""),
 			BackendClientSecret:  getEnv("KEYCLOAK_BACKEND_CLIENT_SECRET", ""),
 			TokenExchangeEnabled: toBool(getEnv("KEYCLOAK_TOKEN_EXCHANGE_ENABLED", "false")),
+		},
+		Minio: MinioConfig{
+			Endpoint:     getEnv("MINIO_ENDPOINT", ""),
+			AccessKey:    getEnv("MINIO_ACCESS_KEY", ""),
+			SecretKey:    getEnv("MINIO_SECRET_KEY", ""),
+			UseSSL:       toBool(getEnv("MINIO_USE_SSL", "false")),
+			Region:       getEnv("MINIO_REGION", ""),
+			AvatarBucket: getEnv("MINIO_AVATAR_BUCKET", "avatars"),
+			ReportBucket: getEnv("MINIO_REPORT_BUCKET", "reports"),
 		},
 		Pagination: PaginationConfig{
 			DefaultLimit: defaultLimit,

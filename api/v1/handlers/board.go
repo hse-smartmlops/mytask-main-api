@@ -57,11 +57,11 @@ func (h *BoardHandler) ListBoards(c echo.Context) error {
 
 	page, err := h.service.ListBoards(c.Request().Context(), params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to list boards"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to list boards"))
 	}
 
 	pagination, payload := presenter.MapBoardsPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Board
@@ -78,18 +78,18 @@ func (h *BoardHandler) ListBoards(c echo.Context) error {
 func (h *BoardHandler) GetBoard(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}
 
 	board, err := h.service.GetBoard(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("board_not_found", "board not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("board_not_found", "board not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to get board"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to get board"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToBoardDTO(board)))
+	return respondSuccess(c, http.StatusOK, presenter.ToBoardDTO(board))
 }
 
 // @Summary Create Board
@@ -103,7 +103,7 @@ func (h *BoardHandler) GetBoard(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /boards [post]
 func (h *BoardHandler) CreateBoard(c echo.Context) error {
-	req, err := middleware.BindAndValidate[request.CreateBoard](c, validateCreateBoardPayload)
+	req, err := middleware.BindAndValidate[request.CreateBoard](c, middleware.ValidateCreateBoardPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -116,12 +116,12 @@ func (h *BoardHandler) CreateBoard(c echo.Context) error {
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("board_create_failed", "failed to create board"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("board_create_failed", "failed to create board"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToBoardDTO(board)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToBoardDTO(board))
 }
 
 // @Summary Update Board
@@ -139,10 +139,10 @@ func (h *BoardHandler) CreateBoard(c echo.Context) error {
 func (h *BoardHandler) UpdateBoard(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}
 
-	req, err := middleware.BindAndValidate[request.UpdateBoard](c, validateUpdateBoardPayload)
+	req, err := middleware.BindAndValidate[request.UpdateBoard](c, middleware.ValidateUpdateBoardPayload)
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
@@ -154,15 +154,15 @@ func (h *BoardHandler) UpdateBoard(c echo.Context) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("board_not_found", "board not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("board_not_found", "board not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("board_update_failed", "failed to update board"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("board_update_failed", "failed to update board"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToBoardDTO(board)))
+	return respondSuccess(c, http.StatusOK, presenter.ToBoardDTO(board))
 }
 
 // @Summary Delete Board
@@ -179,14 +179,14 @@ func (h *BoardHandler) UpdateBoard(c echo.Context) error {
 func (h *BoardHandler) DeleteBoard(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}
 
 	if err := h.service.DeleteBoard(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("board_not_found", "board not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("board_not_found", "board not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("board_delete_failed", "failed to delete board"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("board_delete_failed", "failed to delete board"))
 	}
 
 	return c.NoContent(http.StatusNoContent)
@@ -205,12 +205,12 @@ func (h *BoardHandler) DeleteBoard(c echo.Context) error {
 func (h *BoardHandler) ListBoardsByProject(c echo.Context) error {
 	projectID, err := parseUUID(c.Param("project_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
 	boards, err := h.service.ListBoardsByProject(c.Request().Context(), projectID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to list boards"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to list boards"))
 	}
 
 	items := make([]response.Board, len(boards))
@@ -218,5 +218,5 @@ func (h *BoardHandler) ListBoardsByProject(c echo.Context) error {
 		items[i] = presenter.ToBoardDTO(&boards[i])
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(items))
+	return respondSuccess(c, http.StatusOK, items)
 }

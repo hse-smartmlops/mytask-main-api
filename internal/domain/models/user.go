@@ -20,6 +20,7 @@ type User struct {
 	LastLogin     time.Time
 	Deleted       bool      `gorm:"type:boolean"`
 	UpdatedAt     time.Time `gorm:"type:timestamp"`
+	AvatarPath    string    `gorm:"size:255"`
 
 	UserRoles []UserRole `gorm:"foreignKey:UserID;references:ID"`
 }

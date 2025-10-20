@@ -15,6 +15,7 @@ type User struct {
 	LastLogin     time.Time `json:"last_login"`
 	CreatedAt     time.Time `json:"created_at"`
 	UpdatedAt     time.Time `json:"updated_at"`
+	AvatarURL     *string   `json:"avatar_url,omitempty"`
 }
 
 type UsersPage struct {
