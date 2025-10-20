@@ -1354,50 +1354,6 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
-            "post": {
-                "description": "Create a new project",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Projects"
-                ],
-                "summary": "Create Project",
-                "parameters": [
-                    {
-                        "description": "Project creation payload",
-                        "name": "project",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/emplacc-api_api_v1_dto_request.CreateProject"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ProjectResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
-                        }
-                    }
-                }
             }
         },
         "/projects/{id}": {
@@ -1771,6 +1727,36 @@ const docTemplate = `{
                         "description": "Page size",
                         "name": "page_size",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by project ID",
+                        "name": "project_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by task ID",
+                        "name": "task_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by start date (YYYY-MM-DD)",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by end date (YYYY-MM-DD)",
+                        "name": "end_date",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1835,52 +1821,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/report/export/xlsx": {
-            "post": {
-                "description": "Export daily reports within a specified date range to an XLSX file",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                ],
-                "tags": [
-                    "Reports"
-                ],
-                "summary": "Export Reports to XLSX",
-                "parameters": [
-                    {
-                        "description": "Reports export request payload",
-                        "name": "export_request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/emplacc-api_api_v1_dto_request.ReportsByDate"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "XLSX file containing the exported reports",
-                        "schema": {
-                            "type": "file"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
                         }
@@ -3928,6 +3868,159 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/{id}/avatar": {
+            "get": {
+                "description": "Retrieve the user's avatar image",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "image/png"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Download User Avatar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Upload or update a user's avatar image scaled to 256x256",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Upload User Avatar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Avatar image",
+                        "name": "avatar",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Remove the user's avatar from storage",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete User Avatar",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{user_id}/attendance": {
             "get": {
                 "description": "Retrieve a list of attendances for a specific user",
@@ -4671,29 +4764,6 @@ const docTemplate = `{
                 }
             }
         },
-        "emplacc-api_api_v1_dto_request.CreateProject": {
-            "type": "object",
-            "properties": {
-                "created_by": {
-                    "type": "string"
-                },
-                "description": {
-                    "type": "string"
-                },
-                "gitlab_project_id": {
-                    "type": "integer"
-                },
-                "gitlab_url": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
         "emplacc-api_api_v1_dto_request.CreateRole": {
             "type": "object",
             "properties": {
@@ -4948,17 +5018,6 @@ const docTemplate = `{
                     }
                 },
                 "report_date": {
-                    "type": "string"
-                }
-            }
-        },
-        "emplacc-api_api_v1_dto_request.ReportsByDate": {
-            "type": "object",
-            "properties": {
-                "end_date": {
-                    "type": "string"
-                },
-                "start_date": {
                     "type": "string"
                 }
             }
@@ -5898,6 +5957,9 @@ const docTemplate = `{
         "emplacc-api_api_v1_dto_response.User": {
             "type": "object",
             "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },

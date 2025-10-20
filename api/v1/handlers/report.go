@@ -19,6 +19,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+var (
+	_ request.ReportCreate
+	_ request.ReportUpdate
+	_ request.CompletedWorkUpdate
+	_ request.HelpRequestUpdate
+	_ request.TomorrowPlanUpdate
+	_ request.ReportsByDate
+)
+
 type DailyReportHandler struct {
 	service ports.DailyReportService
 }

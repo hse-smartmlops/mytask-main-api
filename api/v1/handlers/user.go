@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
+	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -14,6 +15,10 @@ import (
 )
 
 const maxAvatarSize = 5 << 20
+
+var (
+	_ request.CreateUser
+)
 
 type UserHandler struct {
 	service ports.UserService

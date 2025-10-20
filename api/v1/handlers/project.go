@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
+	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -12,6 +13,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	_ request.CreateProject
+	_ request.UpdateProject
 )
 
 type ProjectHandler struct {

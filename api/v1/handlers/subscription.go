@@ -5,12 +5,17 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
+	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
 
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	_ request.CreateSubscription
 )
 
 type SubscriptionHandler struct {

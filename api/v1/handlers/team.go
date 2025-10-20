@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
+	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
@@ -12,6 +13,13 @@ import (
 	"emplacc-api/internal/domain"
 
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	_ request.CreateTeam
+	_ request.UpdateTeam
+	_ request.AddTeamMember
+	_ request.AddTeamProject
 )
 
 type TeamHandler struct {

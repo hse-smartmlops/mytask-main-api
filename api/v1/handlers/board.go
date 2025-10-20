@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
+	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
@@ -13,6 +14,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	_ request.CreateBoard
+	_ request.UpdateBoard
 )
 
 type BoardHandler struct {

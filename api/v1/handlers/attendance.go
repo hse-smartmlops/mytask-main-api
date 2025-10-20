@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
+	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -12,6 +13,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	_ request.CreateAttendance
+	_ request.UpdateAttendance
 )
 
 type AttendanceHandler struct {
@@ -132,7 +138,7 @@ func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /attendance [post]
 func (h *AttendanceHandler) CreateAttendance(c echo.Context) error {
-	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateAttendancePayload)
+	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateAttendancePayload) // don't show this error
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}

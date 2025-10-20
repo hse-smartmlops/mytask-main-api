@@ -370,21 +370,6 @@ definitions:
       name:
         type: string
     type: object
-  emplacc-api_api_v1_dto_request.CreateProject:
-    properties:
-      created_by:
-        type: string
-      description:
-        type: string
-      gitlab_project_id:
-        type: integer
-      gitlab_url:
-        type: string
-      name:
-        type: string
-      status:
-        type: string
-    type: object
   emplacc-api_api_v1_dto_request.CreateRole:
     properties:
       description:
@@ -551,13 +536,6 @@ definitions:
           type: string
         type: array
       report_date:
-        type: string
-    type: object
-  emplacc-api_api_v1_dto_request.ReportsByDate:
-    properties:
-      end_date:
-        type: string
-      start_date:
         type: string
     type: object
   emplacc-api_api_v1_dto_request.TomorrowPlanUpdate:
@@ -1168,6 +1146,8 @@ definitions:
     type: object
   emplacc-api_api_v1_dto_response.User:
     properties:
+      avatar_url:
+        type: string
       created_at:
         type: string
       email:
@@ -2123,35 +2103,6 @@ paths:
       summary: List Projects
       tags:
       - Projects
-    post:
-      consumes:
-      - application/json
-      description: Create a new project
-      parameters:
-      - description: Project creation payload
-        in: body
-        name: project
-        required: true
-        schema:
-          $ref: '#/definitions/emplacc-api_api_v1_dto_request.CreateProject'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/emplacc-api_api_v1_dto.ProjectResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
-      summary: Create Project
-      tags:
-      - Projects
   /projects/{id}:
     delete:
       consumes:
@@ -2499,6 +2450,26 @@ paths:
         in: query
         name: page_size
         type: integer
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: string
+      - description: Filter by project ID
+        in: query
+        name: project_id
+        type: string
+      - description: Filter by task ID
+        in: query
+        name: task_id
+        type: string
+      - description: Filter by start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: Filter by end date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
       produces:
       - application/json
       responses:
@@ -2550,36 +2521,6 @@ paths:
           schema:
             $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
       summary: Update Completed Work
-      tags:
-      - Reports
-  /report/export/xlsx:
-    post:
-      consumes:
-      - application/json
-      description: Export daily reports within a specified date range to an XLSX file
-      parameters:
-      - description: Reports export request payload
-        in: body
-        name: export_request
-        required: true
-        schema:
-          $ref: '#/definitions/emplacc-api_api_v1_dto_request.ReportsByDate'
-      produces:
-      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-      responses:
-        "200":
-          description: XLSX file containing the exported reports
-          schema:
-            type: file
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
-      summary: Export Reports to XLSX
       tags:
       - Reports
   /report/help-request/{id}:
@@ -3827,6 +3768,108 @@ paths:
           schema:
             $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
       summary: Get User
+      tags:
+      - Users
+  /users/{id}/avatar:
+    delete:
+      consumes:
+      - application/json
+      description: Remove the user's avatar from storage
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+      summary: Delete User Avatar
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the user's avatar image
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+      summary: Download User Avatar
+      tags:
+      - Users
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload or update a user's avatar image scaled to 256x256
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Avatar image
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+      summary: Upload User Avatar
       tags:
       - Users
   /users/{user_id}/attendance:
