@@ -145,7 +145,7 @@ func (s *dailyReportService) UpdateTomorrowPlan(ctx context.Context, id uuid.UUI
 	return s.repo.UpdateTomorrowPlan(ctx, id, input)
 }
 
-func (s *dailyReportService) ExportReportsToXLSX(ctx context.Context, input ports.ReportsByDateInput) ([]byte, error) {
+func (s *dailyReportService) ExportReportsToXLSX(ctx context.Context, input ports.ReportsByDateInput, fileName string) ([]byte, error) {
 	if input.EndDate.Before(input.StartDate) {
 		return nil, domain.ErrInvalidInput
 	}
@@ -155,52 +155,23 @@ func (s *dailyReportService) ExportReportsToXLSX(ctx context.Context, input port
 		return nil, err
 	}
 
-	return buildDailyReportsWorkbook(reports, input.StartDate, input.EndDate)
-}
-
-func (s *dailyReportService) DownloadReportFile(ctx context.Context, id uuid.UUID) (*ports.ReportFile, error) {
-	report, err := s.repo.GetReportByID(ctx, id)
+	data, err := buildDailyReportsWorkbook(reports, input.StartDate, input.EndDate)
 	if err != nil {
 		return nil, err
 	}
 
-	filename := fmt.Sprintf("%s.json", id.String())
-
-	if s.storage == nil {
-		data, err := serializeReport(report)
-		if err != nil {
+	if s.storage != nil {
+		object := reportExportObjectKey(fileName)
+		metadata := map[string]string{
+			"start_date": input.StartDate.Format(time.RFC3339),
+			"end_date":   input.EndDate.Format(time.RFC3339),
+		}
+		if err := s.storage.Upload(ctx, s.reportBucket(), object, data, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", metadata); err != nil {
 			return nil, err
 		}
-		return &ports.ReportFile{FileName: filename, ContentType: "application/json", Data: data}, nil
 	}
 
-	bucket, object := splitStoragePath(report.StorageObject)
-	if bucket == "" || object == "" {
-		if err := s.syncReportFile(ctx, report); err != nil {
-			return nil, err
-		}
-		bucket, object = splitStoragePath(report.StorageObject)
-	}
-
-	data, contentType, err := s.storage.Get(ctx, bucket, object)
-	if err != nil {
-		payload, serr := serializeReport(report)
-		if serr != nil {
-			return nil, err
-		}
-		if uploadErr := s.storage.Upload(ctx, s.reportBucket(), reportObjectKey(report.ID), payload, "application/json", map[string]string{"report_id": report.ID.String()}); uploadErr == nil {
-			path := fmt.Sprintf("%s/%s", s.reportBucket(), reportObjectKey(report.ID))
-			_ = s.repo.UpdateReportStorage(ctx, report.ID, path)
-			report.StorageObject = path
-		}
-		return &ports.ReportFile{FileName: filename, ContentType: "application/json", Data: payload}, nil
-	}
-
-	if strings.TrimSpace(contentType) == "" {
-		contentType = "application/json"
-	}
-
-	return &ports.ReportFile{FileName: filename, ContentType: contentType, Data: data}, nil
+	return data, nil
 }
 
 func sanitizeReportInputs(input *ports.CreateDailyReportInput) {
@@ -304,6 +275,14 @@ type reportFilePayload struct {
 	HelpRequests  []models.HelpRequest   `json:"help_requests,omitempty"`
 	TomorrowPlans []models.TomorrowPlans `json:"tomorrow_plans,omitempty"`
 	Problems      []models.ReportProblem `json:"problems,omitempty"`
+}
+
+func reportExportObjectKey(fileName string) string {
+	name := strings.TrimSpace(fileName)
+	if name == "" {
+		name = fmt.Sprintf("reports_%d.xlsx", time.Now().Unix())
+	}
+	return fmt.Sprintf("exports/%d_%s", time.Now().UnixNano(), name)
 }
 
 func sanitizeUpdateReportInputs(input *ports.UpdateDailyReportInput) {

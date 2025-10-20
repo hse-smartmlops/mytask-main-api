@@ -495,12 +495,6 @@ type DailyReportRepository interface {
 	UpdateTomorrowPlan(ctx context.Context, id uuid.UUID, input UpdateTomorrowPlanInput) (*models.TomorrowPlans, error)
 }
 
-type ReportFile struct {
-	FileName    string
-	ContentType string
-	Data        []byte
-}
-
 type DailyReportService interface {
 	ListReports(ctx context.Context, params PaginationParams) (*Page[models.DailyReport], error)
 	ListReportsByUser(ctx context.Context, userID uuid.UUID, params PaginationParams) (*Page[models.DailyReport], error)
@@ -516,8 +510,7 @@ type DailyReportService interface {
 	UpdateHelpRequest(ctx context.Context, id uuid.UUID, input UpdateHelpRequestInput) (*models.HelpRequest, error)
 	DeleteHelpRequest(ctx context.Context, id uuid.UUID) error
 	UpdateTomorrowPlan(ctx context.Context, id uuid.UUID, input UpdateTomorrowPlanInput) (*models.TomorrowPlans, error)
-	ExportReportsToXLSX(ctx context.Context, input ReportsByDateInput) ([]byte, error)
-	DownloadReportFile(ctx context.Context, id uuid.UUID) (*ReportFile, error)
+	ExportReportsToXLSX(ctx context.Context, input ReportsByDateInput, fileName string) ([]byte, error)
 }
 
 type CreateProblemInput struct {

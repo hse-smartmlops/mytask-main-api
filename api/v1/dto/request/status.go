@@ -1,5 +1,7 @@
 package request
 
+import "github.com/google/uuid"
+
 type CreateStatus struct {
 	BoardID   string  `json:"board_id"`
 	Name      string  `json:"name"`
@@ -9,6 +11,8 @@ type CreateStatus struct {
 	IsActive  *bool   `json:"is_active,omitempty"`
 	IsOpen    *bool   `json:"is_open,omitempty"`
 	SortOrder *int    `json:"sort_order,omitempty"`
+
+	BoardUUID uuid.UUID `json:"-"`
 }
 
 type UpdateStatus struct {

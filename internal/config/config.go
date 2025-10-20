@@ -20,6 +20,7 @@ type Config struct {
 	Keycloak   KeycloakConfig
 	Minio      MinioConfig
 	Pagination PaginationConfig
+	RateLimit  RateLimitConfig
 }
 
 type AppConfig struct {
@@ -108,6 +109,16 @@ type MinioConfig struct {
 	ReportBucket string
 }
 
+type RateLimitConfig struct {
+	User RateLimitRule
+	IP   RateLimitRule
+}
+
+type RateLimitRule struct {
+	Requests int
+	Window   time.Duration
+}
+
 func Load() (*Config, error) {
 	_ = godotenv.Load(".env")
 
@@ -149,6 +160,24 @@ func Load() (*Config, error) {
 	logMaxAge, err := toInt(getEnv("LOG_MAX_AGE_DAYS", "30"))
 	if err != nil {
 		return nil, fmt.Errorf("parse LOG_MAX_AGE_DAYS: %w", err)
+	}
+
+	userRateRequests, err := toInt(getEnv("RATE_LIMIT_USER_REQUESTS", "0"))
+	if err != nil {
+		return nil, fmt.Errorf("parse RATE_LIMIT_USER_REQUESTS: %w", err)
+	}
+	userRateWindow, err := toDuration(getEnv("RATE_LIMIT_USER_WINDOW", "1m"))
+	if err != nil {
+		return nil, fmt.Errorf("parse RATE_LIMIT_USER_WINDOW: %w", err)
+	}
+
+	ipRateRequests, err := toInt(getEnv("RATE_LIMIT_IP_REQUESTS", "0"))
+	if err != nil {
+		return nil, fmt.Errorf("parse RATE_LIMIT_IP_REQUESTS: %w", err)
+	}
+	ipRateWindow, err := toDuration(getEnv("RATE_LIMIT_IP_WINDOW", "1m"))
+	if err != nil {
+		return nil, fmt.Errorf("parse RATE_LIMIT_IP_WINDOW: %w", err)
 	}
 
 	readTimeout, err := toDuration(getEnv("SERVER_READ_TIMEOUT", "15s"))
@@ -258,6 +287,16 @@ func Load() (*Config, error) {
 		Pagination: PaginationConfig{
 			DefaultLimit: defaultLimit,
 			MaxLimit:     maxLimit,
+		},
+		RateLimit: RateLimitConfig{
+			User: RateLimitRule{
+				Requests: userRateRequests,
+				Window:   userRateWindow,
+			},
+			IP: RateLimitRule{
+				Requests: ipRateRequests,
+				Window:   ipRateWindow,
+			},
 		},
 	}
 

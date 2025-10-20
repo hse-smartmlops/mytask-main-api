@@ -6,6 +6,7 @@ import (
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -46,18 +47,16 @@ func RegisterProjectRoutes(group *echo.Group, service ports.ProjectService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /projects [get]
 func (h *ProjectHandler) ListProjects(c echo.Context) error {
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
-	page, err := h.service.ListProjects(c.Request().Context(), params)
+	projectsPage, err := h.service.ListProjects(c.Request().Context(), params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("projects_fetch_failed", "failed to list projects"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("projects_fetch_failed", "failed to list projects"))
 	}
 
-	pagination, payload := presenter.MapProjectsPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	pagination, payload := presenter.MapProjectsPage(projectsPage)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Project
@@ -74,18 +73,18 @@ func (h *ProjectHandler) ListProjects(c echo.Context) error {
 func (h *ProjectHandler) GetProject(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
 	project, err := h.service.GetProject(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("project_not_found", "project not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("project_not_found", "project not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("projects_fetch_failed", "failed to get project"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("projects_fetch_failed", "failed to get project"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToProjectDTO(project)))
+	return respondSuccess(c, http.StatusOK, presenter.ToProjectDTO(project))
 }
 
 // @Summary Create Project
@@ -98,18 +97,16 @@ func (h *ProjectHandler) GetProject(c echo.Context) error {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /projects [post]
+
 func (h *ProjectHandler) CreateProject(c echo.Context) error {
-	var req request.CreateProject
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.CreateProject](c, middleware.ValidateCreateProjectPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	var createdBy *uuid.UUID
 	if req.CreatedBy != nil {
-		id, err := uuid.Parse(*req.CreatedBy)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "created_by must be a valid UUID"))
-		}
+		id, _ := uuid.Parse(*req.CreatedBy)
 		createdBy = &id
 	}
 
@@ -123,12 +120,12 @@ func (h *ProjectHandler) CreateProject(c echo.Context) error {
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("project_create_failed", "failed to create project"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("project_create_failed", "failed to create project"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToProjectDTO(project)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToProjectDTO(project))
 }
 
 // @Summary Update Project
@@ -149,9 +146,9 @@ func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	var req request.UpdateProject
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.UpdateProject](c, middleware.ValidateUpdateProjectPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	project, err := h.service.UpdateProject(c.Request().Context(), id, ports.UpdateProjectInput{
@@ -164,15 +161,15 @@ func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("project_not_found", "project not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("project_not_found", "project not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("project_update_failed", "failed to update project"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("project_update_failed", "failed to update project"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToProjectDTO(project)))
+	return respondSuccess(c, http.StatusOK, presenter.ToProjectDTO(project))
 }
 
 // @Summary Delete Project
@@ -189,14 +186,14 @@ func (h *ProjectHandler) UpdateProject(c echo.Context) error {
 func (h *ProjectHandler) DeleteProject(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
 	if err := h.service.DeleteProject(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("project_not_found", "project not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("project_not_found", "project not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("project_delete_failed", "failed to delete project"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("project_delete_failed", "failed to delete project"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

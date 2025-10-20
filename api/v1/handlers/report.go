@@ -10,6 +10,7 @@ import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -36,7 +37,6 @@ func RegisterDailyReportRoutes(group *echo.Group, service ports.DailyReportServi
 	group.GET("/report/:id", handler.GetReport)
 	group.PATCH("/report/:id", handler.UpdateReport)
 	group.DELETE("/report/:id", handler.DeleteReport)
-	group.GET("/report/:id/download", handler.DownloadReportFile)
 	group.GET("/report/all/:page/:page_size", handler.ListReports)
 	group.GET("/report/all", handler.ListReports)
 	group.GET("/report/user/:id/:page/:page_size", handler.ListReportsByUser)
@@ -257,35 +257,6 @@ func (h *DailyReportHandler) GetReport(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToReportDTO(report)))
-}
-
-// @Summary Download Report File
-// @Description Download the file associated with a daily report
-// @Tags Reports
-// @Accept json
-// @Produce octet-stream
-// @Param id path string true "Report ID"
-// @Success 200 {file} file
-// @Failure 400 {object} dto.ErrorResponse
-// @Failure 404 {object} dto.ErrorResponse
-// @Failure 500 {object} dto.ErrorResponse
-// @Router /report/{id}/download [get]
-func (h *DailyReportHandler) DownloadReportFile(c echo.Context) error {
-	id, err := parseUUID(c.Param("id"))
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid report identifier"))
-	}
-
-	file, err := h.service.DownloadReportFile(c.Request().Context(), id)
-	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("report_not_found", "report not found"))
-		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("report_file_failed", "failed to download report"))
-	}
-
-	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", file.FileName))
-	return c.Blob(http.StatusOK, file.ContentType, file.Data)
 }
 
 // @Summary Update Report
@@ -597,39 +568,33 @@ func (h *DailyReportHandler) UpdateTomorrowPlan(c echo.Context) error {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/export/xlsx [post]
-func (h *DailyReportHandler) ExportReportsXLSX(c echo.Context) error {
-	var req request.ReportsByDate
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
 
-	if strings.TrimSpace(req.StartDate) == "" || strings.TrimSpace(req.EndDate) == "" {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "start_date and end_date are required"))
+func (h *DailyReportHandler) ExportReportsXLSX(c echo.Context) error {
+	req, err := middleware.BindAndValidate[request.ReportsByDate](c, middleware.ValidateReportsByDatePayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	start, err := parseDateValue(req.StartDate)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "start_date must be a valid date"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "start_date must be a valid date"))
 	}
 	end, err := parseDateValue(req.EndDate)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "end_date must be a valid date"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "end_date must be a valid date"))
 	}
 
-	input := ports.ReportsByDateInput{
-		StartDate: start,
-		EndDate:   end,
-	}
+	input := ports.ReportsByDateInput{StartDate: start, EndDate: end}
+	fileName := fmt.Sprintf("reports_%s_%s.xlsx", start.Format("2006-01-02"), end.Format("2006-01-02"))
 
-	data, err := h.service.ExportReportsToXLSX(c.Request().Context(), input)
+	data, err := h.service.ExportReportsToXLSX(c.Request().Context(), input, fileName)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("report_export_failed", "failed to export reports"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("report_export_failed", "failed to export reports"))
 	}
 
-	fileName := fmt.Sprintf("reports_%s_%s.xlsx", start.Format("2006-01-02"), end.Format("2006-01-02"))
 	contentType := "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 	c.Response().Header().Set("Content-Type", contentType)
 	c.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))

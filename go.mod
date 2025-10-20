@@ -4,6 +4,7 @@ go 1.24.5
 
 require (
 	github.com/disintegration/imaging v1.6.2
+	github.com/go-gormigrate/gormigrate/v2 v2.1.5
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/labstack/echo/v4 v4.11.4
@@ -19,7 +20,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/driver/postgres v1.5.11
-	gorm.io/gorm v1.25.10
+	gorm.io/gorm v1.26.1
 )
 
 require (

@@ -10,6 +10,7 @@ import (
 	"emplacc-api/internal/repo/pg"
 	"emplacc-api/internal/service"
 
+	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
 )
 
@@ -28,6 +29,7 @@ type Container struct {
 	DailyReportService  ports.DailyReportService
 	ForumMessageService ports.ForumMessageService
 	tokenValidator      ports.TokenValidator
+	rateLimiter         echo.MiddlewareFunc
 }
 
 func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) *Container {
@@ -51,6 +53,8 @@ func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) 
 
 	authService := service.NewAuthService(cfg.Keycloak, authRepo, userRepo)
 
+	rateLimiter := v1middleware.NewRateLimiter(cfg.RateLimit)
+
 	return &Container{
 		AttendanceService:   service.NewAttendanceService(attendanceRepo),
 		AuthService:         authService,
@@ -66,6 +70,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) 
 		DailyReportService:  service.NewDailyReportService(reportRepo, minioStorage, cfg.Minio),
 		ForumMessageService: service.NewForumMessageService(forumRepo),
 		tokenValidator:      authService,
+		rateLimiter:         rateLimiter,
 	}
 }
 
@@ -85,5 +90,6 @@ func (c *Container) V1Deps() v1.Deps {
 		DailyReportService:  c.DailyReportService,
 		ForumMessageService: c.ForumMessageService,
 		AuthMiddleware:      v1middleware.KeycloakAuth(c.tokenValidator),
+		RateLimiter:         c.rateLimiter,
 	}
 }

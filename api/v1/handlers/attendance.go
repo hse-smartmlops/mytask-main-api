@@ -3,10 +3,10 @@ package handlers
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -52,24 +52,16 @@ func RegisterAttendanceRoutes(group *echo.Group, service ports.AttendanceService
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /attendance [get]
 func (h *AttendanceHandler) ListAttendances(c echo.Context) error {
-	page, pageSize := resolvePagination(
-		c.Param("page"),
-		c.Param("page_size"),
-		c.QueryParam("page"),
-		c.QueryParam("page_size"),
-		1,
-		20,
-	)
-
-	params := ports.PaginationParams{Page: page, PageSize: pageSize}
+	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: page, PageSize: size}
 
 	attendancesPage, err := h.service.ListAttendances(c.Request().Context(), params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to list attendances"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to list attendances"))
 	}
 
 	pagination, payload := presenter.MapAttendancesPage(attendancesPage)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Attendance
@@ -86,18 +78,18 @@ func (h *AttendanceHandler) ListAttendances(c echo.Context) error {
 func (h *AttendanceHandler) GetAttendance(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid attendance identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid attendance identifier"))
 	}
 
 	attendance, err := h.service.GetAttendance(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("attendance_not_found", "attendance not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("attendance_not_found", "attendance not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to get attendance"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to get attendance"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToAttendanceDTO(attendance)))
+	return respondSuccess(c, http.StatusOK, presenter.ToAttendanceDTO(attendance))
 }
 
 // @Summary List Attendances by User
@@ -118,16 +110,16 @@ func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
 	items, err := h.service.ListAttendancesByUser(c.Request().Context(), userID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to list attendances for user"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to list attendances for user"))
 	}
 
 	payload := presenter.MapAttendancesByUser(userID.String(), items)
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(payload))
+	return respondSuccess(c, http.StatusOK, payload)
 }
 
 // @Summary Create Attendance
@@ -141,75 +133,33 @@ func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /attendance [post]
 func (h *AttendanceHandler) CreateAttendance(c echo.Context) error {
-	var req request.CreateAttendance
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	userID, err := uuid.Parse(strings.TrimSpace(req.UserID))
-	if err != nil || userID == uuid.Nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "user_id must be a valid UUID"))
-	}
-
-	date, err := parseDatePointer(req.Date)
+	req, err := middleware.BindAndValidate[request.CreateAttendance](c, middleware.ValidateCreateAttendancePayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "date must be a valid ISO date"))
-	}
-
-	plannedStart, err := parseTimeOfDayPointer(req.PlannedStart)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "planned_start must be a valid time"))
-	}
-
-	actualStart, err := parseTimeOfDayPointer(req.ActualStart)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "actual_start must be a valid time"))
-	}
-
-	endWork, err := parseTimeOfDayPointer(req.EndWork)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "end_work must be a valid time"))
-	}
-
-	workdayHours, err := toInt16Ptr(req.WorkdayHours)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	commits, err := toInt16Ptr(req.Commits)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	mergeRequests, err := toInt16Ptr(req.MergeRequests)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	codeReviews, err := toInt16Ptr(req.CodeReviews)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.CreateAttendanceInput{
-		UserID:        userID,
-		Date:          date,
-		WorkdayHours:  workdayHours,
-		PlannedStart:  plannedStart,
-		ActualStart:   actualStart,
-		EndWork:       endWork,
-		Commits:       commits,
-		MergeRequests: mergeRequests,
-		CodeReviews:   codeReviews,
-		Status:        sanitizeStringPtr(req.Status),
+		UserID:        req.UserUUID,
+		Date:          req.ParsedDate,
+		WorkdayHours:  req.WorkdayHoursValue,
+		PlannedStart:  req.ParsedPlannedStart,
+		ActualStart:   req.ParsedActualStart,
+		EndWork:       req.ParsedEndWork,
+		Commits:       req.CommitsValue,
+		MergeRequests: req.MergeRequestsValue,
+		CodeReviews:   req.CodeReviewsValue,
+		Status:        req.Status,
 	}
 
 	attendance, err := h.service.CreateAttendance(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("attendance_create_failed", "failed to create attendance"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("attendance_create_failed", "failed to create attendance"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToAttendanceDTO(attendance)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToAttendanceDTO(attendance))
 }
 
 // @Summary Update Attendance
@@ -227,72 +177,39 @@ func (h *AttendanceHandler) CreateAttendance(c echo.Context) error {
 func (h *AttendanceHandler) UpdateAttendance(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid attendance identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid attendance identifier"))
 	}
 
-	var req request.UpdateAttendance
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	date, err := parseDatePointer(req.Date)
+	req, err := middleware.BindAndValidate[request.UpdateAttendance](c, middleware.ValidateUpdateAttendancePayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "date must be a valid ISO date"))
-	}
-	plannedStart, err := parseTimeOfDayPointer(req.PlannedStart)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "planned_start must be a valid time"))
-	}
-	actualStart, err := parseTimeOfDayPointer(req.ActualStart)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "actual_start must be a valid time"))
-	}
-	endWork, err := parseTimeOfDayPointer(req.EndWork)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "end_work must be a valid time"))
-	}
-	workdayHours, err := toInt16Ptr(req.WorkdayHours)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	commits, err := toInt16Ptr(req.Commits)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	mergeRequests, err := toInt16Ptr(req.MergeRequests)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
-	}
-	codeReviews, err := toInt16Ptr(req.CodeReviews)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateAttendanceInput{
-		Date:          date,
-		WorkdayHours:  workdayHours,
-		PlannedStart:  plannedStart,
-		ActualStart:   actualStart,
-		EndWork:       endWork,
-		Commits:       commits,
-		MergeRequests: mergeRequests,
-		CodeReviews:   codeReviews,
-		Status:        sanitizeStringPtr(req.Status),
+		Date:          req.ParsedDate,
+		WorkdayHours:  req.WorkdayHoursValue,
+		PlannedStart:  req.ParsedPlannedStart,
+		ActualStart:   req.ParsedActualStart,
+		EndWork:       req.ParsedEndWork,
+		Commits:       req.CommitsValue,
+		MergeRequests: req.MergeRequestsValue,
+		CodeReviews:   req.CodeReviewsValue,
+		Status:        req.Status,
 	}
 
 	attendance, err := h.service.UpdateAttendance(c.Request().Context(), id, input)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("attendance_not_found", "attendance not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("attendance_not_found", "attendance not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("attendance_update_failed", "failed to update attendance"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("attendance_update_failed", "failed to update attendance"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToAttendanceDTO(attendance)))
+	return respondSuccess(c, http.StatusOK, presenter.ToAttendanceDTO(attendance))
 }
 
 // @Summary Delete Attendance
@@ -309,14 +226,14 @@ func (h *AttendanceHandler) UpdateAttendance(c echo.Context) error {
 func (h *AttendanceHandler) DeleteAttendance(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid attendance identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid attendance identifier"))
 	}
 
 	if err := h.service.DeleteAttendance(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("attendance_not_found", "attendance not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("attendance_not_found", "attendance not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("attendance_delete_failed", "failed to delete attendance"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("attendance_delete_failed", "failed to delete attendance"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

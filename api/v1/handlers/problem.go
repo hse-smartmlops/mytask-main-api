@@ -6,6 +6,7 @@ import (
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -45,18 +46,16 @@ func RegisterProblemRoutes(group *echo.Group, service ports.ProblemService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /problems [get]
 func (h *ProblemHandler) ListProblems(c echo.Context) error {
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	page, err := h.service.ListProblems(c.Request().Context(), params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("problems_fetch_failed", "failed to list problems"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("problems_fetch_failed", "failed to list problems"))
 	}
 
 	pagination, payload := presenter.MapProblemsPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Problem
@@ -73,18 +72,18 @@ func (h *ProblemHandler) ListProblems(c echo.Context) error {
 func (h *ProblemHandler) GetProblem(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
 	}
 
 	problem, err := h.service.GetProblem(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("problem_not_found", "problem not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("problem_not_found", "problem not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("problems_fetch_failed", "failed to get problem"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("problems_fetch_failed", "failed to get problem"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToProblemDTO(problem)))
+	return respondSuccess(c, http.StatusOK, presenter.ToProblemDTO(problem))
 }
 
 // @Summary Create Problem
@@ -98,15 +97,12 @@ func (h *ProblemHandler) GetProblem(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /problems [post]
 func (h *ProblemHandler) CreateProblem(c echo.Context) error {
-	var req request.CreateProblem
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.CreateProblem](c, middleware.ValidateCreateProblemPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
-	creatorID, err := parseUUIDPointer(req.CreatorID)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "creator_id must be a valid UUID"))
-	}
+	creatorID, _ := parseUUIDPointer(req.CreatorID)
 
 	input := ports.CreateProblemInput{
 		Description: req.Description,
@@ -117,12 +113,12 @@ func (h *ProblemHandler) CreateProblem(c echo.Context) error {
 	problem, err := h.service.CreateProblem(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("problem_create_failed", "failed to create problem"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("problem_create_failed", "failed to create problem"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToProblemDTO(problem)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToProblemDTO(problem))
 }
 
 // @Summary Update Problem
@@ -140,12 +136,12 @@ func (h *ProblemHandler) CreateProblem(c echo.Context) error {
 func (h *ProblemHandler) UpdateProblem(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
 	}
 
-	var req request.UpdateProblem
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.UpdateProblem](c, middleware.ValidateUpdateProblemPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateProblemInput{
@@ -157,15 +153,15 @@ func (h *ProblemHandler) UpdateProblem(c echo.Context) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("problem_not_found", "problem not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("problem_not_found", "problem not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("problem_update_failed", "failed to update problem"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("problem_update_failed", "failed to update problem"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToProblemDTO(problem)))
+	return respondSuccess(c, http.StatusOK, presenter.ToProblemDTO(problem))
 }
 
 // @Summary Delete Problem
@@ -182,14 +178,14 @@ func (h *ProblemHandler) UpdateProblem(c echo.Context) error {
 func (h *ProblemHandler) DeleteProblem(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
 	}
 
 	if err := h.service.DeleteProblem(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("problem_not_found", "problem not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("problem_not_found", "problem not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("problem_delete_failed", "failed to delete problem"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("problem_delete_failed", "failed to delete problem"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

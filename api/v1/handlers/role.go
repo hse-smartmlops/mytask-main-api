@@ -6,6 +6,7 @@ import (
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -45,18 +46,16 @@ func RegisterRoleRoutes(group *echo.Group, service ports.RoleService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /roles [get]
 func (h *RoleHandler) ListRoles(c echo.Context) error {
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	page, err := h.service.ListRoles(c.Request().Context(), params)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("roles_fetch_failed", "failed to list roles"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("roles_fetch_failed", "failed to list roles"))
 	}
 
 	pagination, payload := presenter.MapRolesPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Role
@@ -73,18 +72,18 @@ func (h *RoleHandler) ListRoles(c echo.Context) error {
 func (h *RoleHandler) GetRole(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid role identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid role identifier"))
 	}
 
 	role, err := h.service.GetRole(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("role_not_found", "role not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("role_not_found", "role not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("roles_fetch_failed", "failed to get role"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("roles_fetch_failed", "failed to get role"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToRoleDTO(role)))
+	return respondSuccess(c, http.StatusOK, presenter.ToRoleDTO(role))
 }
 
 // @Summary Create Role
@@ -98,9 +97,9 @@ func (h *RoleHandler) GetRole(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /roles [post]
 func (h *RoleHandler) CreateRole(c echo.Context) error {
-	var req request.CreateRole
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.CreateRole](c, middleware.ValidateCreateRolePayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	role, err := h.service.CreateRole(c.Request().Context(), ports.CreateRoleInput{
@@ -109,12 +108,12 @@ func (h *RoleHandler) CreateRole(c echo.Context) error {
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "role name is required"))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("role_create_failed", "failed to create role"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("role_create_failed", "failed to create role"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToRoleDTO(role)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToRoleDTO(role))
 }
 
 // @Summary Update Role
@@ -132,12 +131,12 @@ func (h *RoleHandler) CreateRole(c echo.Context) error {
 func (h *RoleHandler) UpdateRole(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid role identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid role identifier"))
 	}
 
-	var req request.UpdateRole
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.UpdateRole](c, middleware.ValidateUpdateRolePayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	role, err := h.service.UpdateRole(c.Request().Context(), id, ports.UpdateRoleInput{
@@ -147,15 +146,15 @@ func (h *RoleHandler) UpdateRole(c echo.Context) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("role_not_found", "role not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("role_not_found", "role not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("role_update_failed", "failed to update role"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("role_update_failed", "failed to update role"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToRoleDTO(role)))
+	return respondSuccess(c, http.StatusOK, presenter.ToRoleDTO(role))
 }
 
 // @Summary Delete Role
@@ -172,15 +171,15 @@ func (h *RoleHandler) UpdateRole(c echo.Context) error {
 func (h *RoleHandler) DeleteRole(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid role identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid role identifier"))
 	}
 
 	err = h.service.DeleteRole(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("role_not_found", "role not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("role_not_found", "role not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("role_delete_failed", "failed to delete role"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("role_delete_failed", "failed to delete role"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

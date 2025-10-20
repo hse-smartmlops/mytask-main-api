@@ -23,10 +23,14 @@ type Deps struct {
 	DailyReportService  ports.DailyReportService
 	ForumMessageService ports.ForumMessageService
 	AuthMiddleware      echo.MiddlewareFunc
+	RateLimiter         echo.MiddlewareFunc
 }
 
 func RegisterRoutes(group *echo.Group, deps Deps) {
 	group.Use(middleware.TraceMeta())
+	if deps.RateLimiter != nil {
+		group.Use(deps.RateLimiter)
+	}
 	if deps.AuthService != nil {
 		handlers.RegisterAuthRoutes(group, deps.AuthService)
 	}

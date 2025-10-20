@@ -7,6 +7,7 @@ import (
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
 	"emplacc-api/api/v1/dto/response"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -47,18 +48,14 @@ func RegisterStatusRoutes(group *echo.Group, service ports.StatusService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /statuses [get]
 func (h *StatusHandler) ListStatuses(c echo.Context) error {
-	params := ports.PaginationParams{
-		Page:     parsePositiveInt(c.QueryParam("page"), 1),
-		PageSize: parsePositiveInt(c.QueryParam("page_size"), 20),
-	}
-
-	page, err := h.service.ListStatuses(c.Request().Context(), params)
+	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	page, err := h.service.ListStatuses(c.Request().Context(), ports.PaginationParams{Page: pageNum, PageSize: size})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
 	}
 
 	pagination, payload := presenter.MapStatusesPage(page)
-	return c.JSON(http.StatusOK, dto.NewPaginatedResponse(payload, pagination))
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get Status
@@ -75,18 +72,18 @@ func (h *StatusHandler) ListStatuses(c echo.Context) error {
 func (h *StatusHandler) GetStatus(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid status identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid status identifier"))
 	}
 
 	status, err := h.service.GetStatus(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("status_not_found", "status not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("status_not_found", "status not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to get status"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to get status"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToStatusDTO(status)))
+	return respondSuccess(c, http.StatusOK, presenter.ToStatusDTO(status))
 }
 
 // @Summary List Statuses By Board
@@ -102,12 +99,12 @@ func (h *StatusHandler) GetStatus(c echo.Context) error {
 func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 	boardID, err := parseUUID(c.Param("board_id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}
 
 	statuses, err := h.service.ListStatusesByBoard(c.Request().Context(), boardID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
 	}
 
 	items := make([]response.Status, len(statuses))
@@ -115,7 +112,7 @@ func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 		items[i] = presenter.ToStatusDTO(&statuses[i])
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(items))
+	return respondSuccess(c, http.StatusOK, items)
 }
 
 // @Summary Create Status
@@ -129,21 +126,16 @@ func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /statuses [post]
 func (h *StatusHandler) CreateStatus(c echo.Context) error {
-	var req request.CreateStatus
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
-	}
-
-	boardID, err := parseUUID(req.BoardID)
+	req, err := middleware.BindAndValidate[request.CreateStatus](c, middleware.ValidateCreateStatusPayload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "board_id must be a valid UUID"))
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.CreateStatusInput{
-		BoardID:   boardID,
+		BoardID:   req.BoardUUID,
 		Name:      req.Name,
-		Key:       sanitizeStringPtr(req.Key),
-		Color:     sanitizeStringPtr(req.Color),
+		Key:       req.Key,
+		Color:     req.Color,
 		IsDefault: req.IsDefault,
 		IsActive:  req.IsActive,
 		IsOpen:    req.IsOpen,
@@ -153,12 +145,12 @@ func (h *StatusHandler) CreateStatus(c echo.Context) error {
 	status, err := h.service.CreateStatus(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("status_create_failed", "failed to create status"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("status_create_failed", "failed to create status"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToStatusDTO(status)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToStatusDTO(status))
 }
 
 // @Summary Update Status
@@ -176,18 +168,17 @@ func (h *StatusHandler) CreateStatus(c echo.Context) error {
 func (h *StatusHandler) UpdateStatus(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid status identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid status identifier"))
 	}
-
-	var req request.UpdateStatus
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.UpdateStatus](c, middleware.ValidateUpdateStatusPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.UpdateStatusInput{
-		Name:      sanitizeStringPtr(req.Name),
-		Key:       sanitizeStringPtr(req.Key),
-		Color:     sanitizeStringPtr(req.Color),
+		Name:      req.Name,
+		Key:       req.Key,
+		Color:     req.Color,
 		IsDefault: req.IsDefault,
 		IsActive:  req.IsActive,
 		IsOpen:    req.IsOpen,
@@ -198,15 +189,15 @@ func (h *StatusHandler) UpdateStatus(c echo.Context) error {
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidInput):
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		case errors.Is(err, domain.ErrNotFound):
-			return c.JSON(http.StatusNotFound, dto.NewError("status_not_found", "status not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("status_not_found", "status not found"))
 		default:
-			return c.JSON(http.StatusInternalServerError, dto.NewError("status_update_failed", "failed to update status"))
+			return respondError(c, http.StatusInternalServerError, dto.NewError("status_update_failed", "failed to update status"))
 		}
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToStatusDTO(status)))
+	return respondSuccess(c, http.StatusOK, presenter.ToStatusDTO(status))
 }
 
 // @Summary Delete Status
@@ -223,14 +214,14 @@ func (h *StatusHandler) UpdateStatus(c echo.Context) error {
 func (h *StatusHandler) DeleteStatus(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid status identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid status identifier"))
 	}
 
 	if err := h.service.DeleteStatus(c.Request().Context(), id); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("status_not_found", "status not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("status_not_found", "status not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("status_delete_failed", "failed to delete status"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("status_delete_failed", "failed to delete status"))
 	}
 
 	return c.NoContent(http.StatusNoContent)

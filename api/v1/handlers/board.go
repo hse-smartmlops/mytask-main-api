@@ -52,7 +52,7 @@ func RegisterBoardRoutes(group *echo.Group, service ports.BoardService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /boards/all [get]
 func (h *BoardHandler) ListBoards(c echo.Context) error {
-	pageNumber, pageSize := resolvePagination("", "", c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNumber, pageSize := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
 	params := ports.PaginationParams{Page: pageNumber, PageSize: pageSize}
 
 	page, err := h.service.ListBoards(c.Request().Context(), params)

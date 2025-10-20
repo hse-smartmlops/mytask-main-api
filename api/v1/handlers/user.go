@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"errors"
-	"io"
 	"net/http"
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
+	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain"
@@ -50,21 +50,18 @@ func RegisterUserRoutes(group *echo.Group, service ports.UserService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users [get]
 func (h *UserHandler) ListUsers(c echo.Context) error {
-	page := parsePositiveInt(c.QueryParam("page"), 1)
-	pageSize := parsePositiveInt(c.QueryParam("page_size"), 20)
+	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
 
 	result, err := h.service.ListUsers(c.Request().Context(), ports.PaginationParams{
 		Page:     page,
-		PageSize: pageSize,
+		PageSize: size,
 	})
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, dto.NewError("users_fetch_failed", "failed to list users"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("users_fetch_failed", "failed to list users"))
 	}
 
 	pagination, payload := presenter.MapUsersPage(result)
-	response := dto.NewPaginatedResponse(payload, pagination)
-
-	return c.JSON(http.StatusOK, response)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Get User
@@ -81,18 +78,18 @@ func (h *UserHandler) ListUsers(c echo.Context) error {
 func (h *UserHandler) GetUser(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
 	user, err := h.service.GetUser(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("user_not_found", "user not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("user_not_found", "user not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("users_fetch_failed", "failed to get user"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("users_fetch_failed", "failed to get user"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToUserDTO(user)))
+	return respondSuccess(c, http.StatusOK, presenter.ToUserDTO(user))
 }
 
 // @Summary Create User
@@ -106,9 +103,9 @@ func (h *UserHandler) GetUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users [post]
 func (h *UserHandler) CreateUser(c echo.Context) error {
-	var req request.CreateUser
-	if err := c.Bind(&req); err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "failed to parse request body"))
+	req, err := middleware.BindAndValidate[request.CreateUser](c, middleware.ValidateCreateUserPayload)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
 	}
 
 	input := ports.CreateUserInput{
@@ -125,12 +122,12 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	user, err := h.service.CreateUser(c.Request().Context(), input)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
-			return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("user_create_failed", "failed to create user"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("user_create_failed", "failed to create user"))
 	}
 
-	return c.JSON(http.StatusCreated, dto.NewSuccessResponse(presenter.ToUserDTO(user)))
+	return respondSuccess(c, http.StatusCreated, presenter.ToUserDTO(user))
 }
 
 // UploadAvatar handles uploading or updating a user's avatar image.
@@ -149,46 +146,26 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 func (h *UserHandler) UploadAvatar(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	file, err := c.FormFile("avatar")
+	upload, err := middleware.BindAvatarUpload(c, "avatar", maxAvatarSize)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "avatar file is required"))
+		return middleware.RespondValidationError(c, err)
 	}
-
-	src, err := file.Open()
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "unable to read avatar file"))
-	}
-	defer src.Close()
-
-	limited := io.LimitReader(src, maxAvatarSize+1)
-	data, err := io.ReadAll(limited)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "unable to process avatar file"))
-	}
-	if len(data) == 0 {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "avatar file is empty"))
-	}
-	if len(data) > maxAvatarSize {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_payload", "avatar file exceeds size limit"))
-	}
-
-	contentType := file.Header.Get("Content-Type")
 
 	user, err := h.service.SaveAvatar(c.Request().Context(), id, ports.SaveUserAvatarInput{
-		Data:        data,
-		ContentType: contentType,
+		Data:        upload.Data,
+		ContentType: upload.ContentType,
 	})
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("user_not_found", "user not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("user_not_found", "user not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("avatar_upload_failed", "failed to upload avatar"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("avatar_upload_failed", "failed to upload avatar"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToUserDTO(user)))
+	return respondSuccess(c, http.StatusOK, presenter.ToUserDTO(user))
 }
 
 // DeleteAvatar removes the user's avatar from storage and database.
@@ -206,18 +183,18 @@ func (h *UserHandler) UploadAvatar(c echo.Context) error {
 func (h *UserHandler) DeleteAvatar(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
 	user, err := h.service.DeleteAvatar(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("user_not_found", "user not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("user_not_found", "user not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("avatar_delete_failed", "failed to delete avatar"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("avatar_delete_failed", "failed to delete avatar"))
 	}
 
-	return c.JSON(http.StatusOK, dto.NewSuccessResponse(presenter.ToUserDTO(user)))
+	return respondSuccess(c, http.StatusOK, presenter.ToUserDTO(user))
 }
 
 // GetAvatar returns the user's avatar image from storage.
@@ -235,15 +212,15 @@ func (h *UserHandler) DeleteAvatar(c echo.Context) error {
 func (h *UserHandler) GetAvatar(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
 	avatar, err := h.service.GetAvatar(c.Request().Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			return c.JSON(http.StatusNotFound, dto.NewError("avatar_not_found", "avatar not found"))
+			return respondError(c, http.StatusNotFound, dto.NewError("avatar_not_found", "avatar not found"))
 		}
-		return c.JSON(http.StatusInternalServerError, dto.NewError("avatar_download_failed", "failed to download avatar"))
+		return respondError(c, http.StatusInternalServerError, dto.NewError("avatar_download_failed", "failed to download avatar"))
 	}
 
 	c.Response().Header().Set("Content-Disposition", "inline; filename="+avatar.FileName)
