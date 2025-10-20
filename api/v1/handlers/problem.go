@@ -33,11 +33,15 @@ func NewProblemHandler(service ports.ProblemService) *ProblemHandler {
 func RegisterProblemRoutes(group *echo.Group, service ports.ProblemService) {
 	handler := NewProblemHandler(service)
 
-	group.GET("/problems", handler.ListProblems)
-	group.GET("/problems/:id", handler.GetProblem)
-	group.POST("/problems", handler.CreateProblem)
-	group.PATCH("/problems/:id", handler.UpdateProblem)
-	group.DELETE("/problems/:id", handler.DeleteProblem)
+	pgroup := group.Group("/problem")
+	{
+		pgroup.GET("", handler.ListProblems)
+		pgroup.GET("/:id", handler.GetProblem)
+		pgroup.GET("/user/:user_id", handler.ListProblemsByUser)
+		pgroup.POST("", handler.CreateProblem)
+		pgroup.PATCH("/:id", handler.UpdateProblem)
+		pgroup.DELETE("/:id", handler.DeleteProblem)
+	}
 }
 
 // @Summary List Problems
@@ -45,18 +49,64 @@ func RegisterProblemRoutes(group *echo.Group, service ports.ProblemService) {
 // @Tags Problems
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.ProblemsListResponse
+// @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /problems [get]
+// @Router /problem [get]
 func (h *ProblemHandler) ListProblems(c echo.Context) error {
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
-	params := ports.PaginationParams{Page: pageNum, PageSize: size}
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
 
 	page, err := h.service.ListProblems(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("problems_fetch_failed", "failed to list problems"))
+	}
+
+	pagination, payload := presenter.MapProblemsPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
+}
+
+// @Summary List Problems By User
+// @Description Retrieve a paginated list of problems created by a specific user
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.ProblemsListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /problem/user/{id} [get]
+func (h *ProblemHandler) ListProblemsByUser(c echo.Context) error {
+	userID, err := parseUUID(c.Param("id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+	}
+
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
+
+	page, err := h.service.ListProblemsByUser(c.Request().Context(), userID, params)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidInput) {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "user identifier is required"))
+		}
+		return respondError(c, http.StatusInternalServerError, dto.NewError("problems_fetch_failed", "failed to list problems for user"))
 	}
 
 	pagination, payload := presenter.MapProblemsPage(page)
@@ -73,7 +123,7 @@ func (h *ProblemHandler) ListProblems(c echo.Context) error {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /problems/{id} [get]
+// @Router /problem/{id} [get]
 func (h *ProblemHandler) GetProblem(c echo.Context) error {
 	id, err := parseUUID(c.Param("id"))
 	if err != nil {
@@ -100,7 +150,7 @@ func (h *ProblemHandler) GetProblem(c echo.Context) error {
 // @Success 201 {object} dto.ProblemResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /problems [post]
+// @Router /problem [post]
 func (h *ProblemHandler) CreateProblem(c echo.Context) error {
 	req, err := middleware.BindAndValidate(c, middleware.ValidateCreateProblemPayload)
 	if err != nil {

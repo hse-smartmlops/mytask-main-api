@@ -32,12 +32,15 @@ func NewSubscriptionHandler(service ports.SubscriptionService) *SubscriptionHand
 func RegisterSubscriptionRoutes(group *echo.Group, service ports.SubscriptionService) {
 	handler := NewSubscriptionHandler(service)
 
-	group.GET("/subscriptions", handler.ListSubscriptions)
-	group.GET("/subscriptions/:id", handler.GetSubscription)
-	group.GET("/users/:user_id/subscriptions", handler.ListSubscriptionsByUser)
-	group.GET("/subscriptions/targets/:subscription_id", handler.ListSubscriptionsByTarget)
-	group.POST("/subscriptions", handler.CreateSubscription)
-	group.DELETE("/subscriptions/:id", handler.DeleteSubscription)
+	rgroup := group.Group("/subscription")
+	{
+		rgroup.GET("", handler.ListSubscriptions)
+		rgroup.GET("/:id", handler.GetSubscription)
+		rgroup.GET("/user/:user_id", handler.ListSubscriptionsByUser)
+		rgroup.GET("/sub-object/:subobj_id", handler.ListSubscriptionsBySubObject)
+		rgroup.POST("", handler.CreateSubscription)
+		rgroup.DELETE("/:id", handler.DeleteSubscription)
+	}
 }
 
 // @Summary List Subscriptions
@@ -51,7 +54,7 @@ func RegisterSubscriptionRoutes(group *echo.Group, service ports.SubscriptionSer
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /subscriptions [get]
 func (h *SubscriptionHandler) ListSubscriptions(c echo.Context) error {
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	result, err := h.service.ListSubscriptions(c.Request().Context(), params)
@@ -104,12 +107,17 @@ func (h *SubscriptionHandler) GetSubscription(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users/{user_id}/subscriptions [get]
 func (h *SubscriptionHandler) ListSubscriptionsByUser(c echo.Context) error {
-	userID, err := parseUUID(c.Param("user_id"))
+	userParam := c.Param("user_id")
+	if userParam == "" {
+		userParam = c.Param("id")
+	}
+
+	userID, err := parseUUID(userParam)
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	result, err := h.service.ListSubscriptionsByUser(c.Request().Context(), userID, params)
@@ -135,18 +143,26 @@ func (h *SubscriptionHandler) ListSubscriptionsByUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /subscriptions/targets/{subscription_id} [get]
 func (h *SubscriptionHandler) ListSubscriptionsByTarget(c echo.Context) error {
-	targetID, err := parseUUID(c.Param("subscription_id"))
+	targetParam := c.Param("subscription_id")
+	if targetParam == "" {
+		targetParam = c.Param("id")
+	}
+
+	targetID, err := parseUUID(targetParam)
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid subscription target identifier"))
 	}
 
 	typeParam := c.QueryParam("type_id")
+	if typeParam == "" {
+		typeParam = c.Param("type")
+	}
 	typeID, err := parseOptionalInt8(typeParam)
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "type_id must be a valid 8-bit integer"))
 	}
 
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	result, err := h.service.ListSubscriptionsByTarget(c.Request().Context(), targetID, typeID, params)

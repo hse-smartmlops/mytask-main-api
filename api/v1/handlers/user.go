@@ -34,13 +34,22 @@ func NewUserHandler(service ports.UserService) *UserHandler {
 func RegisterUserRoutes(group *echo.Group, service ports.UserService) {
 	handler := NewUserHandler(service)
 
-	group.GET("/users", handler.ListUsers)
-	group.GET("/users/:id", handler.GetUser)
-	group.POST("/users", handler.CreateUser)
-	group.POST("/users/:id/avatar", handler.UploadAvatar)
-	group.PUT("/users/:id/avatar", handler.UploadAvatar)
-	group.DELETE("/users/:id/avatar", handler.DeleteAvatar)
-	group.GET("/users/:id/avatar", handler.GetAvatar)
+	ugroup := group.Group("/user")
+	{
+		ugroup.GET("", handler.ListUsers)
+		ugroup.GET("/:id", handler.GetUser)
+		ugroup.POST("", handler.CreateUser)
+		ugroup.DELETE("/:id", handler.DeleteUser)
+		ugroup.PATCH("/:id", handler.UpdateUser)
+		ugroup.GET("/restore", handler.ListDeletedUsers)
+		ugroup.POST("/role", handler.AddUserRole)
+		ugroup.DELETE("/role", handler.RemoveUserRole)
+		ugroup.POST("/:id/avatar", handler.UploadAvatar)
+		ugroup.PUT("/:id/avatar", handler.UpdateAvatar)
+		ugroup.DELETE("/:id/avatar", handler.DeleteAvatar)
+		ugroup.GET("/:id/avatar", handler.GetAvatar)
+	}
+
 }
 
 // @Summary List Users
@@ -54,7 +63,7 @@ func RegisterUserRoutes(group *echo.Group, service ports.UserService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users [get]
 func (h *UserHandler) ListUsers(c echo.Context) error {
-	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	page, size := resolvePaginationFromContext(c, 1, 20)
 
 	result, err := h.service.ListUsers(c.Request().Context(), ports.PaginationParams{
 		Page:     page,

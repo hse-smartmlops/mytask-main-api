@@ -33,11 +33,14 @@ func NewRoleHandler(service ports.RoleService) *RoleHandler {
 func RegisterRoleRoutes(group *echo.Group, service ports.RoleService) {
 	handler := NewRoleHandler(service)
 
-	group.GET("/roles", handler.ListRoles)
-	group.GET("/roles/:id", handler.GetRole)
-	group.POST("/roles", handler.CreateRole)
-	group.PATCH("/roles/:id", handler.UpdateRole)
-	group.DELETE("/roles/:id", handler.DeleteRole)
+	rgroup := group.Group("/role")
+	{
+		rgroup.GET("", handler.ListRoles)
+		rgroup.GET("/:id", handler.GetRole)
+		rgroup.POST("", handler.CreateRole)
+		rgroup.PATCH("/:id", handler.UpdateRole)
+		rgroup.DELETE("/:id", handler.DeleteRole)
+	}
 }
 
 // @Summary List Roles
@@ -51,7 +54,7 @@ func RegisterRoleRoutes(group *echo.Group, service ports.RoleService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /roles [get]
 func (h *RoleHandler) ListRoles(c echo.Context) error {
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	page, err := h.service.ListRoles(c.Request().Context(), params)

@@ -34,12 +34,16 @@ func NewStatusHandler(service ports.StatusService) *StatusHandler {
 func RegisterStatusRoutes(group *echo.Group, service ports.StatusService) {
 	handler := NewStatusHandler(service)
 
-	group.GET("/statuses", handler.ListStatuses)
-	group.GET("/statuses/:id", handler.GetStatus)
-	group.GET("/boards/:board_id/statuses", handler.ListStatusesByBoard)
-	group.POST("/statuses", handler.CreateStatus)
-	group.PATCH("/statuses/:id", handler.UpdateStatus)
-	group.DELETE("/statuses/:id", handler.DeleteStatus)
+	sgroup := group.Group("/status")
+	{
+		sgroup.GET("", handler.ListStatuses)
+		sgroup.GET("/:id", handler.GetStatus)
+		sgroup.GET("/board/:board_id", handler.ListStatusesByBoard)
+		sgroup.POST("", handler.CreateStatus)
+		sgroup.PATCH("/:id", handler.UpdateStatus)
+		sgroup.DELETE("/:id", handler.DeleteStatus)
+	}
+
 }
 
 // @Summary List Statuses
@@ -53,7 +57,7 @@ func RegisterStatusRoutes(group *echo.Group, service ports.StatusService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /statuses [get]
 func (h *StatusHandler) ListStatuses(c echo.Context) error {
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	page, err := h.service.ListStatuses(c.Request().Context(), ports.PaginationParams{Page: pageNum, PageSize: size})
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
@@ -102,7 +106,12 @@ func (h *StatusHandler) GetStatus(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /boards/{board_id}/statuses [get]
 func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
-	boardID, err := parseUUID(c.Param("board_id"))
+	boardIDParam := c.Param("board_id")
+	if boardIDParam == "" {
+		boardIDParam = c.Param("id")
+	}
+
+	boardID, err := parseUUID(boardIDParam)
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}

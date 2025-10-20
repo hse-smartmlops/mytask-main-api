@@ -39,16 +39,21 @@ func NewTaskHandler(service ports.TaskService, boardService ports.BoardService, 
 func RegisterTaskRoutes(group *echo.Group, service ports.TaskService, boardService ports.BoardService, mcpService ports.MCPService) {
 	handler := NewTaskHandler(service, boardService, mcpService)
 
-	group.GET("/tasks", handler.ListTasks)
-	group.GET("/tasks/:id", handler.GetTask)
-	group.GET("/projects/:project_id/tasks", handler.ListTasksByProject)
-	group.GET("/users/:user_id/tasks", handler.ListTasksByUser)
-	group.POST("/tasks", handler.CreateTask)
-	group.PATCH("/tasks/:id", handler.UpdateTask)
-	group.DELETE("/tasks/:id", handler.DeleteTask)
-	group.POST("/tasks/:id/improve-report", handler.ImproveTaskReport)
-	group.GET("/tasks/:id/improve-report/ws", handler.ImproveTaskReportWS)
-	group.GET("/tasks/:id/board-project", handler.GetTaskBoardAndProject)
+	tgroup := group.Group("/tasks")
+	{
+		tgroup.GET("", handler.ListTasks)
+		tgroup.GET("/:id", handler.GetTask)
+		tgroup.GET("/user/:id", handler.ListTasksByUser)
+		tgroup.GET("/move", handler.MoveTaskBetweenStatuses)
+		tgroup.GET("/user/:user_id/active", handler.ListActiveTasksByUser)
+		tgroup.GET("/user/:user_id/project/:project_id", handler.ListTasksByUserAndProject)
+		tgroup.POST("", handler.CreateTask)
+		tgroup.PATCH("/:id", handler.UpdateTask)
+		tgroup.DELETE("/:id", handler.DeleteTask)
+		tgroup.POST("/:id/improve-report", handler.ImproveTaskReport)
+		tgroup.GET("/:id/improve-report/ws", handler.ImproveTaskReportWS)
+		tgroup.GET("/board/:board_id", handler.ListTasksByBoard)
+	}
 }
 
 // @Summary List Tasks
@@ -62,7 +67,7 @@ func RegisterTaskRoutes(group *echo.Group, service ports.TaskService, boardServi
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /tasks [get]
 func (h *TaskHandler) ListTasks(c echo.Context) error {
-	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	page, size := resolvePaginationFromContext(c, 1, 20)
 	result, err := h.service.ListTasks(c.Request().Context(), ports.PaginationParams{
 		Page:     page,
 		PageSize: size,
@@ -121,7 +126,7 @@ func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	page, size := resolvePaginationFromContext(c, 1, 20)
 	result, err := h.service.ListTasksByProject(c.Request().Context(), projectID, ports.PaginationParams{Page: page, PageSize: size})
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
@@ -144,12 +149,17 @@ func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users/{user_id}/tasks [get]
 func (h *TaskHandler) ListTasksByUser(c echo.Context) error {
-	userID, err := parseUUID(c.Param("user_id"))
+	userIDParam := c.Param("user_id")
+	if userIDParam == "" {
+		userIDParam = c.Param("id")
+	}
+
+	userID, err := parseUUID(userIDParam)
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	page, size := resolvePaginationFromContext(c, 1, 20)
 	result, err := h.service.ListTasksByUser(c.Request().Context(), userID, ports.PaginationParams{Page: page, PageSize: size})
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))

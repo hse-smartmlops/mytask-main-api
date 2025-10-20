@@ -115,6 +115,7 @@ type AttendanceRepository interface {
 
 type ProblemRepository interface {
 	ListProblems(ctx context.Context, params PaginationParams) (*Page[models.Problem], error)
+	ListProblemsByUser(ctx context.Context, userID uuid.UUID, params PaginationParams) (*Page[models.Problem], error)
 	GetProblemByID(ctx context.Context, id uuid.UUID) (*models.Problem, error)
 	CreateProblem(ctx context.Context, problem *models.Problem) error
 	UpdateProblem(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.Problem, error)

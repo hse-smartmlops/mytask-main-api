@@ -46,6 +46,35 @@ func (r *ProblemRepository) ListProblems(ctx context.Context, params ports.Pagin
 	}, nil
 }
 
+func (r *ProblemRepository) ListProblemsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Problem], error) {
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
+		Model(&models.Problem{}).
+		Where("(problems.deleted = FALSE OR problems.deleted IS NULL) AND problems.creator_id = ?", userID)
+
+	if err := base.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+
+	var problems []models.Problem
+	offset := (params.Page - 1) * params.PageSize
+	if err := base.Order("problems.created_at DESC NULLS LAST").
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
+		Limit(params.PageSize).
+		Offset(offset).
+		Find(&problems).Error; err != nil {
+		return nil, err
+	}
+
+	return &ports.Page[models.Problem]{
+		Items:      problems,
+		Page:       params.Page,
+		PageSize:   params.PageSize,
+		TotalCount: totalCount,
+	}, nil
+}
+
 func (r *ProblemRepository) GetProblemByID(ctx context.Context, id uuid.UUID) (*models.Problem, error) {
 	var problem models.Problem
 	err := r.db.WithContext(ctx).

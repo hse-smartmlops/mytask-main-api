@@ -34,15 +34,16 @@ func NewAttendanceHandler(service ports.AttendanceService) *AttendanceHandler {
 func RegisterAttendanceRoutes(group *echo.Group, service ports.AttendanceService) {
 	handler := NewAttendanceHandler(service)
 
-	group.GET("/attendance", handler.ListAttendances)
-	group.GET("/attendance/all/:page/:page_size", handler.ListAttendances)
-	group.GET("/attendance/all", handler.ListAttendances)
-	group.GET("/attendance/:id", handler.GetAttendance)
-	group.GET("/users/:user_id/attendance", handler.ListAttendancesByUser)
-	group.GET("/attendance/user/:user_id", handler.ListAttendancesByUser)
-	group.POST("/attendance", handler.CreateAttendance)
-	group.PATCH("/attendance/:id", handler.UpdateAttendance)
-	group.DELETE("/attendance/:id", handler.DeleteAttendance)
+	agroup := group.Group("/attendance")
+	{
+		agroup.GET("", handler.ListAttendances)
+		agroup.GET("/:id", handler.GetAttendance)
+		agroup.GET("/user/:user_id", handler.ListAttendancesByUser)
+		agroup.POST("", handler.CreateAttendance)
+		agroup.PATCH("/:id", handler.UpdateAttendance)
+		agroup.DELETE("/:id", handler.DeleteAttendance)
+	}
+
 }
 
 // @Summary List Attendances
@@ -50,15 +51,21 @@ func RegisterAttendanceRoutes(group *echo.Group, service ports.AttendanceService
 // @Tags Attendance
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number"
-// @Param page_size query int false "Number of items per page"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Number of items per page"
 // @Success 200 {object} dto.AttendancesListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /attendance [get]
 func (h *AttendanceHandler) ListAttendances(c echo.Context) error {
-	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
-	params := ports.PaginationParams{Page: page, PageSize: size}
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
 
 	attendancesPage, err := h.service.ListAttendances(c.Request().Context(), params)
 	if err != nil {
@@ -103,10 +110,12 @@ func (h *AttendanceHandler) GetAttendance(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param user_id path string true "User ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Number of items per page"
 // @Success 200 {object} dto.AttendancesByUserResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /users/{user_id}/attendance [get]
+// @Router /attendance/user/{user_id} [get]
 func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 	userIDStr := c.Param("user_id")
 	if userIDStr == "" {
@@ -118,13 +127,46 @@ func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
+	page, size, perr := requirePagination(c)
+	if perr != nil {
+		code := "invalid_pagination"
+		if errors.Is(perr, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, perr.Error()))
+	}
+
 	items, err := h.service.ListAttendancesByUser(c.Request().Context(), userID)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to list attendances for user"))
 	}
 
-	payload := presenter.MapAttendancesByUser(userID.String(), items)
-	return respondSuccess(c, http.StatusOK, payload)
+	start := (page - 1) * size
+	if start > len(items) {
+		start = len(items)
+	}
+	end := start + size
+	if end > len(items) {
+		end = len(items)
+	}
+
+	paged := items[start:end]
+	payload := presenter.MapAttendancesByUser(userID.String(), paged)
+
+	total := len(items)
+	totalPages := 0
+	if size > 0 {
+		totalPages = (total + size - 1) / size
+	}
+
+	pagination := dto.Pagination{
+		Page:       page,
+		PageSize:   size,
+		TotalCount: int64(total),
+		TotalPages: totalPages,
+	}
+
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Create Attendance

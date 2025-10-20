@@ -34,11 +34,17 @@ func NewProjectHandler(service ports.ProjectService) *ProjectHandler {
 func RegisterProjectRoutes(group *echo.Group, service ports.ProjectService) {
 	handler := NewProjectHandler(service)
 
-	group.GET("/projects", handler.ListProjects)
-	group.GET("/projects/:id", handler.GetProject)
-	group.POST("/projects", handler.CreateProject)
-	group.PATCH("/projects/:id", handler.UpdateProject)
-	group.DELETE("/projects/:id", handler.DeleteProject)
+	pgroup := group.Group("/project")
+	{
+		pgroup.GET("", handler.ListProjects)
+		pgroup.GET("/:id", handler.GetProject)
+		pgroup.GET("/user/:user_id", handler.ListProjectsByUser)
+		pgroup.GET("/:project_id/teams", handler.ListTeamsByProject)
+		pgroup.GET("/team/:team_id", handler.ListProjectsByTeam)
+		pgroup.POST("", handler.CreateProject)
+		pgroup.PATCH("/:id", handler.UpdateProject)
+		pgroup.DELETE("/:id", handler.DeleteProject)
+	}
 }
 
 // @Summary List Projects
@@ -52,7 +58,7 @@ func RegisterProjectRoutes(group *echo.Group, service ports.ProjectService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /projects [get]
 func (h *ProjectHandler) ListProjects(c echo.Context) error {
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	projectsPage, err := h.service.ListProjects(c.Request().Context(), params)

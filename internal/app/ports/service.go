@@ -123,6 +123,7 @@ type DailyReportService interface {
 
 type ProblemService interface {
 	ListProblems(ctx context.Context, params PaginationParams) (*Page[models.Problem], error)
+	ListProblemsByUser(ctx context.Context, userID uuid.UUID, params PaginationParams) (*Page[models.Problem], error)
 	GetProblem(ctx context.Context, id uuid.UUID) (*models.Problem, error)
 	CreateProblem(ctx context.Context, input CreateProblemInput) (*models.Problem, error)
 	UpdateProblem(ctx context.Context, id uuid.UUID, input UpdateProblemInput) (*models.Problem, error)

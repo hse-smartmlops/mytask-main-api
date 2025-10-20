@@ -29,6 +29,19 @@ func (s *problemService) ListProblems(ctx context.Context, params ports.Paginati
 	return s.repo.ListProblems(ctx, params)
 }
 
+func (s *problemService) ListProblemsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Problem], error) {
+	if userID == uuid.Nil {
+		return nil, domain.ErrInvalidInput
+	}
+	if params.Page <= 0 {
+		params.Page = 1
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = 20
+	}
+	return s.repo.ListProblemsByUser(ctx, userID, params)
+}
+
 func (s *problemService) GetProblem(ctx context.Context, id uuid.UUID) (*models.Problem, error) {
 	problem, err := s.repo.GetProblemByID(ctx, id)
 	if err != nil {

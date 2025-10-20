@@ -35,14 +35,15 @@ func NewBoardHandler(service ports.BoardService) *BoardHandler {
 func RegisterBoardRoutes(group *echo.Group, service ports.BoardService) {
 	handler := NewBoardHandler(service)
 
-	group.GET("/boards/all/:page/:pagesize", handler.ListBoards)
-	group.GET("/boards/:id", handler.GetBoard)
-	group.GET("/boards/project/:projectId", handler.ListBoardsByProject)
-	group.POST("/boards", handler.CreateBoard)
-	group.PATCH("/boards/:id", handler.UpdateBoard)
-	group.DELETE("/boards/:id", handler.DeleteBoard)
-
-	group.GET("/projects/:project_id/boards", handler.ListBoardsByProject)
+	bgroup := group.Group("/board")
+	{
+		bgroup.GET("", handler.ListBoards)
+		bgroup.GET("/:id", handler.GetBoard)
+		bgroup.GET("/project/:project_id", handler.ListBoardsByProject)
+		bgroup.POST("", handler.CreateBoard)
+		bgroup.PATCH("/:id", handler.UpdateBoard)
+		bgroup.DELETE("/:id", handler.DeleteBoard)
+	}
 }
 
 // @Summary List Boards
@@ -50,14 +51,21 @@ func RegisterBoardRoutes(group *echo.Group, service ports.BoardService) {
 // @Tags Boards
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.BoardsListResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /boards/all [get]
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /board [get]
 func (h *BoardHandler) ListBoards(c echo.Context) error {
-	pageNumber, pageSize := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
-	params := ports.PaginationParams{Page: pageNumber, PageSize: pageSize}
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
 
 	page, err := h.service.ListBoards(c.Request().Context(), params)
 	if err != nil {
@@ -202,14 +210,25 @@ func (h *BoardHandler) DeleteBoard(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param project_id path string true "Project ID"
-// @Success 200 {object} dto.BoardsListByProjectResponse
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.BoardsListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /projects/{project_id}/boards [get]
+// @Router /board/project/{project_id} [get]
 func (h *BoardHandler) ListBoardsByProject(c echo.Context) error {
 	projectID, err := parseUUID(c.Param("project_id"))
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+	}
+
+	pageNumber, pageSize, perr := requirePagination(c)
+	if perr != nil {
+		code := "invalid_pagination"
+		if errors.Is(perr, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, perr.Error()))
 	}
 
 	boards, err := h.service.ListBoardsByProject(c.Request().Context(), projectID)
@@ -217,10 +236,34 @@ func (h *BoardHandler) ListBoardsByProject(c echo.Context) error {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to list boards"))
 	}
 
-	items := make([]response.Board, len(boards))
-	for i := range boards {
-		items[i] = presenter.ToBoardDTO(&boards[i])
+	start := (pageNumber - 1) * pageSize
+	if start > len(boards) {
+		start = len(boards)
+	}
+	end := start + pageSize
+	if end > len(boards) {
+		end = len(boards)
 	}
 
-	return respondSuccess(c, http.StatusOK, items)
+	items := make([]response.Board, end-start)
+	for i := start; i < end; i++ {
+		items[i-start] = presenter.ToBoardDTO(&boards[i])
+	}
+
+	total := len(boards)
+	totalPages := 0
+	if pageSize > 0 {
+		totalPages = (total + pageSize - 1) / pageSize
+	}
+
+	pagination := dto.Pagination{
+		Page:       pageNumber,
+		PageSize:   pageSize,
+		TotalCount: int64(total),
+		TotalPages: totalPages,
+	}
+
+	payload := response.BoardsPage{Boards: items}
+
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }

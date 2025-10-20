@@ -1,9 +1,15 @@
 package handlers
+package handlers
 
 import (
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+
 	"emplacc-api/api/v1/dto"
 	v1helpers "emplacc-api/api/v1/helpers"
-	"strings"
+	"emplacc-api/internal/app/ports"
 
 	"github.com/labstack/echo/v4"
 )
@@ -16,10 +22,37 @@ var (
 	extractBearerToken = v1helpers.ExtractBearerToken
 	getOptionalString  = v1helpers.GetOptionalString
 	toOptionalString   = v1helpers.ToOptionalString
+
+	errMissingPagination = errors.New("page and page_size query parameters are required")
 )
 
-func resolvePagination(queryPage, querySize string, defaultPage, defaultSize int) (int, int) {
-	return v1helpers.ResolvePagination(queryPage, querySize, defaultPage, defaultSize)
+func requirePagination(c echo.Context) (int, int, error) {
+	pageStr := strings.TrimSpace(c.QueryParam("page"))
+	sizeStr := strings.TrimSpace(c.QueryParam("page_size"))
+
+	if pageStr == "" || sizeStr == "" {
+		return 0, 0, errMissingPagination
+	}
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		return 0, 0, fmt.Errorf("page must be a positive integer")
+	}
+
+	size, err := strconv.Atoi(sizeStr)
+	if err != nil || size <= 0 {
+		return 0, 0, fmt.Errorf("page_size must be a positive integer")
+	}
+
+	return page, size, nil
+}
+
+func paginationParams(c echo.Context) (ports.PaginationParams, error) {
+	page, size, err := requirePagination(c)
+	if err != nil {
+		return ports.PaginationParams{}, err
+	}
+	return ports.PaginationParams{Page: page, PageSize: size}, nil
 }
 
 func resolveAuthToken(c echo.Context) string {

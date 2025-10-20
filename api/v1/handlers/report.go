@@ -42,20 +42,24 @@ func NewDailyReportHandler(service ports.DailyReportService) *DailyReportHandler
 func RegisterDailyReportRoutes(group *echo.Group, service ports.DailyReportService) {
 	handler := NewDailyReportHandler(service)
 
-	group.POST("/report", handler.CreateReport)
-	group.GET("/report/:id", handler.GetReport)
-	group.PATCH("/report/:id", handler.UpdateReport)
-	group.DELETE("/report/:id", handler.DeleteReport)
-	group.GET("/report/all", handler.ListReports)
-	group.GET("/report/user/:id", handler.ListReportsByUser)
-	group.GET("/report/project/:id", handler.ListReportsByProject)
-	group.GET("/report/task/:id", handler.ListReportsByTask)
-	group.PATCH("/report/completed-work/:id", handler.UpdateCompletedWork)
-	group.PATCH("/report/help-request/:id", handler.UpdateHelpRequest)
-	group.DELETE("/report/help-request/:id", handler.DeleteHelpRequest)
-	group.GET("/report/help-requests-by-user-id/:id", handler.ListHelpRequestsByHelper)
-	group.PATCH("/report/tomorrow-plans/:id", handler.UpdateTomorrowPlan)
-	group.POST("/report/export/xlsx", handler.ExportReportsXLSX)
+	rgroup := group.Group("/report")
+	{
+		rgroup.GET("", handler.ListReports)
+		rgroup.GET("/:id", handler.GetReport)
+		rgroup.PATCH("/completed-work/:id", handler.UpdateCompletedWork)
+		rgroup.POST("/export/xlsx", handler.ExportReportsXLSX)
+		rgroup.DELETE("/help-request/:id", handler.DeleteHelpRequest)
+		rgroup.PATCH("/help-request/:id", handler.UpdateHelpRequest)
+		rgroup.GET("/help-requests-by-user-id/:id", handler.ListHelpRequestsByHelper)
+		rgroup.GET("/project/:id", handler.ListReportsByProject)
+		rgroup.GET("/task/:id", handler.ListReportsByTask)
+		rgroup.PATCH("/tomorrow-plans/:id", handler.UpdateTomorrowPlan)
+		rgroup.GET("/user/:user_id", handler.ListReportsByUser)
+		rgroup.DELETE("/:id", handler.DeleteReport)
+		rgroup.POST("", handler.CreateReport)
+		rgroup.PATCH("/:id", handler.UpdateReport)
+	}
+
 }
 
 // @Summary List Reports
@@ -86,7 +90,7 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 		if err != nil {
 			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "user_id must be a valid UUID"))
 		}
-		pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+		pageNum, size := resolvePaginationFromContext(c, 1, 20)
 		params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 		result, err := h.service.ListReportsByUser(ctx, userID, params)
@@ -141,7 +145,7 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports)})
 	}
 
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	result, err := h.service.ListReports(ctx, params)
@@ -172,7 +176,7 @@ func (h *DailyReportHandler) ListReportsByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	page, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	page, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: page, PageSize: size}
 	reports, err := h.service.ListReportsByUser(c.Request().Context(), userID, params)
 	if err != nil {

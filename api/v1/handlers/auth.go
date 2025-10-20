@@ -38,12 +38,26 @@ func RegisterAuthRoutes(group *echo.Group, service ports.AuthService) {
 	h := NewAuthHandler(service)
 
 	auth := group.Group("/auth")
-	auth.POST("/login", h.Login)
-	auth.POST("/refresh", h.Refresh)
+	{
+		auth.POST("/login", h.Login)
+		auth.POST("/refresh", h.Refresh)
 
-	secured := auth.Group("", middleware.KeycloakAuth(service))
-	secured.POST("/logout", h.Logout)
-	secured.GET("/me", h.Me)
+		secured := auth.Group("", middleware.KeycloakAuth(service))
+		{
+			secured.POST("/logout", h.Logout)
+			secured.GET("/me", h.Me)
+			secured.GET("/validate", h.Validate)
+		}
+	}
+}
+
+// @Summary Login
+// @Description Authenticate user and obtain access and refresh tokens
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param login body request.AuthLogin true "Login credentials"
+// @Success 200 {object} dto.AuthResponse
 	secured.GET("/validate", h.Validate)
 }
 

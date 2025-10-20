@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
@@ -36,16 +37,21 @@ func NewTeamHandler(service ports.TeamService) *TeamHandler {
 func RegisterTeamRoutes(group *echo.Group, service ports.TeamService) {
 	handler := NewTeamHandler(service)
 
-	group.GET("/teams", handler.ListTeams)
-	group.GET("/teams/:id", handler.GetTeam)
-	group.GET("/projects/:project_id/teams", handler.ListTeamsByProject)
-	group.POST("/teams", handler.CreateTeam)
-	group.PATCH("/teams/:id", handler.UpdateTeam)
-	group.DELETE("/teams/:id", handler.DeleteTeam)
-	group.POST("/teams/:id/members", handler.AddUserToTeam)
-	group.DELETE("/teams/:id/members/:user_id", handler.RemoveUserFromTeam)
-	group.POST("/teams/:id/projects", handler.AddTeamToProject)
-	group.DELETE("/teams/:id/projects/:project_id", handler.RemoveTeamFromProject)
+	tgroup := group.Group("/team")
+	{
+		tgroup.GET("", handler.ListTeams)
+		tgroup.GET("/:id", handler.GetTeam)
+		tgroup.POST("", handler.CreateTeam)
+		tgroup.PATCH("/:id", handler.UpdateTeam)
+		tgroup.DELETE("/:id", handler.DeleteTeam)
+
+		tgroup.POST("/project", handler.AddTeamToProjectLegacy)
+		tgroup.DELETE("/project", handler.RemoveTeamFromProjectLegacy)
+
+		tgroup.POST("/user", handler.AddUserToTeamLegacy)
+		tgroup.DELETE("/user", handler.RemoveUserFromTeamLegacy)
+		tgroup.GET("/user/:user_id", handler.ListTeamsByUser)
+	}
 }
 
 // @Summary List Teams
@@ -59,7 +65,7 @@ func RegisterTeamRoutes(group *echo.Group, service ports.TeamService) {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /teams [get]
 func (h *TeamHandler) ListTeams(c echo.Context) error {
-	pageNum, size := resolvePagination(c.QueryParam("page"), c.QueryParam("page_size"), 1, 20)
+	pageNum, size := resolvePaginationFromContext(c, 1, 20)
 	params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 	page, err := h.service.ListTeams(c.Request().Context(), params)
@@ -69,6 +75,24 @@ func (h *TeamHandler) ListTeams(c echo.Context) error {
 
 	pagination, payload := presenter.MapTeamsPage(page)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
+}
+
+// @Summary List All Teams
+// @Description Retrieve a list of all teams without pagination
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Success 200 {object} dto.TeamsListResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /team/all [get]
+func (h *TeamHandler) ListAllTeams(c echo.Context) error {
+	teams, err := h.service.ListAllTeams(c.Request().Context())
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
+	}
+
+	payload := presenter.MapTeamsList(teams)
+	return respondSuccess(c, http.StatusOK, payload)
 }
 
 // @Summary Get Team
@@ -126,6 +150,34 @@ func (h *TeamHandler) ListTeamsByProject(c echo.Context) error {
 	}
 
 	return respondSuccess(c, http.StatusOK, items)
+}
+
+// @Summary List Teams By User
+// @Description Retrieve teams associated with a specific user
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} dto.TeamsListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /team/user/{id} [get]
+func (h *TeamHandler) ListTeamsByUser(c echo.Context) error {
+	userID, err := parseUUID(c.Param("id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+	}
+
+	teams, err := h.service.ListTeamsByUser(c.Request().Context(), userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidInput) {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "user identifier is required"))
+		}
+		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
+	}
+
+	payload := presenter.MapTeamsList(teams)
+	return respondSuccess(c, http.StatusOK, payload)
 }
 
 // @Summary Create Team
@@ -228,6 +280,230 @@ func (h *TeamHandler) DeleteTeam(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// @Summary Add Users to Team (legacy)
+// @Description Add one or more users to a team using legacy payload format
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param body body request.TeamAddUsers true "Legacy team-user association"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /team/user [post]
+func (h *TeamHandler) AddUserToTeamLegacy(c echo.Context) error {
+	var req request.TeamAddUsers
+	if err := c.Bind(&req); err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "invalid request body"))
+	}
+
+	teamID := strings.TrimSpace(req.TeamID)
+	if teamID == "" {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id is required"))
+	}
+
+	teamUUID, err := parseUUID(teamID)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id must be a valid UUID"))
+	}
+
+	if len(req.UserIDs) == 0 {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "user_ids are required"))
+	}
+
+	cleanedUserIDs := make([]string, 0, len(req.UserIDs))
+	for _, rawUserID := range req.UserIDs {
+		userID := strings.TrimSpace(rawUserID)
+		if userID == "" {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "user_id cannot be empty"))
+		}
+
+		userUUID, err := parseUUID(userID)
+		if err != nil {
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "user_id must be a valid UUID"))
+		}
+
+		cleanedUserIDs = append(cleanedUserIDs, userUUID.String())
+
+		input := ports.TeamMemberInput{
+			TeamID: teamUUID,
+			UserID: userUUID,
+		}
+
+		if err := h.service.AddUserToTeam(c.Request().Context(), input); err != nil {
+			switch {
+			case errors.Is(err, domain.ErrInvalidInput):
+				return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+			case errors.Is(err, domain.ErrNotFound):
+				return respondError(c, http.StatusNotFound, dto.NewError("team_not_found", "team or user not found"))
+			default:
+				return respondError(c, http.StatusInternalServerError, dto.NewError("team_member_add_failed", "failed to add member"))
+			}
+		}
+	}
+
+	payload := response.UsersAdd{
+		TeamID:  teamUUID.String(),
+		UserIDs: cleanedUserIDs,
+		Message: "Team members added",
+	}
+	return respondSuccess(c, http.StatusOK, payload)
+}
+
+// @Summary Remove User from Team (legacy)
+// @Description Remove a user from a team using legacy payload format
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param body body request.TeamRemoveUser true "Legacy team-user removal"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /team/user [delete]
+func (h *TeamHandler) RemoveUserFromTeamLegacy(c echo.Context) error {
+	var req request.TeamRemoveUser
+	if err := c.Bind(&req); err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "invalid request body"))
+	}
+
+	teamID := strings.TrimSpace(req.TeamID)
+	userID := strings.TrimSpace(req.UserID)
+	if teamID == "" || userID == "" {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id and user_id are required"))
+	}
+
+	teamUUID, err := parseUUID(teamID)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id must be a valid UUID"))
+	}
+	userUUID, err := parseUUID(userID)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "user_id must be a valid UUID"))
+	}
+
+	if err := h.service.RemoveUserFromTeam(c.Request().Context(), teamUUID, userUUID); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidInput):
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+		case errors.Is(err, domain.ErrNotFound):
+			return respondError(c, http.StatusNotFound, dto.NewError("team_member_not_found", "team member not found"))
+		default:
+			return respondError(c, http.StatusInternalServerError, dto.NewError("team_member_remove_failed", "failed to remove member"))
+		}
+	}
+
+	payload := response.TeamUserMessage{
+		TeamID:  teamUUID.String(),
+		UserID:  userUUID.String(),
+		Message: "Team member removed",
+	}
+	return respondSuccess(c, http.StatusOK, payload)
+}
+
+// @Summary Add Team to Project (legacy)
+// @Description Associate a team with a project using legacy payload
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param body body request.TeamProjectRequest true "Team-project association"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /team/project [post]
+func (h *TeamHandler) AddTeamToProjectLegacy(c echo.Context) error {
+	var req request.TeamProjectRequest
+	if err := c.Bind(&req); err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "invalid request body"))
+	}
+
+	teamID := strings.TrimSpace(req.TeamID)
+	projectID := strings.TrimSpace(req.ProjectID)
+	if teamID == "" || projectID == "" {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id and project_id are required"))
+	}
+
+	teamUUID, err := parseUUID(teamID)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id must be a valid UUID"))
+	}
+	projectUUID, err := parseUUID(projectID)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "project_id must be a valid UUID"))
+	}
+
+	input := ports.TeamProjectInput{TeamID: teamUUID, ProjectID: projectUUID}
+	if err := h.service.AddTeamToProject(c.Request().Context(), input); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidInput):
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+		case errors.Is(err, domain.ErrNotFound):
+			return respondError(c, http.StatusNotFound, dto.NewError("team_not_found", "team or project not found"))
+		default:
+			return respondError(c, http.StatusInternalServerError, dto.NewError("team_project_add_failed", "failed to associate team with project"))
+		}
+	}
+
+	payload := response.TeamProjectMessage{
+		TeamID:    teamUUID.String(),
+		ProjectID: projectUUID.String(),
+		Message:   "Project linked to team",
+	}
+	return respondSuccess(c, http.StatusOK, payload)
+}
+
+// @Summary Remove Team from Project (legacy)
+// @Description Remove a team-project association using legacy payload
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param body body request.TeamProjectRequest true "Team-project association"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /team/project [delete]
+func (h *TeamHandler) RemoveTeamFromProjectLegacy(c echo.Context) error {
+	var req request.TeamProjectRequest
+	if err := c.Bind(&req); err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "invalid request body"))
+	}
+
+	teamID := strings.TrimSpace(req.TeamID)
+	projectID := strings.TrimSpace(req.ProjectID)
+	if teamID == "" || projectID == "" {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id and project_id are required"))
+	}
+
+	teamUUID, err := parseUUID(teamID)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "team_id must be a valid UUID"))
+	}
+	projectUUID, err := parseUUID(projectID)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "project_id must be a valid UUID"))
+	}
+
+	if err := h.service.RemoveTeamFromProject(c.Request().Context(), teamUUID, projectUUID); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidInput):
+			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", err.Error()))
+		case errors.Is(err, domain.ErrNotFound):
+			return respondError(c, http.StatusNotFound, dto.NewError("team_project_not_found", "association not found"))
+		default:
+			return respondError(c, http.StatusInternalServerError, dto.NewError("team_project_remove_failed", "failed to remove association"))
+		}
+	}
+
+	payload := response.TeamProjectMessage{
+		TeamID:    teamUUID.String(),
+		ProjectID: projectUUID.String(),
+		Message:   "Project unlinked from team",
+	}
+	return respondSuccess(c, http.StatusOK, payload)
 }
 
 // @Summary Add User to Team
