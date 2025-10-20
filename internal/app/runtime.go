@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	appdb "emplacc-api/internal/app/db"
+	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/config"
 	"emplacc-api/internal/migrations"
+	mcprepo "emplacc-api/internal/repo/mcp"
 	minioRepo "emplacc-api/internal/repo/minio"
+	"emplacc-api/internal/service"
+	grpcv1 "emplacc-api/internal/transport/grpc/v1"
 	pkglogger "emplacc-api/pkg/logger"
 	"emplacc-api/pkg/tracing"
 
@@ -43,12 +48,52 @@ func Run(ctx context.Context) error {
 		}
 	}
 
-	storage, err := minioRepo.NewStorage(cfg.Minio)
-	if err != nil {
-		logger.Warn("failed to initialize object storage", slog.String("error", err.Error()))
+	var storage ports.ObjectStorage
+
+	if strings.TrimSpace(cfg.Minio.Endpoint) != "" {
+		minioStorage, err := minioRepo.NewStorage(cfg.Minio)
+		if err != nil {
+			logger.Warn("failed to initialize object storage", slog.String("error", err.Error()))
+		} else if minioStorage != nil {
+			storage = minioStorage
+		} else {
+			logger.Info("object storage disabled", slog.String("reason", "minio storage returned nil"))
+		}
+	} else {
+		logger.Info("object storage disabled", slog.String("reason", "minio endpoint not configured"))
 	}
 
-	container := NewContainer(cfg, db, storage)
+	var (
+		mcpClient  *grpcv1.Client
+		mcpService ports.MCPService
+	)
+
+	if strings.TrimSpace(cfg.MCP.Address) != "" {
+		client, err := grpcv1.NewClient(grpcv1.Config{
+			Address: cfg.MCP.Address,
+			Timeout: cfg.MCP.Timeout,
+			UseTLS:  cfg.MCP.UseTLS,
+		})
+		if err != nil {
+			logger.Warn("failed to initialize mcp client", slog.String("error", err.Error()))
+		} else {
+			mcpClient = client
+			repo := mcprepo.New(client.API())
+			mcpService = service.NewMCPService(repo)
+		}
+	} else {
+		logger.Info("mcp disabled", slog.String("reason", "MCP_GRPC_ADDRESS not configured"))
+	}
+
+	if mcpClient != nil {
+		defer func() {
+			if err := mcpClient.Close(); err != nil {
+				logger.Warn("mcp client close failed", slog.String("error", err.Error()))
+			}
+		}()
+	}
+
+	container := NewContainer(cfg, db, storage, mcpService)
 
 	tracerProvider, tracerShutdown, err := setupTracing(ctx, cfg, logger)
 	if err != nil {

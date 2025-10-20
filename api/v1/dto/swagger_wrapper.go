@@ -26,6 +26,14 @@ type ReportsListResponse struct {
 	SuccessResponse[response.ReportsPage]
 }
 
+type ImprovedTaskReportResponse struct {
+	SuccessResponse[response.ImprovedTaskReport]
+}
+
+type TaskBoardProjectResponse struct {
+	SuccessResponse[response.TaskBoardProject]
+}
+
 type CompletedWorkItemResponse struct {
 	SuccessResponse[response.CompletedWorkItem]
 }

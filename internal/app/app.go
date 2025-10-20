@@ -141,6 +141,12 @@ func registerCommonEndpoints(e *echo.Echo, cfg *config.Config) {
 		return c.NoContent(http.StatusOK)
 	})
 
+	e.GET("/version", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, map[string]string{
+			"version": cfg.App.Version,
+		})
+	})
+
 	e.GET("/metrics", echo.WrapHandler(appmetrics.Handler()))
 
 	if cfg.Swagger.Enabled {

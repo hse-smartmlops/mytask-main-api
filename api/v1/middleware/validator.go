@@ -49,7 +49,8 @@ type BindableRequest interface {
 		request.CompletedWorkUpdate |
 		request.HelpRequestUpdate |
 		request.TomorrowPlanUpdate |
-		request.ReportsByDate
+		request.ReportsByDate |
+		request.ImproveTaskReport
 }
 
 // ValidationError is returned when request validation fails.
@@ -1093,6 +1094,39 @@ func ValidateTomorrowPlanUpdatePayload(req *request.TomorrowPlanUpdate) error {
 	if !hasField {
 		return ValidationError{Message: "no fields to update"}
 	}
+	return nil
+}
+
+func ValidateImproveTaskReportPayload(req *request.ImproveTaskReport) error {
+	req.UserText = strings.TrimSpace(req.UserText)
+	if req.UserText == "" {
+		return ValidationError{Message: "user_text is required"}
+	}
+	if len(req.UserText) > 2000 {
+		return ValidationError{Message: "user_text cannot exceed 2000 characters"}
+	}
+
+	if req.Meta != nil {
+		clean := make(map[string]string, len(req.Meta))
+		for k, v := range req.Meta {
+			key := strings.TrimSpace(k)
+			value := strings.TrimSpace(v)
+			if key != "" {
+				clean[key] = value
+			}
+		}
+		req.Meta = clean
+	}
+
+	if req.ContentType != nil {
+		trimmed := strings.TrimSpace(*req.ContentType)
+		if trimmed == "" {
+			req.ContentType = nil
+		} else {
+			req.ContentType = &trimmed
+		}
+	}
+
 	return nil
 }
 

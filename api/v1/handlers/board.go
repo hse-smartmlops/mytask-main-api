@@ -35,13 +35,12 @@ func NewBoardHandler(service ports.BoardService) *BoardHandler {
 func RegisterBoardRoutes(group *echo.Group, service ports.BoardService) {
 	handler := NewBoardHandler(service)
 
-	legacy := group.Group("/boards")
-	legacy.GET("/all/:page/:pagesize", handler.ListBoards)
-	legacy.GET("/:id", handler.GetBoard)
-	legacy.GET("/project/:projectId", handler.ListBoardsByProject)
-	legacy.POST("", handler.CreateBoard)
-	legacy.PATCH("/:id", handler.UpdateBoard)
-	legacy.DELETE("/:id", handler.DeleteBoard)
+	group.GET("/boards/all/:page/:pagesize", handler.ListBoards)
+	group.GET("/boards/:id", handler.GetBoard)
+	group.GET("/boards/project/:projectId", handler.ListBoardsByProject)
+	group.POST("/boards", handler.CreateBoard)
+	group.PATCH("/boards/:id", handler.UpdateBoard)
+	group.DELETE("/boards/:id", handler.DeleteBoard)
 
 	group.GET("/projects/:project_id/boards", handler.ListBoardsByProject)
 }

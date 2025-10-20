@@ -170,3 +170,21 @@ func ExtractBearerToken(header string) (string, error) {
 	}
 	return trimmed, nil
 }
+
+func GetOptionalString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
+func ToOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	trimmed := strings.TrimSpace(*value)
+	if trimmed == "" {
+		return nil
+	}
+	return &trimmed
+}

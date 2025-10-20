@@ -99,6 +99,13 @@ definitions:
       meta:
         $ref: '#/definitions/emplacc-api_api_v1_dto.ResponseMeta'
     type: object
+  emplacc-api_api_v1_dto.ImprovedTaskReportResponse:
+    properties:
+      data:
+        $ref: '#/definitions/emplacc-api_api_v1_dto_response.ImprovedTaskReport'
+      meta:
+        $ref: '#/definitions/emplacc-api_api_v1_dto.ResponseMeta'
+    type: object
   emplacc-api_api_v1_dto.Pagination:
     properties:
       page:
@@ -219,6 +226,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/map_string_string'
+      meta:
+        $ref: '#/definitions/emplacc-api_api_v1_dto.ResponseMeta'
+    type: object
+  emplacc-api_api_v1_dto.TaskBoardProjectResponse:
+    properties:
+      data:
+        $ref: '#/definitions/emplacc-api_api_v1_dto_response.TaskBoardProject'
       meta:
         $ref: '#/definitions/emplacc-api_api_v1_dto.ResponseMeta'
     type: object
@@ -461,6 +475,19 @@ definitions:
       helper_id:
         type: string
       status:
+        type: string
+    type: object
+  emplacc-api_api_v1_dto_request.ImproveTaskReport:
+    properties:
+      content_type:
+        type: string
+      meta:
+        additionalProperties:
+          type: string
+        type: object
+      timeout_ms:
+        type: integer
+      user_text:
         type: string
     type: object
   emplacc-api_api_v1_dto_request.ReportCompletedWork:
@@ -829,6 +856,25 @@ definitions:
           $ref: '#/definitions/emplacc-api_api_v1_dto_response.HelpRequestWithAssigner'
         type: array
     type: object
+  emplacc-api_api_v1_dto_response.ImprovedTaskReport:
+    properties:
+      content_type:
+        type: string
+      improved_text:
+        type: string
+      meta:
+        additionalProperties:
+          type: string
+        type: object
+      original_text:
+        type: string
+      task_description:
+        type: string
+      task_id:
+        type: string
+      task_title:
+        type: string
+    type: object
   emplacc-api_api_v1_dto_response.Problem:
     properties:
       created_at:
@@ -1065,6 +1111,15 @@ definitions:
       status_id:
         type: string
       updated_at:
+        type: string
+    type: object
+  emplacc-api_api_v1_dto_response.TaskBoardProject:
+    properties:
+      board_id:
+        type: string
+      project_id:
+        type: string
+      task_id:
         type: string
     type: object
   emplacc-api_api_v1_dto_response.TaskStatus:
@@ -3414,6 +3469,113 @@ paths:
           schema:
             $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
       summary: Update Task
+      tags:
+      - Tasks
+  /tasks/{id}/board-project:
+    get:
+      consumes:
+      - application/json
+      description: Returns board and project identifiers for the specified task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.TaskBoardProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+      summary: Get Task Board and Project
+      tags:
+      - Tasks
+  /tasks/{id}/improve-report:
+    post:
+      consumes:
+      - application/json
+      description: Use MCP to improve a user supplied task report text
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Improvement payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/emplacc-api_api_v1_dto_request.ImproveTaskReport'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ImprovedTaskReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+      summary: Improve Task Report
+      tags:
+      - Tasks
+  /tasks/{id}/improve-report/ws:
+    get:
+      description: Stream MCP events while improving a task report through WebSocket
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/emplacc-api_api_v1_dto.ErrorResponse'
+      summary: Stream Task Report Improvement (WebSocket)
       tags:
       - Tasks
   /teams:

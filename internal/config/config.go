@@ -21,6 +21,7 @@ type Config struct {
 	Minio      MinioConfig
 	Pagination PaginationConfig
 	RateLimit  RateLimitConfig
+	MCP        MCPConfig
 }
 
 type AppConfig struct {
@@ -119,6 +120,12 @@ type RateLimitRule struct {
 	Window   time.Duration
 }
 
+type MCPConfig struct {
+	Address string
+	Timeout time.Duration
+	UseTLS  bool
+}
+
 func Load() (*Config, error) {
 	_ = godotenv.Load(".env")
 
@@ -210,6 +217,11 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parse PAGINATION_MAX_LIMIT: %w", err)
 	}
 
+	mcpTimeout, err := toDuration(getEnv("MCP_GRPC_TIMEOUT", "5s"))
+	if err != nil {
+		return nil, fmt.Errorf("parse MCP_GRPC_TIMEOUT: %w", err)
+	}
+
 	cfg := &Config{
 		App: AppConfig{
 			Name:        getEnv("APP_NAME", "emplacc-api"),
@@ -297,6 +309,11 @@ func Load() (*Config, error) {
 				Requests: ipRateRequests,
 				Window:   ipRateWindow,
 			},
+		},
+		MCP: MCPConfig{
+			Address: getEnv("MCP_GRPC_ADDRESS", ""),
+			Timeout: mcpTimeout,
+			UseTLS:  toBool(getEnv("MCP_GRPC_USE_TLS", "false")),
 		},
 	}
 

@@ -3323,6 +3323,168 @@
                 }
             }
         },
+        "/tasks/{id}/board-project": {
+            "get": {
+                "description": "Returns board and project identifiers for the specified task",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Get Task Board and Project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.TaskBoardProjectResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/{id}/improve-report": {
+            "post": {
+                "description": "Use MCP to improve a user supplied task report text",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Improve Task Report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Improvement payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto_request.ImproveTaskReport"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ImprovedTaskReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tasks/{id}/improve-report/ws": {
+            "get": {
+                "description": "Stream MCP events while improving a task report through WebSocket",
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Stream Task Report Improvement (WebSocket)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "101": {
+                        "description": "Switching Protocols"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/emplacc-api_api_v1_dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/teams": {
             "get": {
                 "description": "Retrieve a paginated list of teams",
@@ -4329,6 +4491,17 @@
                 }
             }
         },
+        "emplacc-api_api_v1_dto.ImprovedTaskReportResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/emplacc-api_api_v1_dto_response.ImprovedTaskReport"
+                },
+                "meta": {
+                    "$ref": "#/definitions/emplacc-api_api_v1_dto.ResponseMeta"
+                }
+            }
+        },
         "emplacc-api_api_v1_dto.Pagination": {
             "type": "object",
             "properties": {
@@ -4516,6 +4689,17 @@
             "properties": {
                 "data": {
                     "$ref": "#/definitions/map_string_string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/emplacc-api_api_v1_dto.ResponseMeta"
+                }
+            }
+        },
+        "emplacc-api_api_v1_dto.TaskBoardProjectResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/emplacc-api_api_v1_dto_response.TaskBoardProject"
                 },
                 "meta": {
                     "$ref": "#/definitions/emplacc-api_api_v1_dto.ResponseMeta"
@@ -4892,6 +5076,26 @@
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "emplacc-api_api_v1_dto_request.ImproveTaskReport": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "timeout_ms": {
+                    "type": "integer"
+                },
+                "user_text": {
                     "type": "string"
                 }
             }
@@ -5459,6 +5663,35 @@
                 }
             }
         },
+        "emplacc-api_api_v1_dto_response.ImprovedTaskReport": {
+            "type": "object",
+            "properties": {
+                "content_type": {
+                    "type": "string"
+                },
+                "improved_text": {
+                    "type": "string"
+                },
+                "meta": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "original_text": {
+                    "type": "string"
+                },
+                "task_description": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "task_title": {
+                    "type": "string"
+                }
+            }
+        },
         "emplacc-api_api_v1_dto_response.Problem": {
             "type": "object",
             "properties": {
@@ -5820,6 +6053,20 @@
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "emplacc-api_api_v1_dto_response.TaskBoardProject": {
+            "type": "object",
+            "properties": {
+                "board_id": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "task_id": {
                     "type": "string"
                 }
             }

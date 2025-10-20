@@ -26,6 +26,7 @@ type Deps struct {
 	AuthMiddleware      echo.MiddlewareFunc
 	RateLimiter         echo.MiddlewareFunc
 	TraceMetaEnabled    bool
+	MCPService          ports.MCPService
 }
 
 func RegisterRoutes(group *echo.Group, deps Deps) {
@@ -60,7 +61,7 @@ func RegisterRoutes(group *echo.Group, deps Deps) {
 		handlers.RegisterBoardRoutes(group, deps.BoardService)
 	}
 	if deps.TaskService != nil {
-		handlers.RegisterTaskRoutes(group, deps.TaskService)
+		handlers.RegisterTaskRoutes(group, deps.TaskService, deps.BoardService, deps.MCPService)
 	}
 	if deps.StatusService != nil {
 		handlers.RegisterStatusRoutes(group, deps.StatusService)

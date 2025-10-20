@@ -14,6 +14,8 @@ var (
 	parseUUIDPointer   = v1helpers.ParseUUIDPointer
 	parseDateValue     = v1helpers.ParseDateValue
 	extractBearerToken = v1helpers.ExtractBearerToken
+	getOptionalString  = v1helpers.GetOptionalString
+	toOptionalString   = v1helpers.ToOptionalString
 )
 
 func resolvePagination(queryPage, querySize string, defaultPage, defaultSize int) (int, int) {

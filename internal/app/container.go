@@ -31,9 +31,10 @@ type Container struct {
 	tokenValidator      ports.TokenValidator
 	rateLimiter         echo.MiddlewareFunc
 	traceMetaEnabled    bool
+	mcpService          ports.MCPService
 }
 
-func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) *Container {
+func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage, mcpService ports.MCPService) *Container {
 	attendanceRepo := pg.NewAttendanceRepository(db)
 	userRepo := pg.NewUserRepository(db)
 	roleRepo := pg.NewRoleRepository(db)
@@ -73,6 +74,7 @@ func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage) 
 		tokenValidator:      authService,
 		rateLimiter:         rateLimiter,
 		traceMetaEnabled:    cfg.Tracing.Enabled,
+		mcpService:          mcpService,
 	}
 }
 
@@ -94,5 +96,6 @@ func (c *Container) V1Deps() v1.Deps {
 		AuthMiddleware:      v1middleware.KeycloakAuth(c.tokenValidator),
 		RateLimiter:         c.rateLimiter,
 		TraceMetaEnabled:    c.traceMetaEnabled,
+		MCPService:          c.mcpService,
 	}
 }
