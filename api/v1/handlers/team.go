@@ -59,40 +59,23 @@ func RegisterTeamRoutes(group *echo.Group, service ports.TeamService) {
 // @Tags Teams
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.TeamsListResponse
+// @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /teams [get]
 func (h *TeamHandler) ListTeams(c echo.Context) error {
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	params := ports.PaginationParams{Page: pageNum, PageSize: size}
-
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
 	page, err := h.service.ListTeams(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
 	}
-
 	pagination, payload := presenter.MapTeamsPage(page)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
-}
-
-// @Summary List All Teams
-// @Description Retrieve a list of all teams without pagination
-// @Tags Teams
-// @Accept json
-// @Produce json
-// @Success 200 {object} dto.TeamsListResponse
-// @Failure 500 {object} dto.ErrorResponse
-// @Router /team/all [get]
-func (h *TeamHandler) ListAllTeams(c echo.Context) error {
-	teams, err := h.service.ListAllTeams(c.Request().Context())
-	if err != nil {
-		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
-	}
-
-	payload := presenter.MapTeamsList(teams)
-	return respondSuccess(c, http.StatusOK, payload)
 }
 
 // @Summary Get Team

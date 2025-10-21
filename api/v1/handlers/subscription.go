@@ -54,8 +54,10 @@ func RegisterSubscriptionRoutes(group *echo.Group, service ports.SubscriptionSer
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /subscriptions [get]
 func (h *SubscriptionHandler) ListSubscriptions(c echo.Context) error {
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	params := ports.PaginationParams{Page: pageNum, PageSize: size}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
 
 	result, err := h.service.ListSubscriptions(c.Request().Context(), params)
 	if err != nil {
@@ -117,8 +119,14 @@ func (h *SubscriptionHandler) ListSubscriptionsByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	params := ports.PaginationParams{Page: pageNum, PageSize: size}
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
 
 	result, err := h.service.ListSubscriptionsByUser(c.Request().Context(), userID, params)
 	if err != nil {
@@ -162,8 +170,14 @@ func (h *SubscriptionHandler) ListSubscriptionsByTarget(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "type_id must be a valid 8-bit integer"))
 	}
 
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	params := ports.PaginationParams{Page: pageNum, PageSize: size}
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
 
 	result, err := h.service.ListSubscriptionsByTarget(c.Request().Context(), targetID, typeID, params)
 	if err != nil {
@@ -232,4 +246,40 @@ func (h *SubscriptionHandler) DeleteSubscription(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// @Summary List Subscriptions by SubObject
+// @Tags Subscriptions
+// @Param subobj_id path string true "Subobject (Subscription) ID"
+// @Param type_id query int false "Type ID filter"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.SubscriptionsListResponse
+// @Router /subscription/sub-object/{subobj_id} [get]
+func (h *SubscriptionHandler) ListSubscriptionsBySubObject(c echo.Context) error {
+	subID, err := parseUUID(c.Param("subobj_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid sub-object identifier"))
+	}
+
+	typeParam := c.QueryParam("type_id")
+	if typeParam == "" {
+		typeParam = c.Param("type")
+	}
+	typeID, err := parseOptionalInt8(typeParam)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_type_id", "type_id must fit int8"))
+	}
+
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
+	page, err := h.service.ListBySubObject(c.Request().Context(), subID, typeID, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("subscriptions_fetch_failed", "failed to list subscriptions"))
+	}
+	pagination, payload := presenter.MapSubscriptionsPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }

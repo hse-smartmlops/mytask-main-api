@@ -13,25 +13,19 @@ import (
 )
 
 type projectService struct {
-	repo ports.ProjectRepository
+	projectRepo ports.ProjectRepository
+	teamRepo    ports.TeamRepository
 }
 
-func NewProjectService(repo ports.ProjectRepository) ports.ProjectService {
-	return &projectService{repo: repo}
-}
-
-func (s *projectService) ListProjects(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Project], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func NewProjectService(projectRepo ports.ProjectRepository, teamRepo ports.TeamRepository) ports.ProjectService {
+	return &projectService{
+		projectRepo: projectRepo,
+		teamRepo:    teamRepo,
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
-	}
-	return s.repo.ListProjects(ctx, params)
 }
 
 func (s *projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {
-	project, err := s.repo.GetProjectByID(ctx, id)
+	project, err := s.projectRepo.GetProjectByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +57,7 @@ func (s *projectService) CreateProject(ctx context.Context, input ports.CreatePr
 		Deleted:         &deleted,
 	}
 
-	if err := s.repo.CreateProject(ctx, project); err != nil {
+	if err := s.projectRepo.CreateProject(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -98,14 +92,30 @@ func (s *projectService) UpdateProject(ctx context.Context, id uuid.UUID, input 
 	}
 
 	if len(updates) == 0 {
-		return s.repo.GetProjectByID(ctx, id)
+		return s.projectRepo.GetProjectByID(ctx, id)
 	}
 
-	return s.repo.UpdateProject(ctx, id, updates)
+	return s.projectRepo.UpdateProject(ctx, id, updates)
 }
 
 func (s *projectService) DeleteProject(ctx context.Context, id uuid.UUID) error {
-	return s.repo.SoftDeleteProject(ctx, id)
+	return s.projectRepo.SoftDeleteProject(ctx, id)
+}
+
+func (s *projectService) ListProjects(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+	return s.projectRepo.ListProjects(ctx, p)
+}
+
+func (s *projectService) ListProjectsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+	return s.projectRepo.ListProjectsByUser(ctx, userID, p)
+}
+
+func (s *projectService) ListTeamsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+	return s.teamRepo.ListTeamsByProject(ctx, projectID, p)
+}
+
+func (s *projectService) ListProjectsByTeam(ctx context.Context, teamID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+	return s.projectRepo.ListProjectsByTeam(ctx, teamID, p)
 }
 
 var _ ports.ProjectService = (*projectService)(nil)

@@ -49,14 +49,18 @@ func RegisterForumMessageRoutes(group *echo.Group, service ports.ForumMessageSer
 // @Tags ForumMessages
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.ForumMessagesListResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /forum-messages [get]
 func (h *ForumMessageHandler) ListMessages(c echo.Context) error {
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	page, err := h.service.ListMessages(c.Request().Context(), ports.PaginationParams{Page: pageNum, PageSize: size})
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
+	page, err := h.service.ListMessages(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("forum_messages_fetch_failed", "failed to list forum messages"))
 	}
@@ -99,24 +103,24 @@ func (h *ForumMessageHandler) GetMessage(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param problem_id path string true "Problem ID"
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.ForumMessagesListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /problems/{problem_id}/forum-messages [get]
 func (h *ForumMessageHandler) ListMessagesByProblem(c echo.Context) error {
-	problemIDParam := c.Param("problem_id")
-	if problemIDParam == "" {
-		problemIDParam = c.Param("id")
-	}
-
-	problemID, err := parseUUID(problemIDParam)
+	problemID, err := parseUUID(c.Param("problem_id"))
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid problem identifier"))
 	}
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	page, err := h.service.ListMessagesByProblem(c.Request().Context(), problemID, ports.PaginationParams{Page: pageNum, PageSize: size})
+
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
+	page, err := h.service.ListMessagesByProblem(c.Request().Context(), problemID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("forum_messages_fetch_failed", "failed to list forum messages"))
 	}

@@ -52,21 +52,23 @@ func RegisterProjectRoutes(group *echo.Group, service ports.ProjectService) {
 // @Tags Projects
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.ProjectsListResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /projects [get]
 func (h *ProjectHandler) ListProjects(c echo.Context) error {
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	params := ports.PaginationParams{Page: pageNum, PageSize: size}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
 
-	projectsPage, err := h.service.ListProjects(c.Request().Context(), params)
+	result, err := h.service.ListProjects(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("projects_fetch_failed", "failed to list projects"))
 	}
 
-	pagination, payload := presenter.MapProjectsPage(projectsPage)
+	pagination, payload := presenter.MapProjectsPage(result)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
@@ -208,4 +210,85 @@ func (h *ProjectHandler) DeleteProject(c echo.Context) error {
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+// @Summary List Projects by User
+// @Tags Projects
+// @Param user_id path string true "User ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.ProjectsListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /project/user/{user_id} [get]
+func (h *ProjectHandler) ListProjectsByUser(c echo.Context) error {
+	userID, err := parseUUID(c.Param("user_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+	}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
+	page, err := h.service.ListProjectsByUser(c.Request().Context(), userID, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("projects_fetch_failed", "failed to list projects"))
+	}
+	pagination, payload := presenter.MapProjectsPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
+}
+
+// @Summary List Teams by Project
+// @Tags Projects
+// @Param project_id path string true "Project ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.TeamsListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /project/{project_id}/teams [get]
+func (h *ProjectHandler) ListTeamsByProject(c echo.Context) error {
+	projectID, err := parseUUID(c.Param("project_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
+	}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
+	page, err := h.service.ListTeamsByProject(c.Request().Context(), projectID, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
+	}
+	pagination, payload := presenter.MapTeamsPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
+}
+
+// @Summary List Projects by Team
+// @Tags Projects
+// @Param team_id path string true "Team ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.ProjectsListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /project/team/{team_id} [get]
+func (h *ProjectHandler) ListProjectsByTeam(c echo.Context) error {
+	teamID, err := parseUUID(c.Param("team_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid team identifier"))
+	}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
+	page, err := h.service.ListProjectsByTeam(c.Request().Context(), teamID, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("projects_fetch_failed", "failed to list projects"))
+	}
+	pagination, payload := presenter.MapProjectsPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }

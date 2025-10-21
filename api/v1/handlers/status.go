@@ -51,18 +51,21 @@ func RegisterStatusRoutes(group *echo.Group, service ports.StatusService) {
 // @Tags Statuses
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.StatusesListResponse
+// @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /statuses [get]
 func (h *StatusHandler) ListStatuses(c echo.Context) error {
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	page, err := h.service.ListStatuses(c.Request().Context(), ports.PaginationParams{Page: pageNum, PageSize: size})
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	page, err := h.service.ListStatuses(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
 	}
-
 	pagination, payload := presenter.MapStatusesPage(page)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }

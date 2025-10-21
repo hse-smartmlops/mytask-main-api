@@ -2,6 +2,128 @@
 
 Сервис предоставляет HTTP API (Echo), gRPC клиент для MCP и интеграции с Keycloak, MinIO, Prometheus.
 
+## Routes
+
+### Attendance
+GET    /v1/attendance                         (требует ?page & page_size)
+GET    /v1/attendance/{id}
+GET    /v1/attendance/user/{user_id}          (требует ?page & page_size)
+POST   /v1/attendance
+PATCH  /v1/attendance/{id}
+DELETE /v1/attendance/{id}
+
+### Auth
+POST   /v1/auth/login
+POST   /v1/auth/refresh
+POST   /v1/auth/logout         (secured)
+GET    /v1/auth/me             (secured)
+GET    /v1/auth/validate       (secured)
+
+### Board
+GET    /v1/board                               (требует ?page & page_size)
+GET    /v1/board/{id}
+GET    /v1/board/project/{project_id}          (требует ?page & page_size)
+POST   /v1/board
+PATCH  /v1/board/{id}
+DELETE /v1/board/{id}
+
+### Problem
+GET    /v1/problem                             (требует ?page & page_size)
+GET    /v1/problem/{id}
+GET    /v1/problem/user/{user_id}              (требует ?page & page_size)
+POST   /v1/problem
+PATCH  /v1/problem/{id}
+DELETE /v1/problem/{id}
+
+### Project
+GET    /v1/project                             (требует ?page & page_size)
+GET    /v1/project/{id}
+GET    /v1/project/user/{user_id}              (требует ?page & page_size)
+GET    /v1/project/{project_id}/teams          (требует ?page & page_size)
+GET    /v1/project/team/{team_id}              (требует ?page & page_size)
+POST   /v1/project
+PATCH  /v1/project/{id}
+DELETE /v1/project/{id}
+
+### Report
+GET    /v1/report                              (требует ?page & page_size)
+GET    /v1/report/{id}
+GET    /v1/report/project/{id}                 (требует ?page & page_size)
+GET    /v1/report/task/{id}                    (требует ?page & page_size)
+GET    /v1/report/user/{user_id}               (требует ?page & page_size)
+GET    /v1/report/help-requests-by-user-id/{id}(требует ?page & page_size)
+POST   /v1/report
+PATCH  /v1/report/{id}
+DELETE /v1/report/{id}
+PATCH  /v1/report/completed-work/{id}
+PATCH  /v1/report/tomorrow-plans/{id}
+POST   /v1/report/export/xlsx
+PATCH  /v1/report/help-request/{id}
+DELETE /v1/report/help-request/{id}
+
+### Role
+GET    /v1/role                                (требует ?page & page_size)
+GET    /v1/role/{id}
+POST   /v1/role
+PATCH  /v1/role/{id}
+DELETE /v1/role/{id}
+
+### Status
+GET    /v1/status                              (требует ?page & page_size)
+GET    /v1/status/{id}
+GET    /v1/status/board/{board_id}             (список статусов доски, без пагинации)
+POST   /v1/status
+PATCH  /v1/status/{id}
+DELETE /v1/status/{id}
+
+### Subscription
+GET    /v1/subscription                        (требует ?page & page_size)
+GET    /v1/subscription/{id}
+GET    /v1/subscription/user/{user_id}         (требует ?page & page_size)
+GET    /v1/subscription/sub-object/{subobj_id} (требует ?page & page_size)
+POST   /v1/subscription
+DELETE /v1/subscription/{id}
+
+### Task
+GET    /v1/tasks                               (требует ?page & page_size)
+GET    /v1/tasks/{id}
+GET    /v1/tasks/board/{board_id}              (требует ?page & page_size)
+GET    /v1/tasks/user/{id}                     (требует ?page & page_size)
+GET    /v1/tasks/user/{user_id}/project/{project_id} (требует ?page & page_size)
+GET    /v1/tasks/user/{user_id}/active         (требует ?page & page_size)
+POST   /v1/tasks
+PATCH  /v1/tasks/{id}
+DELETE /v1/tasks/{id}
+POST   /v1/tasks/{id}/improve-report
+GET    /v1/tasks/{id}/improve-report/ws
+
+### Team
+GET    /v1/team                                (требует ?page & page_size)
+GET    /v1/team/{id}
+POST   /v1/team
+PATCH  /v1/team/{id}
+DELETE /v1/team/{id}
+POST   /v1/team/project
+DELETE /v1/team/project
+POST   /v1/team/user
+DELETE /v1/team/user
+GET    /v1/team/user/{user_id}                 (требует ?page & page_size)
+
+### User
+GET    /v1/user                                (требует ?page & page_size)
+GET    /v1/user/{id}
+POST   /v1/user
+PATCH  /v1/user/{id}
+DELETE /v1/user/{id}
+GET    /v1/user/restore                        (требует ?page & page_size)
+POST   /v1/user/{id}/avatar
+PUT    /v1/user/{id}/avatar
+DELETE /v1/user/{id}/avatar
+GET    /v1/user/{id}/avatar
+POST   /v1/user/role
+DELETE /v1/user/role
+
+
 ## Архитектура
 
 ```

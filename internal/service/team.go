@@ -21,17 +21,7 @@ func NewTeamService(repo ports.TeamRepository) ports.TeamService {
 }
 
 func (s *teamService) ListTeams(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Team], error) {
-	if params.Page <= 0 {
-		params.Page = 1
-	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
-	}
 	return s.repo.ListTeams(ctx, params)
-}
-
-func (s *teamService) ListAllTeams(ctx context.Context) ([]models.Team, error) {
-	return s.repo.ListAllTeams(ctx)
 }
 
 func (s *teamService) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, error) {
@@ -45,15 +35,15 @@ func (s *teamService) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, 
 	return team, nil
 }
 
-func (s *teamService) ListTeamsByProject(ctx context.Context, projectID uuid.UUID) ([]models.Team, error) {
-	return s.repo.ListTeamsByProject(ctx, projectID)
+func (s *teamService) ListTeamsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+	return s.repo.ListTeamsByProject(ctx, projectID, p)
 }
 
-func (s *teamService) ListTeamsByUser(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
+func (s *teamService) ListTeamsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
 	if userID == uuid.Nil {
 		return nil, domain.ErrInvalidInput
 	}
-	return s.repo.ListTeamsByUser(ctx, userID)
+	return s.repo.ListTeamsByUser(ctx, userID, p)
 }
 
 func (s *teamService) CreateTeam(ctx context.Context, input ports.CreateTeamInput) (*models.Team, error) {

@@ -92,4 +92,13 @@ func (s *subscriptionService) DeleteSubscription(ctx context.Context, id uuid.UU
 	return s.repo.SoftDeleteSubscription(ctx, id)
 }
 
+func (s *subscriptionService) ListBySubObject(
+	ctx context.Context,
+	subobjID uuid.UUID,
+	typeID *int8,
+	p ports.PaginationParams,
+) (*ports.Page[models.Subscription], error) {
+	return s.ListSubscriptionsByTarget(ctx, subobjID, typeID, p)
+}
+
 var _ ports.SubscriptionService = (*subscriptionService)(nil)

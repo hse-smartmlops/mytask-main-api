@@ -61,22 +61,22 @@ func RegisterTaskRoutes(group *echo.Group, service ports.TaskService, boardServi
 // @Tags Tasks
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.TasksListResponse
+// @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /tasks [get]
 func (h *TaskHandler) ListTasks(c echo.Context) error {
-	page, size := resolvePaginationFromContext(c, 1, 20)
-	result, err := h.service.ListTasks(c.Request().Context(), ports.PaginationParams{
-		Page:     page,
-		PageSize: size,
-	})
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	page, err := h.service.ListTasks(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
 	}
-
-	pagination, payload := presenter.MapTasksPage(result)
+	pagination, payload := presenter.MapTasksPage(page)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
@@ -126,8 +126,11 @@ func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	page, size := resolvePaginationFromContext(c, 1, 20)
-	result, err := h.service.ListTasksByProject(c.Request().Context(), projectID, ports.PaginationParams{Page: page, PageSize: size})
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	result, err := h.service.ListTasksByProject(c.Request().Context(), projectID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
 	}
@@ -159,8 +162,11 @@ func (h *TaskHandler) ListTasksByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	page, size := resolvePaginationFromContext(c, 1, 20)
-	result, err := h.service.ListTasksByUser(c.Request().Context(), userID, ports.PaginationParams{Page: page, PageSize: size})
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	result, err := h.service.ListTasksByUser(c.Request().Context(), userID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
 	}
@@ -589,4 +595,123 @@ func (h *TaskHandler) GetTaskBoardAndProject(c echo.Context) error {
 	return respondSuccess(c, http.StatusOK, dto.TaskBoardProjectResponse{
 		SuccessResponse: dto.NewSuccessResponse(resp),
 	})
+}
+
+// @Summary Move Task between statuses
+// @Description Move a task from its current status to another status
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param task_id query string true "Task ID"
+// @Param to_status_id query string true "Destination Status ID"
+// @Success 200 {object} dto.TaskResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks/move [get]
+func (h *TaskHandler) MoveTaskBetweenStatuses(c echo.Context) error {
+	taskID, err := parseUUID(c.QueryParam("task_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_task_id", "invalid task identifier"))
+	}
+	toStatusID, err := parseUUID(c.QueryParam("to_status_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_status_id", "invalid status identifier"))
+	}
+	task, err := h.service.MoveTaskBetweenStatuses(c.Request().Context(), taskID, toStatusID)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("task_move_failed", "failed to move task"))
+	}
+	return respondSuccess(c, http.StatusOK, presenter.ToTaskDTO(task))
+}
+
+// @Summary List Active Tasks by User
+// @Description Retrieve a paginated list of active tasks assigned to a specific user
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.TasksListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks/user/{user_id}/active [get]
+func (h *TaskHandler) ListActiveTasksByUser(c echo.Context) error {
+	userID, err := parseUUID(c.Param("user_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_user_id", "invalid user identifier"))
+	}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	page, err := h.service.ListActiveTasksByUser(c.Request().Context(), userID, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
+	}
+	pagination, payload := presenter.MapTasksPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
+}
+
+// @Summary List Tasks by User and Project
+// @Description Retrieve a paginated list of tasks assigned to a specific user within a specific project
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param user_id path string true "User ID"
+// @Param project_id path string true "Project ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.TasksListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks/user/{user_id}/project/{project_id} [get]
+func (h *TaskHandler) ListTasksByUserAndProject(c echo.Context) error {
+	userID, err := parseUUID(c.Param("user_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_user_id", "invalid user identifier"))
+	}
+	projectID, err := parseUUID(c.Param("project_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_project_id", "invalid project identifier"))
+	}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	page, err := h.service.ListTasksByUserAndProject(c.Request().Context(), userID, projectID, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
+	}
+	pagination, payload := presenter.MapTasksPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
+}
+
+// @Summary List Tasks by Board
+// @Description Retrieve a paginated list of tasks associated with a specific board
+// @Accept json
+// @Produce json
+// @Tags Tasks
+// @Param board_id path string true "Board ID"
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.TasksListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /tasks/board/{board_id} [get]
+func (h *TaskHandler) ListTasksByBoard(c echo.Context) error {
+	boardID, err := parseUUID(c.Param("board_id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_board_id", "invalid board identifier"))
+	}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	page, err := h.service.ListTasksByBoard(c.Request().Context(), boardID, params)
+	if err != nil {
+		return respondError(c, http.StatusInternalServerError, dto.NewError("tasks_fetch_failed", "failed to list tasks"))
+	}
+	pagination, payload := presenter.MapTasksPage(page)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }

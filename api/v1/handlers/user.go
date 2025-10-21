@@ -57,22 +57,21 @@ func RegisterUserRoutes(group *echo.Group, service ports.UserService) {
 // @Tags Users
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Success 200 {object} dto.UsersListResponse
+// @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users [get]
 func (h *UserHandler) ListUsers(c echo.Context) error {
-	page, size := resolvePaginationFromContext(c, 1, 20)
-
-	result, err := h.service.ListUsers(c.Request().Context(), ports.PaginationParams{
-		Page:     page,
-		PageSize: size,
-	})
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+	result, err := h.service.ListUsers(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("users_fetch_failed", "failed to list users"))
 	}
-
 	pagination, payload := presenter.MapUsersPage(result)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
@@ -141,6 +140,40 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 	}
 
 	return respondSuccess(c, http.StatusCreated, presenter.ToUserDTO(user))
+}
+
+// @Summary Update User Avatar
+// @Description Update a user's avatar image
+// @Tags Users
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path string true "User ID"
+// @Param avatar formData file true "Avatar image"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/{id}/avatar [put]
+func (h *UserHandler) UpdateAvatar(c echo.Context) error {
+	id, err := parseUUID(c.Param("id"))
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
+	}
+	upload, err := middleware.BindAvatarUpload(c, "avatar", maxAvatarSize)
+	if err != nil {
+		return middleware.RespondValidationError(c, err)
+	}
+	user, err := h.service.SaveAvatar(c.Request().Context(), id, ports.SaveUserAvatarInput{
+		Data:        upload.Data,
+		ContentType: upload.ContentType,
+	})
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			return respondError(c, http.StatusNotFound, dto.NewError("user_not_found", "user not found"))
+		}
+		return respondError(c, http.StatusInternalServerError, dto.NewError("avatar_upload_failed", "failed to upload avatar"))
+	}
+	return respondSuccess(c, http.StatusOK, presenter.ToUserDTO(user))
 }
 
 // UploadAvatar handles uploading or updating a user's avatar image.
@@ -238,4 +271,80 @@ func (h *UserHandler) GetAvatar(c echo.Context) error {
 
 	c.Response().Header().Set("Content-Disposition", "inline; filename="+avatar.FileName)
 	return c.Blob(http.StatusOK, avatar.ContentType, avatar.Data)
+}
+
+// @Summary Delete User
+// @Description Delete a user by their ID
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/{id} [delete]
+func (h *UserHandler) DeleteUser(c echo.Context) error {
+	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "delete user is not implemented yet"))
+}
+
+// @Summary Update User
+// @Description Update an existing user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param user body request.UpdateUser true "User update payload"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/{id} [patch]
+func (h *UserHandler) UpdateUser(c echo.Context) error {
+	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "update user is not implemented yet"))
+}
+
+// @Summary List Deleted Users
+// @Description Retrieve a paginated list of deleted users
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
+// @Success 200 {object} dto.UsersListResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/restore [get]
+func (h *UserHandler) ListDeletedUsers(c echo.Context) error {
+	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "list deleted users is not implemented yet"))
+}
+
+// @Summary Add User Role
+// @Description Assign a role to a user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user_role body request.UserRoleAssignment true "User role assignment payload"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/role [post]
+func (h *UserHandler) AddUserRole(c echo.Context) error {
+	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "add user role is not implemented yet"))
+}
+
+// @Summary Remove User Role
+// @Description Remove a role from a user
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param user_role body request.UserRoleAssignment true "User role removal payload"
+// @Success 200 {object} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 404 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /users/role [delete]
+func (h *UserHandler) RemoveUserRole(c echo.Context) error {
+	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "remove user role is not implemented yet"))
 }

@@ -67,14 +67,15 @@ func RegisterDailyReportRoutes(group *echo.Group, service ports.DailyReportServi
 // @Tags Reports
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number" default(1)
-// @Param page_size query int false "Page size" default(20)
+// @Param page query int true "Page number"
+// @Param page_size query int true "Page size"
 // @Param user_id query string false "Filter by user ID"
 // @Param project_id query string false "Filter by project ID"
 // @Param task_id query string false "Filter by task ID"
 // @Param start_date query string false "Filter by start date (YYYY-MM-DD)"
 // @Param end_date query string false "Filter by end date (YYYY-MM-DD)"
 // @Success 200 {object} dto.ReportsListResponse
+// @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/all [get]
 func (h *DailyReportHandler) ListReports(c echo.Context) error {
@@ -85,13 +86,16 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 	startParam := strings.TrimSpace(c.QueryParam("start_date"))
 	endParam := strings.TrimSpace(c.QueryParam("end_date"))
 
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
 	if userParam != "" {
 		userID, err := parseUUID(userParam)
 		if err != nil {
 			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "user_id must be a valid UUID"))
 		}
-		pageNum, size := resolvePaginationFromContext(c, 1, 20)
-		params := ports.PaginationParams{Page: pageNum, PageSize: size}
 
 		result, err := h.service.ListReportsByUser(ctx, userID, params)
 		if err != nil {
@@ -145,9 +149,6 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports)})
 	}
 
-	pageNum, size := resolvePaginationFromContext(c, 1, 20)
-	params := ports.PaginationParams{Page: pageNum, PageSize: size}
-
 	result, err := h.service.ListReports(ctx, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports"))
@@ -176,8 +177,10 @@ func (h *DailyReportHandler) ListReportsByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	page, size := resolvePaginationFromContext(c, 1, 20)
-	params := ports.PaginationParams{Page: page, PageSize: size}
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
 	reports, err := h.service.ListReportsByUser(c.Request().Context(), userID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports for user"))

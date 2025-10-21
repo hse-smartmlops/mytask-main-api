@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type CreateUserInput struct {
+type UserInput struct {
 	Email         string
 	IsActive      *bool
 	TgID          *string
@@ -17,7 +17,7 @@ type CreateUserInput struct {
 	LastName      *string
 }
 
-type SaveUserAvatarInput struct {
+type UserAvatarInput struct {
 	Data        []byte
 	ContentType string
 }

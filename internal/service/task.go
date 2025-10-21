@@ -21,12 +21,6 @@ func NewTaskService(repo ports.TaskRepository) ports.TaskService {
 }
 
 func (s *taskService) ListTasks(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Task], error) {
-	if params.Page <= 0 {
-		params.Page = 1
-	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
-	}
 	return s.repo.ListTasks(ctx, params)
 }
 
@@ -42,22 +36,10 @@ func (s *taskService) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, 
 }
 
 func (s *taskService) ListTasksByProject(ctx context.Context, projectID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
-	if params.Page <= 0 {
-		params.Page = 1
-	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
-	}
 	return s.repo.ListTasksByProject(ctx, projectID, params)
 }
 
 func (s *taskService) ListTasksByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
-	if params.Page <= 0 {
-		params.Page = 1
-	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
-	}
 	return s.repo.ListTasksByUser(ctx, userID, params)
 }
 
@@ -141,6 +123,22 @@ func (s *taskService) UpdateTask(ctx context.Context, id uuid.UUID, input ports.
 
 func (s *taskService) DeleteTask(ctx context.Context, id uuid.UUID) error {
 	return s.repo.SoftDeleteTask(ctx, id)
+}
+
+func (s *taskService) ListActiveTasksByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+	return s.repo.ListActiveTasksByUser(ctx, userID, p)
+}
+
+func (s *taskService) ListTasksByUserAndProject(ctx context.Context, userID, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+	return s.repo.ListTasksByUserAndProject(ctx, userID, projectID, p)
+}
+
+func (s *taskService) ListTasksByBoard(ctx context.Context, boardID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+	return s.repo.ListTasksByBoard(ctx, boardID, p)
+}
+
+func (s *taskService) MoveTaskBetweenStatuses(ctx context.Context, taskID, toStatusID uuid.UUID) (*models.Task, error) {
+	return s.repo.MoveTaskBetweenStatuses(ctx, taskID, toStatusID)
 }
 
 var _ ports.TaskService = (*taskService)(nil)

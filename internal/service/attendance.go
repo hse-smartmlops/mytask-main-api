@@ -29,8 +29,14 @@ func (s *attendanceService) ListAttendances(ctx context.Context, params ports.Pa
 	return s.repo.ListAttendances(ctx, params)
 }
 
-func (s *attendanceService) ListAttendancesByUser(ctx context.Context, userID uuid.UUID) ([]models.Attendance, error) {
-	return s.repo.ListAttendancesByUser(ctx, userID)
+func (s *attendanceService) ListAttendancesByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) ([]models.Attendance, error) {
+	if params.Page <= 0 {
+		params.Page = 1
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = 20
+	}
+	return s.repo.ListAttendancesByUser(ctx, userID, params)
 }
 
 func (s *attendanceService) GetAttendance(ctx context.Context, id uuid.UUID) (*models.Attendance, error) {

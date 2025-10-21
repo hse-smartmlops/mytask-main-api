@@ -58,16 +58,6 @@ func RegisterAuthRoutes(group *echo.Group, service ports.AuthService) {
 // @Produce json
 // @Param login body request.AuthLogin true "Login credentials"
 // @Success 200 {object} dto.AuthResponse
-	secured.GET("/validate", h.Validate)
-}
-
-// @Summary Login
-// @Description Authenticate user and obtain access and refresh tokens
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param login body request.AuthLogin true "Login credentials"
-// @Success 200 {object} dto.AuthResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Router /auth/login [post]
