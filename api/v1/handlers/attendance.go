@@ -25,7 +25,9 @@ type AttendanceHandler struct {
 }
 
 func NewAttendanceHandler(service ports.AttendanceService) *AttendanceHandler {
-	return &AttendanceHandler{service: service}
+	return &AttendanceHandler{
+		service: service,
+	}
 }
 
 // @Summary Register Attendance Routes

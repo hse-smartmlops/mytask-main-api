@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -14,20 +15,21 @@ import (
 
 type boardService struct {
 	repo ports.BoardRepository
+	config *config.PaginationConfig
 }
 
-func NewBoardService(repo ports.BoardRepository) ports.BoardService {
-	return &boardService{repo: repo}
+func NewBoardService(repo ports.BoardRepository, config *config.PaginationConfig) ports.BoardService {
+	return &boardService{repo:repo,config:config}
 }
 
-func (s *boardService) ListBoards(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Board], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *boardService) ListBoards(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Board], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListBoards(ctx, params)
+	return s.repo.ListBoards(ctx, p)
 }
 
 func (s *boardService) GetBoard(ctx context.Context, id uuid.UUID) (*models.Board, error) {

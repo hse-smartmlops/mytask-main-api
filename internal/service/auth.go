@@ -19,14 +19,11 @@ type authService struct {
 	repo     ports.AuthRepository
 	userRepo ports.UserRepository
 	cfg      config.KeycloakConfig
+	config   *config.PaginationConfig
 }
 
-func NewAuthService(cfg config.KeycloakConfig, repository ports.AuthRepository, userRepo ports.UserRepository) ports.AuthService {
-	return &authService{
-		repo:     repository,
-		userRepo: userRepo,
-		cfg:      cfg,
-	}
+func NewAuthService(cfg config.KeycloakConfig, repository ports.AuthRepository, userRepo ports.UserRepository, config *config.PaginationConfig) ports.AuthService {
+	return &authService{repo:repository,userRepo:userRepo,cfg:cfg,config:config}
 }
 
 func (s *authService) Login(ctx context.Context, email, password string) (*ports.AuthLoginResult, error) {

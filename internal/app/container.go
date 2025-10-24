@@ -53,24 +53,24 @@ func NewContainer(cfg *config.Config, db *gorm.DB, storage ports.ObjectStorage, 
 		minioStorage, _ = minioRepo.NewStorage(cfg.Minio)
 	}
 
-	authService := service.NewAuthService(cfg.Keycloak, authRepo, userRepo)
+	authService := service.NewAuthService(cfg.Keycloak, authRepo, userRepo, &cfg.Pagination)
 
 	rateLimiter := v1middleware.NewRateLimiter(cfg.RateLimit)
 
 	return &Container{
-		AttendanceService:   service.NewAttendanceService(attendanceRepo),
+		AttendanceService:   service.NewAttendanceService(attendanceRepo, &cfg.Pagination),
 		AuthService:         authService,
-		UserService:         service.NewUserService(userRepo, minioStorage, cfg.Minio),
-		RoleService:         service.NewRoleService(roleRepo),
-		ProjectService:      service.NewProjectService(projectRepo, teamRepo),
-		BoardService:        service.NewBoardService(boardRepo),
-		TaskService:         service.NewTaskService(taskRepo),
-		StatusService:       service.NewStatusService(statusRepo),
-		TeamService:         service.NewTeamService(teamRepo),
-		SubscriptionService: service.NewSubscriptionService(subRepo),
-		ProblemService:      service.NewProblemService(problemRepo),
-		DailyReportService:  service.NewDailyReportService(reportRepo, minioStorage, cfg.Minio),
-		ForumMessageService: service.NewForumMessageService(forumRepo),
+		UserService:         service.NewUserService(userRepo, minioStorage, cfg.Minio, &cfg.Pagination),
+		RoleService:         service.NewRoleService(roleRepo, &cfg.Pagination),
+		ProjectService:      service.NewProjectService(projectRepo, teamRepo, &cfg.Pagination),
+		BoardService:        service.NewBoardService(boardRepo, &cfg.Pagination),
+		TaskService:         service.NewTaskService(taskRepo, &cfg.Pagination),
+		StatusService:       service.NewStatusService(statusRepo, &cfg.Pagination),
+		TeamService:         service.NewTeamService(teamRepo, &cfg.Pagination),
+		SubscriptionService: service.NewSubscriptionService(subRepo, &cfg.Pagination),
+		ProblemService:      service.NewProblemService(problemRepo, &cfg.Pagination),
+		DailyReportService:  service.NewDailyReportService(reportRepo, minioStorage, cfg.Minio, &cfg.Pagination),
+		ForumMessageService: service.NewForumMessageService(forumRepo, &cfg.Pagination),
 		tokenValidator:      authService,
 		rateLimiter:         rateLimiter,
 		traceMetaEnabled:    cfg.Tracing.Enabled,

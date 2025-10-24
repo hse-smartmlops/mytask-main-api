@@ -6,15 +6,17 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	pb "emplacc-api/pkg/pb/v1"
 )
 
 type mcpService struct {
 	repo ports.MCPRepository
+	config *config.PaginationConfig
 }
 
-func NewMCPService(repo ports.MCPRepository) ports.MCPService {
-	return &mcpService{repo: repo}
+func NewMCPService(repo ports.MCPRepository, config *config.PaginationConfig) ports.MCPService {
+	return &mcpService{repo: repo, config: config}
 }
 
 func (s *mcpService) ImproveReport(ctx context.Context, input ports.ImproveReportInput) (*ports.ImproveReportResult, error) {

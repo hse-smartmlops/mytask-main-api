@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,30 +14,31 @@ import (
 
 type attendanceService struct {
 	repo ports.AttendanceRepository
+	config *config.PaginationConfig
 }
 
-func NewAttendanceService(repo ports.AttendanceRepository) ports.AttendanceService {
-	return &attendanceService{repo: repo}
+func NewAttendanceService(repo ports.AttendanceRepository, config *config.PaginationConfig) ports.AttendanceService {
+	return &attendanceService{repo: repo,config: config}
 }
 
-func (s *attendanceService) ListAttendances(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Attendance], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *attendanceService) ListAttendances(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Attendance], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListAttendances(ctx, params)
+	return s.repo.ListAttendances(ctx, p)
 }
 
-func (s *attendanceService) ListAttendancesByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) ([]models.Attendance, error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *attendanceService) ListAttendancesByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) ([]models.Attendance, error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListAttendancesByUser(ctx, userID, params)
+	return s.repo.ListAttendancesByUser(ctx, userID, p)
 }
 
 func (s *attendanceService) GetAttendance(ctx context.Context, id uuid.UUID) (*models.Attendance, error) {

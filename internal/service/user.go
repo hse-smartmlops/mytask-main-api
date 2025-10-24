@@ -19,20 +19,21 @@ type userService struct {
 	repo    ports.UserRepository
 	storage ports.ObjectStorage
 	cfg     config.MinioConfig
+	config  *config.PaginationConfig
 }
 
-func NewUserService(repo ports.UserRepository, storage ports.ObjectStorage, cfg config.MinioConfig) ports.UserService {
-	return &userService{repo: repo, storage: storage, cfg: cfg}
+func NewUserService(repo ports.UserRepository, storage ports.ObjectStorage, cfg config.MinioConfig, config *config.PaginationConfig) ports.UserService {
+	return &userService{repo: repo, storage: storage, cfg: cfg, config: config}
 }
 
-func (s *userService) ListUsers(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.User], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *userService) ListUsers(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.User], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListUsers(ctx, params)
+	return s.repo.ListUsers(ctx, p)
 }
 
 func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {

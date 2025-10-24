@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,20 +14,21 @@ import (
 
 type forumMessageService struct {
 	repo ports.ForumMessageRepository
+	config *config.PaginationConfig
 }
 
-func NewForumMessageService(repo ports.ForumMessageRepository) ports.ForumMessageService {
-	return &forumMessageService{repo: repo}
+func NewForumMessageService(repo ports.ForumMessageRepository, config *config.PaginationConfig) ports.ForumMessageService {
+	return &forumMessageService{repo: repo, config: config}
 }
 
-func (s *forumMessageService) ListMessages(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.ForumMessage], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *forumMessageService) ListMessages(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.ForumMessage], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListMessages(ctx, params)
+	return s.repo.ListMessages(ctx, p)
 }
 
 func (s *forumMessageService) GetMessage(ctx context.Context, id uuid.UUID) (*models.ForumMessage, error) {
@@ -40,14 +42,14 @@ func (s *forumMessageService) GetMessage(ctx context.Context, id uuid.UUID) (*mo
 	return msg, nil
 }
 
-func (s *forumMessageService) ListMessagesByProblem(ctx context.Context, problemID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.ForumMessage], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *forumMessageService) ListMessagesByProblem(ctx context.Context, problemID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.ForumMessage], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListMessagesByProblem(ctx, problemID, params)
+	return s.repo.ListMessagesByProblem(ctx, problemID, p)
 }
 
 func (s *forumMessageService) CreateMessage(ctx context.Context, input ports.CreateForumMessageInput) (*models.ForumMessage, error) {
