@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,10 +14,11 @@ import (
 
 type problemService struct {
 	repo ports.ProblemRepository
+	config *config.PaginationConfig
 }
 
-func NewProblemService(repo ports.ProblemRepository) ports.ProblemService {
-	return &problemService{repo: repo}
+func NewProblemService(repo ports.ProblemRepository, config *config.PaginationConfig) ports.ProblemService {
+	return &problemService{repo: repo, config: config}
 }
 
 func (s *problemService) ListProblems(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Problem], error) {

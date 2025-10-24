@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -14,10 +15,11 @@ import (
 
 type boardService struct {
 	repo ports.BoardRepository
+	config *config.PaginationConfig
 }
 
-func NewBoardService(repo ports.BoardRepository) ports.BoardService {
-	return &boardService{repo: repo}
+func NewBoardService(repo ports.BoardRepository, config *config.PaginationConfig) ports.BoardService {
+	return &boardService{repo:repo,config:config}
 }
 
 func (s *boardService) ListBoards(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Board], error) {

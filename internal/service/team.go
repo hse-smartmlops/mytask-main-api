@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -14,10 +15,11 @@ import (
 
 type teamService struct {
 	repo ports.TeamRepository
+	config *config.PaginationConfig
 }
 
-func NewTeamService(repo ports.TeamRepository) ports.TeamService {
-	return &teamService{repo: repo}
+func NewTeamService(repo ports.TeamRepository, config *config.PaginationConfig) ports.TeamService {
+	return &teamService{repo: repo, config: config}
 }
 
 func (s *teamService) ListTeams(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Team], error) {

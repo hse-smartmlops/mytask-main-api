@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -14,10 +15,11 @@ import (
 
 type roleService struct {
 	repo ports.RoleRepository
+	config *config.PaginationConfig
 }
 
-func NewRoleService(repo ports.RoleRepository) ports.RoleService {
-	return &roleService{repo: repo}
+func NewRoleService(repo ports.RoleRepository, config *config.PaginationConfig) ports.RoleService {
+	return &roleService{repo: repo, config: config}
 }
 
 func (s *roleService) ListRoles(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Role], error) {

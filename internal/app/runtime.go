@@ -79,7 +79,7 @@ func Run(ctx context.Context) error {
 		} else {
 			mcpClient = client
 			repo := mcprepo.New(client.API())
-			mcpService = service.NewMCPService(repo)
+			mcpService = service.NewMCPService(repo, &cfg.Pagination)
 		}
 	} else {
 		logger.Info("mcp disabled", slog.String("reason", "MCP_GRPC_ADDRESS not configured"))

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -14,10 +15,11 @@ import (
 
 type taskService struct {
 	repo ports.TaskRepository
+	config *config.PaginationConfig
 }
 
-func NewTaskService(repo ports.TaskRepository) ports.TaskService {
-	return &taskService{repo: repo}
+func NewTaskService(repo ports.TaskRepository, config *config.PaginationConfig) ports.TaskService {
+	return &taskService{repo: repo, config: config}
 }
 
 func (s *taskService) ListTasks(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Task], error) {

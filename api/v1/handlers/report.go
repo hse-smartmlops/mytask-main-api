@@ -580,7 +580,6 @@ func (h *DailyReportHandler) UpdateTomorrowPlan(c echo.Context) error {
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/export/xlsx [post]
-
 func (h *DailyReportHandler) ExportReportsXLSX(c echo.Context) error {
 	req, err := middleware.BindAndValidate(c, middleware.ValidateReportsByDatePayload)
 	if err != nil {

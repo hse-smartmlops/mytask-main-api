@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -15,12 +16,14 @@ import (
 type projectService struct {
 	projectRepo ports.ProjectRepository
 	teamRepo    ports.TeamRepository
+	config      *config.PaginationConfig
 }
 
-func NewProjectService(projectRepo ports.ProjectRepository, teamRepo ports.TeamRepository) ports.ProjectService {
+func NewProjectService(projectRepo ports.ProjectRepository, teamRepo ports.TeamRepository, config *config.PaginationConfig) ports.ProjectService {
 	return &projectService{
 		projectRepo: projectRepo,
 		teamRepo:    teamRepo,
+		config: config,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -14,10 +15,11 @@ import (
 
 type statusService struct {
 	repo ports.StatusRepository
+	config *config.PaginationConfig
 }
 
-func NewStatusService(repo ports.StatusRepository) ports.StatusService {
-	return &statusService{repo: repo}
+func NewStatusService(repo ports.StatusRepository, config *config.PaginationConfig) ports.StatusService {
+	return &statusService{repo: repo, config: config}
 }
 
 func (s *statusService) ListStatuses(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Status], error) {

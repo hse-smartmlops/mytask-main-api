@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,10 +14,11 @@ import (
 
 type attendanceService struct {
 	repo ports.AttendanceRepository
+	config *config.PaginationConfig
 }
 
-func NewAttendanceService(repo ports.AttendanceRepository) ports.AttendanceService {
-	return &attendanceService{repo: repo}
+func NewAttendanceService(repo ports.AttendanceRepository, config *config.PaginationConfig) ports.AttendanceService {
+	return &attendanceService{repo: repo,config: config}
 }
 
 func (s *attendanceService) ListAttendances(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Attendance], error) {

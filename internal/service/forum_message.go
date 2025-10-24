@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,10 +14,11 @@ import (
 
 type forumMessageService struct {
 	repo ports.ForumMessageRepository
+	config *config.PaginationConfig
 }
 
-func NewForumMessageService(repo ports.ForumMessageRepository) ports.ForumMessageService {
-	return &forumMessageService{repo: repo}
+func NewForumMessageService(repo ports.ForumMessageRepository, config *config.PaginationConfig) ports.ForumMessageService {
+	return &forumMessageService{repo: repo, config: config}
 }
 
 func (s *forumMessageService) ListMessages(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.ForumMessage], error) {

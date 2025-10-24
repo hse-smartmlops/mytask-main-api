@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/app/ports"
+	"emplacc-api/internal/config"
 	"emplacc-api/internal/domain"
 	"emplacc-api/internal/domain/models"
 
@@ -13,10 +14,11 @@ import (
 
 type subscriptionService struct {
 	repo ports.SubscriptionRepository
+	config *config.PaginationConfig
 }
 
-func NewSubscriptionService(repo ports.SubscriptionRepository) ports.SubscriptionService {
-	return &subscriptionService{repo: repo}
+func NewSubscriptionService(repo ports.SubscriptionRepository, config *config.PaginationConfig) ports.SubscriptionService {
+	return &subscriptionService{repo: repo, config: config}
 }
 
 func (s *subscriptionService) ListSubscriptions(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
