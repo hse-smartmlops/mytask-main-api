@@ -20,7 +20,7 @@ func NewAttendanceRepository(db *gorm.DB) *AttendanceRepository {
 	return &AttendanceRepository{db: db}
 }
 
-func (r *AttendanceRepository) ListAttendances(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Attendance], error) {
+func (r *AttendanceRepository) ListAttendances(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Attendance], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Attendance{}).
@@ -30,10 +30,10 @@ func (r *AttendanceRepository) ListAttendances(ctx context.Context, params ports
 	}
 
 	var attendances []models.Attendance
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("attendances.date DESC NULLS LAST, attendances.created_at DESC NULLS LAST").
 		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&attendances).Error; err != nil {
 		return nil, err
@@ -41,13 +41,13 @@ func (r *AttendanceRepository) ListAttendances(ctx context.Context, params ports
 
 	return &ports.Page[models.Attendance]{
 		Items:      attendances,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
 
-func (r *AttendanceRepository) ListAttendancesByUser(ctx context.Context, userID uuid.UUID) ([]models.Attendance, error) {
+func (r *AttendanceRepository) ListAttendancesByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Attendance], error) {
 	var attendances []models.Attendance
 	err := r.db.WithContext(ctx).
 		Model(&models.Attendance{}).
@@ -58,7 +58,12 @@ func (r *AttendanceRepository) ListAttendancesByUser(ctx context.Context, userID
 	if err != nil {
 		return nil, err
 	}
-	return attendances, nil
+	return &ports.Page[models.Attendance]{ // TODO Add pagination on db layer
+		Items:      attendances,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
 func (r *AttendanceRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.Attendance, error) {

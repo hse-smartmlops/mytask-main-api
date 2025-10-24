@@ -20,7 +20,15 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) ListUsers(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.User], error) {
+func (r *UserRepository) SoftDeleteUser(ctx context.Context, id uuid.UUID) error {
+	return nil // TODO Add implementation
+}
+
+func (r *UserRepository) UpdateUser(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.User, error) {
+	return nil, nil // TODO Add implementation
+}
+
+func (r *UserRepository) ListUsers(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.User], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.User{}).Where("deleted = FALSE")
@@ -29,9 +37,9 @@ func (r *UserRepository) ListUsers(ctx context.Context, params ports.PaginationP
 	}
 
 	var users []models.User
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("created_at DESC").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&users).Error; err != nil {
 		return nil, err
@@ -39,8 +47,8 @@ func (r *UserRepository) ListUsers(ctx context.Context, params ports.PaginationP
 
 	return &ports.Page[models.User]{
 		Items:      users,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }

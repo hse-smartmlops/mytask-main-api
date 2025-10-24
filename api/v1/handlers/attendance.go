@@ -136,24 +136,16 @@ func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError(code, perr.Error()))
 	}
 
-	items, err := h.service.ListAttendancesByUser(c.Request().Context(), userID)
+	params := ports.PaginationParams{Page: page, PageSize: size}
+
+	pagedItems, err := h.service.ListAttendancesByUser(c.Request().Context(), userID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to list attendances for user"))
 	}
 
-	start := (page - 1) * size
-	if start > len(items) {
-		start = len(items)
-	}
-	end := start + size
-	if end > len(items) {
-		end = len(items)
-	}
+	payload := presenter.MapAttendancesByUser(userID.String(), pagedItems.Items)
 
-	paged := items[start:end]
-	payload := presenter.MapAttendancesByUser(userID.String(), paged)
-
-	total := len(items)
+	total := len(pagedItems.Items)
 	totalPages := 0
 	if size > 0 {
 		totalPages = (total + size - 1) / size

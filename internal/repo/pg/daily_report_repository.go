@@ -20,7 +20,7 @@ func NewDailyReportRepository(db *gorm.DB) *DailyReportRepository {
 	return &DailyReportRepository{db: db}
 }
 
-func (r *DailyReportRepository) ListReports(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+func (r *DailyReportRepository) ListReports(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
 	var total int64
 	base := r.db.WithContext(ctx).Model(&models.DailyReport{}).
 		Where("daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL")
@@ -29,9 +29,9 @@ func (r *DailyReportRepository) ListReports(ctx context.Context, params ports.Pa
 	}
 
 	var reports []models.DailyReport
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := preloadReportRelations(base.Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST")).
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&reports).Error; err != nil {
 		return nil, err
@@ -39,13 +39,13 @@ func (r *DailyReportRepository) ListReports(ctx context.Context, params ports.Pa
 
 	return &ports.Page[models.DailyReport]{
 		Items:      reports,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: total,
 	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+func (r *DailyReportRepository) ListReportsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
 	var total int64
 	base := r.db.WithContext(ctx).Model(&models.DailyReport{}).
 		Where("daily_reports.user_id = ? AND (daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL)", userID)
@@ -54,9 +54,9 @@ func (r *DailyReportRepository) ListReportsByUser(ctx context.Context, userID uu
 	}
 
 	var reports []models.DailyReport
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := preloadReportRelations(base.Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST")).
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&reports).Error; err != nil {
 		return nil, err
@@ -64,13 +64,13 @@ func (r *DailyReportRepository) ListReportsByUser(ctx context.Context, userID uu
 
 	return &ports.Page[models.DailyReport]{
 		Items:      reports,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: total,
 	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByProject(ctx context.Context, projectID uuid.UUID) ([]models.DailyReport, error) {
+func (r *DailyReportRepository) ListReportsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
 	var reports []models.DailyReport
 	err := preloadReportRelations(r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
@@ -86,10 +86,15 @@ func (r *DailyReportRepository) ListReportsByProject(ctx context.Context, projec
 	if err != nil {
 		return nil, err
 	}
-	return reports, nil
+	return &ports.Page[models.DailyReport]{ // TODO Add pagination on db layer
+		Items:      reports,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByTask(ctx context.Context, taskID uuid.UUID) ([]models.DailyReport, error) {
+func (r *DailyReportRepository) ListReportsByTask(ctx context.Context, taskID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
 	var reports []models.DailyReport
 	err := preloadReportRelations(r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
@@ -102,10 +107,15 @@ func (r *DailyReportRepository) ListReportsByTask(ctx context.Context, taskID uu
 	if err != nil {
 		return nil, err
 	}
-	return reports, nil
+	return &ports.Page[models.DailyReport]{ // TODO Add pagination on db layer
+		Items:      reports,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByDateRange(ctx context.Context, startDate, endDate time.Time) ([]models.DailyReport, error) {
+func (r *DailyReportRepository) ListReportsByDateRange(ctx context.Context, startDate, endDate time.Time, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
 	var reports []models.DailyReport
 	err := preloadReportRelations(r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
@@ -115,10 +125,15 @@ func (r *DailyReportRepository) ListReportsByDateRange(ctx context.Context, star
 	if err != nil {
 		return nil, err
 	}
-	return reports, nil
+	return &ports.Page[models.DailyReport]{ // TODO Add pagination on db layer
+		Items:      reports,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
-func (r *DailyReportRepository) ListHelpRequestsByHelper(ctx context.Context, helperID uuid.UUID) ([]models.HelpRequest, error) {
+func (r *DailyReportRepository) ListHelpRequestsByHelper(ctx context.Context, helperID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.HelpRequest], error) {
 	var requests []models.HelpRequest
 	err := r.db.WithContext(ctx).
 		Model(&models.HelpRequest{}).
@@ -130,7 +145,12 @@ func (r *DailyReportRepository) ListHelpRequestsByHelper(ctx context.Context, he
 	if err != nil {
 		return nil, err
 	}
-	return requests, nil
+	return &ports.Page[models.HelpRequest]{ // TODO Add pagination on db layer
+		Items:      requests,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
 func (r *DailyReportRepository) GetReportByID(ctx context.Context, id uuid.UUID) (*models.DailyReport, error) {

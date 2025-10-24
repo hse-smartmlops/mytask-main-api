@@ -20,6 +20,22 @@ func NewTaskRepository(db *gorm.DB) *TaskRepository {
 	return &TaskRepository{db: db}
 }
 
+func (r *TaskRepository) ListActiveTasksByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+	return nil, nil // TODO Add implementation
+}
+
+func (r *TaskRepository) ListTasksByBoard(ctx context.Context, boardID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+	return nil, nil // TODO Add implementation
+}
+
+func (r *TaskRepository) ListTasksByUserAndProject(ctx context.Context, userID, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+	return nil, nil // TODO Add implementation
+}
+
+func (r *TaskRepository) MoveTaskBetweenStatuses(ctx context.Context, taskID uuid.UUID, newStatusID uuid.UUID) (*models.Task, error) {
+	return nil, nil // TODO Add implementation
+}
+
 func (r *TaskRepository) ListTasks(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Task], error) {
 	var totalCount int64
 
@@ -68,7 +84,7 @@ func (r *TaskRepository) GetTaskByID(ctx context.Context, id uuid.UUID) (*models
 	return &task, nil
 }
 
-func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Task{}).
@@ -80,13 +96,13 @@ func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.
 	}
 
 	var tasks []models.Task
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("tasks.created_at DESC NULLS LAST").
 		Preload("Status").
 		Preload("Status.Board").
 		Preload("CreatedByUser").
 		Preload("AssignedToUser").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
 		return nil, err
@@ -94,13 +110,13 @@ func (r *TaskRepository) ListTasksByProject(ctx context.Context, projectID uuid.
 
 	return &ports.Page[models.Task]{
 		Items:      tasks,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
 
-func (r *TaskRepository) ListTasksByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (r *TaskRepository) ListTasksByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Task{}).
@@ -110,13 +126,13 @@ func (r *TaskRepository) ListTasksByUser(ctx context.Context, userID uuid.UUID, 
 	}
 
 	var tasks []models.Task
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("tasks.created_at DESC NULLS LAST").
 		Preload("Status").
 		Preload("Status.Board").
 		Preload("CreatedByUser").
 		Preload("AssignedToUser").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&tasks).Error; err != nil {
 		return nil, err
@@ -124,8 +140,8 @@ func (r *TaskRepository) ListTasksByUser(ctx context.Context, userID uuid.UUID, 
 
 	return &ports.Page[models.Task]{
 		Items:      tasks,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }

@@ -20,6 +20,14 @@ func NewProjectRepository(db *gorm.DB) *ProjectRepository {
 	return &ProjectRepository{db: db}
 }
 
+func (r *ProjectRepository) ListProjectsByTeam(ctx context.Context, teamID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+	return nil, nil // TODO Add implementation
+}
+
+func (r *ProjectRepository) ListProjectsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+	return nil, nil // TODO Add implementation
+}
+
 func (r *ProjectRepository) ListProjects(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Project], error) {
 	var totalCount int64
 

@@ -20,7 +20,7 @@ func NewStatusRepository(db *gorm.DB) *StatusRepository {
 	return &StatusRepository{db: db}
 }
 
-func (r *StatusRepository) ListStatuses(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Status], error) {
+func (r *StatusRepository) ListStatuses(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Status], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Status{}).Where("statuses.deleted = FALSE OR statuses.deleted IS NULL")
@@ -29,10 +29,10 @@ func (r *StatusRepository) ListStatuses(ctx context.Context, params ports.Pagina
 	}
 
 	var statuses []models.Status
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("statuses.created_at DESC NULLS LAST").
 		Preload("Board").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&statuses).Error; err != nil {
 		return nil, err
@@ -40,8 +40,8 @@ func (r *StatusRepository) ListStatuses(ctx context.Context, params ports.Pagina
 
 	return &ports.Page[models.Status]{
 		Items:      statuses,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
@@ -62,7 +62,7 @@ func (r *StatusRepository) GetStatusByID(ctx context.Context, id uuid.UUID) (*mo
 	return &status, nil
 }
 
-func (r *StatusRepository) ListStatusesByBoard(ctx context.Context, boardID uuid.UUID) ([]models.Status, error) {
+func (r *StatusRepository) ListStatusesByBoard(ctx context.Context, boardID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Status], error) {
 	var statuses []models.Status
 	if err := r.db.WithContext(ctx).
 		Model(&models.Status{}).
@@ -71,7 +71,12 @@ func (r *StatusRepository) ListStatusesByBoard(ctx context.Context, boardID uuid
 		Find(&statuses).Error; err != nil {
 		return nil, err
 	}
-	return statuses, nil
+	return &ports.Page[models.Status]{ // TODO Add pagination on db layer
+		Items:      statuses,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
 func (r *StatusRepository) CreateStatus(ctx context.Context, status *models.Status) error {

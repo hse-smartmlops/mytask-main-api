@@ -21,11 +21,12 @@ func NewTeamRepository(db *gorm.DB) *TeamRepository {
 	return &TeamRepository{db: db}
 }
 
-func (r *TeamRepository) ListAllTeams(ctx context.Context) ([]models.Team, error) {
+func (r *TeamRepository) ListTeamsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
 	var teams []models.Team
 	err := r.db.WithContext(ctx).
 		Model(&models.Team{}).
-		Where("teams.deleted = FALSE OR teams.deleted IS NULL").
+		Joins("JOIN project_teams ON project_teams.team_id = teams.id").
+		Where("(teams.deleted = FALSE OR teams.deleted IS NULL) AND (project_teams.deleted = FALSE OR project_teams.deleted IS NULL) AND project_teams.project_id = ?", projectID).
 		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
 		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Order("teams.created_at DESC NULLS LAST").
@@ -33,10 +34,15 @@ func (r *TeamRepository) ListAllTeams(ctx context.Context) ([]models.Team, error
 	if err != nil {
 		return nil, err
 	}
-	return teams, nil
+	return &ports.Page[models.Team]{ // TODO Add pagination on db layer
+		Items:      teams,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
-func (r *TeamRepository) ListTeams(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (r *TeamRepository) ListTeams(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Team], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Team{}).Where("teams.deleted = FALSE OR teams.deleted IS NULL")
@@ -45,11 +51,11 @@ func (r *TeamRepository) ListTeams(ctx context.Context, params ports.PaginationP
 	}
 
 	var teams []models.Team
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("teams.created_at DESC NULLS LAST").
 		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
 		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&teams).Error; err != nil {
 		return nil, err
@@ -57,8 +63,8 @@ func (r *TeamRepository) ListTeams(ctx context.Context, params ports.PaginationP
 
 	return &ports.Page[models.Team]{
 		Items:      teams,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
@@ -80,23 +86,7 @@ func (r *TeamRepository) GetTeamByID(ctx context.Context, id uuid.UUID) (*models
 	return &team, nil
 }
 
-func (r *TeamRepository) ListTeamsByProject(ctx context.Context, projectID uuid.UUID) ([]models.Team, error) {
-	var teams []models.Team
-	err := r.db.WithContext(ctx).
-		Model(&models.Team{}).
-		Joins("JOIN project_teams ON project_teams.team_id = teams.id").
-		Where("(teams.deleted = FALSE OR teams.deleted IS NULL) AND (project_teams.deleted = FALSE OR project_teams.deleted IS NULL) AND project_teams.project_id = ?", projectID).
-		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
-		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Order("teams.created_at DESC NULLS LAST").
-		Find(&teams).Error
-	if err != nil {
-		return nil, err
-	}
-	return teams, nil
-}
-
-func (r *TeamRepository) ListTeamsByUser(ctx context.Context, userID uuid.UUID) ([]models.Team, error) {
+func (r *TeamRepository) ListTeamsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
 	var teams []models.Team
 	err := r.db.WithContext(ctx).
 		Model(&models.Team{}).
@@ -109,7 +99,12 @@ func (r *TeamRepository) ListTeamsByUser(ctx context.Context, userID uuid.UUID) 
 	if err != nil {
 		return nil, err
 	}
-	return teams, nil
+	return &ports.Page[models.Team]{ // TODO Add pagination on db layer
+		Items:      teams,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
 func (r *TeamRepository) CreateTeam(ctx context.Context, team *models.Team) error {

@@ -20,7 +20,7 @@ func NewBoardRepository(db *gorm.DB) *BoardRepository {
 	return &BoardRepository{db: db}
 }
 
-func (r *BoardRepository) ListBoards(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Board], error) {
+func (r *BoardRepository) ListBoards(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Board], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Board{}).Where("deleted = FALSE OR deleted IS NULL")
@@ -29,11 +29,11 @@ func (r *BoardRepository) ListBoards(ctx context.Context, params ports.Paginatio
 	}
 
 	var boards []models.Board
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("created_at DESC NULLS LAST").
 		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
 		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&boards).Error; err != nil {
 		return nil, err
@@ -41,8 +41,8 @@ func (r *BoardRepository) ListBoards(ctx context.Context, params ports.Paginatio
 
 	return &ports.Page[models.Board]{
 		Items:      boards,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
@@ -64,7 +64,7 @@ func (r *BoardRepository) GetBoardByID(ctx context.Context, id uuid.UUID) (*mode
 	return &board, nil
 }
 
-func (r *BoardRepository) ListBoardsByProject(ctx context.Context, projectID uuid.UUID) ([]models.Board, error) {
+func (r *BoardRepository) ListBoardsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Board], error) {
 	var boards []models.Board
 	err := r.db.WithContext(ctx).
 		Model(&models.Board{}).
@@ -76,7 +76,12 @@ func (r *BoardRepository) ListBoardsByProject(ctx context.Context, projectID uui
 	if err != nil {
 		return nil, err
 	}
-	return boards, nil
+	return &ports.Page[models.Board]{ // TODO Add pagination on db layer
+		Items:      boards,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: 0,
+	}, nil
 }
 
 func (r *BoardRepository) CreateBoard(ctx context.Context, board *models.Board) error {
