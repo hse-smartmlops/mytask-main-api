@@ -21,27 +21,27 @@ func NewProblemService(repo ports.ProblemRepository, config *config.PaginationCo
 	return &problemService{repo: repo, config: config}
 }
 
-func (s *problemService) ListProblems(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Problem], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *problemService) ListProblems(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Problem], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListProblems(ctx, params)
+	return s.repo.ListProblems(ctx, p)
 }
 
-func (s *problemService) ListProblemsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Problem], error) {
+func (s *problemService) ListProblemsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Problem], error) {
 	if userID == uuid.Nil {
 		return nil, domain.ErrInvalidInput
 	}
-	if params.Page <= 0 {
-		params.Page = 1
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListProblemsByUser(ctx, userID, params)
+	return s.repo.ListProblemsByUser(ctx, userID, p)
 }
 
 func (s *problemService) GetProblem(ctx context.Context, id uuid.UUID) (*models.Problem, error) {

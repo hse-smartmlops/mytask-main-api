@@ -31,24 +31,24 @@ func NewDailyReportService(repo ports.DailyReportRepository, storage ports.Objec
 	return &dailyReportService{repo: repo, storage: storage, cfg: cfg, config: config}
 }
 
-func (s *dailyReportService) ListReports(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *dailyReportService) ListReports(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListReports(ctx, params)
+	return s.repo.ListReports(ctx, p)
 }
 
-func (s *dailyReportService) ListReportsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *dailyReportService) ListReportsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListReportsByUser(ctx, userID, params)
+	return s.repo.ListReportsByUser(ctx, userID, p)
 }
 
 func (s *dailyReportService) ListReportsByProject(ctx context.Context, projectID uuid.UUID) ([]models.DailyReport, error) {

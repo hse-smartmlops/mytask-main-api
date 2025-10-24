@@ -21,14 +21,14 @@ func NewSubscriptionService(repo ports.SubscriptionRepository, config *config.Pa
 	return &subscriptionService{repo: repo, config: config}
 }
 
-func (s *subscriptionService) ListSubscriptions(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *subscriptionService) ListSubscriptions(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Subscription], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListSubscriptions(ctx, params)
+	return s.repo.ListSubscriptions(ctx, p)
 }
 
 func (s *subscriptionService) GetSubscription(ctx context.Context, id uuid.UUID) (*models.Subscription, error) {
@@ -42,24 +42,24 @@ func (s *subscriptionService) GetSubscription(ctx context.Context, id uuid.UUID)
 	return sub, nil
 }
 
-func (s *subscriptionService) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *subscriptionService) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Subscription], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListSubscriptionsByUser(ctx, userID, params)
+	return s.repo.ListSubscriptionsByUser(ctx, userID, p)
 }
 
-func (s *subscriptionService) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *subscriptionService) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, p ports.PaginationParams) (*ports.Page[models.Subscription], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListSubscriptionsByTarget(ctx, subscriptionID, typeID, params)
+	return s.repo.ListSubscriptionsByTarget(ctx, subscriptionID, typeID, p)
 }
 
 func (s *subscriptionService) CreateSubscription(ctx context.Context, input ports.CreateSubscriptionInput) (*models.Subscription, error) {

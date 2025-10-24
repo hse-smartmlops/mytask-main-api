@@ -22,8 +22,8 @@ func NewTeamService(repo ports.TeamRepository, config *config.PaginationConfig) 
 	return &teamService{repo: repo, config: config}
 }
 
-func (s *teamService) ListTeams(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Team], error) {
-	return s.repo.ListTeams(ctx, params)
+func (s *teamService) ListTeams(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+	return s.repo.ListTeams(ctx, p)
 }
 
 func (s *teamService) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, error) {

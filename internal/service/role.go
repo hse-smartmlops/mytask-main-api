@@ -22,14 +22,14 @@ func NewRoleService(repo ports.RoleRepository, config *config.PaginationConfig) 
 	return &roleService{repo: repo, config: config}
 }
 
-func (s *roleService) ListRoles(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Role], error) {
-	if params.Page <= 0 {
-		params.Page = 1
+func (s *roleService) ListRoles(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Role], error) {
+	if p.Page <= 0 {
+		p.Page = 1
 	}
-	if params.PageSize <= 0 {
-		params.PageSize = 20
+	if p.PageSize <= 0 {
+		p.PageSize = 20
 	}
-	return s.repo.ListRoles(ctx, params)
+	return s.repo.ListRoles(ctx, p)
 }
 
 func (s *roleService) GetRole(ctx context.Context, id uuid.UUID) (*models.Role, error) {
