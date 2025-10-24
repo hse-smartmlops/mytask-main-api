@@ -13,12 +13,18 @@ import (
 )
 
 type subscriptionService struct {
-	repo ports.SubscriptionRepository
+	repo   ports.SubscriptionRepository
 	config *config.PaginationConfig
 }
 
-func NewSubscriptionService(repo ports.SubscriptionRepository, config *config.PaginationConfig) ports.SubscriptionService {
-	return &subscriptionService{repo: repo, config: config}
+func NewSubscriptionService(
+	repo ports.SubscriptionRepository,
+	config *config.PaginationConfig,
+) ports.SubscriptionService {
+	return &subscriptionService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *subscriptionService) ListSubscriptions(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Subscription], error) {

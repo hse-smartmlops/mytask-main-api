@@ -27,8 +27,17 @@ type dailyReportService struct {
 	config  *config.PaginationConfig
 }
 
-func NewDailyReportService(repo ports.DailyReportRepository, storage ports.ObjectStorage, cfg config.MinioConfig, config *config.PaginationConfig) ports.DailyReportService {
-	return &dailyReportService{repo: repo, storage: storage, cfg: cfg, config: config}
+func NewDailyReportService(
+	repo ports.DailyReportRepository,
+	storage ports.ObjectStorage,
+	cfg config.MinioConfig, config *config.PaginationConfig,
+) ports.DailyReportService {
+	return &dailyReportService{
+		repo:    repo,
+		storage: storage,
+		cfg:     cfg,
+		config:  config,
+	}
 }
 
 func (s *dailyReportService) ListReports(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {

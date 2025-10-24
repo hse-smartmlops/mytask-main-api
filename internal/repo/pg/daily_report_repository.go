@@ -16,11 +16,18 @@ type DailyReportRepository struct {
 	db *gorm.DB
 }
 
-func NewDailyReportRepository(db *gorm.DB) *DailyReportRepository {
-	return &DailyReportRepository{db: db}
+func NewDailyReportRepository(
+	db *gorm.DB,
+) *DailyReportRepository {
+	return &DailyReportRepository{
+		db: db,
+	}
 }
 
-func (r *DailyReportRepository) ListReports(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+func (r *DailyReportRepository) ListReports(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.DailyReport], error) {
 	var total int64
 	base := r.db.WithContext(ctx).Model(&models.DailyReport{}).
 		Where("daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL")
@@ -30,7 +37,9 @@ func (r *DailyReportRepository) ListReports(ctx context.Context, p ports.Paginat
 
 	var reports []models.DailyReport
 	offset := (p.Page - 1) * p.PageSize
-	if err := preloadReportRelations(base.Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST")).
+	if err := preloadReportRelations(
+		base.Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST"),
+	).
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&reports).Error; err != nil {
@@ -45,17 +54,27 @@ func (r *DailyReportRepository) ListReports(ctx context.Context, p ports.Paginat
 	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+func (r *DailyReportRepository) ListReportsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.DailyReport], error) {
 	var total int64
-	base := r.db.WithContext(ctx).Model(&models.DailyReport{}).
-		Where("daily_reports.user_id = ? AND (daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL)", userID)
+	base := r.db.WithContext(ctx).
+		Model(&models.DailyReport{}).
+		Where(
+			"daily_reports.user_id = ? AND (daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL)",
+			userID,
+		)
 	if err := base.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
 	var reports []models.DailyReport
 	offset := (p.Page - 1) * p.PageSize
-	if err := preloadReportRelations(base.Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST")).
+	if err := preloadReportRelations(
+		base.Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST"),
+	).
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&reports).Error; err != nil {
@@ -70,7 +89,11 @@ func (r *DailyReportRepository) ListReportsByUser(ctx context.Context, userID uu
 	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+func (r *DailyReportRepository) ListReportsByProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.DailyReport], error) {
 	var reports []models.DailyReport
 	err := preloadReportRelations(r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
@@ -94,7 +117,11 @@ func (r *DailyReportRepository) ListReportsByProject(ctx context.Context, projec
 	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByTask(ctx context.Context, taskID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+func (r *DailyReportRepository) ListReportsByTask(
+	ctx context.Context,
+	taskID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.DailyReport], error) {
 	var reports []models.DailyReport
 	err := preloadReportRelations(r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
@@ -115,7 +142,12 @@ func (r *DailyReportRepository) ListReportsByTask(ctx context.Context, taskID uu
 	}, nil
 }
 
-func (r *DailyReportRepository) ListReportsByDateRange(ctx context.Context, startDate, endDate time.Time, p ports.PaginationParams) (*ports.Page[models.DailyReport], error) {
+func (r *DailyReportRepository) ListReportsByDateRange(
+	ctx context.Context,
+	startDate,
+	endDate time.Time,
+	p ports.PaginationParams,
+) (*ports.Page[models.DailyReport], error) {
 	var reports []models.DailyReport
 	err := preloadReportRelations(r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
@@ -133,7 +165,11 @@ func (r *DailyReportRepository) ListReportsByDateRange(ctx context.Context, star
 	}, nil
 }
 
-func (r *DailyReportRepository) ListHelpRequestsByHelper(ctx context.Context, helperID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.HelpRequest], error) {
+func (r *DailyReportRepository) ListHelpRequestsByHelper(
+	ctx context.Context,
+	helperID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.HelpRequest], error) {
 	var requests []models.HelpRequest
 	err := r.db.WithContext(ctx).
 		Model(&models.HelpRequest{}).
@@ -153,7 +189,10 @@ func (r *DailyReportRepository) ListHelpRequestsByHelper(ctx context.Context, he
 	}, nil
 }
 
-func (r *DailyReportRepository) GetReportByID(ctx context.Context, id uuid.UUID) (*models.DailyReport, error) {
+func (r *DailyReportRepository) GetReportByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.DailyReport, error) {
 	var report models.DailyReport
 	err := preloadReportRelations(r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
@@ -168,7 +207,10 @@ func (r *DailyReportRepository) GetReportByID(ctx context.Context, id uuid.UUID)
 	return &report, nil
 }
 
-func (r *DailyReportRepository) CreateReport(ctx context.Context, input ports.CreateDailyReportInput) (*models.DailyReport, error) {
+func (r *DailyReportRepository) CreateReport(
+	ctx context.Context,
+	input ports.CreateDailyReportInput,
+) (*models.DailyReport, error) {
 	var reportID uuid.UUID
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now().UTC()
@@ -207,7 +249,11 @@ func (r *DailyReportRepository) CreateReport(ctx context.Context, input ports.Cr
 	return r.GetReportByID(ctx, reportID)
 }
 
-func (r *DailyReportRepository) UpdateReport(ctx context.Context, id uuid.UUID, input ports.UpdateDailyReportInput) (*models.DailyReport, error) {
+func (r *DailyReportRepository) UpdateReport(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateDailyReportInput,
+) (*models.DailyReport, error) {
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		updates := map[string]interface{}{}
 		if input.ReportDate != nil {
@@ -251,7 +297,10 @@ func (r *DailyReportRepository) UpdateReport(ctx context.Context, id uuid.UUID, 
 	return r.GetReportByID(ctx, id)
 }
 
-func (r *DailyReportRepository) SoftDeleteReport(ctx context.Context, id uuid.UUID) error {
+func (r *DailyReportRepository) SoftDeleteReport(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		now := time.Now().UTC()
 		truePtr := boolPtr(true)
@@ -281,7 +330,11 @@ func (r *DailyReportRepository) SoftDeleteReport(ctx context.Context, id uuid.UU
 	})
 }
 
-func (r *DailyReportRepository) UpdateReportStorage(ctx context.Context, id uuid.UUID, storageObject string) error {
+func (r *DailyReportRepository) UpdateReportStorage(
+	ctx context.Context,
+	id uuid.UUID,
+	storageObject string,
+) error {
 	updates := map[string]interface{}{
 		"storage_object": storageObject,
 		"updated_at":     timePtr(time.Now().UTC()),
@@ -298,7 +351,11 @@ func (r *DailyReportRepository) UpdateReportStorage(ctx context.Context, id uuid
 	return nil
 }
 
-func (r *DailyReportRepository) UpdateCompletedWork(ctx context.Context, id uuid.UUID, input ports.UpdateCompletedWorkInput) (*models.CompletedWork, error) {
+func (r *DailyReportRepository) UpdateCompletedWork(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateCompletedWorkInput,
+) (*models.CompletedWork, error) {
 	updates := map[string]interface{}{"updated_at": timePtr(time.Now().UTC())}
 	if input.Description != nil {
 		updates["description"] = input.Description
@@ -320,7 +377,11 @@ func (r *DailyReportRepository) UpdateCompletedWork(ctx context.Context, id uuid
 	return r.getCompletedWork(ctx, id)
 }
 
-func (r *DailyReportRepository) UpdateHelpRequest(ctx context.Context, id uuid.UUID, input ports.UpdateHelpRequestInput) (*models.HelpRequest, error) {
+func (r *DailyReportRepository) UpdateHelpRequest(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateHelpRequestInput,
+) (*models.HelpRequest, error) {
 	updates := map[string]interface{}{"updated_at": timePtr(time.Now().UTC())}
 	if input.Description != nil {
 		updates["description"] = input.Description
@@ -345,7 +406,10 @@ func (r *DailyReportRepository) UpdateHelpRequest(ctx context.Context, id uuid.U
 	return r.getHelpRequest(ctx, id)
 }
 
-func (r *DailyReportRepository) SoftDeleteHelpRequest(ctx context.Context, id uuid.UUID) error {
+func (r *DailyReportRepository) SoftDeleteHelpRequest(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	res := r.db.WithContext(ctx).
 		Model(&models.HelpRequest{}).
@@ -360,7 +424,11 @@ func (r *DailyReportRepository) SoftDeleteHelpRequest(ctx context.Context, id uu
 	return nil
 }
 
-func (r *DailyReportRepository) UpdateTomorrowPlan(ctx context.Context, id uuid.UUID, input ports.UpdateTomorrowPlanInput) (*models.TomorrowPlans, error) {
+func (r *DailyReportRepository) UpdateTomorrowPlan(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateTomorrowPlanInput,
+) (*models.TomorrowPlans, error) {
 	updates := map[string]interface{}{"updated_at": timePtr(time.Now().UTC())}
 	if input.Description != nil {
 		updates["description"] = input.Description
@@ -382,7 +450,11 @@ func (r *DailyReportRepository) UpdateTomorrowPlan(ctx context.Context, id uuid.
 	return r.getTomorrowPlan(ctx, id)
 }
 
-func (r *DailyReportRepository) persistCompletedWork(tx *gorm.DB, reportID uuid.UUID, items []ports.CompletedWorkInput) error {
+func (r *DailyReportRepository) persistCompletedWork(
+	tx *gorm.DB,
+	reportID uuid.UUID,
+	items []ports.CompletedWorkInput,
+) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -423,7 +495,11 @@ func (r *DailyReportRepository) persistCompletedWork(tx *gorm.DB, reportID uuid.
 	return nil
 }
 
-func (r *DailyReportRepository) persistHelpRequests(tx *gorm.DB, reportID uuid.UUID, items []ports.HelpRequestInput) error {
+func (r *DailyReportRepository) persistHelpRequests(
+	tx *gorm.DB,
+	reportID uuid.UUID,
+	items []ports.HelpRequestInput,
+) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -468,7 +544,11 @@ func (r *DailyReportRepository) persistHelpRequests(tx *gorm.DB, reportID uuid.U
 	return nil
 }
 
-func (r *DailyReportRepository) persistTomorrowPlans(tx *gorm.DB, reportID uuid.UUID, items []ports.TomorrowPlanInput) error {
+func (r *DailyReportRepository) persistTomorrowPlans(
+	tx *gorm.DB,
+	reportID uuid.UUID,
+	items []ports.TomorrowPlanInput,
+) error {
 	if len(items) == 0 {
 		return nil
 	}
@@ -509,7 +589,11 @@ func (r *DailyReportRepository) persistTomorrowPlans(tx *gorm.DB, reportID uuid.
 	return nil
 }
 
-func (r *DailyReportRepository) persistReportProblems(tx *gorm.DB, reportID uuid.UUID, desired []uuid.UUID) error {
+func (r *DailyReportRepository) persistReportProblems(
+	tx *gorm.DB,
+	reportID uuid.UUID,
+	desired []uuid.UUID,
+) error {
 	if desired == nil {
 		return nil
 	}
@@ -559,7 +643,10 @@ func (r *DailyReportRepository) persistReportProblems(tx *gorm.DB, reportID uuid
 	return nil
 }
 
-func (r *DailyReportRepository) getCompletedWork(ctx context.Context, id uuid.UUID) (*models.CompletedWork, error) {
+func (r *DailyReportRepository) getCompletedWork(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.CompletedWork, error) {
 	var cw models.CompletedWork
 	err := r.db.WithContext(ctx).
 		Model(&models.CompletedWork{}).
@@ -575,7 +662,10 @@ func (r *DailyReportRepository) getCompletedWork(ctx context.Context, id uuid.UU
 	return &cw, nil
 }
 
-func (r *DailyReportRepository) getHelpRequest(ctx context.Context, id uuid.UUID) (*models.HelpRequest, error) {
+func (r *DailyReportRepository) getHelpRequest(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.HelpRequest, error) {
 	var hr models.HelpRequest
 	err := r.db.WithContext(ctx).
 		Model(&models.HelpRequest{}).
@@ -590,7 +680,10 @@ func (r *DailyReportRepository) getHelpRequest(ctx context.Context, id uuid.UUID
 	return &hr, nil
 }
 
-func (r *DailyReportRepository) getTomorrowPlan(ctx context.Context, id uuid.UUID) (*models.TomorrowPlans, error) {
+func (r *DailyReportRepository) getTomorrowPlan(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.TomorrowPlans, error) {
 	var plan models.TomorrowPlans
 	err := r.db.WithContext(ctx).
 		Model(&models.TomorrowPlans{}).

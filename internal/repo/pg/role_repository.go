@@ -16,22 +16,31 @@ type RoleRepository struct {
 	db *gorm.DB
 }
 
-func NewRoleRepository(db *gorm.DB) *RoleRepository {
-	return &RoleRepository{db: db}
+func NewRoleRepository(
+	db *gorm.DB,
+) *RoleRepository {
+	return &RoleRepository{
+		db: db,
+	}
 }
 
-func (r *RoleRepository) ListRoles(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Role], error) {
+func (r *RoleRepository) ListRoles(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Role], error) {
 	var totalCount int64
 
-	base := r.db.WithContext(ctx).Model(&models.Role{}).Where("deleted = FALSE OR deleted IS NULL")
+	base := r.db.WithContext(ctx).
+		Model(&models.Role{}).
+		Where("deleted = FALSE OR deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
 
 	var roles []models.Role
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("created_at DESC NULLS LAST").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&roles).Error; err != nil {
 		return nil, err
@@ -39,13 +48,16 @@ func (r *RoleRepository) ListRoles(ctx context.Context, params ports.PaginationP
 
 	return &ports.Page[models.Role]{
 		Items:      roles,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
 
-func (r *RoleRepository) GetRoleByID(ctx context.Context, id uuid.UUID) (*models.Role, error) {
+func (r *RoleRepository) GetRoleByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Role, error) {
 	var role models.Role
 	err := r.db.WithContext(ctx).
 		Model(&models.Role{}).
@@ -60,11 +72,18 @@ func (r *RoleRepository) GetRoleByID(ctx context.Context, id uuid.UUID) (*models
 	return &role, nil
 }
 
-func (r *RoleRepository) CreateRole(ctx context.Context, role *models.Role) error {
+func (r *RoleRepository) CreateRole(
+	ctx context.Context,
+	role *models.Role,
+) error {
 	return r.db.WithContext(ctx).Create(role).Error
 }
 
-func (r *RoleRepository) UpdateRole(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.Role, error) {
+func (r *RoleRepository) UpdateRole(
+	ctx context.Context,
+	id uuid.UUID,
+	updates map[string]interface{},
+) (*models.Role, error) {
 	updates["updated_at"] = timePtr(time.Now().UTC())
 
 	result := r.db.WithContext(ctx).
@@ -81,7 +100,10 @@ func (r *RoleRepository) UpdateRole(ctx context.Context, id uuid.UUID, updates m
 	return r.GetRoleByID(ctx, id)
 }
 
-func (r *RoleRepository) SoftDeleteRole(ctx context.Context, id uuid.UUID) error {
+func (r *RoleRepository) SoftDeleteRole(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).

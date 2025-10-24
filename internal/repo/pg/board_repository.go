@@ -16,8 +16,12 @@ type BoardRepository struct {
 	db *gorm.DB
 }
 
-func NewBoardRepository(db *gorm.DB) *BoardRepository {
-	return &BoardRepository{db: db}
+func NewBoardRepository(
+	db *gorm.DB,
+) *BoardRepository {
+	return &BoardRepository{
+		db: db,
+	}
 }
 
 func (r *BoardRepository) ListBoards(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Board], error) {

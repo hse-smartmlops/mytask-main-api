@@ -11,8 +11,12 @@ type repository struct {
 	client pb.MCPServiceClient
 }
 
-func New(client pb.MCPServiceClient) ports.MCPRepository {
-	return &repository{client: client}
+func New(
+	client pb.MCPServiceClient,
+) ports.MCPRepository {
+	return &repository{
+		client: client,
+	}
 }
 
 func (r *repository) ProcessTask(ctx context.Context, req *pb.ProcessTaskRequest) (*pb.ProcessTaskResponse, error) {

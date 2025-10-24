@@ -21,7 +21,9 @@ type Storage struct {
 	mu          sync.Mutex
 }
 
-func NewStorage(cfg config.MinioConfig) (*Storage, error) {
+func NewStorage(
+	cfg config.MinioConfig,
+) (*Storage, error) {
 	if strings.TrimSpace(cfg.Endpoint) == "" {
 		return nil, nil
 	}

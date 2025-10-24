@@ -16,23 +16,32 @@ type SubscriptionRepository struct {
 	db *gorm.DB
 }
 
-func NewSubscriptionRepository(db *gorm.DB) *SubscriptionRepository {
-	return &SubscriptionRepository{db: db}
+func NewSubscriptionRepository(
+	db *gorm.DB,
+) *SubscriptionRepository {
+	return &SubscriptionRepository{
+		db: db,
+	}
 }
 
-func (r *SubscriptionRepository) ListSubscriptions(ctx context.Context, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
+func (r *SubscriptionRepository) ListSubscriptions(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Subscription], error) {
 	var totalCount int64
 
-	base := r.db.WithContext(ctx).Model(&models.Subscription{}).Where("subscriptions.deleted = FALSE OR subscriptions.deleted IS NULL")
+	base := r.db.WithContext(ctx).
+		Model(&models.Subscription{}).
+		Where("subscriptions.deleted = FALSE OR subscriptions.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
 
 	var subs []models.Subscription
-	offset := (params.Page - 1) * params.PageSize
+	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("subscriptions.created_at DESC NULLS LAST").
 		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil {
 		return nil, err
@@ -40,13 +49,16 @@ func (r *SubscriptionRepository) ListSubscriptions(ctx context.Context, params p
 
 	return &ports.Page[models.Subscription]{
 		Items:      subs,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
 
-func (r *SubscriptionRepository) GetSubscriptionByID(ctx context.Context, id uuid.UUID) (*models.Subscription, error) {
+func (r *SubscriptionRepository) GetSubscriptionByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Subscription, error) {
 	var sub models.Subscription
 	err := r.db.WithContext(ctx).
 		Model(&models.Subscription{}).
@@ -62,7 +74,11 @@ func (r *SubscriptionRepository) GetSubscriptionByID(ctx context.Context, id uui
 	return &sub, nil
 }
 
-func (r *SubscriptionRepository) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
+func (r *SubscriptionRepository) ListSubscriptionsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Subscription], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Subscription{}).
@@ -72,10 +88,11 @@ func (r *SubscriptionRepository) ListSubscriptionsByUser(ctx context.Context, us
 	}
 
 	var subs []models.Subscription
-	offset := (params.Page - 1) * params.PageSize
-	if err := base.Order("subscriptions.created_at DESC NULLS LAST").
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
+		Order("subscriptions.created_at DESC NULLS LAST").
 		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil {
 		return nil, err
@@ -83,13 +100,18 @@ func (r *SubscriptionRepository) ListSubscriptionsByUser(ctx context.Context, us
 
 	return &ports.Page[models.Subscription]{
 		Items:      subs,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
 
-func (r *SubscriptionRepository) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, params ports.PaginationParams) (*ports.Page[models.Subscription], error) {
+func (r *SubscriptionRepository) ListSubscriptionsByTarget(
+	ctx context.Context,
+	subscriptionID uuid.UUID,
+	typeID *int8,
+	p ports.PaginationParams,
+) (*ports.Page[models.Subscription], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Subscription{}).
@@ -102,10 +124,11 @@ func (r *SubscriptionRepository) ListSubscriptionsByTarget(ctx context.Context, 
 	}
 
 	var subs []models.Subscription
-	offset := (params.Page - 1) * params.PageSize
-	if err := base.Order("subscriptions.created_at DESC NULLS LAST").
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
+		Order("subscriptions.created_at DESC NULLS LAST").
 		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Limit(params.PageSize).
+		Limit(p.PageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil {
 		return nil, err
@@ -113,17 +136,23 @@ func (r *SubscriptionRepository) ListSubscriptionsByTarget(ctx context.Context, 
 
 	return &ports.Page[models.Subscription]{
 		Items:      subs,
-		Page:       params.Page,
-		PageSize:   params.PageSize,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
 		TotalCount: totalCount,
 	}, nil
 }
 
-func (r *SubscriptionRepository) CreateSubscription(ctx context.Context, sub *models.Subscription) error {
+func (r *SubscriptionRepository) CreateSubscription(
+	ctx context.Context,
+	sub *models.Subscription,
+) error {
 	return r.db.WithContext(ctx).Create(sub).Error
 }
 
-func (r *SubscriptionRepository) SoftDeleteSubscription(ctx context.Context, id uuid.UUID) error {
+func (r *SubscriptionRepository) SoftDeleteSubscription(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).

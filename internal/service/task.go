@@ -14,12 +14,18 @@ import (
 )
 
 type taskService struct {
-	repo ports.TaskRepository
+	repo   ports.TaskRepository
 	config *config.PaginationConfig
 }
 
-func NewTaskService(repo ports.TaskRepository, config *config.PaginationConfig) ports.TaskService {
-	return &taskService{repo: repo, config: config}
+func NewTaskService(
+	repo ports.TaskRepository,
+	config *config.PaginationConfig,
+) ports.TaskService {
+	return &taskService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *taskService) ListTasks(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Task], error) {

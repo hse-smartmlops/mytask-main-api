@@ -14,12 +14,18 @@ import (
 )
 
 type teamService struct {
-	repo ports.TeamRepository
+	repo   ports.TeamRepository
 	config *config.PaginationConfig
 }
 
-func NewTeamService(repo ports.TeamRepository, config *config.PaginationConfig) ports.TeamService {
-	return &teamService{repo: repo, config: config}
+func NewTeamService(
+	repo ports.TeamRepository,
+	config *config.PaginationConfig,
+) ports.TeamService {
+	return &teamService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *teamService) ListTeams(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Team], error) {

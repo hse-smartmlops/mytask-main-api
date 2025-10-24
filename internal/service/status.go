@@ -14,12 +14,18 @@ import (
 )
 
 type statusService struct {
-	repo ports.StatusRepository
+	repo   ports.StatusRepository
 	config *config.PaginationConfig
 }
 
-func NewStatusService(repo ports.StatusRepository, config *config.PaginationConfig) ports.StatusService {
-	return &statusService{repo: repo, config: config}
+func NewStatusService(
+	repo ports.StatusRepository,
+	config *config.PaginationConfig,
+) ports.StatusService {
+	return &statusService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *statusService) ListStatuses(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Status], error) {

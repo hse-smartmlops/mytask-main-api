@@ -11,15 +11,24 @@ import (
 )
 
 type mcpService struct {
-	repo ports.MCPRepository
+	repo   ports.MCPRepository
 	config *config.PaginationConfig
 }
 
-func NewMCPService(repo ports.MCPRepository, config *config.PaginationConfig) ports.MCPService {
-	return &mcpService{repo: repo, config: config}
+func NewMCPService(
+	repo ports.MCPRepository,
+	config *config.PaginationConfig,
+) ports.MCPService {
+	return &mcpService{
+		repo:   repo,
+		config: config,
+	}
 }
 
-func (s *mcpService) ImproveReport(ctx context.Context, input ports.ImproveReportInput) (*ports.ImproveReportResult, error) {
+func (s *mcpService) ImproveReport(
+	ctx context.Context,
+	input ports.ImproveReportInput,
+) (*ports.ImproveReportResult, error) {
 	ctx, cancel := withOptionalTimeout(ctx, input.TimeoutMs)
 	defer cancel()
 
@@ -50,7 +59,10 @@ func (s *mcpService) ImproveReport(ctx context.Context, input ports.ImproveRepor
 	}, nil
 }
 
-func (s *mcpService) StreamReport(ctx context.Context, input ports.ImproveReportInput) (*ports.MCPStream, error) {
+func (s *mcpService) StreamReport(
+	ctx context.Context,
+	input ports.ImproveReportInput,
+) (*ports.MCPStream, error) {
 	streamCtx, cancel := withOptionalTimeout(ctx, input.TimeoutMs)
 
 	meta := copyMeta(input.Meta)
@@ -105,7 +117,9 @@ func (s *mcpService) StreamReport(ctx context.Context, input ports.ImproveReport
 	}, nil
 }
 
-func copyMeta(meta map[string]string) map[string]string {
+func copyMeta(
+	meta map[string]string,
+) map[string]string {
 	if len(meta) == 0 {
 		return map[string]string{}
 	}
@@ -116,14 +130,19 @@ func copyMeta(meta map[string]string) map[string]string {
 	return out
 }
 
-func withOptionalTimeout(ctx context.Context, timeoutMs *int64) (context.Context, context.CancelFunc) {
+func withOptionalTimeout(
+	ctx context.Context,
+	timeoutMs *int64,
+) (context.Context, context.CancelFunc) {
 	if timeoutMs != nil && *timeoutMs > 0 {
 		return context.WithTimeout(ctx, time.Duration(*timeoutMs)*time.Millisecond)
 	}
 	return context.WithCancel(ctx)
 }
 
-func convertProcessEvent(ev *pb.ProcessTaskEvent) ports.MCPStreamEvent {
+func convertProcessEvent(
+	ev *pb.ProcessTaskEvent,
+) ports.MCPStreamEvent {
 	if status := ev.GetStatus(); status != nil {
 		return ports.MCPStreamEvent{
 			Type: ports.MCPStreamEventStatus,

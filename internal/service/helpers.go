@@ -42,22 +42,22 @@ func sanitizeDescription(items []string) []string {
 
 func checkPagination(p ports.PaginationParams, config *config.PaginationConfig) (page, pagesize int, ok bool) {
 	ok = true
-    
-    if p.Page <= 0 {
-        page = 1
-		ok = false
-    } else {
-        page = p.Page
-    }
-    
-    if p.PageSize <= 0 || p.PageSize > config.MaxLimit {
-        pagesize = config.DefaultLimit
-		ok = false
-    } else {
-        pagesize = p.PageSize
-    }
 
-    return page, pagesize, ok
+	if p.Page <= 0 {
+		page = 1
+		ok = false
+	} else {
+		page = p.Page
+	}
+
+	if p.PageSize <= 0 || p.PageSize > config.MaxLimit {
+		pagesize = config.DefaultLimit
+		ok = false
+	} else {
+		pagesize = p.PageSize
+	}
+
+	return page, pagesize, ok
 }
 
 func boolValue(value *bool, fallback bool) bool {

@@ -17,11 +17,19 @@ type TeamRepository struct {
 	db *gorm.DB
 }
 
-func NewTeamRepository(db *gorm.DB) *TeamRepository {
-	return &TeamRepository{db: db}
+func NewTeamRepository(
+	db *gorm.DB,
+) *TeamRepository {
+	return &TeamRepository{
+		db: db,
+	}
 }
 
-func (r *TeamRepository) ListTeamsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (r *TeamRepository) ListTeamsByProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Team], error) {
 	var teams []models.Team
 	err := r.db.WithContext(ctx).
 		Model(&models.Team{}).
@@ -42,7 +50,10 @@ func (r *TeamRepository) ListTeamsByProject(ctx context.Context, projectID uuid.
 	}, nil
 }
 
-func (r *TeamRepository) ListTeams(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (r *TeamRepository) ListTeams(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Team], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Team{}).Where("teams.deleted = FALSE OR teams.deleted IS NULL")
@@ -69,7 +80,10 @@ func (r *TeamRepository) ListTeams(ctx context.Context, p ports.PaginationParams
 	}, nil
 }
 
-func (r *TeamRepository) GetTeamByID(ctx context.Context, id uuid.UUID) (*models.Team, error) {
+func (r *TeamRepository) GetTeamByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Team, error) {
 	var team models.Team
 	err := r.db.WithContext(ctx).
 		Model(&models.Team{}).
@@ -86,7 +100,11 @@ func (r *TeamRepository) GetTeamByID(ctx context.Context, id uuid.UUID) (*models
 	return &team, nil
 }
 
-func (r *TeamRepository) ListTeamsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (r *TeamRepository) ListTeamsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Team], error) {
 	var teams []models.Team
 	err := r.db.WithContext(ctx).
 		Model(&models.Team{}).
@@ -107,11 +125,18 @@ func (r *TeamRepository) ListTeamsByUser(ctx context.Context, userID uuid.UUID, 
 	}, nil
 }
 
-func (r *TeamRepository) CreateTeam(ctx context.Context, team *models.Team) error {
+func (r *TeamRepository) CreateTeam(
+	ctx context.Context,
+	team *models.Team,
+) error {
 	return r.db.WithContext(ctx).Create(team).Error
 }
 
-func (r *TeamRepository) UpdateTeam(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.Team, error) {
+func (r *TeamRepository) UpdateTeam(
+	ctx context.Context,
+	id uuid.UUID,
+	updates map[string]interface{},
+) (*models.Team, error) {
 	updates["updated_at"] = timePtr(time.Now().UTC())
 
 	result := r.db.WithContext(ctx).
@@ -128,7 +153,10 @@ func (r *TeamRepository) UpdateTeam(ctx context.Context, id uuid.UUID, updates m
 	return r.GetTeamByID(ctx, id)
 }
 
-func (r *TeamRepository) SoftDeleteTeam(ctx context.Context, id uuid.UUID) error {
+func (r *TeamRepository) SoftDeleteTeam(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).
@@ -147,13 +175,20 @@ func (r *TeamRepository) SoftDeleteTeam(ctx context.Context, id uuid.UUID) error
 	return nil
 }
 
-func (r *TeamRepository) AddUserToTeam(ctx context.Context, input ports.TeamMemberInput) error {
+func (r *TeamRepository) AddUserToTeam(
+	ctx context.Context,
+	input ports.TeamMemberInput,
+) error {
 	now := time.Now().UTC()
 	deleted := false
 
 	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "team_id"}, {Name: "user_id"}},
-		DoUpdates: clause.Assignments(map[string]interface{}{"specialization": input.Specialization, "deleted": &deleted, "updated_at": now}),
+		Columns: []clause.Column{{Name: "team_id"}, {Name: "user_id"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"specialization": input.Specialization,
+			"deleted":        &deleted,
+			"updated_at":     now,
+		}),
 	}).Create(&models.TeamMember{
 		TeamID:         input.TeamID,
 		UserID:         input.UserID,
@@ -164,7 +199,11 @@ func (r *TeamRepository) AddUserToTeam(ctx context.Context, input ports.TeamMemb
 	}).Error
 }
 
-func (r *TeamRepository) RemoveUserFromTeam(ctx context.Context, teamID, userID uuid.UUID) error {
+func (r *TeamRepository) RemoveUserFromTeam(
+	ctx context.Context,
+	teamID,
+	userID uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).
@@ -183,7 +222,10 @@ func (r *TeamRepository) RemoveUserFromTeam(ctx context.Context, teamID, userID 
 	return nil
 }
 
-func (r *TeamRepository) AddTeamToProject(ctx context.Context, input ports.TeamProjectInput) error {
+func (r *TeamRepository) AddTeamToProject(
+	ctx context.Context,
+	input ports.TeamProjectInput,
+) error {
 	now := time.Now().UTC()
 	deleted := false
 
@@ -199,7 +241,11 @@ func (r *TeamRepository) AddTeamToProject(ctx context.Context, input ports.TeamP
 	}).Error
 }
 
-func (r *TeamRepository) RemoveTeamFromProject(ctx context.Context, teamID, projectID uuid.UUID) error {
+func (r *TeamRepository) RemoveTeamFromProject(
+	ctx context.Context,
+	teamID,
+	projectID uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).

@@ -14,12 +14,18 @@ import (
 )
 
 type roleService struct {
-	repo ports.RoleRepository
+	repo   ports.RoleRepository
 	config *config.PaginationConfig
 }
 
-func NewRoleService(repo ports.RoleRepository, config *config.PaginationConfig) ports.RoleService {
-	return &roleService{repo: repo, config: config}
+func NewRoleService(
+	repo ports.RoleRepository,
+	config *config.PaginationConfig,
+) ports.RoleService {
+	return &roleService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *roleService) ListRoles(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Role], error) {

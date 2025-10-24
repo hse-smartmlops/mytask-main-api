@@ -13,15 +13,24 @@ import (
 )
 
 type attendanceService struct {
-	repo ports.AttendanceRepository
+	repo   ports.AttendanceRepository
 	config *config.PaginationConfig
 }
 
-func NewAttendanceService(repo ports.AttendanceRepository, config *config.PaginationConfig) ports.AttendanceService {
-	return &attendanceService{repo: repo,config: config}
+func NewAttendanceService(
+	repo ports.AttendanceRepository,
+	config *config.PaginationConfig,
+) ports.AttendanceService {
+	return &attendanceService{
+		repo:   repo,
+		config: config,
+	}
 }
 
-func (s *attendanceService) ListAttendances(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Attendance], error) {
+func (s *attendanceService) ListAttendances(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Attendance], error) {
 	if p.Page <= 0 {
 		p.Page = 1
 	}
@@ -31,7 +40,11 @@ func (s *attendanceService) ListAttendances(ctx context.Context, p ports.Paginat
 	return s.repo.ListAttendances(ctx, p)
 }
 
-func (s *attendanceService) ListAttendancesByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) ([]models.Attendance, error) {
+func (s *attendanceService) ListAttendancesByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) ([]models.Attendance, error) {
 	if p.Page <= 0 {
 		p.Page = 1
 	}
@@ -41,7 +54,10 @@ func (s *attendanceService) ListAttendancesByUser(ctx context.Context, userID uu
 	return s.repo.ListAttendancesByUser(ctx, userID, p)
 }
 
-func (s *attendanceService) GetAttendance(ctx context.Context, id uuid.UUID) (*models.Attendance, error) {
+func (s *attendanceService) GetAttendance(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Attendance, error) {
 	attendance, err := s.repo.GetAttendanceByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -52,7 +68,10 @@ func (s *attendanceService) GetAttendance(ctx context.Context, id uuid.UUID) (*m
 	return attendance, nil
 }
 
-func (s *attendanceService) CreateAttendance(ctx context.Context, input ports.CreateAttendanceInput) (*models.Attendance, error) {
+func (s *attendanceService) CreateAttendance(
+	ctx context.Context,
+	input ports.CreateAttendanceInput,
+) (*models.Attendance, error) {
 	if input.UserID == uuid.Nil {
 		return nil, domain.ErrInvalidInput
 	}
@@ -84,7 +103,11 @@ func (s *attendanceService) CreateAttendance(ctx context.Context, input ports.Cr
 	return s.repo.GetAttendanceByID(ctx, attendance.ID)
 }
 
-func (s *attendanceService) UpdateAttendance(ctx context.Context, id uuid.UUID, input ports.UpdateAttendanceInput) (*models.Attendance, error) {
+func (s *attendanceService) UpdateAttendance(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateAttendanceInput,
+) (*models.Attendance, error) {
 	updates := make(map[string]interface{})
 
 	if input.Date != nil {
@@ -122,7 +145,10 @@ func (s *attendanceService) UpdateAttendance(ctx context.Context, id uuid.UUID, 
 	return s.repo.UpdateAttendance(ctx, id, updates)
 }
 
-func (s *attendanceService) DeleteAttendance(ctx context.Context, id uuid.UUID) error {
+func (s *attendanceService) DeleteAttendance(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteAttendance(ctx, id)
 }
 

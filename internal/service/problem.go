@@ -13,12 +13,18 @@ import (
 )
 
 type problemService struct {
-	repo ports.ProblemRepository
+	repo   ports.ProblemRepository
 	config *config.PaginationConfig
 }
 
-func NewProblemService(repo ports.ProblemRepository, config *config.PaginationConfig) ports.ProblemService {
-	return &problemService{repo: repo, config: config}
+func NewProblemService(
+	repo ports.ProblemRepository,
+	config *config.PaginationConfig,
+) ports.ProblemService {
+	return &problemService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *problemService) ListProblems(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Problem], error) {

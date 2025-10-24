@@ -16,14 +16,23 @@ type StatusRepository struct {
 	db *gorm.DB
 }
 
-func NewStatusRepository(db *gorm.DB) *StatusRepository {
-	return &StatusRepository{db: db}
+func NewStatusRepository(
+	db *gorm.DB,
+) *StatusRepository {
+	return &StatusRepository{
+		db: db,
+	}
 }
 
-func (r *StatusRepository) ListStatuses(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Status], error) {
+func (r *StatusRepository) ListStatuses(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Status], error) {
 	var totalCount int64
 
-	base := r.db.WithContext(ctx).Model(&models.Status{}).Where("statuses.deleted = FALSE OR statuses.deleted IS NULL")
+	base := r.db.WithContext(ctx).
+		Model(&models.Status{}).
+		Where("statuses.deleted = FALSE OR statuses.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
@@ -46,7 +55,10 @@ func (r *StatusRepository) ListStatuses(ctx context.Context, p ports.PaginationP
 	}, nil
 }
 
-func (r *StatusRepository) GetStatusByID(ctx context.Context, id uuid.UUID) (*models.Status, error) {
+func (r *StatusRepository) GetStatusByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Status, error) {
 	var status models.Status
 	err := r.db.WithContext(ctx).
 		Model(&models.Status{}).
@@ -62,7 +74,11 @@ func (r *StatusRepository) GetStatusByID(ctx context.Context, id uuid.UUID) (*mo
 	return &status, nil
 }
 
-func (r *StatusRepository) ListStatusesByBoard(ctx context.Context, boardID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Status], error) {
+func (r *StatusRepository) ListStatusesByBoard(
+	ctx context.Context,
+	boardID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Status], error) {
 	var statuses []models.Status
 	if err := r.db.WithContext(ctx).
 		Model(&models.Status{}).
@@ -79,11 +95,18 @@ func (r *StatusRepository) ListStatusesByBoard(ctx context.Context, boardID uuid
 	}, nil
 }
 
-func (r *StatusRepository) CreateStatus(ctx context.Context, status *models.Status) error {
+func (r *StatusRepository) CreateStatus(
+	ctx context.Context,
+	status *models.Status,
+) error {
 	return r.db.WithContext(ctx).Create(status).Error
 }
 
-func (r *StatusRepository) UpdateStatus(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.Status, error) {
+func (r *StatusRepository) UpdateStatus(
+	ctx context.Context,
+	id uuid.UUID,
+	updates map[string]interface{},
+) (*models.Status, error) {
 	updates["updated_at"] = timePtr(time.Now().UTC())
 
 	result := r.db.WithContext(ctx).
@@ -100,7 +123,10 @@ func (r *StatusRepository) UpdateStatus(ctx context.Context, id uuid.UUID, updat
 	return r.GetStatusByID(ctx, id)
 }
 
-func (r *StatusRepository) SoftDeleteStatus(ctx context.Context, id uuid.UUID) error {
+func (r *StatusRepository) SoftDeleteStatus(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).

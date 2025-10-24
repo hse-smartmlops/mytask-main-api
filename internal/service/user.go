@@ -22,11 +22,25 @@ type userService struct {
 	config  *config.PaginationConfig
 }
 
-func NewUserService(repo ports.UserRepository, storage ports.ObjectStorage, cfg config.MinioConfig, config *config.PaginationConfig) ports.UserService {
-	return &userService{repo: repo, storage: storage, cfg: cfg, config: config}
+func NewUserService(
+	repo ports.UserRepository,
+	storage ports.ObjectStorage,
+	cfg config.MinioConfig,
+	config *config.PaginationConfig,
+) ports.UserService {
+	return &userService{
+		repo:    repo,
+		storage: storage,
+		cfg:     cfg,
+		config:  config,
+	}
 }
 
-func (s *userService) ListUsers(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.User], error) {
+func (s *userService) ListUsers(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (
+	*ports.Page[models.User], error) {
 	if p.Page <= 0 {
 		p.Page = 1
 	}
@@ -36,7 +50,10 @@ func (s *userService) ListUsers(ctx context.Context, p ports.PaginationParams) (
 	return s.repo.ListUsers(ctx, p)
 }
 
-func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
+func (s *userService) GetUser(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.User, error) {
 	user, err := s.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -47,7 +64,10 @@ func (s *userService) GetUser(ctx context.Context, id uuid.UUID) (*models.User, 
 	return user, nil
 }
 
-func (s *userService) CreateUser(ctx context.Context, input ports.CreateUserInput) (*models.User, error) {
+func (s *userService) CreateUser(
+	ctx context.Context,
+	input ports.UserInput,
+) (*models.User, error) {
 	email := strings.TrimSpace(input.Email)
 	if email == "" {
 		return nil, domain.ErrInvalidInput
@@ -77,7 +97,11 @@ func (s *userService) CreateUser(ctx context.Context, input ports.CreateUserInpu
 	return user, nil
 }
 
-func (s *userService) SaveAvatar(ctx context.Context, id uuid.UUID, input ports.SaveUserAvatarInput) (*models.User, error) {
+func (s *userService) SaveAvatar(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UserAvatarInput,
+) (*models.User, error) {
 	if s.storage == nil {
 		return nil, errors.New("object storage is not configured")
 	}
@@ -102,7 +126,14 @@ func (s *userService) SaveAvatar(ctx context.Context, id uuid.UUID, input ports.
 	}
 	object := fmt.Sprintf("%s.png", id.String())
 
-	if err := s.storage.Upload(ctx, bucket, object, resized, contentType, map[string]string{"user_id": id.String()}); err != nil {
+	if err := s.storage.Upload(
+		ctx,
+		bucket,
+		object,
+		resized,
+		contentType,
+		map[string]string{"user_id": id.String()},
+	); err != nil {
 		return nil, err
 	}
 
@@ -115,7 +146,10 @@ func (s *userService) SaveAvatar(ctx context.Context, id uuid.UUID, input ports.
 	return user, nil
 }
 
-func (s *userService) DeleteAvatar(ctx context.Context, id uuid.UUID) (*models.User, error) {
+func (s *userService) DeleteAvatar(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.User, error) {
 	user, err := s.repo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -136,7 +170,10 @@ func (s *userService) DeleteAvatar(ctx context.Context, id uuid.UUID) (*models.U
 	return user, nil
 }
 
-func (s *userService) GetAvatar(ctx context.Context, id uuid.UUID) (*ports.UserAvatarFile, error) {
+func (s *userService) GetAvatar(
+	ctx context.Context,
+	id uuid.UUID,
+) (*ports.UserAvatarFile, error) {
 	if s.storage == nil {
 		return nil, errors.New("object storage is not configured")
 	}

@@ -19,11 +19,15 @@ type projectService struct {
 	config      *config.PaginationConfig
 }
 
-func NewProjectService(projectRepo ports.ProjectRepository, teamRepo ports.TeamRepository, config *config.PaginationConfig) ports.ProjectService {
+func NewProjectService(
+	projectRepo ports.ProjectRepository,
+	teamRepo ports.TeamRepository,
+	config *config.PaginationConfig,
+) ports.ProjectService {
 	return &projectService{
 		projectRepo: projectRepo,
 		teamRepo:    teamRepo,
-		config: config,
+		config:      config,
 	}
 }
 

@@ -14,12 +14,18 @@ import (
 )
 
 type boardService struct {
-	repo ports.BoardRepository
+	repo   ports.BoardRepository
 	config *config.PaginationConfig
 }
 
-func NewBoardService(repo ports.BoardRepository, config *config.PaginationConfig) ports.BoardService {
-	return &boardService{repo:repo,config:config}
+func NewBoardService(
+	repo ports.BoardRepository,
+	config *config.PaginationConfig,
+) ports.BoardService {
+	return &boardService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *boardService) ListBoards(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Board], error) {

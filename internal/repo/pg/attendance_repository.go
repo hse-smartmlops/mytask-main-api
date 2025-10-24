@@ -16,8 +16,12 @@ type AttendanceRepository struct {
 	db *gorm.DB
 }
 
-func NewAttendanceRepository(db *gorm.DB) *AttendanceRepository {
-	return &AttendanceRepository{db: db}
+func NewAttendanceRepository(
+	db *gorm.DB,
+) *AttendanceRepository {
+	return &AttendanceRepository{
+		db: db,
+	}
 }
 
 func (r *AttendanceRepository) ListAttendances(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Attendance], error) {

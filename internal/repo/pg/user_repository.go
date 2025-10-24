@@ -16,19 +16,33 @@ type UserRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewUserRepository(
+	db *gorm.DB,
+) *UserRepository {
+	return &UserRepository{
+		db: db,
+	}
 }
 
-func (r *UserRepository) SoftDeleteUser(ctx context.Context, id uuid.UUID) error {
+func (r *UserRepository) SoftDeleteUser(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return nil // TODO Add implementation
 }
 
-func (r *UserRepository) UpdateUser(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.User, error) {
+func (r *UserRepository) UpdateUser(
+	ctx context.Context,
+	id uuid.UUID,
+	updates map[string]interface{},
+) (*models.User, error) {
 	return nil, nil // TODO Add implementation
 }
 
-func (r *UserRepository) ListUsers(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.User], error) {
+func (r *UserRepository) ListUsers(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.User], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.User{}).Where("deleted = FALSE")
@@ -53,7 +67,10 @@ func (r *UserRepository) ListUsers(ctx context.Context, p ports.PaginationParams
 	}, nil
 }
 
-func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models.User, error) {
+func (r *UserRepository) GetUserByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.User, error) {
 	var user models.User
 	err := r.db.WithContext(ctx).
 		Model(&models.User{}).
@@ -68,11 +85,18 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id uuid.UUID) (*models
 	return &user, nil
 }
 
-func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) error {
+func (r *UserRepository) CreateUser(
+	ctx context.Context,
+	user *models.User,
+) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
 
-func (r *UserRepository) UpdateUserAvatar(ctx context.Context, id uuid.UUID, avatarPath string) error {
+func (r *UserRepository) UpdateUserAvatar(
+	ctx context.Context,
+	id uuid.UUID,
+	avatarPath string,
+) error {
 	updates := map[string]interface{}{
 		"avatar_path": avatarPath,
 		"updated_at":  time.Now().UTC(),
@@ -89,7 +113,10 @@ func (r *UserRepository) UpdateUserAvatar(ctx context.Context, id uuid.UUID, ava
 	return nil
 }
 
-func (r *UserRepository) ClearUserAvatar(ctx context.Context, id uuid.UUID) error {
+func (r *UserRepository) ClearUserAvatar(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	updates := map[string]interface{}{
 		"avatar_path": "",
 		"updated_at":  time.Now().UTC(),

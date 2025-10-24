@@ -13,12 +13,18 @@ import (
 )
 
 type forumMessageService struct {
-	repo ports.ForumMessageRepository
+	repo   ports.ForumMessageRepository
 	config *config.PaginationConfig
 }
 
-func NewForumMessageService(repo ports.ForumMessageRepository, config *config.PaginationConfig) ports.ForumMessageService {
-	return &forumMessageService{repo: repo, config: config}
+func NewForumMessageService(
+	repo ports.ForumMessageRepository,
+	config *config.PaginationConfig,
+) ports.ForumMessageService {
+	return &forumMessageService{
+		repo:   repo,
+		config: config,
+	}
 }
 
 func (s *forumMessageService) ListMessages(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.ForumMessage], error) {
