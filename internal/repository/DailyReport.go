@@ -28,6 +28,7 @@ type ReportRepository interface {
 	DeleteHelpRequest(requestID uuid.UUID) (bool, error)
 	Transaction(txFunc func(ReportRepository) error) error
 	GetReportByDateInXLSX(startDate, endDate time.Time) ([]models.DailyReport, error)
+	GetLatestTomorrowPlans() ([]models.TomorrowPlans, error)
 }
 
 type reportRepository struct {
@@ -131,6 +132,53 @@ func (r *reportRepository) GetReport(reportID uuid.UUID) (*models.DailyReport, e
 		return nil, err
 	}
 	return &report, nil
+}
+
+func (r *reportRepository) GetLatestTomorrowPlans() ([]models.TomorrowPlans, error) {
+    var plans []models.TomorrowPlans
+    
+    // Субзапрос для получения ID последних отчетов
+    subquery := r.db.Session(&gorm.Session{}).
+        Model(&models.DailyReport{}).
+        Select("id").
+        Where("deleted = ?", false).
+        Where("(user_id, report_date) IN (?)", 
+            r.db.Session(&gorm.Session{}).
+                Model(&models.DailyReport{}).
+                Select("user_id, MAX(report_date)").
+                Where("deleted = ?", false).
+                Group("user_id"),
+        )
+
+    // Основной запрос с прелоадами
+    err := r.db.Session(&gorm.Session{}).
+        Where("deleted = ? AND report_id IN (?)", false, subquery).
+        Preload("Report", func(db *gorm.DB) *gorm.DB {
+            return db.Where("deleted = ?", false)
+        }).
+        Preload("Report.User", func(db *gorm.DB) *gorm.DB {
+            return db.Where("deleted = ?", false)
+        }).
+        Preload("Task", func(db *gorm.DB) *gorm.DB {
+            return db.Where("deleted = ?", false)
+        }).
+        Preload("Task.Status", func(db *gorm.DB) *gorm.DB {
+            return db.Where("deleted = ?", false)
+        }).
+        Preload("Task.Status.Board", func(db *gorm.DB) *gorm.DB {
+            return db.Where("deleted = ?", false)
+        }).
+        Preload("Task.Status.Board.Project", func(db *gorm.DB) *gorm.DB {
+            return db.Where("deleted = ?", false)
+        }).
+        Order("report_id, created_at").
+        Find(&plans).Error
+
+    if err != nil {
+        return nil, err
+    }
+
+    return plans, nil
 }
 
 func (r *reportRepository) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyReport, error) {

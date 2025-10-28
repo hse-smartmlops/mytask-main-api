@@ -61,3 +61,10 @@ func GetUUIDString(u *uuid.UUID) string {
     }
     return ""
 }
+
+func FormatTimeForExcel(t time.Time) string {
+    if t.IsZero() {
+        return ""
+    }
+    return t.Format("02.01.2006")
+}

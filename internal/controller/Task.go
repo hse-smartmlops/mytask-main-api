@@ -6,12 +6,15 @@ import (
 	"emplacc-api/internal/grpc/client"
 	"emplacc-api/internal/service"
 	utils "emplacc-api/internal/utils"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/xuri/excelize/v2"
 )
 
 type TaskController struct {
@@ -45,6 +48,7 @@ func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userServi
 		taskGroup.POST("/:id/improve-report", controller.ImproveTaskReport)
 		taskGroup.GET("/user/:id/:page/:pagesize/active", controller.GetActiveTasksByUserId)
 		taskGroup.GET("/board-project/:id", controller.GetTaskBoardAndProject)
+		taskGroup.GET("/export/active-tasks/xlsx", controller.ExportAllActiveTasksToXLSX)
 	}
 }
 
@@ -889,4 +893,160 @@ func (tc *TaskController) GetTaskBoardAndProject(c echo.Context) error {
 		BoardID: boardId.String(),
 		ProjectID: projectId.String(),
 	})
+}
+
+// ExportAllActiveTasksToXLSX godoc
+// @Summary Экспорт активных задач всех пользователей в XLSX
+// @Description Генерирует XLSX-файл с активными задачами всех пользователей, сгруппированными по пользователям
+// @Tags Tasks
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security BearerAuth
+// @Success 200 {string} file "XLSX-файл с активными задачами"
+// @Failure 500 {object} map[string]string "Ошибка при генерации отчёта"
+// @Router /task/export/active-tasks/xlsx [get]
+func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
+    // Получаем данные для экспорта
+    data, err := tc.taskService.GetAllActiveTasksForXLSX()
+    if err != nil {
+        log.Printf("service error (get all active tasks for XLSX): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
+    }
+
+    // Создаем XLSX файл
+    f := excelize.NewFile()
+
+    // Создаем сводный лист
+    summarySheet := "Сводка по активным задачам"
+    f.NewSheet(summarySheet)
+    
+    // Заголовки для сводного листа
+    summaryHeaders := []interface{}{
+        "Пользователь", "Название задачи", "Описание", 
+        "Приоритет", "Дата начала", "Дедлайн", "Статус",
+        "Доска", "Проект", "Создана", "Обновлена",
+    }
+    
+    if err := f.SetSheetRow(summarySheet, "A1", &summaryHeaders); err != nil {
+        log.Printf("XLSX header error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании XLSX"})
+    }
+
+    rowIndex := 2
+    totalTasks := 0
+
+    // Заполняем сводный лист и создаем листы для каждого пользователя
+    for _, user := range data.Users {
+        // Убрано ограничение на длину имени листа - используем полное имя пользователя
+        userSheet := user.UserName
+        if userSheet == "" {
+            userSheet = user.UserEmail
+        }
+        
+        f.NewSheet(userSheet)
+        
+        // Заголовки для листа пользователя
+        userHeaders := []interface{}{
+            "Название задачи", "Описание", 
+            "Приоритет", "Дата начала", "Дедлайн", "Статус",
+            "Доска", "Проект", "Создана", "Обновлена",
+        }
+        f.SetSheetRow(userSheet, "A1", &userHeaders)
+        
+        userRowIndex := 2
+
+        for _, task := range user.Tasks {
+            totalTasks++
+            
+            // Конвертируем приоритет в текст
+            priorityText := convertPriorityToText(task.Priority)
+            
+            // Запись в сводный лист
+            summaryRow := []interface{}{
+                user.UserName,
+                task.Name,
+                task.Description,
+                priorityText,
+                utils.FormatTimeForExcel(task.StartDate),
+                utils.FormatTimeForExcel(task.Deadline),
+                task.StatusName,
+                task.BoardName,
+                task.ProjectName, // Теперь отображается реальное название проекта
+                task.CreatedAt.Format("02.01.2006 15:04"),
+                task.UpdatedAt.Format("02.01.2006 15:04"),
+            }
+            
+            axis := fmt.Sprintf("A%d", rowIndex)
+            if err := f.SetSheetRow(summarySheet, axis, &summaryRow); err != nil {
+                log.Printf("XLSX summary row error: %v", err)
+                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+            }
+            rowIndex++
+
+            // Запись в лист пользователя
+            userRow := []interface{}{
+                task.Name,
+                task.Description,
+                priorityText,
+                utils.FormatTimeForExcel(task.StartDate),
+                utils.FormatTimeForExcel(task.Deadline),
+                task.StatusName,
+                task.BoardName,
+                task.ProjectName, // Теперь отображается реальное название проекта
+                task.CreatedAt.Format("02.01.2006 15:04"),
+                task.UpdatedAt.Format("02.01.2006 15:04"),
+            }
+            
+            userAxis := fmt.Sprintf("A%d", userRowIndex)
+            if err := f.SetSheetRow(userSheet, userAxis, &userRow); err != nil {
+                log.Printf("XLSX user row error: %v", err)
+                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+            }
+            userRowIndex++
+        }
+
+        // Настройка форматирования для листа пользователя
+        f.SetColWidth(userSheet, "A", "J", 20)
+        f.SetColWidth(userSheet, "A", "B", 30) // Шире для названия и описания
+        styleID, _ := f.NewStyle(&excelize.Style{
+            Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+        })
+        f.SetCellStyle(userSheet, "A1", fmt.Sprintf("J%d", userRowIndex), styleID)
+    }
+
+    // Добавляем общую информацию на сводный лист
+    f.SetCellValue(summarySheet, "A1", "Всего активных задач: "+strconv.Itoa(totalTasks))
+    f.SetCellValue(summarySheet, "B1", "Всего пользователей: "+strconv.Itoa(len(data.Users)))
+
+    // Настройка форматирования сводного листа
+    f.SetColWidth(summarySheet, "A", "K", 20)
+    f.SetColWidth(summarySheet, "B", "C", 30) // Шире для названия и описания
+    styleID, _ := f.NewStyle(&excelize.Style{
+        Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+    })
+    f.SetCellStyle(summarySheet, "A2", fmt.Sprintf("K%d", rowIndex), styleID)
+
+    // Удаляем дефолтный лист
+    f.DeleteSheet("Sheet1")
+
+    // Устанавливаем сводный лист активным
+    index, err := f.GetSheetIndex(summarySheet)
+    if err != nil {
+        log.Printf("Creating list error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+    f.SetActiveSheet(index)
+
+    // Генерируем файл
+    buf, err := f.WriteToBuffer()
+    if err != nil {
+        log.Printf("XLSX buffer error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+
+    filename := fmt.Sprintf("active_tasks_%s.xlsx", time.Now().Format("2006-01-02"))
+
+    c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
+    return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
 }

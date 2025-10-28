@@ -5,12 +5,14 @@ import (
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/service"
 	"emplacc-api/internal/utils"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+	"github.com/xuri/excelize/v2"
 )
 
 type BoardController struct {
@@ -33,6 +35,7 @@ func RegisterBoardRoutes(e *echo.Echo, boardService service.BoardService) {
 		projectGroup.POST("", controller.CreateBoard)
 		projectGroup.PATCH("/:id", controller.UpdateBoard)
 		projectGroup.DELETE("/:id", controller.DeleteBoard)
+		projectGroup.GET("/project/:projectId/export/xlsx", controller.ExportProjectTasksToXLSX)
 	}
 }
 
@@ -387,4 +390,185 @@ func (bc *BoardController) DeleteBoard(c echo.Context) error {
 		Id:      boardID.String(),
 		Message: "Доска удалена",
 	})
+}
+
+// ExportProjectTasksToXLSX godoc
+// @Summary Экспорт задач проекта в XLSX
+// @Description Генерирует XLSX-файл с задачами проекта, сгруппированными по доскам и статусам
+// @Tags Boards
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Param projectId path string true "ID проекта"
+// @Security BearerAuth
+// @Success 200 {string} file "XLSX-файл с задачами проекта"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор проекта"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 500 {object} map[string]string "Ошибка при генерации отчёта"
+// @Router /boards/project/{projectId}/export/xlsx [get]
+func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
+    projectUUID, err := uuid.Parse(c.Param("projectId"))
+    if err != nil {
+        log.Printf("UUID parse error: %v", err)
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
+    }
+
+    // Получаем данные для экспорта
+    data, err := bc.boardService.GetProjectTasksForXLSX(projectUUID)
+    if err != nil {
+        log.Printf("service error (get project tasks for XLSX): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
+    }
+
+    // Создаем XLSX файл
+    f := excelize.NewFile()
+
+    // Создаем сводный лист
+    summarySheet := "Сводка по проекту"
+    f.NewSheet(summarySheet)
+    
+    // Заголовки для сводного листа (убран ID задачи)
+    summaryHeaders := []interface{}{
+        "Доска", "Статус", "Название задачи", "Описание", 
+        "Приоритет", "Дата начала", "Дедлайн", "Исполнитель",
+        "Создана", "Обновлена",
+    }
+    
+    if err := f.SetSheetRow(summarySheet, "A1", &summaryHeaders); err != nil {
+        log.Printf("XLSX header error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании XLSX"})
+    }
+
+    rowIndex := 2
+    totalTasks := 0
+
+    // Заполняем сводный лист и создаем листы для каждой доски
+    for _, board := range data.Boards {
+        boardSheet := board.BoardName
+        if len(boardSheet) > 31 { // Ограничение Excel на длину имени листа
+            boardSheet = boardSheet[:31]
+        }
+        f.NewSheet(boardSheet)
+        
+        // Заголовки для листа доски (убран ID задачи)
+        boardHeaders := []interface{}{
+            "Статус", "Название задачи", "Описание", 
+            "Приоритет", "Дата начала", "Дедлайн", "Исполнитель",
+            "Создана", "Обновлена",
+        }
+        f.SetSheetRow(boardSheet, "A1", &boardHeaders)
+        
+        boardRowIndex := 2
+
+        for _, status := range board.Statuses {
+            for _, task := range status.Tasks {
+                totalTasks++
+                
+                // Конвертируем приоритет в текст
+                priorityText := convertPriorityToText(task.Priority)
+                
+                // Запись в сводный лист (убран ID задачи)
+                summaryRow := []interface{}{
+                    board.BoardName,
+                    status.StatusName,
+                    task.Name,
+                    task.Description,
+                    priorityText, // Используем текстовое представление приоритета
+                    utils.FormatTimeForExcel(task.StartDate),
+                    utils.FormatTimeForExcel(task.Deadline),
+                    task.AssignedTo,
+                    task.CreatedAt.Format("02.01.2006 15:04"),
+                    task.UpdatedAt.Format("02.01.2006 15:04"),
+                }
+                
+                axis := fmt.Sprintf("A%d", rowIndex)
+                if err := f.SetSheetRow(summarySheet, axis, &summaryRow); err != nil {
+                    log.Printf("XLSX summary row error: %v", err)
+                    return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+                }
+                rowIndex++
+
+                // Запись в лист доски (убран ID задачи)
+                boardRow := []interface{}{
+                    status.StatusName,
+                    task.Name,
+                    task.Description,
+                    priorityText, // Используем текстовое представление приоритета
+                    utils.FormatTimeForExcel(task.StartDate),
+                    utils.FormatTimeForExcel(task.Deadline),
+                    task.AssignedTo,
+                    task.CreatedAt.Format("02.01.2006 15:04"),
+                    task.UpdatedAt.Format("02.01.2006 15:04"),
+                }
+                
+                boardAxis := fmt.Sprintf("A%d", boardRowIndex)
+                if err := f.SetSheetRow(boardSheet, boardAxis, &boardRow); err != nil {
+                    log.Printf("XLSX board row error: %v", err)
+                    return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+                }
+                boardRowIndex++
+            }
+        }
+
+        // Настройка форматирования для листа доски
+        f.SetColWidth(boardSheet, "A", "I", 20) // Изменено с J на I (меньше столбцов)
+        f.SetColWidth(boardSheet, "B", "C", 30) // Шире для названия и описания (изменены индексы)
+        styleID, _ := f.NewStyle(&excelize.Style{
+            Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+        })
+        f.SetCellStyle(boardSheet, "A1", fmt.Sprintf("I%d", boardRowIndex), styleID) // Изменено с J на I
+    }
+
+    // Добавляем общую информацию о проекте на сводный лист
+    f.SetCellValue(summarySheet, "A1", "Проект: "+data.ProjectName)
+    f.SetCellValue(summarySheet, "B1", fmt.Sprintf("Всего задач: %d", totalTasks))
+
+    // Настройка форматирования сводного листа
+    f.SetColWidth(summarySheet, "A", "J", 20) // Изменено с K на J (меньше столбцов)
+    f.SetColWidth(summarySheet, "C", "D", 30) // Шире для названия и описания (изменены индексы)
+    styleID, _ := f.NewStyle(&excelize.Style{
+        Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+    })
+    f.SetCellStyle(summarySheet, "A2", fmt.Sprintf("J%d", rowIndex), styleID) // Изменено с K на J
+
+	// Удаляем дефолтный лист и создаем структурированные листы
+    f.DeleteSheet("Sheet1")
+
+    // Устанавливаем сводный лист активным
+    index, err := f.GetSheetIndex(summarySheet)
+    if err != nil {
+        log.Printf("Creating list error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+    f.SetActiveSheet(index)
+
+    // Генерируем файл
+    buf, err := f.WriteToBuffer()
+    if err != nil {
+        log.Printf("XLSX buffer error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+
+    filename := fmt.Sprintf("project_tasks_%s.xlsx", data.ProjectName)
+
+    c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
+    return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+// convertPriorityToText преобразует числовой приоритет в текстовое представление
+func convertPriorityToText(priority int16) string {
+    switch priority {
+    case 5:
+        return "Срочный"
+    case 4:
+        return "Высокий"
+    case 3:
+        return "Средний"
+    case 2:
+        return "Низкий"
+    case 1:
+        return "Не задан"
+    default:
+        return fmt.Sprintf("Неизвестный (%d)", priority)
+    }
 }

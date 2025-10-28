@@ -3,8 +3,12 @@ package service
 import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/repository"
+	"emplacc-api/internal/utils"
 	"errors"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +26,7 @@ type TaskService interface {
 	GetTasksByUserIDAndProjectID(userID, projectID uuid.UUID, page, pageSize int) ([]models.Task, int64, error)	
 	GetActiveTasksByUserId(userID uuid.UUID, page, pageSize int) ([]models.Task, int64, error)
 	GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardId, projectId uuid.UUID, err error)
+	GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXData, error)
 }
 
 type taskService struct {
@@ -222,6 +227,87 @@ func (s *taskService) GetActiveTasksByUserId(userID uuid.UUID, page, pageSize in
 	}
 	offset := (page - 1) * pageSize
 	return s.repo.GetActiveTasksByUserId(userID, pageSize, offset)
+}
+
+func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXData, error) {
+    // Получаем все активные задачи
+    tasks, err := s.repo.GetAllActiveTasks()
+    if err != nil {
+        return nil, err
+    }
+
+    // Группируем задачи по пользователям
+    userTasksMap := make(map[uuid.UUID]*response.UserTasksXLSX)
+    
+    for _, task := range tasks {
+        if task.AssignedTo == nil {
+            continue // Пропускаем задачи без назначенного пользователя
+        }
+
+        userID := *task.AssignedTo
+        if _, exists := userTasksMap[userID]; !exists {
+            // Создаем нового пользователя
+            userName := "Неизвестный пользователь"
+            userEmail := ""
+            if task.AssignedToUser != nil {
+                firstName := task.AssignedToUser.FirstName
+                lastName := task.AssignedToUser.LastName
+                if firstName != "" || lastName != "" {
+                    userName = strings.TrimSpace(firstName + " " + lastName)
+                } else {
+                    userName = task.AssignedToUser.Email
+                }
+                userEmail = task.AssignedToUser.Email
+            }
+
+            userTasksMap[userID] = &response.UserTasksXLSX{
+                UserID:    userID.String(),
+                UserName:  userName,
+                UserEmail: userEmail,
+                Tasks:     []response.TaskXLSXForTask{},
+            }
+        }
+
+        // Получаем название проекта через цепочку: Task -> Status -> Board -> Project
+        projectName := "Без проекта"
+        if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+            if task.Status.Board.Project.Name != nil {
+                projectName = *task.Status.Board.Project.Name
+            }
+        }
+
+        // Добавляем задачу пользователю
+        taskXLSX := response.TaskXLSXForTask{
+            ID:          task.ID.String(),
+            Name:        utils.GetString(task.Name),
+            Description: utils.GetString(task.Description),
+            Priority:    utils.GetInt16(task.Priority),
+            StartDate:   utils.GetTime(task.StartDate),
+            Deadline:    utils.GetTime(task.Deadline),
+            StatusName:  utils.GetString(task.Status.Name),
+            BoardName:   utils.GetString(task.Status.Board.Name),
+            ProjectName: projectName, // Теперь используем реальное название проекта
+            CreatedAt:   utils.GetTime(task.CreatedAt),
+            UpdatedAt:   utils.GetTime(task.UpdatedAt),
+        }
+
+        userTasksMap[userID].Tasks = append(userTasksMap[userID].Tasks, taskXLSX)
+    }
+
+    // Преобразуем map в slice
+    users := make([]response.UserTasksXLSX, 0, len(userTasksMap))
+    for _, userTasks := range userTasksMap {
+        users = append(users, *userTasks)
+    }
+
+    // Сортируем пользователей по имени
+    sort.Slice(users, func(i, j int) bool {
+        return users[i].UserName < users[j].UserName
+    })
+
+    return &response.AllActiveTasksXLSXData{
+        Users: users,
+    }, nil
 }
 
 // GetTaskBoardAndProjectIDs возвращает ID доски и ID проекта для задачи

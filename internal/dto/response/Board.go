@@ -28,3 +28,34 @@ type BoardForProjectResponse struct {
 	Boards    []BoardResponse `json:"boards"`
 	ProjectId string          `json:"project_id"`
 }
+
+type ProjectTasksXLSXData struct {
+    ProjectName        string
+    ProjectDescription string
+    Boards             []BoardXLSXResponse
+}
+
+type BoardXLSXResponse struct {
+    BoardName        string
+    BoardDescription string
+    Statuses         []StatusXLSXResponse
+}
+
+type StatusXLSXResponse struct {
+    StatusName  string
+    StatusColor string
+    Tasks       []TaskXLSX
+}
+
+type TaskXLSX struct {
+    ID          string
+    Name        string
+    Description string
+    Priority    int16
+    StartDate   time.Time
+    Deadline    time.Time
+    AssignedTo  string
+    CreatedBy   string    // Добавлено: кто создал задачу
+    CreatedAt   time.Time
+    UpdatedAt   time.Time
+}

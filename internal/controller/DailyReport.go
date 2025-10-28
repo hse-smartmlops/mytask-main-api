@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -44,6 +45,7 @@ func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService) {
 		reportGroup.GET("/help-requests-by-user-id/:id", controller.GetHelpRequestsForUser)
 		reportGroup.DELETE("/help-request/:id", controller.DeleteHelpRequest)
 		reportGroup.POST("/export/xlsx", controller.GetReportByDateInXLSX)
+		reportGroup.GET("/export/tomorrow-plans/xlsx", controller.ExportTomorrowPlansToXLSX)
 	}
 }
 
@@ -143,6 +145,210 @@ func (rc *ReportController) GetAllReports(c echo.Context) error {
 		})
 	}
 	return c.JSON(http.StatusOK, out)
+}
+
+// ExportTomorrowPlansToXLSX godoc
+// @Summary Экспорт планов на завтра в XLSX
+// @Description Генерирует XLSX-файл с планами на завтра из последних отчетов всех пользователей
+// @Tags Reports
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security BearerAuth
+// @Success 200 {string} file "XLSX-файл с планами на завтра"
+// @Failure 500 {object} map[string]string "Ошибка при генерации отчёта"
+// @Router /report/export/tomorrow-plans/xlsx [get]
+func (rc *ReportController) ExportTomorrowPlansToXLSX(c echo.Context) error {
+    data, err := rc.reportService.GetTomorrowPlansForXLSX()
+    if err != nil {
+        log.Printf("service error (get tomorrow plans for XLSX): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
+    }
+
+    // Создаем XLSX файл
+    f := excelize.NewFile()
+
+    // Создаем сводный лист
+    summarySheet := "Планы на завтра"
+    f.NewSheet(summarySheet)
+    
+    // Добавляем общую информацию ПЕРЕД таблицей
+    f.SetCellValue(summarySheet, "A1", "Отчет по планам на завтра")
+    f.SetCellValue(summarySheet, "A2", "Дата формирования: "+time.Now().Format("02.01.2006 15:04"))
+    f.SetCellValue(summarySheet, "A3", "Всего пользователей: "+strconv.Itoa(len(data.Users)))
+    f.SetCellValue(summarySheet, "A4", "Всего планов: "+strconv.Itoa(calculateTotalPlans(data.Users)))
+    
+    // Пустая строка для разделения
+    f.SetCellValue(summarySheet, "A5", "")
+
+    // Заголовки для сводного листа (начинаем с строки 6)
+    summaryHeaders := []interface{}{
+        "Пользователь", "Дата отчета", "Задача", "Проект", "Описание плана", 
+        "Создано",
+    }
+    
+    if err := f.SetSheetRow(summarySheet, "A6", &summaryHeaders); err != nil {
+        log.Printf("XLSX header error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании XLSX"})
+    }
+
+    rowIndex := 7 // Начинаем с строки 7 (после заголовков)
+    totalPlans := 0
+
+    // Заполняем сводный лист и создаем листы для каждого пользователя
+    for _, user := range data.Users {
+        // Создаем лист для пользователя
+        userSheet := user.UserName
+        if userSheet == "" {
+            userSheet = user.UserEmail
+        }
+        
+        f.NewSheet(userSheet)
+        
+        // Добавляем информацию о пользователе на лист
+        f.SetCellValue(userSheet, "A1", "Пользователь: "+user.UserName)
+        if user.UserEmail != "" {
+            f.SetCellValue(userSheet, "A2", "Email: "+user.UserEmail)
+        }
+        f.SetCellValue(userSheet, "A3", "Дата отчета: "+user.ReportDate.Format("02.01.2006"))
+        f.SetCellValue(userSheet, "A4", "Количество планов: "+strconv.Itoa(len(user.Plans)))
+        
+        // Пустая строка для разделения
+        f.SetCellValue(userSheet, "A5", "")
+
+        // Заголовки для листа пользователя (начинаем с строки 6)
+        userHeaders := []interface{}{
+            "Дата отчета", "Задача", "Проект", "Описание плана", "Создано",
+        }
+        f.SetSheetRow(userSheet, "A6", &userHeaders)
+        
+        userRowIndex := 7 // Начинаем с строки 7 (после заголовков)
+
+        for _, plan := range user.Plans {
+            totalPlans++
+            
+            // Запись в сводный лист
+            summaryRow := []interface{}{
+                user.UserName,
+                user.ReportDate.Format("02.01.2006"),
+                plan.TaskName,        // Имя задачи
+                plan.ProjectName,     // Имя проекта
+                plan.Description,
+                plan.CreatedAt.Format("02.01.2006 15:04"),
+            }
+            
+            axis := fmt.Sprintf("A%d", rowIndex)
+            if err := f.SetSheetRow(summarySheet, axis, &summaryRow); err != nil {
+                log.Printf("XLSX summary row error: %v", err)
+                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+            }
+            rowIndex++
+
+            // Запись в лист пользователя
+            userRow := []interface{}{
+                user.ReportDate.Format("02.01.2006"),
+                plan.TaskName,        // Имя задачи
+                plan.ProjectName,     // Имя проекта
+                plan.Description,
+                plan.CreatedAt.Format("02.01.2006 15:04"),
+            }
+            
+            userAxis := fmt.Sprintf("A%d", userRowIndex)
+            if err := f.SetSheetRow(userSheet, userAxis, &userRow); err != nil {
+                log.Printf("XLSX user row error: %v", err)
+                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+            }
+            userRowIndex++
+        }
+
+        // Настройка форматирования для листа пользователя
+        f.SetColWidth(userSheet, "A", "E", 20)
+        f.SetColWidth(userSheet, "B", "C", 25) // Шире для задачи и проекта
+        f.SetColWidth(userSheet, "D", "D", 40) // Шире для описания
+        
+        // Стиль для заголовка пользователя
+        headerStyle, _ := f.NewStyle(&excelize.Style{
+            Font: &excelize.Font{Bold: true, Size: 12},
+        })
+        f.SetCellStyle(userSheet, "A1", "A4", headerStyle)
+        
+        // Стиль для таблицы
+        tableStyle, _ := f.NewStyle(&excelize.Style{
+            Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+        })
+        f.SetCellStyle(userSheet, "A6", fmt.Sprintf("E%d", userRowIndex), tableStyle)
+        
+        // Стиль для заголовков таблицы
+        tableHeaderStyle, _ := f.NewStyle(&excelize.Style{
+            Font: &excelize.Font{Bold: true},
+            Alignment: &excelize.Alignment{WrapText: true, Vertical: "center", Horizontal: "center"},
+            Fill: excelize.Fill{Type: "pattern", Color: []string{"E6E6FA"}, Pattern: 1},
+        })
+        f.SetCellStyle(userSheet, "A6", "E6", tableHeaderStyle)
+    }
+
+    // Настройка форматирования сводного листа
+    f.SetColWidth(summarySheet, "A", "F", 20)
+    f.SetColWidth(summarySheet, "C", "D", 25) // Шире для задачи и проекта
+    f.SetColWidth(summarySheet, "E", "E", 40) // Шире для описания
+    
+    // Стиль для заголовка отчета
+    titleStyle, _ := f.NewStyle(&excelize.Style{
+        Font: &excelize.Font{Bold: true, Size: 14},
+    })
+    f.SetCellStyle(summarySheet, "A1", "A1", titleStyle)
+    
+    // Стиль для информации
+    infoStyle, _ := f.NewStyle(&excelize.Style{
+        Font: &excelize.Font{Bold: true},
+    })
+    f.SetCellStyle(summarySheet, "A2", "A4", infoStyle)
+    
+    // Стиль для таблицы
+    tableStyle, _ := f.NewStyle(&excelize.Style{
+        Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+    })
+    f.SetCellStyle(summarySheet, "A6", fmt.Sprintf("F%d", rowIndex), tableStyle)
+    
+    // Стиль для заголовков таблицы
+    tableHeaderStyle, _ := f.NewStyle(&excelize.Style{
+        Font: &excelize.Font{Bold: true},
+        Alignment: &excelize.Alignment{WrapText: true, Vertical: "center", Horizontal: "center"},
+        Fill: excelize.Fill{Type: "pattern", Color: []string{"E6E6FA"}, Pattern: 1},
+    })
+    f.SetCellStyle(summarySheet, "A6", "F6", tableHeaderStyle)
+
+    // Удаляем дефолтный лист
+    f.DeleteSheet("Sheet1")
+
+    // Устанавливаем сводный лист активным
+    index, err := f.GetSheetIndex(summarySheet)
+    if err != nil {
+        log.Printf("Creating list error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+    f.SetActiveSheet(index)
+
+    // Генерируем файл
+    buf, err := f.WriteToBuffer()
+    if err != nil {
+        log.Printf("XLSX buffer error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+
+    filename := fmt.Sprintf("tomorrow_plans_%s.xlsx", time.Now().Format("2006-01-02"))
+
+    c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
+    return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+// Вспомогательная функция для подсчета общего количества планов
+func calculateTotalPlans(users []response.UserTomorrowPlans) int {
+    total := 0
+    for _, user := range users {
+        total += len(user.Plans)
+    }
+    return total
 }
 
 // GetAllReportsByUserId godoc

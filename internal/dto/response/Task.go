@@ -124,3 +124,28 @@ type TaskBoardProjectResponse struct {
 	BoardID   string `json:"board_id"`
 	ProjectID string `json:"project_id"`
 }
+
+type AllActiveTasksXLSXData struct {
+    Users []UserTasksXLSX `json:"users"`
+}
+
+type UserTasksXLSX struct {
+    UserID    string    `json:"user_id"`
+    UserName  string    `json:"user_name"`
+    UserEmail string    `json:"user_email"`
+    Tasks     []TaskXLSXForTask `json:"tasks"`
+}
+
+type TaskXLSXForTask struct {
+    ID          string    `json:"id"`
+    Name        string    `json:"name"`
+    Description string    `json:"description"`
+    Priority    int16     `json:"priority"`
+    StartDate   time.Time `json:"start_date"`
+    Deadline    time.Time `json:"deadline"`
+    StatusName  string    `json:"status_name"`
+    BoardName   string    `json:"board_name"`
+    ProjectName string    `json:"project_name"`
+    CreatedAt   time.Time `json:"created_at"`
+    UpdatedAt   time.Time `json:"updated_at"`
+}

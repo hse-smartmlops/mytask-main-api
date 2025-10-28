@@ -89,3 +89,25 @@ type XLSXReportData struct {
     Dates []time.Time            // все даты в диапазоне
     Grid  map[string]map[time.Time][]string // user → date → работы
 }
+
+type TomorrowPlansXLSXData struct {
+    Users []UserTomorrowPlans `json:"users"`
+}
+
+// Планы пользователя
+type UserTomorrowPlans struct {
+    UserID    string         `json:"user_id"`
+    UserName  string         `json:"user_name"`
+    UserEmail string         `json:"user_email"`
+    ReportDate time.Time     `json:"report_date"`
+    Plans     []TomorrowPlan `json:"plans"`
+}
+
+// Детали плана
+type TomorrowPlan struct {
+    ID          string    `json:"id"`
+    Description string    `json:"description"`
+    TaskName    string    `json:"task_name"`
+    ProjectName string    `json:"project_name"`
+    CreatedAt   time.Time `json:"created_at"`
+}

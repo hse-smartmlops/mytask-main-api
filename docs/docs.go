@@ -816,6 +816,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/boards/project/{projectId}/export/xlsx": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с задачами проекта, сгруппированными по доскам и статусам",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Boards"
+                ],
+                "summary": "Экспорт задач проекта в XLSX",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID проекта",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с задачами проекта",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор проекта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/boards/{id}": {
             "get": {
                 "security": [
@@ -2565,6 +2629,43 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении выполненной работы",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/report/export/tomorrow-plans/xlsx": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с планами на завтра из последних отчетов всех пользователей",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Экспорт планов на завтра в XLSX",
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с планами на завтра",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4826,6 +4927,43 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/task/export/active-tasks/xlsx": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с активными задачами всех пользователей, сгруппированными по пользователям",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Экспорт активных задач всех пользователей в XLSX",
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с активными задачами",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {

@@ -2174,6 +2174,48 @@ paths:
       summary: Получение досок по ID проекта
       tags:
       - Boards
+  /boards/project/{projectId}/export/xlsx:
+    get:
+      consumes:
+      - application/json
+      description: Генерирует XLSX-файл с задачами проекта, сгруппированными по доскам
+        и статусам
+      parameters:
+      - description: ID проекта
+        in: path
+        name: projectId
+        required: true
+        type: string
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с задачами проекта
+          schema:
+            type: string
+        "400":
+          description: Некорректный идентификатор проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт задач проекта в XLSX
+      tags:
+      - Boards
   /forum-messages:
     post:
       consumes:
@@ -3321,6 +3363,30 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление выполненной работы
+      tags:
+      - Reports
+  /report/export/tomorrow-plans/xlsx:
+    get:
+      consumes:
+      - application/json
+      description: Генерирует XLSX-файл с планами на завтра из последних отчетов всех
+        пользователей
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с планами на завтра
+          schema:
+            type: string
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт планов на завтра в XLSX
       tags:
       - Reports
   /report/export/xlsx:
@@ -4845,6 +4911,30 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение доски и проекта задачи
+      tags:
+      - Tasks
+  /task/export/active-tasks/xlsx:
+    get:
+      consumes:
+      - application/json
+      description: Генерирует XLSX-файл с активными задачами всех пользователей, сгруппированными
+        по пользователям
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с активными задачами
+          schema:
+            type: string
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт активных задач всех пользователей в XLSX
       tags:
       - Tasks
   /task/move:
