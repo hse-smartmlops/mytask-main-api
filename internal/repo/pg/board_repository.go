@@ -24,7 +24,10 @@ func NewBoardRepository(
 	}
 }
 
-func (r *BoardRepository) ListBoards(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Board], error) {
+func (r *BoardRepository) ListBoards(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Board], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Board{}).Where("deleted = FALSE OR deleted IS NULL")
@@ -51,7 +54,10 @@ func (r *BoardRepository) ListBoards(ctx context.Context, p ports.PaginationPara
 	}, nil
 }
 
-func (r *BoardRepository) GetBoardByID(ctx context.Context, id uuid.UUID) (*models.Board, error) {
+func (r *BoardRepository) GetBoardByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Board, error) {
 	var board models.Board
 	err := r.db.WithContext(ctx).
 		Model(&models.Board{}).
@@ -68,7 +74,11 @@ func (r *BoardRepository) GetBoardByID(ctx context.Context, id uuid.UUID) (*mode
 	return &board, nil
 }
 
-func (r *BoardRepository) ListBoardsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Board], error) {
+func (r *BoardRepository) ListBoardsByProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Board], error) {
 	var boards []models.Board
 	err := r.db.WithContext(ctx).
 		Model(&models.Board{}).
@@ -88,11 +98,18 @@ func (r *BoardRepository) ListBoardsByProject(ctx context.Context, projectID uui
 	}, nil
 }
 
-func (r *BoardRepository) CreateBoard(ctx context.Context, board *models.Board) error {
+func (r *BoardRepository) CreateBoard(
+	ctx context.Context,
+	board *models.Board,
+) error {
 	return r.db.WithContext(ctx).Create(board).Error
 }
 
-func (r *BoardRepository) UpdateBoard(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.Board, error) {
+func (r *BoardRepository) UpdateBoard(
+	ctx context.Context,
+	id uuid.UUID,
+	updates map[string]interface{},
+) (*models.Board, error) {
 	updates["updated_at"] = timePtr(time.Now().UTC())
 
 	result := r.db.WithContext(ctx).
@@ -109,7 +126,10 @@ func (r *BoardRepository) UpdateBoard(ctx context.Context, id uuid.UUID, updates
 	return r.GetBoardByID(ctx, id)
 }
 
-func (r *BoardRepository) SoftDeleteBoard(ctx context.Context, id uuid.UUID) error {
+func (r *BoardRepository) SoftDeleteBoard(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).

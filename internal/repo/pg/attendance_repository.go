@@ -24,7 +24,10 @@ func NewAttendanceRepository(
 	}
 }
 
-func (r *AttendanceRepository) ListAttendances(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Attendance], error) {
+func (r *AttendanceRepository) ListAttendances(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Attendance], error) {
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Attendance{}).
@@ -51,7 +54,11 @@ func (r *AttendanceRepository) ListAttendances(ctx context.Context, p ports.Pagi
 	}, nil
 }
 
-func (r *AttendanceRepository) ListAttendancesByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Attendance], error) {
+func (r *AttendanceRepository) ListAttendancesByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Attendance], error) {
 	var attendances []models.Attendance
 	err := r.db.WithContext(ctx).
 		Model(&models.Attendance{}).
@@ -70,7 +77,10 @@ func (r *AttendanceRepository) ListAttendancesByUser(ctx context.Context, userID
 	}, nil
 }
 
-func (r *AttendanceRepository) GetAttendanceByID(ctx context.Context, id uuid.UUID) (*models.Attendance, error) {
+func (r *AttendanceRepository) GetAttendanceByID(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Attendance, error) {
 	var attendance models.Attendance
 	err := r.db.WithContext(ctx).
 		Model(&models.Attendance{}).
@@ -86,11 +96,18 @@ func (r *AttendanceRepository) GetAttendanceByID(ctx context.Context, id uuid.UU
 	return &attendance, nil
 }
 
-func (r *AttendanceRepository) CreateAttendance(ctx context.Context, attendance *models.Attendance) error {
+func (r *AttendanceRepository) CreateAttendance(
+	ctx context.Context,
+	attendance *models.Attendance,
+) error {
 	return r.db.WithContext(ctx).Create(attendance).Error
 }
 
-func (r *AttendanceRepository) UpdateAttendance(ctx context.Context, id uuid.UUID, updates map[string]interface{}) (*models.Attendance, error) {
+func (r *AttendanceRepository) UpdateAttendance(
+	ctx context.Context,
+	id uuid.UUID,
+	updates map[string]interface{},
+) (*models.Attendance, error) {
 	updates["updated_at"] = timePtr(time.Now().UTC())
 
 	result := r.db.WithContext(ctx).
@@ -107,7 +124,10 @@ func (r *AttendanceRepository) UpdateAttendance(ctx context.Context, id uuid.UUI
 	return r.GetAttendanceByID(ctx, id)
 }
 
-func (r *AttendanceRepository) SoftDeleteAttendance(ctx context.Context, id uuid.UUID) error {
+func (r *AttendanceRepository) SoftDeleteAttendance(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	now := time.Now().UTC()
 	deleted := true
 	result := r.db.WithContext(ctx).
