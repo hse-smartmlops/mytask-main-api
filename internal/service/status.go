@@ -28,7 +28,10 @@ func NewStatusService(
 	}
 }
 
-func (s *statusService) ListStatuses(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Status], error) {
+func (s *statusService) ListStatuses(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Status], error) {
 	if p.Page <= 0 {
 		p.Page = 1
 	}
@@ -38,7 +41,10 @@ func (s *statusService) ListStatuses(ctx context.Context, p ports.PaginationPara
 	return s.repo.ListStatuses(ctx, p)
 }
 
-func (s *statusService) GetStatus(ctx context.Context, id uuid.UUID) (*models.Status, error) {
+func (s *statusService) GetStatus(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Status, error) {
 	status, err := s.repo.GetStatusByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -49,11 +55,19 @@ func (s *statusService) GetStatus(ctx context.Context, id uuid.UUID) (*models.St
 	return status, nil
 }
 
-func (s *statusService) ListStatusesByBoard(ctx context.Context, boardID uuid.UUID) ([]models.Status, error) {
-	return s.repo.ListStatusesByBoard(ctx, boardID)
+func (s *statusService) ListStatusesByBoard(
+	ctx context.Context,
+	boardID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Status], error) {
+	checkPagination(&p, s.config)
+	return s.repo.ListStatusesByBoard(ctx, boardID, p)
 }
 
-func (s *statusService) CreateStatus(ctx context.Context, input ports.CreateStatusInput) (*models.Status, error) {
+func (s *statusService) CreateStatus(
+	ctx context.Context,
+	input ports.CreateStatusInput,
+) (*models.Status, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -84,7 +98,11 @@ func (s *statusService) CreateStatus(ctx context.Context, input ports.CreateStat
 	return s.repo.GetStatusByID(ctx, status.ID)
 }
 
-func (s *statusService) UpdateStatus(ctx context.Context, id uuid.UUID, input ports.UpdateStatusInput) (*models.Status, error) {
+func (s *statusService) UpdateStatus(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateStatusInput,
+) (*models.Status, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -120,7 +138,10 @@ func (s *statusService) UpdateStatus(ctx context.Context, id uuid.UUID, input po
 	return s.repo.UpdateStatus(ctx, id, updates)
 }
 
-func (s *statusService) DeleteStatus(ctx context.Context, id uuid.UUID) error {
+func (s *statusService) DeleteStatus(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteStatus(ctx, id)
 }
 

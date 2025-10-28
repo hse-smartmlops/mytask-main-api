@@ -27,30 +27,30 @@ func NewProblemService(
 	}
 }
 
-func (s *problemService) ListProblems(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Problem], error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+func (s *problemService) ListProblems(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Problem], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListProblems(ctx, p)
 }
 
-func (s *problemService) ListProblemsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Problem], error) {
+func (s *problemService) ListProblemsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Problem], error) {
 	if userID == uuid.Nil {
 		return nil, domain.ErrInvalidInput
 	}
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+	checkPagination(&p, s.config)
 	return s.repo.ListProblemsByUser(ctx, userID, p)
 }
 
-func (s *problemService) GetProblem(ctx context.Context, id uuid.UUID) (*models.Problem, error) {
+func (s *problemService) GetProblem(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Problem, error) {
 	problem, err := s.repo.GetProblemByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -61,7 +61,10 @@ func (s *problemService) GetProblem(ctx context.Context, id uuid.UUID) (*models.
 	return problem, nil
 }
 
-func (s *problemService) CreateProblem(ctx context.Context, input ports.CreateProblemInput) (*models.Problem, error) {
+func (s *problemService) CreateProblem(
+	ctx context.Context,
+	input ports.CreateProblemInput,
+) (*models.Problem, error) {
 	desc := sanitizeDescription(input.Description)
 	if len(desc) == 0 {
 		return nil, domain.ErrInvalidInput
@@ -86,7 +89,11 @@ func (s *problemService) CreateProblem(ctx context.Context, input ports.CreatePr
 	return s.repo.GetProblemByID(ctx, problem.ID)
 }
 
-func (s *problemService) UpdateProblem(ctx context.Context, id uuid.UUID, input ports.UpdateProblemInput) (*models.Problem, error) {
+func (s *problemService) UpdateProblem(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateProblemInput,
+) (*models.Problem, error) {
 	updates := make(map[string]interface{})
 
 	if input.Description != nil {
@@ -108,7 +115,10 @@ func (s *problemService) UpdateProblem(ctx context.Context, id uuid.UUID, input 
 	return s.repo.UpdateProblem(ctx, id, updates)
 }
 
-func (s *problemService) DeleteProblem(ctx context.Context, id uuid.UUID) error {
+func (s *problemService) DeleteProblem(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteProblem(ctx, id)
 }
 

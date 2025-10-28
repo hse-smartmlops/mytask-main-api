@@ -702,7 +702,9 @@ func boolPtr(value bool) *bool {
 	return &value
 }
 
-func preloadReportRelations(db *gorm.DB) *gorm.DB {
+func preloadReportRelations(
+	db *gorm.DB,
+) *gorm.DB {
 	return db.
 		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Preload("CompletedWork", "completed_works.deleted = FALSE OR completed_works.deleted IS NULL").

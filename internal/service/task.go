@@ -28,11 +28,18 @@ func NewTaskService(
 	}
 }
 
-func (s *taskService) ListTasks(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (s *taskService) ListTasks(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Task], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListTasks(ctx, p)
 }
 
-func (s *taskService) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, error) {
+func (s *taskService) GetTask(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Task, error) {
 	task, err := s.repo.GetTaskByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -43,15 +50,28 @@ func (s *taskService) GetTask(ctx context.Context, id uuid.UUID) (*models.Task, 
 	return task, nil
 }
 
-func (s *taskService) ListTasksByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (s *taskService) ListTasksByProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Task], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListTasksByProject(ctx, projectID, p)
 }
 
-func (s *taskService) ListTasksByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (s *taskService) ListTasksByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Task], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListTasksByUser(ctx, userID, p)
 }
 
-func (s *taskService) CreateTask(ctx context.Context, input ports.CreateTaskInput) (*models.Task, error) {
+func (s *taskService) CreateTask(
+	ctx context.Context,
+	input ports.CreateTaskInput,
+) (*models.Task, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -84,7 +104,11 @@ func (s *taskService) CreateTask(ctx context.Context, input ports.CreateTaskInpu
 	return s.repo.GetTaskByID(ctx, task.ID)
 }
 
-func (s *taskService) UpdateTask(ctx context.Context, id uuid.UUID, input ports.UpdateTaskInput) (*models.Task, error) {
+func (s *taskService) UpdateTask(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateTaskInput,
+) (*models.Task, error) {
 	updates := make(map[string]interface{})
 
 	if input.StatusID != nil {
@@ -129,23 +153,46 @@ func (s *taskService) UpdateTask(ctx context.Context, id uuid.UUID, input ports.
 	return s.repo.UpdateTask(ctx, id, updates)
 }
 
-func (s *taskService) DeleteTask(ctx context.Context, id uuid.UUID) error {
+func (s *taskService) DeleteTask(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteTask(ctx, id)
 }
 
-func (s *taskService) ListActiveTasksByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (s *taskService) ListActiveTasksByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Task], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListActiveTasksByUser(ctx, userID, p)
 }
 
-func (s *taskService) ListTasksByUserAndProject(ctx context.Context, userID, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (s *taskService) ListTasksByUserAndProject(
+	ctx context.Context,
+	userID,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Task], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListTasksByUserAndProject(ctx, userID, projectID, p)
 }
 
-func (s *taskService) ListTasksByBoard(ctx context.Context, boardID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Task], error) {
+func (s *taskService) ListTasksByBoard(
+	ctx context.Context,
+	boardID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Task], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListTasksByBoard(ctx, boardID, p)
 }
 
-func (s *taskService) MoveTaskBetweenStatuses(ctx context.Context, taskID, toStatusID uuid.UUID) (*models.Task, error) {
+func (s *taskService) MoveTaskBetweenStatuses(
+	ctx context.Context,
+	taskID,
+	toStatusID uuid.UUID,
+) (*models.Task, error) {
 	return s.repo.MoveTaskBetweenStatuses(ctx, taskID, toStatusID)
 }
 

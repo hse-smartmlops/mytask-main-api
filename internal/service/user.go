@@ -39,14 +39,8 @@ func NewUserService(
 func (s *userService) ListUsers(
 	ctx context.Context,
 	p ports.PaginationParams,
-) (
-	*ports.Page[models.User], error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+) (*ports.Page[models.User], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListUsers(ctx, p)
 }
 
@@ -95,6 +89,73 @@ func (s *userService) CreateUser(
 	}
 
 	return user, nil
+}
+
+func (s *userService) UpdateUser(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UserInput,
+) (*models.User, error) {
+	user, err := s.repo.GetUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	if user == nil {
+		return nil, domain.ErrNotFound
+	}
+	updates := make(map[string]interface{})
+
+	if input.Email != "" {
+		email := strings.TrimSpace(input.Email)
+		if email == "" {
+			return nil, domain.ErrInvalidInput
+		}
+		updates["email"] = email
+	}
+
+	if input.IsActive != nil {
+		updates["is_active"] = *input.IsActive
+	}
+
+	if input.TgID != nil {
+		updates["tg_id"] = *input.TgID
+	}
+
+	if input.TgUserID != nil {
+		updates["tg_user_id"] = *input.TgUserID
+	}
+
+	if input.Profession != nil {
+		updates["profession"] = *input.Profession
+	}
+
+	if input.EmailVerified != nil {
+		updates["email_verified"] = *input.EmailVerified
+	}
+
+	if input.FirstName != nil {
+		updates["first_name"] = *input.FirstName
+	}
+
+	if input.LastName != nil {
+		updates["last_name"] = *input.LastName
+	}
+
+	if len(updates) == 0 {
+		return user, nil
+	}
+
+	updates["updated_at"] = time.Now().UTC()
+
+	return s.repo.UpdateUser(ctx, id, updates)
+}
+
+func (s *userService) DeleteUser(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
+	return s.repo.SoftDeleteUser(ctx, id)
 }
 
 func (s *userService) SaveAvatar(
@@ -206,3 +267,54 @@ func (s *userService) GetAvatar(
 		Data:        data,
 	}, nil
 }
+
+func (s *userService) UpdateAvatar(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UserAvatarInput,
+) (*models.User, error) {
+	if s.storage == nil {
+		return nil, errors.New("object storage is not configured")
+	}
+
+	if len(input.Data) == 0 {
+		return nil, domain.ErrInvalidInput
+	}
+
+	user, err := s.repo.GetUserByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	resized, contentType, err := prepareAvatar(input.Data)
+	if err != nil {
+		return nil, err
+	}
+
+	bucket := strings.TrimSpace(s.cfg.AvatarBucket)
+	if bucket == "" {
+		bucket = "avatars"
+	}
+	object := fmt.Sprintf("%s.png", id.String())
+
+	if err := s.storage.Upload(
+		ctx,
+		bucket,
+		object,
+		resized,
+		contentType,
+		map[string]string{"user_id": id.String()},
+	); err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.UpdateUserAvatar(ctx, id, fmt.Sprintf("%s/%s", bucket, object)); err != nil {
+		return nil, err
+	}
+
+	user.AvatarPath = fmt.Sprintf("%s/%s", bucket, object)
+
+	return user, nil
+}
+
+var _ ports.UserService = (*userService)(nil)

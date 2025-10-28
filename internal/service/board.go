@@ -28,17 +28,18 @@ func NewBoardService(
 	}
 }
 
-func (s *boardService) ListBoards(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Board], error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+func (s *boardService) ListBoards(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Board], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListBoards(ctx, p)
 }
 
-func (s *boardService) GetBoard(ctx context.Context, id uuid.UUID) (*models.Board, error) {
+func (s *boardService) GetBoard(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Board, error) {
 	board, err := s.repo.GetBoardByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -49,11 +50,19 @@ func (s *boardService) GetBoard(ctx context.Context, id uuid.UUID) (*models.Boar
 	return board, nil
 }
 
-func (s *boardService) ListBoardsByProject(ctx context.Context, projectID uuid.UUID) ([]models.Board, error) {
-	return s.repo.ListBoardsByProject(ctx, projectID)
+func (s *boardService) ListBoardsByProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Board], error) {
+	checkPagination(&p, s.config)
+	return s.repo.ListBoardsByProject(ctx, projectID, p)
 }
 
-func (s *boardService) CreateBoard(ctx context.Context, input ports.CreateBoardInput) (*models.Board, error) {
+func (s *boardService) CreateBoard(
+	ctx context.Context,
+	input ports.CreateBoardInput,
+) (*models.Board, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -79,7 +88,11 @@ func (s *boardService) CreateBoard(ctx context.Context, input ports.CreateBoardI
 	return board, nil
 }
 
-func (s *boardService) UpdateBoard(ctx context.Context, id uuid.UUID, input ports.UpdateBoardInput) (*models.Board, error) {
+func (s *boardService) UpdateBoard(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateBoardInput,
+) (*models.Board, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {

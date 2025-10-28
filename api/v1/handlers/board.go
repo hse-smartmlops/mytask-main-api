@@ -231,26 +231,30 @@ func (h *BoardHandler) ListBoardsByProject(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError(code, perr.Error()))
 	}
 
-	boards, err := h.service.ListBoardsByProject(c.Request().Context(), projectID)
+	boards, err := h.service.ListBoardsByProject(c.Request().Context(), projectID, ports.PaginationParams{
+		Page:     pageNumber,
+		PageSize: pageSize,
+	})
+
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to list boards"))
 	}
 
 	start := (pageNumber - 1) * pageSize
-	if start > len(boards) {
-		start = len(boards)
+	if start > len(boards.Items) {
+		start = len(boards.Items)
 	}
 	end := start + pageSize
-	if end > len(boards) {
-		end = len(boards)
+	if end > len(boards.Items) {
+		end = len(boards.Items)
 	}
 
 	items := make([]response.Board, end-start)
 	for i := start; i < end; i++ {
-		items[i-start] = presenter.ToBoardDTO(&boards[i])
+		items[i-start] = presenter.ToBoardDTO(&boards.Items[i])
 	}
 
-	total := len(boards)
+	total := len(boards.Items)
 	totalPages := 0
 	if pageSize > 0 {
 		totalPages = (total + pageSize - 1) / pageSize

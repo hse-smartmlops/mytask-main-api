@@ -118,15 +118,18 @@ func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}
-
-	statuses, err := h.service.ListStatusesByBoard(c.Request().Context(), boardID)
+	// TODO add pagination
+	statuses, err := h.service.ListStatusesByBoard(c.Request().Context(), boardID, ports.PaginationParams{
+		Page:     1,
+		PageSize: 0,
+	})
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
 	}
 
-	items := make([]response.Status, len(statuses))
-	for i := range statuses {
-		items[i] = presenter.ToStatusDTO(&statuses[i])
+	items := make([]response.Status, len(statuses.Items))
+	for i := range statuses.Items {
+		items[i] = presenter.ToStatusDTO(&statuses.Items[i])
 	}
 
 	return respondSuccess(c, http.StatusOK, items)

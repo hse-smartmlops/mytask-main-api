@@ -28,11 +28,18 @@ func NewTeamService(
 	}
 }
 
-func (s *teamService) ListTeams(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (s *teamService) ListTeams(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Team], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListTeams(ctx, p)
 }
 
-func (s *teamService) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, error) {
+func (s *teamService) GetTeam(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Team, error) {
 	team, err := s.repo.GetTeamByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -43,18 +50,31 @@ func (s *teamService) GetTeam(ctx context.Context, id uuid.UUID) (*models.Team, 
 	return team, nil
 }
 
-func (s *teamService) ListTeamsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (s *teamService) ListTeamsByProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Team], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListTeamsByProject(ctx, projectID, p)
 }
 
-func (s *teamService) ListTeamsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (s *teamService) ListTeamsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Team], error) {
 	if userID == uuid.Nil {
 		return nil, domain.ErrInvalidInput
 	}
+	checkPagination(&p, s.config)
 	return s.repo.ListTeamsByUser(ctx, userID, p)
 }
 
-func (s *teamService) CreateTeam(ctx context.Context, input ports.CreateTeamInput) (*models.Team, error) {
+func (s *teamService) CreateTeam(
+	ctx context.Context,
+	input ports.CreateTeamInput,
+) (*models.Team, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -79,7 +99,11 @@ func (s *teamService) CreateTeam(ctx context.Context, input ports.CreateTeamInpu
 	return s.repo.GetTeamByID(ctx, team.ID)
 }
 
-func (s *teamService) UpdateTeam(ctx context.Context, id uuid.UUID, input ports.UpdateTeamInput) (*models.Team, error) {
+func (s *teamService) UpdateTeam(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateTeamInput,
+) (*models.Team, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -101,11 +125,17 @@ func (s *teamService) UpdateTeam(ctx context.Context, id uuid.UUID, input ports.
 	return s.repo.UpdateTeam(ctx, id, updates)
 }
 
-func (s *teamService) DeleteTeam(ctx context.Context, id uuid.UUID) error {
+func (s *teamService) DeleteTeam(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteTeam(ctx, id)
 }
 
-func (s *teamService) AddUserToTeam(ctx context.Context, input ports.TeamMemberInput) error {
+func (s *teamService) AddUserToTeam(
+	ctx context.Context,
+	input ports.TeamMemberInput,
+) error {
 	if input.TeamID == uuid.Nil || input.UserID == uuid.Nil {
 		return domain.ErrInvalidInput
 	}
@@ -120,21 +150,32 @@ func (s *teamService) AddUserToTeam(ctx context.Context, input ports.TeamMemberI
 	return s.repo.AddUserToTeam(ctx, input)
 }
 
-func (s *teamService) RemoveUserFromTeam(ctx context.Context, teamID, userID uuid.UUID) error {
+func (s *teamService) RemoveUserFromTeam(
+	ctx context.Context,
+	teamID,
+	userID uuid.UUID,
+) error {
 	if teamID == uuid.Nil || userID == uuid.Nil {
 		return domain.ErrInvalidInput
 	}
 	return s.repo.RemoveUserFromTeam(ctx, teamID, userID)
 }
 
-func (s *teamService) AddTeamToProject(ctx context.Context, input ports.TeamProjectInput) error {
+func (s *teamService) AddTeamToProject(
+	ctx context.Context,
+	input ports.TeamProjectInput,
+) error {
 	if input.TeamID == uuid.Nil || input.ProjectID == uuid.Nil {
 		return domain.ErrInvalidInput
 	}
 	return s.repo.AddTeamToProject(ctx, input)
 }
 
-func (s *teamService) RemoveTeamFromProject(ctx context.Context, teamID, projectID uuid.UUID) error {
+func (s *teamService) RemoveTeamFromProject(
+	ctx context.Context,
+	teamID,
+	projectID uuid.UUID,
+) error {
 	if teamID == uuid.Nil || projectID == uuid.Nil {
 		return domain.ErrInvalidInput
 	}

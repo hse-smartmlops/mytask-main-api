@@ -27,7 +27,10 @@ func NewSubscriptionService(
 	}
 }
 
-func (s *subscriptionService) ListSubscriptions(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Subscription], error) {
+func (s *subscriptionService) ListSubscriptions(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Subscription], error) {
 	if p.Page <= 0 {
 		p.Page = 1
 	}
@@ -37,7 +40,10 @@ func (s *subscriptionService) ListSubscriptions(ctx context.Context, p ports.Pag
 	return s.repo.ListSubscriptions(ctx, p)
 }
 
-func (s *subscriptionService) GetSubscription(ctx context.Context, id uuid.UUID) (*models.Subscription, error) {
+func (s *subscriptionService) GetSubscription(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Subscription, error) {
 	sub, err := s.repo.GetSubscriptionByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -48,27 +54,29 @@ func (s *subscriptionService) GetSubscription(ctx context.Context, id uuid.UUID)
 	return sub, nil
 }
 
-func (s *subscriptionService) ListSubscriptionsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Subscription], error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+func (s *subscriptionService) ListSubscriptionsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Subscription], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListSubscriptionsByUser(ctx, userID, p)
 }
 
-func (s *subscriptionService) ListSubscriptionsByTarget(ctx context.Context, subscriptionID uuid.UUID, typeID *int8, p ports.PaginationParams) (*ports.Page[models.Subscription], error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+func (s *subscriptionService) ListSubscriptionsByTarget(
+	ctx context.Context,
+	subscriptionID uuid.UUID,
+	typeID *int8,
+	p ports.PaginationParams,
+) (*ports.Page[models.Subscription], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListSubscriptionsByTarget(ctx, subscriptionID, typeID, p)
 }
 
-func (s *subscriptionService) CreateSubscription(ctx context.Context, input ports.CreateSubscriptionInput) (*models.Subscription, error) {
+func (s *subscriptionService) CreateSubscription(
+	ctx context.Context,
+	input ports.CreateSubscriptionInput,
+) (*models.Subscription, error) {
 	if input.UserID == uuid.Nil {
 		return nil, domain.ErrInvalidInput
 	}
@@ -96,7 +104,10 @@ func (s *subscriptionService) CreateSubscription(ctx context.Context, input port
 	return s.repo.GetSubscriptionByID(ctx, sub.ID)
 }
 
-func (s *subscriptionService) DeleteSubscription(ctx context.Context, id uuid.UUID) error {
+func (s *subscriptionService) DeleteSubscription(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteSubscription(ctx, id)
 }
 
@@ -106,6 +117,7 @@ func (s *subscriptionService) ListBySubObject(
 	typeID *int8,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Subscription], error) {
+	checkPagination(&p, s.config)
 	return s.ListSubscriptionsByTarget(ctx, subobjID, typeID, p)
 }
 

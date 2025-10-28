@@ -28,17 +28,18 @@ func NewRoleService(
 	}
 }
 
-func (s *roleService) ListRoles(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Role], error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+func (s *roleService) ListRoles(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Role], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListRoles(ctx, p)
 }
 
-func (s *roleService) GetRole(ctx context.Context, id uuid.UUID) (*models.Role, error) {
+func (s *roleService) GetRole(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Role, error) {
 	role, err := s.repo.GetRoleByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -49,7 +50,10 @@ func (s *roleService) GetRole(ctx context.Context, id uuid.UUID) (*models.Role, 
 	return role, nil
 }
 
-func (s *roleService) CreateRole(ctx context.Context, input ports.CreateRoleInput) (*models.Role, error) {
+func (s *roleService) CreateRole(
+	ctx context.Context,
+	input ports.CreateRoleInput,
+) (*models.Role, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -74,7 +78,11 @@ func (s *roleService) CreateRole(ctx context.Context, input ports.CreateRoleInpu
 	return role, nil
 }
 
-func (s *roleService) UpdateRole(ctx context.Context, id uuid.UUID, input ports.UpdateRoleInput) (*models.Role, error) {
+func (s *roleService) UpdateRole(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateRoleInput,
+) (*models.Role, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -101,7 +109,10 @@ func (s *roleService) UpdateRole(ctx context.Context, id uuid.UUID, input ports.
 	return s.repo.UpdateRole(ctx, id, updates)
 }
 
-func (s *roleService) DeleteRole(ctx context.Context, id uuid.UUID) error {
+func (s *roleService) DeleteRole(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteRole(ctx, id)
 }
 

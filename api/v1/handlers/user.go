@@ -120,7 +120,7 @@ func (h *UserHandler) CreateUser(c echo.Context) error {
 		return middleware.RespondValidationError(c, err)
 	}
 
-	input := ports.CreateUserInput{
+	input := ports.UserInput{
 		Email:         req.Email,
 		IsActive:      req.IsActive,
 		TgID:          req.TgID,
@@ -163,7 +163,7 @@ func (h *UserHandler) UpdateAvatar(c echo.Context) error {
 	if err != nil {
 		return middleware.RespondValidationError(c, err)
 	}
-	user, err := h.service.SaveAvatar(c.Request().Context(), id, ports.SaveUserAvatarInput{
+	user, err := h.service.SaveAvatar(c.Request().Context(), id, ports.UserAvatarInput{
 		Data:        upload.Data,
 		ContentType: upload.ContentType,
 	})
@@ -200,7 +200,7 @@ func (h *UserHandler) UploadAvatar(c echo.Context) error {
 		return middleware.RespondValidationError(c, err)
 	}
 
-	user, err := h.service.SaveAvatar(c.Request().Context(), id, ports.SaveUserAvatarInput{
+	user, err := h.service.SaveAvatar(c.Request().Context(), id, ports.UserAvatarInput{
 		Data:        upload.Data,
 		ContentType: upload.ContentType,
 	})

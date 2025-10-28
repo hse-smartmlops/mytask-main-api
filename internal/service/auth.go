@@ -36,7 +36,11 @@ func NewAuthService(
 	}
 }
 
-func (s *authService) Login(ctx context.Context, email, password string) (*ports.AuthLoginResult, error) {
+func (s *authService) Login(
+	ctx context.Context,
+	email,
+	password string,
+) (*ports.AuthLoginResult, error) {
 	tokens, err := s.repo.Login(ctx, strings.TrimSpace(email), password)
 	if err != nil {
 		return nil, err
@@ -65,11 +69,17 @@ func (s *authService) Login(ctx context.Context, email, password string) (*ports
 	}, nil
 }
 
-func (s *authService) Logout(ctx context.Context, refreshToken string) error {
+func (s *authService) Logout(
+	ctx context.Context,
+	refreshToken string,
+) error {
 	return s.repo.Logout(ctx, refreshToken)
 }
 
-func (s *authService) GetUserInfo(ctx context.Context, token string) (*ports.AuthUserInfo, error) {
+func (s *authService) GetUserInfo(
+	ctx context.Context,
+	token string,
+) (*ports.AuthUserInfo, error) {
 	info, err := s.fetchUserInfo(ctx, token)
 	if err != nil {
 		return nil, err
@@ -82,7 +92,10 @@ func (s *authService) GetUserInfo(ctx context.Context, token string) (*ports.Aut
 	return info, nil
 }
 
-func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*ports.AuthRefreshResult, error) {
+func (s *authService) RefreshToken(
+	ctx context.Context,
+	refreshToken string,
+) (*ports.AuthRefreshResult, error) {
 	tokens, err := s.repo.RefreshToken(ctx, strings.TrimSpace(refreshToken))
 	if err != nil {
 		return nil, err
@@ -91,7 +104,10 @@ func (s *authService) RefreshToken(ctx context.Context, refreshToken string) (*p
 	return &ports.AuthRefreshResult{Tokens: buildAuthTokens(tokens)}, nil
 }
 
-func (s *authService) ValidateToken(ctx context.Context, token string) error {
+func (s *authService) ValidateToken(
+	ctx context.Context,
+	token string,
+) error {
 	active, err := s.repo.Introspect(ctx, token)
 	if err != nil || !active {
 		if !s.cfg.TokenExchangeEnabled {
@@ -125,7 +141,10 @@ func (s *authService) ValidateToken(ctx context.Context, token string) error {
 	return s.ensureUserExists(ctx, info)
 }
 
-func (s *authService) fetchUserInfo(ctx context.Context, token string) (*ports.AuthUserInfo, error) {
+func (s *authService) fetchUserInfo(
+	ctx context.Context,
+	token string,
+) (*ports.AuthUserInfo, error) {
 	info, err := s.repo.UserInfo(ctx, token)
 	if err == nil {
 		return info, nil
@@ -148,7 +167,10 @@ func (s *authService) fetchUserInfo(ctx context.Context, token string) (*ports.A
 	return info, nil
 }
 
-func (s *authService) ensureUserExists(ctx context.Context, info *ports.AuthUserInfo) error {
+func (s *authService) ensureUserExists(
+	ctx context.Context,
+	info *ports.AuthUserInfo,
+) error {
 	if info == nil || strings.TrimSpace(info.Subject) == "" {
 		return fmt.Errorf("user info missing subject")
 	}
@@ -195,38 +217,6 @@ func (s *authService) ensureUserExists(ctx context.Context, info *ports.AuthUser
 	}
 
 	return nil
-}
-
-func buildAuthTokens(tokens *ports.AuthRepositoryTokens) ports.AuthTokens {
-	if tokens == nil {
-		return ports.AuthTokens{}
-	}
-
-	now := time.Now().UTC()
-
-	return ports.AuthTokens{
-		AccessToken:      tokens.AccessToken,
-		RefreshToken:     tokens.RefreshToken,
-		ExpiresIn:        tokens.ExpiresIn,
-		RefreshExpiresIn: tokens.RefreshExpiresIn,
-		TokenType:        tokens.TokenType,
-		ExpiresAt:        now.Add(time.Duration(tokens.ExpiresIn) * time.Second),
-	}
-}
-
-func safePointer(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return strings.TrimSpace(*value)
-}
-
-func isUniqueViolation(err error) bool {
-	if err == nil {
-		return false
-	}
-	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "duplicate key") || strings.Contains(message, "unique constraint")
 }
 
 var _ ports.AuthService = (*authService)(nil)

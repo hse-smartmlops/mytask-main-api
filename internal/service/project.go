@@ -31,7 +31,10 @@ func NewProjectService(
 	}
 }
 
-func (s *projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.Project, error) {
+func (s *projectService) GetProject(
+	ctx context.Context,
+	id uuid.UUID,
+) (*models.Project, error) {
 	project, err := s.projectRepo.GetProjectByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -42,7 +45,10 @@ func (s *projectService) GetProject(ctx context.Context, id uuid.UUID) (*models.
 	return project, nil
 }
 
-func (s *projectService) CreateProject(ctx context.Context, input ports.CreateProjectInput) (*models.Project, error) {
+func (s *projectService) CreateProject(
+	ctx context.Context,
+	input ports.CreateProjectInput,
+) (*models.Project, error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, domain.ErrInvalidInput
@@ -71,7 +77,11 @@ func (s *projectService) CreateProject(ctx context.Context, input ports.CreatePr
 	return project, nil
 }
 
-func (s *projectService) UpdateProject(ctx context.Context, id uuid.UUID, input ports.UpdateProjectInput) (*models.Project, error) {
+func (s *projectService) UpdateProject(
+	ctx context.Context,
+	id uuid.UUID,
+	input ports.UpdateProjectInput,
+) (*models.Project, error) {
 	updates := make(map[string]interface{})
 
 	if input.Name != nil {
@@ -105,23 +115,45 @@ func (s *projectService) UpdateProject(ctx context.Context, id uuid.UUID, input 
 	return s.projectRepo.UpdateProject(ctx, id, updates)
 }
 
-func (s *projectService) DeleteProject(ctx context.Context, id uuid.UUID) error {
+func (s *projectService) DeleteProject(
+	ctx context.Context,
+	id uuid.UUID,
+) error {
 	return s.projectRepo.SoftDeleteProject(ctx, id)
 }
 
-func (s *projectService) ListProjects(ctx context.Context, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+func (s *projectService) ListProjects(
+	ctx context.Context,
+	p ports.PaginationParams,
+) (*ports.Page[models.Project], error) {
+	checkPagination(&p, s.config)
 	return s.projectRepo.ListProjects(ctx, p)
 }
 
-func (s *projectService) ListProjectsByUser(ctx context.Context, userID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+func (s *projectService) ListProjectsByUser(
+	ctx context.Context,
+	userID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Project], error) {
+	checkPagination(&p, s.config)
 	return s.projectRepo.ListProjectsByUser(ctx, userID, p)
 }
 
-func (s *projectService) ListTeamsByProject(ctx context.Context, projectID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Team], error) {
+func (s *projectService) ListTeamsByProject(
+	ctx context.Context,
+	projectID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Team], error) {
+	checkPagination(&p, s.config)
 	return s.teamRepo.ListTeamsByProject(ctx, projectID, p)
 }
 
-func (s *projectService) ListProjectsByTeam(ctx context.Context, teamID uuid.UUID, p ports.PaginationParams) (*ports.Page[models.Project], error) {
+func (s *projectService) ListProjectsByTeam(
+	ctx context.Context,
+	teamID uuid.UUID,
+	p ports.PaginationParams,
+) (*ports.Page[models.Project], error) {
+	checkPagination(&p, s.config)
 	return s.projectRepo.ListProjectsByTeam(ctx, teamID, p)
 }
 

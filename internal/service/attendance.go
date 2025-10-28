@@ -31,12 +31,7 @@ func (s *attendanceService) ListAttendances(
 	ctx context.Context,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Attendance], error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+	checkPagination(&p, s.config)
 	return s.repo.ListAttendances(ctx, p)
 }
 
@@ -44,13 +39,8 @@ func (s *attendanceService) ListAttendancesByUser(
 	ctx context.Context,
 	userID uuid.UUID,
 	p ports.PaginationParams,
-) ([]models.Attendance, error) {
-	if p.Page <= 0 {
-		p.Page = 1
-	}
-	if p.PageSize <= 0 {
-		p.PageSize = 20
-	}
+) (*ports.Page[models.Attendance], error) {
+	checkPagination(&p, s.config)
 	return s.repo.ListAttendancesByUser(ctx, userID, p)
 }
 
