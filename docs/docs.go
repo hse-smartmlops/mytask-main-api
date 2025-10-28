@@ -3498,6 +3498,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/role/user/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает роль пользователя по его ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Получение роли по ID пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Роль пользователя успешно получена",
+                        "schema": {
+                            "$ref": "#/definitions/response.GetRoleByUserId"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Роль не найдена для данного пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении роли",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/role/{id}": {
             "get": {
                 "security": [
@@ -8006,6 +8079,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/response.GetUserResponse"
                     }
+                }
+            }
+        },
+        "response.GetRoleByUserId": {
+            "type": "object",
+            "properties": {
+                "role": {
+                    "$ref": "#/definitions/response.GetRoleResponse"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },

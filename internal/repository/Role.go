@@ -16,6 +16,7 @@ type RoleRepository interface {
 	CreateRole(role models.Role) error
 	UpdateRole(roleID uuid.UUID, updateData map[string]interface{}) (bool, error)
 	DeleteRole(roleID uuid.UUID) (bool, error)
+	GetRoleByUserId(userID uuid.UUID) (*models.Role, error)
 }
 
 type roleRepository struct {
@@ -47,6 +48,24 @@ func (r *roleRepository) GetAllRoles(limit, offset int) ([]models.Role, int64, e
 	}
 
 	return roles, totalCount, nil
+}
+
+func (r *roleRepository) GetRoleByUserId(userID uuid.UUID) (*models.Role, error) {
+	var role models.Role
+	
+	// JOIN между roles и user_roles через таблицу связей
+	err := r.db.Session(&gorm.Session{}).Model(&models.Role{}).Joins("JOIN user_roles ur ON ur.role_id = roles.id").
+		Where("ur.user_id = ? AND ur.deleted = FALSE AND roles.deleted = FALSE", userID).
+		First(&role).Error
+	
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("role not found for user")
+		}
+		return nil, err
+	}
+	
+	return &role, nil
 }
 
 func (r *roleRepository) GetRoleById(roleID uuid.UUID) (*models.Role, error) {

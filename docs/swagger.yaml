@@ -782,6 +782,13 @@ definitions:
           $ref: '#/definitions/response.GetUserResponse'
         type: array
     type: object
+  response.GetRoleByUserId:
+    properties:
+      role:
+        $ref: '#/definitions/response.GetRoleResponse'
+      user_id:
+        type: string
+    type: object
   response.GetRoleResponse:
     properties:
       created_at:
@@ -3912,6 +3919,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех ролей
+      tags:
+      - Roles
+  /role/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает роль пользователя по его ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль пользователя успешно получена
+          schema:
+            $ref: '#/definitions/response.GetRoleByUserId'
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Роль не найдена для данного пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение роли по ID пользователя
       tags:
       - Roles
   /status:

@@ -16,6 +16,7 @@ type RoleService interface {
 	CreateRole(req request.RoleCreateRequest) (uuid.UUID, error)
 	UpdateRole(roleID uuid.UUID, req request.RoleUpdateRequest) error
 	DeleteRole(roleID uuid.UUID) error
+	GetRoleByUserId(userID uuid.UUID) (*models.Role, error)
 }
 
 type roleService struct {
@@ -89,4 +90,8 @@ func (s *roleService) DeleteRole(roleID uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (s *roleService) GetRoleByUserId(userID uuid.UUID) (*models.Role, error) {
+	return s.repo.GetRoleByUserId(userID)
 }
