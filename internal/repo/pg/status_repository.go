@@ -79,19 +79,30 @@ func (r *StatusRepository) ListStatusesByBoard(
 	boardID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Status], error) {
-	var statuses []models.Status
-	if err := r.db.WithContext(ctx).
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
 		Model(&models.Status{}).
-		Where("board_id = ? AND (deleted = FALSE OR deleted IS NULL)", boardID).
+		Where("board_id = ? AND (deleted = FALSE OR deleted IS NULL)", boardID)
+	if err := base.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+
+	var statuses []models.Status
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
 		Order("sort_order ASC NULLS LAST").
+		Limit(p.PageSize).
+		Offset(offset).
 		Find(&statuses).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.Status]{ // TODO Add pagination on db layer
+
+	return &ports.Page[models.Status]{
 		Items:      statuses,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 

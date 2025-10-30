@@ -30,7 +30,9 @@ func (r *BoardRepository) ListBoards(
 ) (*ports.Page[models.Board], error) {
 	var totalCount int64
 
-	base := r.db.WithContext(ctx).Model(&models.Board{}).Where("deleted = FALSE OR deleted IS NULL")
+	base := r.db.WithContext(ctx).
+		Model(&models.Board{}).
+		Where("deleted = FALSE OR deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
@@ -79,22 +81,31 @@ func (r *BoardRepository) ListBoardsByProject(
 	projectID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Board], error) {
-	var boards []models.Board
-	err := r.db.WithContext(ctx).
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
 		Model(&models.Board{}).
-		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
-		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
-		Where("project_id = ? AND (deleted = FALSE OR deleted IS NULL)", projectID).
-		Order("created_at DESC NULLS LAST").
-		Find(&boards).Error
-	if err != nil {
+		Where("project_id = ? AND (deleted = FALSE OR deleted IS NULL)", projectID)
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.Board]{ // TODO Add pagination on db layer
+
+	var boards []models.Board
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.Order("created_at DESC NULLS LAST").
+		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
+		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&boards).Error; err != nil {
+		return nil, err
+	}
+
+	return &ports.Page[models.Board]{
 		Items:      boards,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 

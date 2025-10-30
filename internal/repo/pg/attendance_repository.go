@@ -30,7 +30,8 @@ func (r *AttendanceRepository) ListAttendances(
 ) (*ports.Page[models.Attendance], error) {
 	var totalCount int64
 
-	base := r.db.WithContext(ctx).Model(&models.Attendance{}).
+	base := r.db.WithContext(ctx).
+		Model(&models.Attendance{}).
 		Where("attendances.deleted = FALSE OR attendances.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -59,21 +60,30 @@ func (r *AttendanceRepository) ListAttendancesByUser(
 	userID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Attendance], error) {
-	var attendances []models.Attendance
-	err := r.db.WithContext(ctx).
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
 		Model(&models.Attendance{}).
-		Where("attendances.user_id = ? AND (attendances.deleted = FALSE OR attendances.deleted IS NULL)", userID).
-		Order("attendances.date DESC NULLS LAST, attendances.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Find(&attendances).Error
-	if err != nil {
+		Where("attendances.user_id = ? AND (attendances.deleted = FALSE OR attendances.deleted IS NULL)", userID)
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.Attendance]{ // TODO Add pagination on db layer
+
+	var attendances []models.Attendance
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.Order("attendances.date DESC NULLS LAST, attendances.created_at DESC NULLS LAST").
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&attendances).Error; err != nil {
+		return nil, err
+	}
+
+	return &ports.Page[models.Attendance]{
 		Items:      attendances,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 

@@ -28,10 +28,10 @@ func (r *DailyReportRepository) ListReports(
 	ctx context.Context,
 	p ports.PaginationParams,
 ) (*ports.Page[models.DailyReport], error) {
-	var total int64
+	var totalCount int64
 	base := r.db.WithContext(ctx).Model(&models.DailyReport{}).
 		Where("daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL")
-	if err := base.Count(&total).Error; err != nil {
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
 
@@ -50,7 +50,7 @@ func (r *DailyReportRepository) ListReports(
 		Items:      reports,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: total,
+		TotalCount: totalCount,
 	}, nil
 }
 
@@ -59,14 +59,14 @@ func (r *DailyReportRepository) ListReportsByUser(
 	userID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.DailyReport], error) {
-	var total int64
+	var totalCount int64
 	base := r.db.WithContext(ctx).
 		Model(&models.DailyReport{}).
 		Where(
 			"daily_reports.user_id = ? AND (daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL)",
 			userID,
 		)
-	if err := base.Count(&total).Error; err != nil {
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
 
@@ -85,7 +85,7 @@ func (r *DailyReportRepository) ListReportsByUser(
 		Items:      reports,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: total,
+		TotalCount: totalCount,
 	}, nil
 }
 
@@ -94,26 +94,38 @@ func (r *DailyReportRepository) ListReportsByProject(
 	projectID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.DailyReport], error) {
-	var reports []models.DailyReport
-	err := preloadReportRelations(r.db.WithContext(ctx).
-		Model(&models.DailyReport{}).
-		Select("DISTINCT daily_reports.*").
-		Joins("LEFT JOIN completed_works ON completed_works.report_id = daily_reports.id AND (completed_works.deleted = FALSE OR completed_works.deleted IS NULL)").
-		Joins("LEFT JOIN tasks ON tasks.id = completed_works.task_id AND (tasks.deleted = FALSE OR tasks.deleted IS NULL)").
-		Joins("LEFT JOIN statuses ON statuses.id = tasks.status_id").
-		Joins("LEFT JOIN boards ON boards.id = statuses.board_id").
-		Where("daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL").
-		Where("boards.project_id = ?", projectID).
-		Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST")).
-		Find(&reports).Error
-	if err != nil {
+	var totalCount int64
+
+	base := preloadReportRelations(
+		r.db.WithContext(ctx).
+			Model(&models.DailyReport{}).
+			Distinct().
+			Joins("LEFT JOIN completed_works ON completed_works.report_id = daily_reports.id AND (completed_works.deleted = FALSE OR completed_works.deleted IS NULL)").
+			Joins("LEFT JOIN tasks ON tasks.id = completed_works.task_id AND (tasks.deleted = FALSE OR tasks.deleted IS NULL)").
+			Joins("LEFT JOIN statuses ON statuses.id = tasks.status_id").
+			Joins("LEFT JOIN boards ON boards.id = statuses.board_id").
+			Where("daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL").
+			Where("boards.project_id = ?", projectID),
+	)
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.DailyReport]{ // TODO Add pagination on db layer
+
+	var reports []models.DailyReport
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
+		Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&reports).Error; err != nil {
+		return nil, err
+	}
+
+	return &ports.Page[models.DailyReport]{
 		Items:      reports,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 
@@ -122,23 +134,35 @@ func (r *DailyReportRepository) ListReportsByTask(
 	taskID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.DailyReport], error) {
-	var reports []models.DailyReport
-	err := preloadReportRelations(r.db.WithContext(ctx).
-		Model(&models.DailyReport{}).
-		Select("DISTINCT daily_reports.*").
-		Joins("JOIN completed_works ON completed_works.report_id = daily_reports.id AND (completed_works.deleted = FALSE OR completed_works.deleted IS NULL)").
-		Where("daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL").
-		Where("completed_works.task_id = ?", taskID).
-		Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST")).
-		Find(&reports).Error
-	if err != nil {
+	var totalCount int64
+
+	base := preloadReportRelations(
+		r.db.WithContext(ctx).
+			Model(&models.DailyReport{}).
+			Distinct().
+			Joins("JOIN completed_works ON completed_works.report_id = daily_reports.id AND (completed_works.deleted = FALSE OR completed_works.deleted IS NULL)").
+			Where("daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL").
+			Where("completed_works.task_id = ?", taskID),
+	)
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.DailyReport]{ // TODO Add pagination on db layer
+
+	var reports []models.DailyReport
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
+		Order("daily_reports.report_date DESC NULLS LAST, daily_reports.created_at DESC NULLS LAST").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&reports).Error; err != nil {
+		return nil, err
+	}
+
+	return &ports.Page[models.DailyReport]{
 		Items:      reports,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 
@@ -148,20 +172,36 @@ func (r *DailyReportRepository) ListReportsByDateRange(
 	endDate time.Time,
 	p ports.PaginationParams,
 ) (*ports.Page[models.DailyReport], error) {
-	var reports []models.DailyReport
-	err := preloadReportRelations(r.db.WithContext(ctx).
-		Model(&models.DailyReport{}).
-		Where("daily_reports.report_date BETWEEN ? AND ? AND (daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL)", startDate, endDate).
-		Order("daily_reports.report_date ASC, daily_reports.created_at ASC")).
-		Find(&reports).Error
-	if err != nil {
+	var totalCount int64
+
+	base := preloadReportRelations(
+		r.db.WithContext(ctx).
+			Model(&models.DailyReport{}).
+			Where(
+				"daily_reports.report_date BETWEEN ? AND ? AND (daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL)",
+				startDate,
+				endDate,
+			),
+	)
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.DailyReport]{ // TODO Add pagination on db layer
+
+	var reports []models.DailyReport
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
+		Order("daily_reports.report_date ASC, daily_reports.created_at ASC").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&reports).Error; err != nil {
+		return nil, err
+	}
+
+	return &ports.Page[models.DailyReport]{
 		Items:      reports,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 
@@ -170,22 +210,32 @@ func (r *DailyReportRepository) ListHelpRequestsByHelper(
 	helperID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.HelpRequest], error) {
-	var requests []models.HelpRequest
-	err := r.db.WithContext(ctx).
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
 		Model(&models.HelpRequest{}).
-		Where("help_requests.helper_id = ? AND (help_requests.deleted = FALSE OR help_requests.deleted IS NULL)", helperID).
+		Where("help_requests.helper_id = ? AND (help_requests.deleted = FALSE OR help_requests.deleted IS NULL)", helperID)
+	if err := base.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+
+	var requests []models.HelpRequest
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
 		Preload("Report", "reports.deleted = FALSE OR reports.deleted IS NULL").
 		Preload("Report.User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Order("help_requests.created_at DESC NULLS LAST").
-		Find(&requests).Error
-	if err != nil {
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&requests).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.HelpRequest]{ // TODO Add pagination on db layer
+
+	return &ports.Page[models.HelpRequest]{
 		Items:      requests,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 
@@ -696,23 +746,6 @@ func (r *DailyReportRepository) getTomorrowPlan(
 		return nil, err
 	}
 	return &plan, nil
-}
-
-func boolPtr(value bool) *bool {
-	return &value
-}
-
-func preloadReportRelations(
-	db *gorm.DB,
-) *gorm.DB {
-	return db.
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Preload("CompletedWork", "completed_works.deleted = FALSE OR completed_works.deleted IS NULL").
-		Preload("CompletedWork.Task").
-		Preload("HelpRequests", "help_requests.deleted = FALSE OR help_requests.deleted IS NULL").
-		Preload("TomorrowPlans", "tomorrow_plans.deleted = FALSE OR tomorrow_plans.deleted IS NULL").
-		Preload("ReportProblems", "report_problems.deleted = FALSE OR report_problems.deleted IS NULL").
-		Preload("ReportProblems.Problem", "problems.deleted = FALSE OR problems.deleted IS NULL")
 }
 
 var _ ports.DailyReportRepository = (*DailyReportRepository)(nil)

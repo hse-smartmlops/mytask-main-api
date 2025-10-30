@@ -30,23 +30,32 @@ func (r *TeamRepository) ListTeamsByProject(
 	projectID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Team], error) {
-	var teams []models.Team
-	err := r.db.WithContext(ctx).
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
 		Model(&models.Team{}).
 		Joins("JOIN project_teams ON project_teams.team_id = teams.id").
 		Where("(teams.deleted = FALSE OR teams.deleted IS NULL) AND (project_teams.deleted = FALSE OR project_teams.deleted IS NULL) AND project_teams.project_id = ?", projectID).
 		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
-		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Order("teams.created_at DESC NULLS LAST").
-		Find(&teams).Error
-	if err != nil {
+		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL")
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.Team]{ // TODO Add pagination on db layer
+
+	var teams []models.Team
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
+		Order("teams.created_at DESC NULLS LAST").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&teams).Error; err != nil {
+		return nil, err
+	}
+	return &ports.Page[models.Team]{
 		Items:      teams,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 
@@ -56,7 +65,11 @@ func (r *TeamRepository) ListTeams(
 ) (*ports.Page[models.Team], error) {
 	var totalCount int64
 
-	base := r.db.WithContext(ctx).Model(&models.Team{}).Where("teams.deleted = FALSE OR teams.deleted IS NULL")
+	base := r.db.WithContext(ctx).
+		Model(&models.Team{}).
+		Where("teams.deleted = FALSE OR teams.deleted IS NULL").
+		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
+		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
@@ -64,8 +77,6 @@ func (r *TeamRepository) ListTeams(
 	var teams []models.Team
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("teams.created_at DESC NULLS LAST").
-		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
-		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&teams).Error; err != nil {
@@ -105,23 +116,32 @@ func (r *TeamRepository) ListTeamsByUser(
 	userID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Team], error) {
-	var teams []models.Team
-	err := r.db.WithContext(ctx).
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
 		Model(&models.Team{}).
 		Joins("JOIN team_members ON team_members.team_id = teams.id").
 		Where("(teams.deleted = FALSE OR teams.deleted IS NULL) AND (team_members.deleted = FALSE OR team_members.deleted IS NULL) AND team_members.user_id = ?", userID).
 		Preload("TeamMembers", "team_members.deleted = FALSE OR team_members.deleted IS NULL").
-		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL").
-		Order("teams.created_at DESC NULLS LAST").
-		Find(&teams).Error
-	if err != nil {
+		Preload("TeamMembers.User", "users.deleted = FALSE OR users.deleted IS NULL")
+	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
-	return &ports.Page[models.Team]{ // TODO Add pagination on db layer
+
+	var teams []models.Team
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.
+		Order("teams.created_at DESC NULLS LAST").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&teams).Error; err != nil {
+		return nil, err
+	}
+	return &ports.Page[models.Team]{
 		Items:      teams,
 		Page:       p.Page,
 		PageSize:   p.PageSize,
-		TotalCount: 0,
+		TotalCount: totalCount,
 	}, nil
 }
 
