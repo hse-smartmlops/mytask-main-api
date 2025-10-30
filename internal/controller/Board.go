@@ -412,21 +412,17 @@ func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
         return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проекта"})
     }
 
-    // Получаем данные для экспорта
     data, err := bc.boardService.GetProjectTasksForXLSX(projectUUID)
     if err != nil {
         log.Printf("service error (get project tasks for XLSX): %v", err)
         return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
     }
 
-    // Создаем XLSX файл
     f := excelize.NewFile()
 
-    // Создаем сводный лист
     summarySheet := "Сводка по проекту"
     f.NewSheet(summarySheet)
     
-    // Заголовки для сводного листа (убран ID задачи)
     summaryHeaders := []interface{}{
         "Доска", "Статус", "Название задачи", "Описание", 
         "Приоритет", "Дата начала", "Дедлайн", "Исполнитель",
@@ -441,15 +437,13 @@ func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
     rowIndex := 2
     totalTasks := 0
 
-    // Заполняем сводный лист и создаем листы для каждой доски
     for _, board := range data.Boards {
         boardSheet := board.BoardName
-        if len(boardSheet) > 31 { // Ограничение Excel на длину имени листа
+        if len(boardSheet) > 31 {
             boardSheet = boardSheet[:31]
         }
         f.NewSheet(boardSheet)
         
-        // Заголовки для листа доски (убран ID задачи)
         boardHeaders := []interface{}{
             "Статус", "Название задачи", "Описание", 
             "Приоритет", "Дата начала", "Дедлайн", "Исполнитель",
@@ -463,16 +457,14 @@ func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
             for _, task := range status.Tasks {
                 totalTasks++
                 
-                // Конвертируем приоритет в текст
-                priorityText := convertPriorityToText(task.Priority)
+                priorityText := utils.ConvertPriorityToText(task.Priority)
                 
-                // Запись в сводный лист (убран ID задачи)
                 summaryRow := []interface{}{
                     board.BoardName,
                     status.StatusName,
                     task.Name,
                     task.Description,
-                    priorityText, // Используем текстовое представление приоритета
+                    priorityText, 
                     utils.FormatTimeForExcel(task.StartDate),
                     utils.FormatTimeForExcel(task.Deadline),
                     task.AssignedTo,
@@ -487,12 +479,11 @@ func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
                 }
                 rowIndex++
 
-                // Запись в лист доски (убран ID задачи)
                 boardRow := []interface{}{
                     status.StatusName,
                     task.Name,
                     task.Description,
-                    priorityText, // Используем текстовое представление приоритета
+                    priorityText,
                     utils.FormatTimeForExcel(task.StartDate),
                     utils.FormatTimeForExcel(task.Deadline),
                     task.AssignedTo,
@@ -509,31 +500,25 @@ func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
             }
         }
 
-        // Настройка форматирования для листа доски
-        f.SetColWidth(boardSheet, "A", "I", 20) // Изменено с J на I (меньше столбцов)
-        f.SetColWidth(boardSheet, "B", "C", 30) // Шире для названия и описания (изменены индексы)
+        f.SetColWidth(boardSheet, "A", "I", 20)
+        f.SetColWidth(boardSheet, "B", "C", 30)
         styleID, _ := f.NewStyle(&excelize.Style{
             Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
         })
-        f.SetCellStyle(boardSheet, "A1", fmt.Sprintf("I%d", boardRowIndex), styleID) // Изменено с J на I
+        f.SetCellStyle(boardSheet, "A1", fmt.Sprintf("I%d", boardRowIndex), styleID)
     }
 
-    // Добавляем общую информацию о проекте на сводный лист
     f.SetCellValue(summarySheet, "A1", "Проект: "+data.ProjectName)
     f.SetCellValue(summarySheet, "B1", fmt.Sprintf("Всего задач: %d", totalTasks))
 
-    // Настройка форматирования сводного листа
-    f.SetColWidth(summarySheet, "A", "J", 20) // Изменено с K на J (меньше столбцов)
-    f.SetColWidth(summarySheet, "C", "D", 30) // Шире для названия и описания (изменены индексы)
+    f.SetColWidth(summarySheet, "A", "J", 20)
+    f.SetColWidth(summarySheet, "C", "D", 30)
     styleID, _ := f.NewStyle(&excelize.Style{
         Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
     })
-    f.SetCellStyle(summarySheet, "A2", fmt.Sprintf("J%d", rowIndex), styleID) // Изменено с K на J
-
-	// Удаляем дефолтный лист и создаем структурированные листы
+    f.SetCellStyle(summarySheet, "A2", fmt.Sprintf("J%d", rowIndex), styleID)
     f.DeleteSheet("Sheet1")
 
-    // Устанавливаем сводный лист активным
     index, err := f.GetSheetIndex(summarySheet)
     if err != nil {
         log.Printf("Creating list error: %v", err)
@@ -541,7 +526,6 @@ func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
     }
     f.SetActiveSheet(index)
 
-    // Генерируем файл
     buf, err := f.WriteToBuffer()
     if err != nil {
         log.Printf("XLSX buffer error: %v", err)
@@ -553,22 +537,4 @@ func (bc *BoardController) ExportProjectTasksToXLSX(c echo.Context) error {
     c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
     return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
-}
-
-// convertPriorityToText преобразует числовой приоритет в текстовое представление
-func convertPriorityToText(priority int16) string {
-    switch priority {
-    case 5:
-        return "Срочный"
-    case 4:
-        return "Высокий"
-    case 3:
-        return "Средний"
-    case 2:
-        return "Низкий"
-    case 1:
-        return "Не задан"
-    default:
-        return fmt.Sprintf("Неизвестный (%d)", priority)
-    }
 }

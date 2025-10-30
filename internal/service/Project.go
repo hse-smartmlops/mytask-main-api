@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/repository"
+	"emplacc-api/internal/utils"
 	"errors"
 	"time"
 
@@ -104,7 +105,7 @@ func (s *projectService) CreateProject(req request.CreateProjectRequest) (uuid.U
 			Name:      &name,
 			Color:     &color,
 			IsDefault: &tr,
-			IsActive:  boolPtr(true),
+			IsActive:  utils.BoolPtr(true),
 			IsOpen:    &isOpen,
 			Deleted:   &deleted,
 			CreatedAt: &now,

@@ -704,6 +704,15 @@ definitions:
       task_id:
         type: string
     type: object
+  response.CompletedWorkWithTask:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task:
+        $ref: '#/definitions/response.TaskForReport'
+    type: object
   response.ForumMessageListByProblemIdResponse:
     properties:
       messages:
@@ -905,6 +914,20 @@ definitions:
       task_title:
         type: string
     type: object
+  response.InTaskBoard:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  response.InTaskProject:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   response.ProblemListResponse:
     properties:
       page:
@@ -1041,6 +1064,39 @@ definitions:
         type: string
       user_id:
         type: string
+    type: object
+  response.ReportFullResponse:
+    properties:
+      checked:
+        type: integer
+      completed_work:
+        items:
+          $ref: '#/definitions/response.CompletedWorkWithTask'
+        type: array
+      created_at:
+        type: string
+      help_requests:
+        items:
+          $ref: '#/definitions/response.HelpRequestItem'
+        type: array
+      id:
+        type: string
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/response.TomorrowPlansWithTask'
+        type: array
+      problem:
+        items:
+          $ref: '#/definitions/response.ProblemResponse'
+        type: array
+      report_date:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      user_info:
+        $ref: '#/definitions/response.UserShort'
     type: object
   response.ReportListByProjectId:
     properties:
@@ -1279,6 +1335,19 @@ definitions:
       message:
         type: string
     type: object
+  response.TaskForReport:
+    properties:
+      board:
+        $ref: '#/definitions/response.InTaskBoard'
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      project:
+        $ref: '#/definitions/response.InTaskProject'
+    type: object
   response.TaskFull:
     properties:
       assigned_to_user:
@@ -1427,6 +1496,15 @@ definitions:
         type: string
       task_id:
         type: string
+    type: object
+  response.TomorrowPlansWithTask:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task:
+        $ref: '#/definitions/response.TaskForReport'
     type: object
   response.UserFull:
     properties:
@@ -3179,22 +3257,15 @@ paths:
         "200":
           description: Отчет успешно получен
           schema:
-            $ref: '#/definitions/response.ReportResponse'
+            $ref: '#/definitions/response.ReportFullResponse'
         "400":
           description: Некорректный идентификатор отчета
           schema:
             additionalProperties:
               type: string
             type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "404":
-          description: Отчет, пользователь, запрос на помощь, выполненная работа или
-            план на завтра не найдены
+          description: Отчет не найден
           schema:
             additionalProperties:
               type: string

@@ -414,7 +414,6 @@ func (r *taskRepository) GetTasksByUserId(userID uuid.UUID, limit, offset int) (
 
 func (r *taskRepository) GetAllActiveTasks() ([]models.Task, error) {
 	var tasks []models.Task
-	// В основном запросе используем Preload с условием
 	if err := r.db.Session(&gorm.Session{}).
 		Where("deleted = ?", false).
 		Where("status_id NOT IN (SELECT id FROM statuses WHERE name = ? AND deleted = ?)", "Done", false).

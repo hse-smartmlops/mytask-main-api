@@ -23,6 +23,50 @@ type ReportResponse struct {
 	Problems      []ProblemResponse `json:"problem"`
 }
 
+type ReportFullResponse struct {
+	ID            string            `json:"id"`
+	UserID        string            `json:"user_id"`
+	ReportDate    time.Time         `json:"report_date"`
+	CompletedWork []CompletedWorkWithTask      `json:"completed_work"`
+	PlanTomorrow  []TomorrowPlansWithTask        `json:"plan_tomorrow"`
+	HelpRequest   []HelpRequestItem   `json:"help_requests,omitempty"`
+	CreatedAt     time.Time         `json:"created_at"`
+	UpdatedAt     time.Time         `json:"updated_at"`
+	UserInfo      UserShort         `json:"user_info"`
+	Checked	   	  int8           `json:"checked"`
+	Problems      []ProblemResponse `json:"problem"`
+}
+
+type TomorrowPlansWithTask struct {
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Task        TaskForReport         `json:"task"`
+}
+
+type CompletedWorkWithTask struct{
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	Task        TaskForReport         `json:"task"`
+}
+
+type InTaskBoard struct {
+	BoardName string   `json:"name"`
+	BoardId   string   `json:"id"`
+}
+
+type InTaskProject struct {
+	ProjectName string `json:"name"`
+	ProjectId  string  `json:"id"`
+}
+
+type TaskForReport struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Description string `json:"description"`
+	Board InTaskBoard  `json:"board"`
+	Project InTaskProject `json:"project"`
+}
+
 type ProblemResponse struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`		
@@ -41,7 +85,7 @@ type TomorrowPlans struct {
 type CompletedWork struct{
 	ID          string `json:"id"`
 	Description string `json:"description"`
-	TaskId        string            `json:"task_id"`
+	TaskId        string `json:"task_id"`
 }
 
 type HelpRequestItem struct {

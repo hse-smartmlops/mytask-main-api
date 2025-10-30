@@ -3278,7 +3278,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Отчет успешно получен",
                         "schema": {
-                            "$ref": "#/definitions/response.ReportResponse"
+                            "$ref": "#/definitions/response.ReportFullResponse"
                         }
                     },
                     "400": {
@@ -3290,17 +3290,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "401": {
-                        "description": "Нет или неверный токен",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
                     "404": {
-                        "description": "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
+                        "description": "Отчет не найден",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -8100,6 +8091,20 @@ const docTemplate = `{
                 }
             }
         },
+        "response.CompletedWorkWithTask": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task": {
+                    "$ref": "#/definitions/response.TaskForReport"
+                }
+            }
+        },
         "response.ForumMessageListByProblemIdResponse": {
             "type": "object",
             "properties": {
@@ -8411,6 +8416,28 @@ const docTemplate = `{
                 }
             }
         },
+        "response.InTaskBoard": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.InTaskProject": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "response.ProblemListResponse": {
             "type": "object",
             "properties": {
@@ -8619,6 +8646,56 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "response.ReportFullResponse": {
+            "type": "object",
+            "properties": {
+                "checked": {
+                    "type": "integer"
+                },
+                "completed_work": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.CompletedWorkWithTask"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "help_requests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HelpRequestItem"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plan_tomorrow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TomorrowPlansWithTask"
+                    }
+                },
+                "problem": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ProblemResponse"
+                    }
+                },
+                "report_date": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "user_info": {
+                    "$ref": "#/definitions/response.UserShort"
                 }
             }
         },
@@ -8986,6 +9063,26 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TaskForReport": {
+            "type": "object",
+            "properties": {
+                "board": {
+                    "$ref": "#/definitions/response.InTaskBoard"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project": {
+                    "$ref": "#/definitions/response.InTaskProject"
+                }
+            }
+        },
         "response.TaskFull": {
             "type": "object",
             "properties": {
@@ -9212,6 +9309,20 @@ const docTemplate = `{
                 },
                 "task_id": {
                     "type": "string"
+                }
+            }
+        },
+        "response.TomorrowPlansWithTask": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task": {
+                    "$ref": "#/definitions/response.TaskForReport"
                 }
             }
         },

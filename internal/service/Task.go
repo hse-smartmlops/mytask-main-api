@@ -230,23 +230,20 @@ func (s *taskService) GetActiveTasksByUserId(userID uuid.UUID, page, pageSize in
 }
 
 func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXData, error) {
-    // Получаем все активные задачи
     tasks, err := s.repo.GetAllActiveTasks()
     if err != nil {
         return nil, err
     }
 
-    // Группируем задачи по пользователям
     userTasksMap := make(map[uuid.UUID]*response.UserTasksXLSX)
     
     for _, task := range tasks {
         if task.AssignedTo == nil {
-            continue // Пропускаем задачи без назначенного пользователя
+            continue
         }
 
         userID := *task.AssignedTo
         if _, exists := userTasksMap[userID]; !exists {
-            // Создаем нового пользователя
             userName := "Неизвестный пользователь"
             userEmail := ""
             if task.AssignedToUser != nil {
@@ -268,7 +265,6 @@ func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXDa
             }
         }
 
-        // Получаем название проекта через цепочку: Task -> Status -> Board -> Project
         projectName := "Без проекта"
         if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
             if task.Status.Board.Project.Name != nil {
@@ -276,7 +272,6 @@ func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXDa
             }
         }
 
-        // Добавляем задачу пользователю
         taskXLSX := response.TaskXLSXForTask{
             ID:          task.ID.String(),
             Name:        utils.GetString(task.Name),
@@ -286,7 +281,7 @@ func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXDa
             Deadline:    utils.GetTime(task.Deadline),
             StatusName:  utils.GetString(task.Status.Name),
             BoardName:   utils.GetString(task.Status.Board.Name),
-            ProjectName: projectName, // Теперь используем реальное название проекта
+            ProjectName: projectName,
             CreatedAt:   utils.GetTime(task.CreatedAt),
             UpdatedAt:   utils.GetTime(task.UpdatedAt),
         }
@@ -294,13 +289,11 @@ func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXDa
         userTasksMap[userID].Tasks = append(userTasksMap[userID].Tasks, taskXLSX)
     }
 
-    // Преобразуем map в slice
     users := make([]response.UserTasksXLSX, 0, len(userTasksMap))
     for _, userTasks := range userTasksMap {
         users = append(users, *userTasks)
     }
 
-    // Сортируем пользователей по имени
     sort.Slice(users, func(i, j int) bool {
         return users[i].UserName < users[j].UserName
     })
@@ -310,13 +303,11 @@ func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXDa
     }, nil
 }
 
-// GetTaskBoardAndProjectIDs возвращает ID доски и ID проекта для задачи
 func (s *taskService) GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardId, projectId uuid.UUID, err error) {
     return s.repo.GetTaskBoardAndProjectIDs(taskID)
 }
 
 func (s *taskService) TaskMoveFunc(taskID, toStatusID uuid.UUID) ([]models.Status, error) {
-	// 1. Получаем задачу с её текущим статусом и доской
 	task, err := s.repo.GetTaskByID(taskID)
 	if err != nil {
 		if err.Error() == "task not found" {
@@ -325,13 +316,11 @@ func (s *taskService) TaskMoveFunc(taskID, toStatusID uuid.UUID) ([]models.Statu
 		return nil, err
 	}
 
-	// 2. Получаем текущий статус задачи — чтобы узнать board_id
 	currentStatus, err := s.repo.GetStatusByID(task.StatusID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 3. Проверяем, существует ли целевой статус и принадлежит ли он той же доске
 	targetStatus, err := s.repo.GetStatusByID(toStatusID)
 	if err != nil {
 		if err.Error() == "status not found" {
@@ -340,19 +329,16 @@ func (s *taskService) TaskMoveFunc(taskID, toStatusID uuid.UUID) ([]models.Statu
 		return nil, err
 	}
 
-	// 4. Запрещаем перемещение между разными досками
 	if currentStatus.BoardID != targetStatus.BoardID {
 		return nil, errors.New("different board")
 	}
 
-	// 5. Обновляем статус задачи
 	updatedAt := time.Now()
 	err = s.repo.UpdateTaskStatus(taskID, toStatusID, updatedAt)
 	if err != nil {
 		return nil, err
 	}
 
-	// Загружаем статусы доски + задачи к каждому статусу
 	statuses, err := s.repo.GetStatusesByBoardID(targetStatus.BoardID)
 	if err != nil {
 		return nil, err

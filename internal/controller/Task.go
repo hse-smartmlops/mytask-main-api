@@ -906,21 +906,17 @@ func (tc *TaskController) GetTaskBoardAndProject(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка при генерации отчёта"
 // @Router /task/export/active-tasks/xlsx [get]
 func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
-    // Получаем данные для экспорта
     data, err := tc.taskService.GetAllActiveTasksForXLSX()
     if err != nil {
         log.Printf("service error (get all active tasks for XLSX): %v", err)
         return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
     }
 
-    // Создаем XLSX файл
     f := excelize.NewFile()
 
-    // Создаем сводный лист
     summarySheet := "Сводка по активным задачам"
     f.NewSheet(summarySheet)
-    
-    // Заголовки для сводного листа
+
     summaryHeaders := []interface{}{
         "Пользователь", "Название задачи", "Описание", 
         "Приоритет", "Дата начала", "Дедлайн", "Статус",
@@ -935,17 +931,14 @@ func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
     rowIndex := 2
     totalTasks := 0
 
-    // Заполняем сводный лист и создаем листы для каждого пользователя
     for _, user := range data.Users {
-        // Убрано ограничение на длину имени листа - используем полное имя пользователя
         userSheet := user.UserName
         if userSheet == "" {
             userSheet = user.UserEmail
         }
         
         f.NewSheet(userSheet)
-        
-        // Заголовки для листа пользователя
+
         userHeaders := []interface{}{
             "Название задачи", "Описание", 
             "Приоритет", "Дата начала", "Дедлайн", "Статус",
@@ -957,11 +950,9 @@ func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
 
         for _, task := range user.Tasks {
             totalTasks++
-            
-            // Конвертируем приоритет в текст
-            priorityText := convertPriorityToText(task.Priority)
-            
-            // Запись в сводный лист
+
+            priorityText := utils.ConvertPriorityToText(task.Priority)
+
             summaryRow := []interface{}{
                 user.UserName,
                 task.Name,
@@ -971,7 +962,7 @@ func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
                 utils.FormatTimeForExcel(task.Deadline),
                 task.StatusName,
                 task.BoardName,
-                task.ProjectName, // Теперь отображается реальное название проекта
+                task.ProjectName,
                 task.CreatedAt.Format("02.01.2006 15:04"),
                 task.UpdatedAt.Format("02.01.2006 15:04"),
             }
@@ -983,7 +974,6 @@ func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
             }
             rowIndex++
 
-            // Запись в лист пользователя
             userRow := []interface{}{
                 task.Name,
                 task.Description,
@@ -992,7 +982,7 @@ func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
                 utils.FormatTimeForExcel(task.Deadline),
                 task.StatusName,
                 task.BoardName,
-                task.ProjectName, // Теперь отображается реальное название проекта
+                task.ProjectName,
                 task.CreatedAt.Format("02.01.2006 15:04"),
                 task.UpdatedAt.Format("02.01.2006 15:04"),
             }
@@ -1005,31 +995,26 @@ func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
             userRowIndex++
         }
 
-        // Настройка форматирования для листа пользователя
         f.SetColWidth(userSheet, "A", "J", 20)
-        f.SetColWidth(userSheet, "A", "B", 30) // Шире для названия и описания
+        f.SetColWidth(userSheet, "A", "B", 30)
         styleID, _ := f.NewStyle(&excelize.Style{
             Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
         })
         f.SetCellStyle(userSheet, "A1", fmt.Sprintf("J%d", userRowIndex), styleID)
     }
 
-    // Добавляем общую информацию на сводный лист
     f.SetCellValue(summarySheet, "A1", "Всего активных задач: "+strconv.Itoa(totalTasks))
     f.SetCellValue(summarySheet, "B1", "Всего пользователей: "+strconv.Itoa(len(data.Users)))
 
-    // Настройка форматирования сводного листа
     f.SetColWidth(summarySheet, "A", "K", 20)
-    f.SetColWidth(summarySheet, "B", "C", 30) // Шире для названия и описания
+    f.SetColWidth(summarySheet, "B", "C", 30)
     styleID, _ := f.NewStyle(&excelize.Style{
         Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
     })
     f.SetCellStyle(summarySheet, "A2", fmt.Sprintf("K%d", rowIndex), styleID)
 
-    // Удаляем дефолтный лист
     f.DeleteSheet("Sheet1")
 
-    // Устанавливаем сводный лист активным
     index, err := f.GetSheetIndex(summarySheet)
     if err != nil {
         log.Printf("Creating list error: %v", err)
@@ -1037,7 +1022,6 @@ func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
     }
     f.SetActiveSheet(index)
 
-    // Генерируем файл
     buf, err := f.WriteToBuffer()
     if err != nil {
         log.Printf("XLSX buffer error: %v", err)

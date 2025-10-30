@@ -121,7 +121,15 @@ func (r *reportRepository) GetReport(reportID uuid.UUID) (*models.DailyReport, e
 		Preload("User", "deleted = FALSE").
 		Preload("HelpRequests", "deleted = FALSE").
 		Preload("CompletedWork", "deleted = FALSE").
+		Preload("CompletedWork.Task", "deleted = FALSE").
+		Preload("CompletedWork.Task.Status", "deleted = FALSE").
+		Preload("CompletedWork.Task.Status.Board", "deleted = FALSE").
+		Preload("CompletedWork.Task.Status.Board.Project", "deleted = FALSE").
 		Preload("TomorrowPlans", "deleted = FALSE").
+		Preload("TomorrowPlans.Task", "deleted = FALSE").
+		Preload("TomorrowPlans.Task.Status", "deleted = FALSE").
+		Preload("TomorrowPlans.Task.Status.Board", "deleted = FALSE").
+		Preload("TomorrowPlans.Task.Status.Board.Project", "deleted = FALSE").
 		Preload("ReportProblems", "deleted = FALSE").
 		Preload("ReportProblems.Problem", "deleted = FALSE").
 		Where("deleted = FALSE AND id = ?", reportID).
@@ -137,7 +145,6 @@ func (r *reportRepository) GetReport(reportID uuid.UUID) (*models.DailyReport, e
 func (r *reportRepository) GetLatestTomorrowPlans() ([]models.TomorrowPlans, error) {
     var plans []models.TomorrowPlans
     
-    // Субзапрос для получения ID последних отчетов
     subquery := r.db.Session(&gorm.Session{}).
         Model(&models.DailyReport{}).
         Select("id").
@@ -150,7 +157,6 @@ func (r *reportRepository) GetLatestTomorrowPlans() ([]models.TomorrowPlans, err
                 Group("user_id"),
         )
 
-    // Основной запрос с прелоадами
     err := r.db.Session(&gorm.Session{}).
         Where("deleted = ? AND report_id IN (?)", false, subquery).
         Preload("Report", func(db *gorm.DB) *gorm.DB {
@@ -182,7 +188,6 @@ func (r *reportRepository) GetLatestTomorrowPlans() ([]models.TomorrowPlans, err
 }
 
 func (r *reportRepository) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyReport, error) {
-	// находим все completed_work по задаче -> собираем report_id
 	var cw []models.CompletedWork
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.CompletedWork{}).
@@ -225,7 +230,6 @@ func (r *reportRepository) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyR
 }
 
 func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.DailyReport, error) {
-	// Шаг 1: Получить все status_id, принадлежащие доскам данного проекта
 	var statusIDs []uuid.UUID
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.Status{}).
@@ -240,7 +244,6 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 		return []models.DailyReport{}, nil
 	}
 
-	// Шаг 2: Найти все задачи, относящиеся к этим статусам
 	var tasks []models.Task
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.Task{}).
@@ -253,13 +256,11 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 		return []models.DailyReport{}, nil
 	}
 
-	// Шаг 3: Собрать task IDs
 	taskIDs := make([]uuid.UUID, len(tasks))
 	for i, t := range tasks {
 		taskIDs[i] = t.ID
 	}
 
-	// Шаг 4: Найти CompletedWork по этим задачам
 	var completedWorks []models.CompletedWork
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.CompletedWork{}).
@@ -272,7 +273,6 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 		return []models.DailyReport{}, nil
 	}
 
-	// Шаг 5: Собрать уникальные report_id
 	reportIDSet := make(map[uuid.UUID]struct{})
 	for _, cw := range completedWorks {
 		if cw.ReportID != nil {
@@ -289,7 +289,6 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 		reportIDs = append(reportIDs, id)
 	}
 
-	// Шаг 6: Загрузить отчёты с предзагрузкой связей
 	var reports []models.DailyReport
 	if err := r.db.Session(&gorm.Session{}).
 		Preload("User", "deleted = FALSE").
@@ -311,12 +310,10 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 	delFalse := false
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		// создаём сам отчёт
 		if res := tx.Session(&gorm.Session{}).Model(&models.DailyReport{}).Create(&rep); res.Error != nil {
 			return res.Error
 		}
 
-		// CompletedWork: создаём столько, сколько пришло
 		if len(req.CompleteWork) > 0 {
 			batch := make([]models.CompletedWork, 0, len(req.CompleteWork))
 			for _, w := range req.CompleteWork {
@@ -327,7 +324,6 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 					Deleted:     &delFalse,
 					CreatedAt:   &now,
 				}
-				// task_id опционально
 				if w.TaskID != "" {
 					if tid, err := uuid.Parse(w.TaskID); err == nil {
 						item.TaskID = &tid
@@ -340,7 +336,6 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 			}
 		}
 
-		// TomorrowPlans
 		if len(req.PlanTomorrow) > 0 {
 			batch := make([]models.TomorrowPlans, 0, len(req.PlanTomorrow))
 			for _, p := range req.PlanTomorrow {
@@ -363,7 +358,6 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 			}
 		}
 
-		// Problems (pivot)
 		if len(req.Problems) > 0 {
 			batch := make([]models.ReportProblem, 0, len(req.Problems))
 			for _, pr := range req.Problems {
@@ -383,7 +377,6 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 			}
 		}
 
-		// HelpRequest: поддержка массива Helps и одиночного Help
 		type helpItem struct {
 			HelperID    string
 			Description string

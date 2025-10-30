@@ -47,13 +47,11 @@ func (s *boardService) GetBoardByProjectId(projectID uuid.UUID) ([]models.Board,
 }
 
 func (s *boardService) GetProjectTasksForXLSX(projectID uuid.UUID) (*response.ProjectTasksXLSXData, error) {
-    // Используем новый метод с прелоадом пользователей и проекта
     boards, err := s.repo.GetBoardByProjectIdWithUsersAndProject(projectID)
     if err != nil {
         return nil, err
     }
 
-    // Получаем информацию о проекте (теперь Project гарантированно загружен)
     projectName := "Неизвестный проект"
     projectDescription := ""
     
@@ -105,7 +103,6 @@ func (s *boardService) GetProjectTasksForXLSX(projectID uuid.UUID) (*response.Pr
                     description = *task.Description
                 }
 
-                // Получаем информацию об исполнителе
                 assignedTo := "Не назначено"
                 if task.AssignedToUser != nil {
                     firstName := task.AssignedToUser.FirstName
@@ -117,7 +114,6 @@ func (s *boardService) GetProjectTasksForXLSX(projectID uuid.UUID) (*response.Pr
                     }
                 }
 
-                // Получаем информацию о создателе задачи
                 createdBy := "Неизвестно"
                 if task.CreatedByUser != nil {
                     firstName := task.CreatedByUser.FirstName
@@ -137,7 +133,7 @@ func (s *boardService) GetProjectTasksForXLSX(projectID uuid.UUID) (*response.Pr
                     StartDate:   utils.GetTime(task.StartDate),
                     Deadline:    utils.GetTime(task.Deadline),
                     AssignedTo:  assignedTo,
-                    CreatedBy:   createdBy, // Добавлена информация о создателе
+                    CreatedBy:   createdBy,
                     CreatedAt:   utils.GetTime(task.CreatedAt),
                     UpdatedAt:   utils.GetTime(task.UpdatedAt),
                 })
@@ -201,7 +197,7 @@ func (s *boardService) CreateBoard(req request.BoardCreateRequest) (uuid.UUID, e
 			Name:      &name,
 			Color:     &color,
 			IsDefault: &tr,
-			IsActive:  boolPtr(true),
+			IsActive:  utils.BoolPtr(true),
 			IsOpen:    &isOpen,
 			Deleted:   &deleted,
 			CreatedAt: &now,
@@ -260,8 +256,4 @@ func (s *boardService) DeleteBoard(boardID uuid.UUID) error {
 	}
 
 	return nil
-}
-
-func boolPtr(b bool) *bool {
-	return &b
 }

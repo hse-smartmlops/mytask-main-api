@@ -143,18 +143,15 @@ func (s *reportService) GetReportsByProjectId(projectID uuid.UUID) ([]models.Dai
 	return s.repo.GetReportsByProjectId(projectID)
 }
 
-// GetTomorrowPlansForXLSX получает планы на завтра для экспорта в XLSX
 func (s *reportService) GetTomorrowPlansForXLSX() (*response.TomorrowPlansXLSXData, error) {
     plans, err := s.repo.GetLatestTomorrowPlans()
     if err != nil {
         return nil, err
     }
 
-    // Группируем планы по пользователям
     userPlansMap := make(map[uuid.UUID]*response.UserTomorrowPlans)
     
     for _, plan := range plans {
-        // Получаем информацию о пользователе из связанного отчета
         var userID uuid.UUID
         var reportDate time.Time
         var userName, userEmail string
@@ -174,7 +171,7 @@ func (s *reportService) GetTomorrowPlansForXLSX() (*response.TomorrowPlansXLSXDa
                 userEmail = plan.Report.User.Email
             }
         } else {
-            continue // Пропускаем планы без отчета
+            continue
         }
 
         if _, exists := userPlansMap[userID]; !exists {
@@ -187,17 +184,14 @@ func (s *reportService) GetTomorrowPlansForXLSX() (*response.TomorrowPlansXLSXDa
             }
         }
 
-        // Получаем информацию о задаче и проекте
         taskName := "Без задачи"
         projectName := "Без проекта"
         
         if plan.Task != nil {
-            // Получаем имя задачи
             if plan.Task.Name != nil && *plan.Task.Name != "" {
                 taskName = *plan.Task.Name
             }
             
-            // Получаем проект через цепочку: Task -> Status -> Board -> Project
             if plan.Task.Status != nil && 
                plan.Task.Status.Board != nil && 
                plan.Task.Status.Board.Project != nil {
@@ -223,13 +217,11 @@ func (s *reportService) GetTomorrowPlansForXLSX() (*response.TomorrowPlansXLSXDa
         userPlansMap[userID].Plans = append(userPlansMap[userID].Plans, tomorrowPlan)
     }
 
-    // Преобразуем map в slice
     users := make([]response.UserTomorrowPlans, 0, len(userPlansMap))
     for _, userPlans := range userPlansMap {
         users = append(users, *userPlans)
     }
 
-    // Сортируем пользователей по имени
     sort.Slice(users, func(i, j int) bool {
         return users[i].UserName < users[j].UserName
     })

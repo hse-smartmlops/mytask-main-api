@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -67,4 +68,25 @@ func FormatTimeForExcel(t time.Time) string {
         return ""
     }
     return t.Format("02.01.2006")
+}
+
+func ConvertPriorityToText(priority int16) string {
+    switch priority {
+    case 5:
+        return "Срочный"
+    case 4:
+        return "Высокий"
+    case 3:
+        return "Средний"
+    case 2:
+        return "Низкий"
+    case 1:
+        return "Не задан"
+    default:
+        return fmt.Sprintf("Неизвестный (%d)", priority)
+    }
+}
+
+func BoolPtr(b bool) *bool {
+	return &b
 }
