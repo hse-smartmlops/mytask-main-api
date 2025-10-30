@@ -80,6 +80,17 @@ func (s *dailyReportService) ListReportsByDateRange(
 	return s.repo.ListReportsByDateRange(ctx, startDate, endDate, p)
 }
 
+func (s *dailyReportService) ListReportsByDateRangeWithoutPagination(
+	ctx context.Context,
+	startDate,
+	endDate time.Time,
+) (*[]models.DailyReport, error) {
+	if endDate.Before(startDate) {
+		return nil, domain.ErrInvalidInput
+	}
+	return s.repo.ListReportsByDateRangeWithoutPagination(ctx, startDate, endDate)
+}
+
 func (s *dailyReportService) ListHelpRequestsByHelper(
 	ctx context.Context,
 	helperID uuid.UUID,
@@ -201,13 +212,12 @@ func (s *dailyReportService) ExportReportsToXLSX(
 		return nil, domain.ErrInvalidInput
 	}
 
-	p := ports.PaginationParams{Page: 1, PageSize: 0} // TODO get all reports
-	reports, err := s.ListReportsByDateRange(ctx, input.StartDate, input.EndDate, p)
+	reports, err := s.ListReportsByDateRangeWithoutPagination(ctx, input.StartDate, input.EndDate)
 	if err != nil {
 		return nil, err
 	}
 
-	data, err := buildDailyReportsWorkbook(reports.Items, input.StartDate, input.EndDate)
+	data, err := buildDailyReportsWorkbook(*reports, input.StartDate, input.EndDate)
 	if err != nil {
 		return nil, err
 	}

@@ -25,18 +25,46 @@ func NewUserRepository(
 }
 
 func (r *UserRepository) SoftDeleteUser(
-	ctx context.Context,
-	id uuid.UUID,
+    ctx context.Context,
+    id uuid.UUID,
 ) error {
-	return nil // TODO Add implementation
+    now := time.Now().UTC()
+    deleted := true
+    result := r.db.WithContext(ctx).
+        Model(&models.User{}).
+        Where("id = ? AND (deleted = FALSE OR deleted IS NULL)", id).
+        Updates(map[string]interface{}{
+            "deleted":    &deleted,
+            "updated_at": &now,
+        })
+    if result.Error != nil {
+        return result.Error
+    }
+    if result.RowsAffected == 0 {
+        return domain.ErrNotFound
+    }
+    return nil
 }
 
 func (r *UserRepository) UpdateUser(
-	ctx context.Context,
-	id uuid.UUID,
-	updates map[string]interface{},
+    ctx context.Context,
+    id uuid.UUID,
+    updates map[string]interface{},
 ) (*models.User, error) {
-	return nil, nil // TODO Add implementation
+    updates["updated_at"] = timePtr(time.Now().UTC())
+
+    result := r.db.WithContext(ctx).
+        Model(&models.User{}).
+        Where("id = ? AND (deleted = FALSE OR deleted IS NULL)", id).
+        Updates(updates)
+    if result.Error != nil {
+        return nil, result.Error
+    }
+    if result.RowsAffected == 0 {
+        return nil, domain.ErrNotFound
+    }
+
+    return r.GetUserByID(ctx, id)
 }
 
 func (r *UserRepository) ListUsers(

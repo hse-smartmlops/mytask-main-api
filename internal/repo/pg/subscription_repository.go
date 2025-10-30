@@ -32,6 +32,7 @@ func (r *SubscriptionRepository) ListSubscriptions(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Subscription{}).
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("subscriptions.deleted = FALSE OR subscriptions.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -40,7 +41,6 @@ func (r *SubscriptionRepository) ListSubscriptions(
 	var subs []models.Subscription
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("subscriptions.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil {
@@ -82,6 +82,7 @@ func (r *SubscriptionRepository) ListSubscriptionsByUser(
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Subscription{}).
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("subscriptions.user_id = ? AND (subscriptions.deleted = FALSE OR subscriptions.deleted IS NULL)", userID)
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -91,7 +92,6 @@ func (r *SubscriptionRepository) ListSubscriptionsByUser(
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.
 		Order("subscriptions.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil {
@@ -115,6 +115,7 @@ func (r *SubscriptionRepository) ListSubscriptionsByTarget(
 	var totalCount int64
 
 	base := r.db.WithContext(ctx).Model(&models.Subscription{}).
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("subscriptions.subscription_id = ? AND (subscriptions.deleted = FALSE OR subscriptions.deleted IS NULL)", subscriptionID)
 	if typeID != nil {
 		base = base.Where("subscriptions.type_id = ?", typeID)
@@ -127,7 +128,6 @@ func (r *SubscriptionRepository) ListSubscriptionsByTarget(
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.
 		Order("subscriptions.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&subs).Error; err != nil {

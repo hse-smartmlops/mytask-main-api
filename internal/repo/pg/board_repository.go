@@ -32,6 +32,8 @@ func (r *BoardRepository) ListBoards(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Board{}).
+		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
+		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
 		Where("deleted = FALSE OR deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -40,8 +42,6 @@ func (r *BoardRepository) ListBoards(
 	var boards []models.Board
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("created_at DESC NULLS LAST").
-		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
-		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&boards).Error; err != nil {
@@ -85,6 +85,8 @@ func (r *BoardRepository) ListBoardsByProject(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Board{}).
+		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
+		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
 		Where("project_id = ? AND (deleted = FALSE OR deleted IS NULL)", projectID)
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -93,8 +95,6 @@ func (r *BoardRepository) ListBoardsByProject(
 	var boards []models.Board
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("created_at DESC NULLS LAST").
-		Preload("Statuses", "deleted = FALSE OR deleted IS NULL").
-		Preload("Statuses.Tasks", "tasks.deleted = FALSE OR tasks.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&boards).Error; err != nil {

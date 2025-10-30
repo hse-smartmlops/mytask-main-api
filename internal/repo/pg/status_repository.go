@@ -32,6 +32,7 @@ func (r *StatusRepository) ListStatuses(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Status{}).
+		Preload("Board").
 		Where("statuses.deleted = FALSE OR statuses.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -40,7 +41,6 @@ func (r *StatusRepository) ListStatuses(
 	var statuses []models.Status
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("statuses.created_at DESC NULLS LAST").
-		Preload("Board").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&statuses).Error; err != nil {

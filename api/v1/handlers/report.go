@@ -111,16 +111,14 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 		if err != nil {
 			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "project_id must be a valid UUID"))
 		}
-		// TODO add pagination
-		reports, err := h.service.ListReportsByProject(ctx, projectID, ports.PaginationParams{
-			Page:     1,
-			PageSize: 0,
-		})
+
+		reports, err := h.service.ListReportsByProject(ctx, projectID, params)
 		if err != nil {
 			return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by project"))
 		}
-		// TODO pagination
-		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports.Items)})
+
+		pagination, payload := presenter.MapReportsPage(reports)
+		return respondPaginated(c, http.StatusOK, payload, pagination)
 	}
 
 	if taskParam != "" {
@@ -128,16 +126,14 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 		if err != nil {
 			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "task_id must be a valid UUID"))
 		}
-		// TODO add pagination
-		reports, err := h.service.ListReportsByTask(ctx, taskID, ports.PaginationParams{
-			Page:     1,
-			PageSize: 0,
-		})
+
+		reports, err := h.service.ListReportsByTask(ctx, taskID, params)
 		if err != nil {
 			return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by task"))
 		}
-		// TODO pagination
-		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports.Items)})
+		
+		pagination, payload := presenter.MapReportsPage(reports)
+		return respondPaginated(c, http.StatusOK, payload, pagination)
 	}
 
 	if startParam != "" || endParam != "" {
@@ -152,16 +148,14 @@ func (h *DailyReportHandler) ListReports(c echo.Context) error {
 		if err != nil {
 			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_query", "end_date must be a valid date"))
 		}
-		// TODO add pagination
-		reports, err := h.service.ListReportsByDateRange(ctx, startDate, endDate, ports.PaginationParams{
-			Page:     1,
-			PageSize: 0,
-		})
+
+		reports, err := h.service.ListReportsByDateRange(ctx, startDate, endDate, params)
 		if err != nil {
 			return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by date range"))
 		}
-		// TODO pagination
-		return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: mapReportModels(reports.Items)})
+		
+		pagination, payload := presenter.MapReportsPage(reports)
+		return respondPaginated(c, http.StatusOK, payload, pagination)
 	}
 
 	result, err := h.service.ListReports(ctx, params)
@@ -217,25 +211,23 @@ func (h *DailyReportHandler) ListReportsByUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/project/{id} [get]
 func (h *DailyReportHandler) ListReportsByProject(c echo.Context) error {
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
 	projectID, err := parseUUID(c.Param("id"))
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
-	// TODO add pagination
-	reports, err := h.service.ListReportsByProject(c.Request().Context(), projectID, ports.PaginationParams{
-		Page:     1,
-		PageSize: 0,
-	})
+	
+	reports, err := h.service.ListReportsByProject(c.Request().Context(), projectID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by project"))
 	}
-	// TODO pagination
-	payload := make([]response.Report, len(reports.Items))
-	for i := range reports.Items {
-		payload[i] = presenter.ToReportDTO(&reports.Items[i])
-	}
-	// TODO pagination
-	return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: payload})
+	
+	pagination, payload := presenter.MapReportsPage(reports)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary List Reports By Task
@@ -250,25 +242,23 @@ func (h *DailyReportHandler) ListReportsByProject(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/task/{id} [get]
 func (h *DailyReportHandler) ListReportsByTask(c echo.Context) error {
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
 	taskID, err := parseUUID(c.Param("id"))
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
 	}
-	// TODO add pagination
-	reports, err := h.service.ListReportsByTask(c.Request().Context(), taskID, ports.PaginationParams{
-		Page:     1,
-		PageSize: 0,
-	})
+
+	reports, err := h.service.ListReportsByTask(c.Request().Context(), taskID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by task"))
 	}
-	// TODO pagination
-	payload := make([]response.Report, len(reports.Items))
-	for i := range reports.Items {
-		payload[i] = presenter.ToReportDTO(&reports.Items[i])
-	}
-	// TODO pagination
-	return respondSuccess(c, http.StatusOK, response.ReportsPage{Reports: payload})
+	
+	pagination, payload := presenter.MapReportsPage(reports)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Create Report
@@ -535,20 +525,23 @@ func (h *DailyReportHandler) DeleteHelpRequest(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/help-requests-by-user-id/{id} [get]
 func (h *DailyReportHandler) ListHelpRequestsByHelper(c echo.Context) error {
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
 	helperID, err := parseUUID(c.Param("id"))
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid helper identifier"))
 	}
-	// TODO add pagination
-	items, err := h.service.ListHelpRequestsByHelper(c.Request().Context(), helperID, ports.PaginationParams{
-		Page:     1,
-		PageSize: 10,
-	})
+
+	items, err := h.service.ListHelpRequestsByHelper(c.Request().Context(), helperID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("help_requests_fetch_failed", "failed to list help requests"))
 	}
-	// TODO pagination
-	return respondSuccess(c, http.StatusOK, presenter.MapHelpRequestsForUser(items.Items))
+
+	pagination, payload := presenter.MapHelpRequestsPage(items)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Update Tomorrow Plan

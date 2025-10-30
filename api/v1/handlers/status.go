@@ -6,7 +6,6 @@ import (
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
-	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -109,6 +108,11 @@ func (h *StatusHandler) GetStatus(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /boards/{board_id}/statuses [get]
 func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
+	params, err := paginationParams(c)
+	if err != nil {
+		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+	}
+
 	boardIDParam := c.Param("board_id")
 	if boardIDParam == "" {
 		boardIDParam = c.Param("id")
@@ -118,21 +122,13 @@ func (h *StatusHandler) ListStatusesByBoard(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid board identifier"))
 	}
-	// TODO add pagination
-	statuses, err := h.service.ListStatusesByBoard(c.Request().Context(), boardID, ports.PaginationParams{
-		Page:     1,
-		PageSize: 0,
-	})
+	statuses, err := h.service.ListStatusesByBoard(c.Request().Context(), boardID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
 	}
 
-	items := make([]response.Status, len(statuses.Items))
-	for i := range statuses.Items {
-		items[i] = presenter.ToStatusDTO(&statuses.Items[i])
-	}
-
-	return respondSuccess(c, http.StatusOK, items)
+	pagination, payload := presenter.MapStatusesPage(statuses)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Create Status

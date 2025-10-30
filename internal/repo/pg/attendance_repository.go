@@ -32,6 +32,7 @@ func (r *AttendanceRepository) ListAttendances(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Attendance{}).
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("attendances.deleted = FALSE OR attendances.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -40,7 +41,6 @@ func (r *AttendanceRepository) ListAttendances(
 	var attendances []models.Attendance
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("attendances.date DESC NULLS LAST, attendances.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&attendances).Error; err != nil {
@@ -64,6 +64,7 @@ func (r *AttendanceRepository) ListAttendancesByUser(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Attendance{}).
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("attendances.user_id = ? AND (attendances.deleted = FALSE OR attendances.deleted IS NULL)", userID)
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -72,7 +73,6 @@ func (r *AttendanceRepository) ListAttendancesByUser(
 	var attendances []models.Attendance
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("attendances.date DESC NULLS LAST, attendances.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&attendances).Error; err != nil {

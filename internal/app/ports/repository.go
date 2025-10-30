@@ -68,6 +68,7 @@ type ProjectRepository interface {
 
 type TaskRepository interface {
 	GetTaskByID(ctx context.Context, id uuid.UUID) (*models.Task, error)
+	GetTaskBoardAndProjectIDs(ctx context.Context, taskID uuid.UUID) (boardID uuid.UUID, projectID uuid.UUID, err error)
 
 	CreateTask(ctx context.Context, task *models.Task) error
 
@@ -83,6 +84,9 @@ type TaskRepository interface {
 	ListTasksByBoard(ctx context.Context, boardID uuid.UUID, p PaginationParams) (*Page[models.Task], error)
 	ListActiveTasksByUser(ctx context.Context, userID uuid.UUID, p PaginationParams) (*Page[models.Task], error)
 	ListTasksByUserAndProject(ctx context.Context, userID, projectID uuid.UUID, p PaginationParams) (*Page[models.Task], error)
+
+	StatusExists(ctx context.Context, statusID uuid.UUID) (bool, error)
+	UserExists(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
 type SubscriptionRepository interface {
@@ -134,6 +138,7 @@ type DailyReportRepository interface {
 	ListReportsByTask(ctx context.Context, taskID uuid.UUID, p PaginationParams) (*Page[models.DailyReport], error)
 	ListReportsByDateRange(ctx context.Context, startDate, endDate time.Time, p PaginationParams) (*Page[models.DailyReport], error)
 	ListHelpRequestsByHelper(ctx context.Context, helperID uuid.UUID, p PaginationParams) (*Page[models.HelpRequest], error)
+	ListReportsByDateRangeWithoutPagination(ctx context.Context, startDate, endDate time.Time) (*[]models.DailyReport, error)
 }
 
 type TeamRepository interface {
