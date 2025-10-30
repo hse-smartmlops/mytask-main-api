@@ -62,16 +62,16 @@ func checkPagination(
 	config *config.PaginationConfig,
 ) {
 	if p.Page <= 0 {
-		p.Page = config.DefaultLimit
+		p.Page = config.DefaultPageLimit
 	}
-	if p.Page > config.MaxLimit {
-		p.Page = config.MaxLimit
+	if p.Page > config.MaxPageLimit {
+		p.Page = config.MaxPageLimit
 	}
 	if p.PageSize <= 0 {
-		p.PageSize = config.DefaultLimit
+		p.PageSize = config.DefaultPageSizeLimit
 	}
-	if p.PageSize > config.MaxLimit {
-		p.PageSize = config.MaxLimit
+	if p.PageSize > config.MaxPageSizeLimit {
+		p.PageSize = config.MaxPageSizeLimit
 	}
 }
 

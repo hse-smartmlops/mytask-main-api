@@ -86,8 +86,10 @@ type TracingConfig struct {
 }
 
 type PaginationConfig struct {
-	DefaultLimit int
-	MaxLimit     int
+	DefaultPageLimit     int
+	MaxPageLimit         int
+	DefaultPageSizeLimit int
+	MaxPageSizeLimit     int
 }
 
 type KeycloakConfig struct {
@@ -207,14 +209,24 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("parse TRACING_SAMPLE_RATE: %w", err)
 	}
 
-	defaultLimit, err := toInt(getEnv("PAGINATION_DEFAULT_LIMIT", "10"))
+	defaultPageLimit, err := toInt(getEnv("PAGINATION_DEFAULT_PAGE_LIMIT", "10"))
 	if err != nil {
-		return nil, fmt.Errorf("parse PAGINATION_DEFAULT_LIMIT: %w", err)
+		return nil, fmt.Errorf("parse PAGINATION_DEFAULT_PAGE_LIMIT: %w", err)
 	}
 
-	maxLimit, err := toInt(getEnv("PAGINATION_MAX_LIMIT", "100"))
+	maxPageLimit, err := toInt(getEnv("PAGINATION_MAX_PAGE_LIMIT", "100"))
 	if err != nil {
-		return nil, fmt.Errorf("parse PAGINATION_MAX_LIMIT: %w", err)
+		return nil, fmt.Errorf("parse PAGINATION_MAX_PAGE_LIMIT: %w", err)
+	}
+
+	defaultPageSizeLimit, err := toInt(getEnv("PAGINATION_DEFAULT_PAGE_SIZE_LIMIT", "10"))
+	if err != nil {
+		return nil, fmt.Errorf("parse PAGINATION_DEFAULT_PAGE_SIZE_LIMIT: %w", err)
+	}
+
+	maxPageSizeLimit, err := toInt(getEnv("PAGINATION_MAX_PAGE_SIZE_LIMIT", "100"))
+	if err != nil {
+		return nil, fmt.Errorf("parse PAGINATION_MAX_PAGE_SIZE_LIMIT: %w", err)
 	}
 
 	mcpTimeout, err := toDuration(getEnv("MCP_GRPC_TIMEOUT", "5s"))
@@ -297,8 +309,10 @@ func Load() (*Config, error) {
 			ReportBucket: getEnv("MINIO_REPORT_BUCKET", "reports"),
 		},
 		Pagination: PaginationConfig{
-			DefaultLimit: defaultLimit,
-			MaxLimit:     maxLimit,
+			DefaultPageLimit:     defaultPageLimit,
+			MaxPageLimit:         maxPageLimit,
+			DefaultPageSizeLimit: defaultPageSizeLimit,
+			MaxPageSizeLimit:     maxPageSizeLimit,
 		},
 		RateLimit: RateLimitConfig{
 			User: RateLimitRule{
