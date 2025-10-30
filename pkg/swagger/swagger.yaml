@@ -1,0 +1,4937 @@
+definitions:
+  dto.AttendanceResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Attendance'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.AttendancesListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.AttendancesPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.AuthResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Auth'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.BoardResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Board'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.BoardsListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.BoardsPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.CompletedWorkItemResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.CompletedWorkItem'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ErrorDetail:
+    properties:
+      code:
+        type: string
+      message:
+        type: string
+    type: object
+  dto.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/dto.ErrorDetail'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ForumMessageResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.ForumMessage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ForumMessagesListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.ForumMessagesPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.HelpRequestItemResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.HelpRequestItem'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.HelpRequestsListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.HelpRequestsPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ImprovedTaskReportResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.ImprovedTaskReport'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.LogoutMessageResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.LogoutMessage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.Pagination:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      total_count:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  dto.ProblemResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Problem'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ProblemsListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.ProblemsPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ProjectResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Project'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ProjectsListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.ProjectsPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.RefreshResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Refresh'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ReportResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Report'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ReportUniversalResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.ReportUniversal'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ReportsListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.ReportsPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.ResponseMeta:
+    properties:
+      pagination:
+        $ref: '#/definitions/dto.Pagination'
+      trace_id:
+        type: string
+    type: object
+  dto.RoleResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Role'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.RolesListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.RolesPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.StatusResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Status'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.StatusesListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.StatusesPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.SubscriptionResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Subscription'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.SubscriptionsListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.SubscriptionsPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.TaskBoardProjectResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.TaskBoardProject'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.TaskResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Task'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.TasksListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.TasksPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.TeamResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.Team'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.TeamsListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.TeamsPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.TokenValidationResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.TokenValidation'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.TomorrowPlanItemResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.TomorrowPlanItem'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.UserInfoResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.UserInfo'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.UserResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.User'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  dto.UsersListResponse:
+    properties:
+      data:
+        $ref: '#/definitions/response.UsersPage'
+      meta:
+        $ref: '#/definitions/dto.ResponseMeta'
+    type: object
+  request.AddTeamMember:
+    properties:
+      specialization:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.AddTeamProject:
+    properties:
+      project_id:
+        type: string
+    type: object
+  request.AuthLogin:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  request.AuthRefresh:
+    properties:
+      refresh_token:
+        type: string
+    type: object
+  request.CompletedWorkUpdate:
+    properties:
+      description:
+        type: string
+      task_id:
+        type: string
+    type: object
+  request.CreateAttendance:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      end_work:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      user_id:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
+  request.CreateBoard:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      project_id:
+        type: string
+    type: object
+  request.CreateForumMessage:
+    properties:
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        type: array
+      problem_id:
+        type: string
+    type: object
+  request.CreateProblem:
+    properties:
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    type: object
+  request.CreateRole:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.CreateStatus:
+    properties:
+      board_id:
+        type: string
+      color:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  request.CreateSubscription:
+    properties:
+      subscription_id:
+        type: string
+      type_id:
+        type: integer
+      user_id:
+        type: string
+    type: object
+  request.CreateTask:
+    properties:
+      assigned_to:
+        type: string
+      category:
+        type: integer
+      created_by:
+        type: string
+      deadline:
+        type: string
+      description:
+        type: string
+      gitlab_issue_id:
+        type: integer
+      name:
+        type: string
+      priority:
+        type: integer
+      start_date:
+        type: string
+      status_id:
+        type: string
+    type: object
+  request.CreateTeam:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.CreateUser:
+    properties:
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      first_name:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      profession:
+        type: string
+      tg_id:
+        type: string
+      tg_user_id:
+        type: integer
+    type: object
+  request.HelpRequestUpdate:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+      status:
+        type: string
+    type: object
+  request.ImproveTaskReport:
+    properties:
+      content_type:
+        type: string
+      meta:
+        additionalProperties:
+          type: string
+        type: object
+      timeout_ms:
+        type: integer
+      user_text:
+        type: string
+    type: object
+  request.ReportCompletedWork:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+    type: object
+  request.ReportCreate:
+    properties:
+      complete_work:
+        items:
+          $ref: '#/definitions/request.ReportCompletedWork'
+        type: array
+      help:
+        items:
+          $ref: '#/definitions/request.ReportHelpRequest'
+        type: array
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/request.ReportTomorrowPlan'
+        type: array
+      problems:
+        items:
+          type: string
+        type: array
+      report_date:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.ReportHelpRequest:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+      id:
+        type: string
+      status:
+        type: string
+    type: object
+  request.ReportTomorrowPlan:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+    type: object
+  request.ReportUpdate:
+    properties:
+      checked:
+        type: integer
+      complete_work:
+        items:
+          $ref: '#/definitions/request.ReportCompletedWork'
+        type: array
+      help:
+        items:
+          $ref: '#/definitions/request.ReportHelpRequest'
+        type: array
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/request.ReportTomorrowPlan'
+        type: array
+      problems:
+        items:
+          type: string
+        type: array
+      report_date:
+        type: string
+    type: object
+  request.ReportsByDate:
+    properties:
+      end_date:
+        type: string
+      start_date:
+        type: string
+    type: object
+  request.TeamAddUsers:
+    properties:
+      team_id:
+        type: string
+      user_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  request.TeamProjectRequest:
+    properties:
+      project_id:
+        type: string
+      team_id:
+        type: string
+    type: object
+  request.TeamRemoveUser:
+    properties:
+      team_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  request.TomorrowPlanUpdate:
+    properties:
+      description:
+        type: string
+      task_id:
+        type: string
+    type: object
+  request.UpdateAttendance:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      date:
+        type: string
+      end_work:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
+  request.UpdateBoard:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.UpdateForumMessage:
+    properties:
+      description:
+        items:
+          type: string
+        type: array
+    type: object
+  request.UpdateProblem:
+    properties:
+      description:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    type: object
+  request.UpdateProject:
+    properties:
+      description:
+        type: string
+      gitlab_project_id:
+        type: integer
+      gitlab_url:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+    type: object
+  request.UpdateRole:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.UpdateStatus:
+    properties:
+      color:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  request.UpdateTask:
+    properties:
+      assigned_to:
+        type: string
+      category:
+        type: integer
+      created_by:
+        type: string
+      deadline:
+        type: string
+      description:
+        type: string
+      gitlab_issue_id:
+        type: integer
+      name:
+        type: string
+      priority:
+        type: integer
+      start_date:
+        type: string
+      status_id:
+        type: string
+    type: object
+  request.UpdateTeam:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  request.UpdateUser:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      is_active:
+        type: boolean
+      last_name:
+        type: string
+      profession:
+        type: string
+      tg_id:
+        type: string
+    type: object
+  request.UserRoleAssignment:
+    type: object
+  response.Attendance:
+    properties:
+      actual_start:
+        type: string
+      code_reviews:
+        type: integer
+      commits:
+        type: integer
+      created_at:
+        type: string
+      date:
+        type: string
+      end_work:
+        type: string
+      id:
+        type: string
+      merge_requests:
+        type: integer
+      planned_start:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      workday_hours:
+        type: integer
+    type: object
+  response.AttendancesPage:
+    properties:
+      attendances:
+        items:
+          $ref: '#/definitions/response.Attendance'
+        type: array
+    type: object
+  response.Auth:
+    properties:
+      access_token:
+        type: string
+      email:
+        type: string
+      expires_at:
+        type: string
+      expires_in:
+        type: integer
+      refresh_expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+      user_id:
+        type: string
+    type: object
+  response.Board:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      project_id:
+        type: string
+      statuses:
+        items:
+          $ref: '#/definitions/response.BoardStatus'
+        type: array
+      updated_at:
+        type: string
+    type: object
+  response.BoardStatus:
+    properties:
+      color:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  response.BoardsPage:
+    properties:
+      boards:
+        items:
+          $ref: '#/definitions/response.Board'
+        type: array
+    type: object
+  response.CompletedWorkItem:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+    type: object
+  response.ForumMessage:
+    properties:
+      created_at:
+        type: string
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      problem_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.ForumMessagesPage:
+    properties:
+      messages:
+        items:
+          $ref: '#/definitions/response.ForumMessage'
+        type: array
+    type: object
+  response.HelpRequestItem:
+    properties:
+      description:
+        type: string
+      helper_id:
+        type: string
+      id:
+        type: string
+      status:
+        type: string
+    type: object
+  response.HelpRequestsPage:
+    properties:
+      help_requests:
+        items:
+          $ref: '#/definitions/response.HelpRequestItem'
+        type: array
+    type: object
+  response.ImprovedTaskReport:
+    properties:
+      content_type:
+        type: string
+      improved_text:
+        type: string
+      meta:
+        additionalProperties:
+          type: string
+        type: object
+      original_text:
+        type: string
+      task_description:
+        type: string
+      task_id:
+        type: string
+      task_title:
+        type: string
+    type: object
+  response.LogoutMessage:
+    properties:
+      message:
+        type: string
+    type: object
+  response.Problem:
+    properties:
+      created_at:
+        type: string
+      creator:
+        $ref: '#/definitions/response.UserSummary'
+      creator_id:
+        type: string
+      description:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.ProblemItem:
+    properties:
+      description:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+    type: object
+  response.ProblemsPage:
+    properties:
+      problems:
+        items:
+          $ref: '#/definitions/response.Problem'
+        type: array
+    type: object
+  response.Project:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      gitlab_project_id:
+        type: integer
+      gitlab_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.ProjectsPage:
+    properties:
+      projects:
+        items:
+          $ref: '#/definitions/response.Project'
+        type: array
+    type: object
+  response.Refresh:
+    properties:
+      access_token:
+        type: string
+      expires_at:
+        type: string
+      expires_in:
+        type: integer
+      refresh_expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        type: string
+    type: object
+  response.Report:
+    properties:
+      checked:
+        type: integer
+      completed_work:
+        items:
+          $ref: '#/definitions/response.CompletedWorkItem'
+        type: array
+      created_at:
+        type: string
+      help_requests:
+        items:
+          $ref: '#/definitions/response.HelpRequestItem'
+        type: array
+      id:
+        type: string
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/response.TomorrowPlanItem'
+        type: array
+      problem:
+        items:
+          $ref: '#/definitions/response.ProblemItem'
+        type: array
+      report_date:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      user_info:
+        $ref: '#/definitions/response.UserSummary'
+    type: object
+  response.ReportUniversal:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+    type: object
+  response.ReportsPage:
+    properties:
+      reports:
+        items:
+          $ref: '#/definitions/response.Report'
+        type: array
+    type: object
+  response.Role:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.RolesPage:
+    properties:
+      roles:
+        items:
+          $ref: '#/definitions/response.Role'
+        type: array
+    type: object
+  response.Status:
+    properties:
+      board_id:
+        type: string
+      color:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  response.StatusesPage:
+    properties:
+      statuses:
+        items:
+          $ref: '#/definitions/response.Status'
+        type: array
+    type: object
+  response.Subscription:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      subscription_id:
+        type: string
+      type_id:
+        type: integer
+      updated_at:
+        type: string
+      user:
+        $ref: '#/definitions/response.UserSummary'
+      user_id:
+        type: string
+    type: object
+  response.SubscriptionsPage:
+    properties:
+      subscriptions:
+        items:
+          $ref: '#/definitions/response.Subscription'
+        type: array
+    type: object
+  response.Task:
+    properties:
+      assigned_to:
+        type: string
+      assigned_to_user:
+        $ref: '#/definitions/response.UserSummary'
+      category:
+        type: integer
+      created_at:
+        type: string
+      created_by:
+        type: string
+      created_by_user:
+        $ref: '#/definitions/response.UserSummary'
+      deadline:
+        type: string
+      description:
+        type: string
+      gitlab_issue_id:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      project_id:
+        type: string
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/response.TaskStatus'
+      status_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.TaskBoardProject:
+    properties:
+      board_id:
+        type: string
+      project_id:
+        type: string
+      task_id:
+        type: string
+    type: object
+  response.TaskStatus:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      is_default:
+        type: boolean
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
+      sort_order:
+        type: integer
+    type: object
+  response.TasksPage:
+    properties:
+      tasks:
+        items:
+          $ref: '#/definitions/response.Task'
+        type: array
+    type: object
+  response.Team:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      members:
+        items:
+          $ref: '#/definitions/response.TeamMember'
+        type: array
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  response.TeamMember:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      specialization:
+        type: string
+      user_id:
+        type: string
+    type: object
+  response.TeamsPage:
+    properties:
+      teams:
+        items:
+          $ref: '#/definitions/response.Team'
+        type: array
+    type: object
+  response.TokenValidation:
+    properties:
+      message:
+        type: string
+    type: object
+  response.TomorrowPlanItem:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+    type: object
+  response.User:
+    properties:
+      avatar_url:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      first_name:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      last_login:
+        type: string
+      last_name:
+        type: string
+      profession:
+        type: string
+      tg_id:
+        type: string
+      tg_user_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  response.UserInfo:
+    properties:
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      family_name:
+        type: string
+      given_name:
+        type: string
+      name:
+        type: string
+      preferred_username:
+        type: string
+      sub:
+        type: string
+    type: object
+  response.UserSummary:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+    type: object
+  response.UsersPage:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/response.User'
+        type: array
+    type: object
+info:
+  contact: {}
+paths:
+  /attendance:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of attendances
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AttendancesListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Attendances
+      tags:
+      - Attendance
+    post:
+      consumes:
+      - application/json
+      description: Create a new attendance record
+      parameters:
+      - description: Attendance data
+        in: body
+        name: attendance
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateAttendance'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.AttendanceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Attendance
+      tags:
+      - Attendance
+  /attendance/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an attendance record by its ID
+      parameters:
+      - description: Attendance ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Attendance
+      tags:
+      - Attendance
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific attendance by its ID
+      parameters:
+      - description: Attendance ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AttendanceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Attendance
+      tags:
+      - Attendance
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing attendance record
+      parameters:
+      - description: Attendance ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated attendance data
+        in: body
+        name: attendance
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateAttendance'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AttendanceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Attendance
+      tags:
+      - Attendance
+  /attendance/user/{user_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of attendances for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Number of items per page
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AttendancesListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Attendances by User
+      tags:
+      - Attendance
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user and obtain access and refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/request.AuthLogin'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Login
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Invalidate the current access token
+      parameters:
+      - description: Bearer {access_token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.LogoutMessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Logout
+      tags:
+      - Auth
+  /auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve information about the authenticated user
+      parameters:
+      - description: Bearer {access_token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserInfoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get User Info
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access and refresh tokens using a valid refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: refresh
+        required: true
+        schema:
+          $ref: '#/definitions/request.AuthRefresh'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RefreshResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Refresh Token
+      tags:
+      - Auth
+  /auth/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validate the provided access token
+      parameters:
+      - description: Bearer {access_token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TokenValidationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Validate Token
+      tags:
+      - Auth
+  /board:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of boards
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BoardsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Boards
+      tags:
+      - Boards
+  /board/project/{project_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of boards for a specific project
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BoardsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Boards by Project
+      tags:
+      - Boards
+  /boards:
+    post:
+      consumes:
+      - application/json
+      description: Create a new board
+      parameters:
+      - description: Board data
+        in: body
+        name: board
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateBoard'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.BoardResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Board
+      tags:
+      - Boards
+  /boards/{board_id}/statuses:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of statuses associated with a specific board
+      parameters:
+      - description: Board ID
+        in: path
+        name: board_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StatusesListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Statuses By Board
+      tags:
+      - Statuses
+  /boards/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a board by its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Board
+      tags:
+      - Boards
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a board by its ID
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BoardResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Board
+      tags:
+      - Boards
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing board
+      parameters:
+      - description: Board ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Board data
+        in: body
+        name: board
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateBoard'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BoardResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Board
+      tags:
+      - Boards
+  /forum-messages:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of forum messages
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ForumMessagesListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Forum Messages
+      tags:
+      - ForumMessages
+    post:
+      consumes:
+      - application/json
+      description: Create a new forum message
+      parameters:
+      - description: Forum Message data
+        in: body
+        name: forum_message
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateForumMessage'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ForumMessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Forum Message
+      tags:
+      - ForumMessages
+  /forum-messages/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a forum message by its ID
+      parameters:
+      - description: Forum Message ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Forum Message
+      tags:
+      - ForumMessages
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific forum message by its ID
+      parameters:
+      - description: Forum Message ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ForumMessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Forum Message
+      tags:
+      - ForumMessages
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing forum message
+      parameters:
+      - description: Forum Message ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Forum Message data
+        in: body
+        name: forum_message
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateForumMessage'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ForumMessageResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Forum Message
+      tags:
+      - ForumMessages
+  /problem:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of problems
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProblemsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Problems
+      tags:
+      - Problems
+    post:
+      consumes:
+      - application/json
+      description: Create a new problem
+      parameters:
+      - description: Problem data
+        in: body
+        name: problem
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateProblem'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ProblemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Problem
+      tags:
+      - Problems
+  /problem/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a problem by its ID
+      parameters:
+      - description: Problem ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProblemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Problem
+      tags:
+      - Problems
+  /problem/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of problems created by a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProblemsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Problems By User
+      tags:
+      - Problems
+  /problems/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a problem by its ID
+      parameters:
+      - description: Problem ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Problem
+      tags:
+      - Problems
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing problem
+      parameters:
+      - description: Problem ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Problem data
+        in: body
+        name: problem
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateProblem'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProblemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Problem
+      tags:
+      - Problems
+  /problems/{problem_id}/forum-messages:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of forum messages for a specific problem
+      parameters:
+      - description: Problem ID
+        in: path
+        name: problem_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ForumMessagesListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Forum Messages by Problem
+      tags:
+      - ForumMessages
+  /project/{project_id}/teams:
+    get:
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TeamsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Teams by Project
+      tags:
+      - Projects
+  /project/team/{team_id}:
+    get:
+      parameters:
+      - description: Team ID
+        in: path
+        name: team_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProjectsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Projects by Team
+      tags:
+      - Projects
+  /project/user/{user_id}:
+    get:
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProjectsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Projects by User
+      tags:
+      - Projects
+  /projects:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of projects
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProjectsListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Projects
+      tags:
+      - Projects
+  /projects/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a project by its ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Project
+      tags:
+      - Projects
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a project by its ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Project
+      tags:
+      - Projects
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing project
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Project update payload
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateProject'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Project
+      tags:
+      - Projects
+  /projects/{project_id}/tasks:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of tasks associated with a specific project
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TasksListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Tasks By Project
+      tags:
+      - Tasks
+  /projects/{project_id}/teams:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of teams associated with a specific project
+      parameters:
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TeamsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Teams By Project
+      tags:
+      - Teams
+  /report:
+    post:
+      consumes:
+      - application/json
+      description: Create a new daily report
+      parameters:
+      - description: Report creation payload
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportCreate'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Report
+      tags:
+      - Reports
+  /report/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a daily report by its ID
+      parameters:
+      - description: Report ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportUniversalResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Report
+      tags:
+      - Reports
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a daily report by its ID
+      parameters:
+      - description: Report ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Report
+      tags:
+      - Reports
+    put:
+      consumes:
+      - application/json
+      description: Update an existing daily report
+      parameters:
+      - description: Report ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Report update payload
+        in: body
+        name: report
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Report
+      tags:
+      - Reports
+  /report/all:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of daily reports
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: string
+      - description: Filter by project ID
+        in: query
+        name: project_id
+        type: string
+      - description: Filter by task ID
+        in: query
+        name: task_id
+        type: string
+      - description: Filter by start date (YYYY-MM-DD)
+        in: query
+        name: start_date
+        type: string
+      - description: Filter by end date (YYYY-MM-DD)
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Reports
+      tags:
+      - Reports
+  /report/completed-work/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing completed work item
+      parameters:
+      - description: Completed Work ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Completed Work update payload
+        in: body
+        name: completed_work
+        required: true
+        schema:
+          $ref: '#/definitions/request.CompletedWorkUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.CompletedWorkItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Completed Work
+      tags:
+      - Reports
+  /report/export/xlsx:
+    post:
+      consumes:
+      - application/json
+      description: Export daily reports within a specified date range to an XLSX file
+      parameters:
+      - description: Reports export request payload
+        in: body
+        name: export_request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ReportsByDate'
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX file containing the exported reports
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Export Reports to XLSX
+      tags:
+      - Reports
+  /report/help-request/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a help request by its ID
+      parameters:
+      - description: Help Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportUniversalResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Help Request
+      tags:
+      - Reports
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing help request item
+      parameters:
+      - description: Help Request ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Help Request update payload
+        in: body
+        name: help_request
+        required: true
+        schema:
+          $ref: '#/definitions/request.HelpRequestUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HelpRequestItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Help Request
+      tags:
+      - Reports
+  /report/help-requests-by-user-id/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of help requests assigned to a specific helper
+      parameters:
+      - description: Helper ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.HelpRequestsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Help Requests By Helper
+      tags:
+      - Reports
+  /report/project/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of daily reports for a specific project
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Reports By Project
+      tags:
+      - Reports
+  /report/task/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a list of daily reports for a specific task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Reports By Task
+      tags:
+      - Reports
+  /report/tomorrow-plans/{id}:
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing tomorrow plan item
+      parameters:
+      - description: Tomorrow Plan ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tomorrow Plan update payload
+        in: body
+        name: tomorrow_plan
+        required: true
+        schema:
+          $ref: '#/definitions/request.TomorrowPlanUpdate'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TomorrowPlanItemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Tomorrow Plan
+      tags:
+      - Reports
+  /report/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of daily reports for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ReportsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Reports By User
+      tags:
+      - Reports
+  /roles:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of roles
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RolesListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Roles
+      tags:
+      - Roles
+    post:
+      consumes:
+      - application/json
+      description: Create a new role
+      parameters:
+      - description: Role creation payload
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateRole'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Role
+      tags:
+      - Roles
+  /roles/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a role by its ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Role
+      tags:
+      - Roles
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a role by its ID
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Role
+      tags:
+      - Roles
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing role
+      parameters:
+      - description: Role ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Role data
+        in: body
+        name: role
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateRole'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.RoleResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Role
+      tags:
+      - Roles
+  /statuses:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of statuses
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StatusesListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Statuses
+      tags:
+      - Statuses
+    post:
+      consumes:
+      - application/json
+      description: Create a new status
+      parameters:
+      - description: Status creation payload
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateStatus'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Status
+      tags:
+      - Statuses
+  /statuses/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a status by its ID
+      parameters:
+      - description: Status ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Status
+      tags:
+      - Statuses
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a specific status by its ID
+      parameters:
+      - description: Status ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Status
+      tags:
+      - Statuses
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing status
+      parameters:
+      - description: Status ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status data
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateStatus'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Status
+      tags:
+      - Statuses
+  /subscription/sub-object/{subobj_id}:
+    get:
+      parameters:
+      - description: Subobject (Subscription) ID
+        in: path
+        name: subobj_id
+        required: true
+        type: string
+      - description: Type ID filter
+        in: query
+        name: type_id
+        type: integer
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SubscriptionsListResponse'
+      summary: List Subscriptions by SubObject
+      tags:
+      - Subscriptions
+  /subscriptions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of subscriptions
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SubscriptionsListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Subscriptions
+      tags:
+      - Subscriptions
+    post:
+      consumes:
+      - application/json
+      description: Create a new subscription
+      parameters:
+      - description: Subscription creation payload
+        in: body
+        name: subscription
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateSubscription'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.SubscriptionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Subscription
+      tags:
+      - Subscriptions
+  /subscriptions/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a subscription by its ID
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Subscription
+      tags:
+      - Subscriptions
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a subscription by its ID
+      parameters:
+      - description: Subscription ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SubscriptionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Subscription
+      tags:
+      - Subscriptions
+  /subscriptions/targets/{subscription_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of subscriptions for a specific target
+      parameters:
+      - description: Subscription Target ID
+        in: path
+        name: subscription_id
+        required: true
+        type: string
+      - description: Type ID
+        in: query
+        name: type_id
+        type: integer
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SubscriptionsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Subscriptions By Target
+      tags:
+      - Subscriptions
+  /tasks:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of tasks
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TasksListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Tasks
+      tags:
+      - Tasks
+    post:
+      consumes:
+      - application/json
+      description: Create a new task
+      parameters:
+      - description: Task creation payload
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateTask'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Task
+      tags:
+      - Tasks
+  /tasks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a task by its ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Task
+      tags:
+      - Tasks
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a task by its ID
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Task
+      tags:
+      - Tasks
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task data
+        in: body
+        name: task
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateTask'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Task
+      tags:
+      - Tasks
+  /tasks/{id}/board-project:
+    get:
+      consumes:
+      - application/json
+      description: Returns board and project identifiers for the specified task
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskBoardProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Task Board and Project
+      tags:
+      - Tasks
+  /tasks/{id}/improve-report:
+    post:
+      consumes:
+      - application/json
+      description: Use MCP to improve a user supplied task report text
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Improvement payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ImproveTaskReport'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ImprovedTaskReportResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Improve Task Report
+      tags:
+      - Tasks
+  /tasks/{id}/improve-report/ws:
+    get:
+      description: Stream MCP events while improving a task report through WebSocket
+      parameters:
+      - description: Task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Stream Task Report Improvement (WebSocket)
+      tags:
+      - Tasks
+  /tasks/board/{board_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of tasks associated with a specific board
+      parameters:
+      - description: Board ID
+        in: path
+        name: board_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TasksListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Tasks by Board
+      tags:
+      - Tasks
+  /tasks/move:
+    get:
+      consumes:
+      - application/json
+      description: Move a task from its current status to another status
+      parameters:
+      - description: Task ID
+        in: query
+        name: task_id
+        required: true
+        type: string
+      - description: Destination Status ID
+        in: query
+        name: to_status_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TaskResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Move Task between statuses
+      tags:
+      - Tasks
+  /tasks/user/{user_id}/active:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of active tasks assigned to a specific
+        user
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TasksListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Active Tasks by User
+      tags:
+      - Tasks
+  /tasks/user/{user_id}/project/{project_id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of tasks assigned to a specific user
+        within a specific project
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TasksListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Tasks by User and Project
+      tags:
+      - Tasks
+  /team/project:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a team-project association using legacy payload
+      parameters:
+      - description: Team-project association
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Remove Team from Project (legacy)
+      tags:
+      - Teams
+    post:
+      consumes:
+      - application/json
+      description: Associate a team with a project using legacy payload
+      parameters:
+      - description: Team-project association
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Add Team to Project (legacy)
+      tags:
+      - Teams
+  /team/user:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a user from a team using legacy payload format
+      parameters:
+      - description: Legacy team-user removal
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamRemoveUser'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Remove User from Team (legacy)
+      tags:
+      - Teams
+    post:
+      consumes:
+      - application/json
+      description: Add one or more users to a team using legacy payload format
+      parameters:
+      - description: Legacy team-user association
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamAddUsers'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Add Users to Team (legacy)
+      tags:
+      - Teams
+  /team/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve teams associated with a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TeamsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Teams By User
+      tags:
+      - Teams
+  /teams:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of teams
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TeamsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Teams
+      tags:
+      - Teams
+    post:
+      consumes:
+      - application/json
+      description: Create a new team
+      parameters:
+      - description: Team creation payload
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateTeam'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.TeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create Team
+      tags:
+      - Teams
+  /teams/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a team by its ID
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete Team
+      tags:
+      - Teams
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a team by its ID
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get Team
+      tags:
+      - Teams
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing team
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Team data
+        in: body
+        name: team
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateTeam'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TeamResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update Team
+      tags:
+      - Teams
+  /teams/{id}/members:
+    post:
+      consumes:
+      - application/json
+      description: Add a user to a team
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Team member data
+        in: body
+        name: member
+        required: true
+        schema:
+          $ref: '#/definitions/request.AddTeamMember'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Add User to Team
+      tags:
+      - Teams
+  /teams/{id}/members/{user_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a user from a team
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Remove User from Team
+      tags:
+      - Teams
+  /teams/{id}/projects:
+    post:
+      consumes:
+      - application/json
+      description: Associate a team with a project
+      parameters:
+      - description: Team ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Team-Project association data
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/request.AddTeamProject'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Add Team to Project
+      tags:
+      - Teams
+  /users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of users
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UsersListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Users
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Create a new user
+      parameters:
+      - description: User creation payload
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.CreateUser'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Create User
+      tags:
+      - Users
+  /users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a user by their ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete User
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a user by their ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Get User
+      tags:
+      - Users
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing user
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User update payload
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/request.UpdateUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update User
+      tags:
+      - Users
+  /users/{id}/avatar:
+    delete:
+      consumes:
+      - application/json
+      description: Remove the user's avatar from storage
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Delete User Avatar
+      tags:
+      - Users
+    get:
+      consumes:
+      - application/json
+      description: Retrieve the user's avatar image
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - image/png
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Download User Avatar
+      tags:
+      - Users
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload or update a user's avatar image scaled to 256x256
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Avatar image
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Upload User Avatar
+      tags:
+      - Users
+    put:
+      consumes:
+      - multipart/form-data
+      description: Update a user's avatar image
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Avatar image
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Update User Avatar
+      tags:
+      - Users
+  /users/{user_id}/subscriptions:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of subscriptions for a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.SubscriptionsListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Subscriptions By User
+      tags:
+      - Subscriptions
+  /users/{user_id}/tasks:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of tasks associated with a specific user
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Page size
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.TasksListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Tasks By User
+      tags:
+      - Tasks
+  /users/restore:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve a paginated list of deleted users
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UsersListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: List Deleted Users
+      tags:
+      - Users
+  /users/role:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a role from a user
+      parameters:
+      - description: User role removal payload
+        in: body
+        name: user_role
+        required: true
+        schema:
+          $ref: '#/definitions/request.UserRoleAssignment'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Remove User Role
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Assign a role to a user
+      parameters:
+      - description: User role assignment payload
+        in: body
+        name: user_role
+        required: true
+        schema:
+          $ref: '#/definitions/request.UserRoleAssignment'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Add User Role
+      tags:
+      - Users
+swagger: "2.0"

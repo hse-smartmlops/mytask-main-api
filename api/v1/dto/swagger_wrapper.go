@@ -145,3 +145,7 @@ type UserInfoResponse struct {
 type TokenValidationResponse struct {
 	SuccessResponse[response.TokenValidation]
 }
+
+type LogoutMessageResponse struct {
+	SuccessResponse[response.LogoutMessage]
+}

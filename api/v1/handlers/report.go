@@ -521,7 +521,7 @@ func (h *DailyReportHandler) DeleteHelpRequest(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "Helper ID"
-// @Success 200 {object} dto.HelpRequestsForUserResponse
+// @Success 200 {object} dto.HelpRequestsListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /report/help-requests-by-user-id/{id} [get]

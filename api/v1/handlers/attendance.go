@@ -114,7 +114,7 @@ func (h *AttendanceHandler) GetAttendance(c echo.Context) error {
 // @Param user_id path string true "User ID"
 // @Param page query int true "Page number"
 // @Param page_size query int true "Number of items per page"
-// @Success 200 {object} dto.AttendancesByUserResponse
+// @Success 200 {object} dto.AttendancesListResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /attendance/user/{user_id} [get]

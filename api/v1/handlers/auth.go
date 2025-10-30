@@ -84,7 +84,7 @@ func (h *AuthHandler) Login(c echo.Context) error {
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer {access_token}"
-// @Success 200 {object} dto.SuccessResponse[map[string]string]
+// @Success 200 {object} dto.LogoutMessageResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /auth/logout [post]
@@ -98,7 +98,7 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("logout_failed", "failed to logout"))
 	}
 
-	return respondSuccess(c, http.StatusOK, map[string]string{"message": "logout successful"})
+	return respondSuccess(c, http.StatusOK, response.LogoutMessage{Message: "sucсessfull logout"})
 }
 
 // @Summary Get User Info

@@ -35,3 +35,7 @@ type UserInfo struct {
 type TokenValidation struct {
 	Message string `json:"message"`
 }
+
+type LogoutMessage struct {
+	Message string `json:"message"`
+}

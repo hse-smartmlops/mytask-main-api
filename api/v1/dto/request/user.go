@@ -10,3 +10,15 @@ type CreateUser struct {
 	FirstName     *string `json:"first_name,omitempty"`
 	LastName      *string `json:"last_name,omitempty"`
 }
+
+type UpdateUser struct {
+	Email      string  `json:"email,omitempty"`
+	IsActive   *bool   `json:"is_active,omitempty"`
+	TgID       *string `json:"tg_id,omitempty"`
+	Profession *string `json:"profession,omitempty"`
+	FirstName  *string `json:"first_name,omitempty"`
+	LastName   *string `json:"last_name,omitempty"`
+}
+
+type UserRoleAssignment struct {
+}
