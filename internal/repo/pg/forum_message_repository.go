@@ -32,6 +32,8 @@ func (r *ForumMessageRepository) ListMessages(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.ForumMessage{}).
+		Preload("Problem").
+		Preload("User").
 		Where("deleted = FALSE OR deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -40,8 +42,6 @@ func (r *ForumMessageRepository) ListMessages(
 	var messages []models.ForumMessage
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("created_at DESC NULLS LAST").
-		Preload("Problem").
-		Preload("User").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&messages).Error; err != nil {
@@ -85,6 +85,8 @@ func (r *ForumMessageRepository) ListMessagesByProblem(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.ForumMessage{}).
+		Preload("Problem").
+		Preload("User").
 		Where("problem_id = ? AND (deleted = FALSE OR deleted IS NULL)", problemID)
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -93,8 +95,6 @@ func (r *ForumMessageRepository) ListMessagesByProblem(
 	var messages []models.ForumMessage
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("created_at DESC NULLS LAST").
-		Preload("Problem").
-		Preload("User").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&messages).Error; err != nil {

@@ -68,8 +68,13 @@ func RegisterTeamRoutes(group *echo.Group, service ports.TeamService) {
 func (h *TeamHandler) ListTeams(c echo.Context) error {
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
+
 	page, err := h.service.ListTeams(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))

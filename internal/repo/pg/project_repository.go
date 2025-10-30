@@ -29,15 +29,69 @@ func (r *ProjectRepository) ListProjectsByTeam(
 	teamID uuid.UUID,
 	p ports.PaginationParams,
 ) (*ports.Page[models.Project], error) {
-	return nil, nil // TODO Add implementation
+	var totalCount int64
+
+	base := r.db.WithContext(ctx).
+		Model(&models.Project{}).
+		Where("projects.deleted = FALSE OR projects.deleted IS NULL")
+	if err := base.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+
+	var projects []models.Project
+	offset := (p.Page - 1) * p.PageSize
+	if err := base.Order("projects.created_at DESC NULLS LAST").
+		Limit(p.PageSize).
+		Offset(offset).
+		Find(&projects).Error; err != nil {
+		return nil, err
+	}
+
+	return &ports.Page[models.Project]{
+		Items:      projects,
+		Page:       p.Page,
+		PageSize:   p.PageSize,
+		TotalCount: totalCount,
+	}, nil
 }
 
 func (r *ProjectRepository) ListProjectsByUser(
-	ctx context.Context,
-	userID uuid.UUID,
-	p ports.PaginationParams,
+    ctx context.Context,
+    userID uuid.UUID,
+    p ports.PaginationParams,
 ) (*ports.Page[models.Project], error) {
-	return nil, nil // TODO Add implementation
+    var totalCount int64
+
+    base := r.db.WithContext(ctx).
+        Model(&models.Project{}).
+        Select("projects.*").
+        Joins("JOIN project_teams pt ON pt.project_id = projects.id AND (pt.deleted = FALSE OR pt.deleted IS NULL)").
+        Joins("JOIN teams t ON t.id = pt.team_id AND (t.deleted = FALSE OR t.deleted IS NULL)").
+        Joins("JOIN team_members tm ON tm.team_id = t.id AND (tm.deleted = FALSE OR tm.deleted IS NULL)").
+        Where(`
+            tm.user_id = ? 
+            AND (projects.deleted = FALSE OR projects.deleted IS NULL)
+        `, userID)
+
+    if err := base.Count(&totalCount).Error; err != nil {
+        return nil, err
+    }
+
+    var projects []models.Project
+    offset := (p.Page - 1) * p.PageSize
+    if err := base.Order("projects.created_at DESC NULLS LAST").
+        Limit(p.PageSize).
+        Offset(offset).
+        Find(&projects).Error; err != nil {
+        return nil, err
+    }
+
+    return &ports.Page[models.Project]{
+        Items:      projects,
+        Page:       p.Page,
+        PageSize:   p.PageSize,
+        TotalCount: totalCount,
+    }, nil
 }
 
 func (r *ProjectRepository) ListProjects(

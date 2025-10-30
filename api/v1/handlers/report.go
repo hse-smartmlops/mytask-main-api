@@ -185,8 +185,13 @@ func (h *DailyReportHandler) ListReportsByUser(c echo.Context) error {
 
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
+
 	reports, err := h.service.ListReportsByUser(c.Request().Context(), userID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports for user"))
@@ -212,6 +217,7 @@ func (h *DailyReportHandler) ListReportsByProject(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
+
 	params, err := paginationParams(c)
 	if err != nil {
 		code := "invalid_pagination"
@@ -246,6 +252,7 @@ func (h *DailyReportHandler) ListReportsByTask(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid task identifier"))
 	}
+
 	params, err := paginationParams(c)
 	if err != nil {
 		code := "invalid_pagination"
@@ -258,6 +265,7 @@ func (h *DailyReportHandler) ListReportsByTask(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("reports_fetch_failed", "failed to list reports by task"))
 	}
+
 	pagination, payload := presenter.MapReportsPage(reports)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
@@ -530,6 +538,7 @@ func (h *DailyReportHandler) ListHelpRequestsByHelper(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid helper identifier"))
 	}
+
 	params, err := paginationParams(c)
 	if err != nil {
 		code := "invalid_pagination"
@@ -542,6 +551,7 @@ func (h *DailyReportHandler) ListHelpRequestsByHelper(c echo.Context) error {
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("help_requests_fetch_failed", "failed to list help requests"))
 	}
+
 	pagination, payload := presenter.MapHelpRequestsPage(helpRequestsPage)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }

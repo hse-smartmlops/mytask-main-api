@@ -205,6 +205,26 @@ func (r *DailyReportRepository) ListReportsByDateRange(
 	}, nil
 }
 
+func (r *DailyReportRepository) ListReportsByDateRangeWithoutPagination(
+	ctx context.Context,
+	startDate,
+	endDate time.Time,
+) (*[]models.DailyReport, error) {
+	var reports []models.DailyReport
+	err := preloadReportRelations(
+		r.db.WithContext(ctx).
+			Model(&models.DailyReport{}).
+			Where("daily_reports.report_date BETWEEN ? AND ? AND (daily_reports.deleted = FALSE OR daily_reports.deleted IS NULL)", startDate, endDate,).
+			Order("daily_reports.report_date ASC, daily_reports.created_at ASC").
+			Find(&reports)).Error 
+	
+	if err != nil {
+		return nil, err
+	}
+
+	return &reports, nil
+}
+
 func (r *DailyReportRepository) ListHelpRequestsByHelper(
 	ctx context.Context,
 	helperID uuid.UUID,
@@ -214,6 +234,8 @@ func (r *DailyReportRepository) ListHelpRequestsByHelper(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.HelpRequest{}).
+		Preload("Report", "reports.deleted = FALSE OR reports.deleted IS NULL").
+		Preload("Report.User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("help_requests.helper_id = ? AND (help_requests.deleted = FALSE OR help_requests.deleted IS NULL)", helperID)
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -222,8 +244,6 @@ func (r *DailyReportRepository) ListHelpRequestsByHelper(
 	var requests []models.HelpRequest
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.
-		Preload("Report", "reports.deleted = FALSE OR reports.deleted IS NULL").
-		Preload("Report.User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Order("help_requests.created_at DESC NULLS LAST").
 		Limit(p.PageSize).
 		Offset(offset).

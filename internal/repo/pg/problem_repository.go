@@ -32,6 +32,7 @@ func (r *ProblemRepository) ListProblems(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Problem{}).
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("problems.deleted = FALSE OR problems.deleted IS NULL")
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
@@ -40,7 +41,6 @@ func (r *ProblemRepository) ListProblems(
 	var problems []models.Problem
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("problems.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&problems).Error; err != nil {
@@ -64,8 +64,8 @@ func (r *ProblemRepository) ListProblemsByUser(
 
 	base := r.db.WithContext(ctx).
 		Model(&models.Problem{}).
+		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Where("(problems.deleted = FALSE OR problems.deleted IS NULL) AND problems.creator_id = ?", userID)
-
 	if err := base.Count(&totalCount).Error; err != nil {
 		return nil, err
 	}
@@ -73,7 +73,6 @@ func (r *ProblemRepository) ListProblemsByUser(
 	var problems []models.Problem
 	offset := (p.Page - 1) * p.PageSize
 	if err := base.Order("problems.created_at DESC NULLS LAST").
-		Preload("User", "users.deleted = FALSE OR users.deleted IS NULL").
 		Limit(p.PageSize).
 		Offset(offset).
 		Find(&problems).Error; err != nil {

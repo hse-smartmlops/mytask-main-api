@@ -59,8 +59,13 @@ func RegisterStatusRoutes(group *echo.Group, service ports.StatusService) {
 func (h *StatusHandler) ListStatuses(c echo.Context) error {
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
+
 	page, err := h.service.ListStatuses(c.Request().Context(), params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("statuses_fetch_failed", "failed to list statuses"))
