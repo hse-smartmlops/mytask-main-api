@@ -60,7 +60,11 @@ func RegisterProjectRoutes(group *echo.Group, service ports.ProjectService) {
 func (h *ProjectHandler) ListProjects(c echo.Context) error {
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	result, err := h.service.ListProjects(c.Request().Context(), params)
@@ -228,7 +232,11 @@ func (h *ProjectHandler) ListProjectsByUser(c echo.Context) error {
 	}
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	page, err := h.service.ListProjectsByUser(c.Request().Context(), userID, params)
@@ -255,7 +263,11 @@ func (h *ProjectHandler) ListTeamsByProject(c echo.Context) error {
 	}
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	page, err := h.service.ListTeamsByProject(c.Request().Context(), projectID, params)
@@ -282,7 +294,11 @@ func (h *ProjectHandler) ListProjectsByTeam(c echo.Context) error {
 	}
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	page, err := h.service.ListProjectsByTeam(c.Request().Context(), teamID, params)

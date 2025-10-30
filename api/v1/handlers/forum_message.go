@@ -57,7 +57,11 @@ func RegisterForumMessageRoutes(group *echo.Group, service ports.ForumMessageSer
 func (h *ForumMessageHandler) ListMessages(c echo.Context) error {
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	page, err := h.service.ListMessages(c.Request().Context(), params)
@@ -117,7 +121,11 @@ func (h *ForumMessageHandler) ListMessagesByProblem(c echo.Context) error {
 
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	page, err := h.service.ListMessagesByProblem(c.Request().Context(), problemID, params)

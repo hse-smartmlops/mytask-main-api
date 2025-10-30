@@ -56,7 +56,11 @@ func RegisterSubscriptionRoutes(group *echo.Group, service ports.SubscriptionSer
 func (h *SubscriptionHandler) ListSubscriptions(c echo.Context) error {
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	result, err := h.service.ListSubscriptions(c.Request().Context(), params)
@@ -273,7 +277,11 @@ func (h *SubscriptionHandler) ListSubscriptionsBySubObject(c echo.Context) error
 
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
 	page, err := h.service.ListBySubObject(c.Request().Context(), subID, typeID, params)

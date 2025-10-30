@@ -66,7 +66,11 @@ func RegisterUserRoutes(group *echo.Group, service ports.UserService) {
 func (h *UserHandler) ListUsers(c echo.Context) error {
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 	result, err := h.service.ListUsers(c.Request().Context(), params)
 	if err != nil {

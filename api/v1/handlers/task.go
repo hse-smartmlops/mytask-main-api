@@ -70,7 +70,11 @@ func RegisterTaskRoutes(group *echo.Group, service ports.TaskService, boardServi
 func (h *TaskHandler) ListTasks(c echo.Context) error {
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 	page, err := h.service.ListTasks(c.Request().Context(), params)
 	if err != nil {
@@ -128,7 +132,11 @@ func (h *TaskHandler) ListTasksByProject(c echo.Context) error {
 
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 	result, err := h.service.ListTasksByProject(c.Request().Context(), projectID, params)
 	if err != nil {
@@ -164,7 +172,11 @@ func (h *TaskHandler) ListTasksByUser(c echo.Context) error {
 
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 	result, err := h.service.ListTasksByUser(c.Request().Context(), userID, params)
 	if err != nil {
@@ -643,7 +655,11 @@ func (h *TaskHandler) ListActiveTasksByUser(c echo.Context) error {
 	}
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 	page, err := h.service.ListActiveTasksByUser(c.Request().Context(), userID, params)
 	if err != nil {
@@ -677,7 +693,11 @@ func (h *TaskHandler) ListTasksByUserAndProject(c echo.Context) error {
 	}
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 	page, err := h.service.ListTasksByUserAndProject(c.Request().Context(), userID, projectID, params)
 	if err != nil {
@@ -706,7 +726,11 @@ func (h *TaskHandler) ListTasksByBoard(c echo.Context) error {
 	}
 	params, err := paginationParams(c)
 	if err != nil {
-		return respondError(c, http.StatusBadRequest, dto.NewError("pagination_required", err.Error()))
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 	page, err := h.service.ListTasksByBoard(c.Request().Context(), boardID, params)
 	if err != nil {
