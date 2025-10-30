@@ -45,10 +45,3 @@ func MapRolesPage(page *ports.Page[models.Role]) (dto.Pagination, response.Roles
 
 	return pagination, response.RolesPage{Roles: items}
 }
-
-func valueOrEmpty(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}

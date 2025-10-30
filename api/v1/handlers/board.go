@@ -6,7 +6,6 @@ import (
 
 	"emplacc-api/api/v1/dto"
 	"emplacc-api/api/v1/dto/request"
-	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/api/v1/middleware"
 	"emplacc-api/api/v1/presenter"
 	"emplacc-api/internal/app/ports"
@@ -222,52 +221,20 @@ func (h *BoardHandler) ListBoardsByProject(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	pageNumber, pageSize, perr := requirePagination(c)
-	if perr != nil {
+	params, err := paginationParams(c)
+	if err != nil {
 		code := "invalid_pagination"
-		if errors.Is(perr, errMissingPagination) {
+		if errors.Is(err, errMissingPagination) {
 			code = "pagination_required"
 		}
-		return respondError(c, http.StatusBadRequest, dto.NewError(code, perr.Error()))
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
-	boards, err := h.service.ListBoardsByProject(c.Request().Context(), projectID, ports.PaginationParams{
-		Page:     pageNumber,
-		PageSize: pageSize,
-	})
-
+	boardsPage, err := h.service.ListBoardsByProject(c.Request().Context(), projectID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("boards_fetch_failed", "failed to list boards"))
 	}
 
-	start := (pageNumber - 1) * pageSize
-	if start > len(boards.Items) {
-		start = len(boards.Items)
-	}
-	end := start + pageSize
-	if end > len(boards.Items) {
-		end = len(boards.Items)
-	}
-
-	items := make([]response.Board, end-start)
-	for i := start; i < end; i++ {
-		items[i-start] = presenter.ToBoardDTO(&boards.Items[i])
-	}
-
-	total := len(boards.Items)
-	totalPages := 0
-	if pageSize > 0 {
-		totalPages = (total + pageSize - 1) / pageSize
-	}
-
-	pagination := dto.Pagination{
-		Page:       pageNumber,
-		PageSize:   pageSize,
-		TotalCount: int64(total),
-		TotalPages: totalPages,
-	}
-
-	payload := response.BoardsPage{Boards: items}
-
+	pagination, payload := presenter.MapBoardsPage(boardsPage)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }

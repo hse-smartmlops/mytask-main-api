@@ -1,38 +1,43 @@
 package presenter
 
-import "time"
+import (
+	"emplacc-api/api/v1/dto/response"
+	"emplacc-api/internal/domain/models"
 
-func valueOrZeroString(value *string) string {
+	"github.com/google/uuid"
+)
+
+func uuidString(value *uuid.UUID) *string {
+	if value == nil {
+		return nil
+	}
+	str := value.String()
+	return &str
+}
+
+func valueOrEmpty(value *string) string {
 	if value == nil {
 		return ""
 	}
 	return *value
 }
 
-func valueOrZeroBool(value *bool) bool {
+func uuidPtrToString(value *uuid.UUID) *string {
 	if value == nil {
-		return false
+		return nil
 	}
-	return *value
+	str := value.String()
+	return &str
 }
 
-func valueOrZeroInt(value *int) int {
-	if value == nil {
-		return 0
+func toUserSummary(user *models.User) *response.UserSummary {
+	if user == nil {
+		return nil
 	}
-	return *value
-}
-
-func valueOrZeroInt16(value *int16) int16 {
-	if value == nil {
-		return 0
+	return &response.UserSummary{
+		ID:        user.ID.String(),
+		FirstName: &user.FirstName,
+		LastName:  &user.LastName,
+		Email:     user.Email,
 	}
-	return *value
-}
-
-func valueOrZeroTime(value *time.Time) time.Time {
-	if value == nil {
-		return time.Time{}
-	}
-	return *value
 }

@@ -5,8 +5,6 @@ import (
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
-
-	"github.com/google/uuid"
 )
 
 func ToTaskDTO(task *models.Task) response.Task {
@@ -72,41 +70,4 @@ func MapTasksPage(page *ports.Page[models.Task]) (dto.Pagination, response.Tasks
 	}
 
 	return pagination, response.TasksPage{Tasks: items}
-}
-
-func toUserSummary(user *models.User) *response.UserSummary {
-	if user == nil {
-		return nil
-	}
-	return &response.UserSummary{
-		ID:        user.ID.String(),
-		FirstName: &user.FirstName,
-		LastName:  &user.LastName,
-		Email:     user.Email,
-	}
-}
-
-func uuidPtrToString(value *uuid.UUID) *string {
-	if value == nil {
-		return nil
-	}
-	str := value.String()
-	return &str
-}
-
-func ToTaskShort(task *models.Task) response.TaskShort {
-	if task == nil {
-		return response.TaskShort{}
-	}
-
-	return response.TaskShort{
-		ID:        task.ID.String(),
-		StatusID:  task.StatusID.String(),
-		Name:      valueOrEmpty(task.Name),
-		Priority:  valueOrZeroInt16(task.Priority),
-		StartDate: valueOrZeroTime(task.StartDate),
-		Deadline:  valueOrZeroTime(task.Deadline),
-		UpdatedAt: valueOrZeroTime(task.UpdatedAt),
-		CreatedAt: valueOrZeroTime(task.CreatedAt),
-	}
 }

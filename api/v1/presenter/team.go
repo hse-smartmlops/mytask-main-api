@@ -55,11 +55,3 @@ func MapTeamsPage(page *ports.Page[models.Team]) (dto.Pagination, response.Teams
 
 	return pagination, response.TeamsPage{Teams: items}
 }
-
-func MapTeamsList(teams []models.Team) response.TeamsPage {
-	items := make([]response.Team, len(teams))
-	for i := range teams {
-		items[i] = ToTeamDTO(&teams[i])
-	}
-	return response.TeamsPage{Teams: items}
-}

@@ -122,22 +122,22 @@ func (h *TeamHandler) ListTeamsByProject(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid project identifier"))
 	}
 
-	// TODO add pagination
-	teams, err := h.service.ListTeamsByProject(c.Request().Context(), projectID, ports.PaginationParams{
-		Page:     1,
-		PageSize: 0,
-	})
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
+
+	teams, err := h.service.ListTeamsByProject(c.Request().Context(), projectID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
 	}
 
-	items := make([]response.Team, len(teams.Items))
-	for i := range teams.Items {
-		items[i] = presenter.ToTeamDTO(&teams.Items[i])
-	}
-
-	// TODO pagination
-	return respondSuccess(c, http.StatusOK, items)
+	pagination, payload := presenter.MapTeamsPage(teams)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary List Teams By User
@@ -156,11 +156,16 @@ func (h *TeamHandler) ListTeamsByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	// TODO add pagination
-	teams, err := h.service.ListTeamsByUser(c.Request().Context(), userID, ports.PaginationParams{
-		Page:     1,
-		PageSize: 0,
-	})
+	params, err := paginationParams(c)
+	if err != nil {
+		code := "invalid_pagination"
+		if errors.Is(err, errMissingPagination) {
+			code = "pagination_required"
+		}
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
+	}
+
+	teams, err := h.service.ListTeamsByUser(c.Request().Context(), userID, params)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidInput) {
 			return respondError(c, http.StatusBadRequest, dto.NewError("invalid_payload", "user identifier is required"))
@@ -168,9 +173,8 @@ func (h *TeamHandler) ListTeamsByUser(c echo.Context) error {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("teams_fetch_failed", "failed to list teams"))
 	}
 
-	// TODO pagination
-	payload := presenter.MapTeamsList(teams.Items)
-	return respondSuccess(c, http.StatusOK, payload)
+	pagination, payload := presenter.MapTeamsPage(teams)
+	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 
 // @Summary Create Team

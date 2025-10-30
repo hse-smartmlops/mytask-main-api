@@ -23,11 +23,6 @@ type TeamsPage struct {
 	Teams []Team `json:"teams"`
 }
 
-type TeamMessage struct {
-	ID      string `json:"id"`
-	Message string `json:"message"`
-}
-
 type TeamUserMessage struct {
 	TeamID  string `json:"team_id"`
 	UserID  string `json:"user_id"`

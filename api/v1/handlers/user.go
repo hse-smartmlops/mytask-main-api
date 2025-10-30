@@ -285,6 +285,7 @@ func (h *UserHandler) GetAvatar(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users/{id} [delete]
 func (h *UserHandler) DeleteUser(c echo.Context) error {
+	// TODO implement handler
 	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "delete user is not implemented yet"))
 }
 
@@ -301,6 +302,7 @@ func (h *UserHandler) DeleteUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users/{id} [patch]
 func (h *UserHandler) UpdateUser(c echo.Context) error {
+	// TODO implement handler
 	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "update user is not implemented yet"))
 }
 
@@ -316,6 +318,7 @@ func (h *UserHandler) UpdateUser(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users/restore [get]
 func (h *UserHandler) ListDeletedUsers(c echo.Context) error {
+	// TODO implement handler
 	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "list deleted users is not implemented yet"))
 }
 
@@ -331,6 +334,7 @@ func (h *UserHandler) ListDeletedUsers(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users/role [post]
 func (h *UserHandler) AddUserRole(c echo.Context) error {
+	// TODO implement handler
 	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "add user role is not implemented yet"))
 }
 
@@ -346,5 +350,6 @@ func (h *UserHandler) AddUserRole(c echo.Context) error {
 // @Failure 500 {object} dto.ErrorResponse
 // @Router /users/role [delete]
 func (h *UserHandler) RemoveUserRole(c echo.Context) error {
+	// TODO implement handler
 	return respondError(c, http.StatusNotImplemented, dto.NewError("not_implemented", "remove user role is not implemented yet"))
 }

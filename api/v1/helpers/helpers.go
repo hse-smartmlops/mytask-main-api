@@ -1,56 +1,10 @@
 package helpers
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
-
-func ParsePositiveInt(value string, fallback int) int {
-	if strings.TrimSpace(value) == "" {
-		return fallback
-	}
-	parsed, err := strconv.Atoi(strings.TrimSpace(value))
-	if err != nil || parsed <= 0 {
-		return fallback
-	}
-	return parsed
-}
-
-func ParseUUID(value string) (uuid.UUID, error) {
-	return uuid.Parse(strings.TrimSpace(value))
-}
-
-func ParseOptionalInt8(value string) (*int8, error) {
-	if strings.TrimSpace(value) == "" {
-		return nil, nil
-	}
-	parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 8)
-	if err != nil {
-		return nil, err
-	}
-	casted := int8(parsed)
-	return &casted, nil
-}
-
-func ParseUUIDPointer(value *string) (*uuid.UUID, error) {
-	if value == nil {
-		return nil, nil
-	}
-	trimmed := strings.TrimSpace(*value)
-	if trimmed == "" {
-		return nil, nil
-	}
-	id, err := uuid.Parse(trimmed)
-	if err != nil {
-		return nil, err
-	}
-	return &id, nil
-}
 
 func ParseTimePointer(value *string) (*time.Time, error) {
 	if value == nil {
@@ -144,47 +98,4 @@ func ToInt16Ptr(value *int) (*int16, error) {
 	}
 	casted := int16(*value)
 	return &casted, nil
-}
-
-func ResolvePagination(queryPage, querySize string, defaultPage, defaultSize int) (int, int) {
-	page := ParsePositiveInt(queryPage, defaultPage)
-	size := ParsePositiveInt(querySize, defaultSize)
-	return page, size
-}
-
-func ExtractBearerToken(header string) (string, error) {
-	if strings.TrimSpace(header) == "" {
-		return "", errors.New("authorization header is required")
-	}
-	const prefix = "Bearer "
-	if strings.HasPrefix(header, prefix) {
-		trimmed := strings.TrimSpace(header[len(prefix):])
-		if trimmed == "" {
-			return "", errors.New("authorization header contains empty token")
-		}
-		return trimmed, nil
-	}
-	trimmed := strings.TrimSpace(header)
-	if trimmed == "" {
-		return "", errors.New("authorization header contains empty token")
-	}
-	return trimmed, nil
-}
-
-func GetOptionalString(value *string) string {
-	if value == nil {
-		return ""
-	}
-	return *value
-}
-
-func ToOptionalString(value *string) *string {
-	if value == nil {
-		return nil
-	}
-	trimmed := strings.TrimSpace(*value)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
 }

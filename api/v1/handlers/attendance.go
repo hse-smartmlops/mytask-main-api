@@ -129,37 +129,21 @@ func (h *AttendanceHandler) ListAttendancesByUser(c echo.Context) error {
 		return respondError(c, http.StatusBadRequest, dto.NewError("invalid_id", "invalid user identifier"))
 	}
 
-	page, size, perr := requirePagination(c)
-	if perr != nil {
+	params, err := paginationParams(c)
+	if err != nil {
 		code := "invalid_pagination"
-		if errors.Is(perr, errMissingPagination) {
+		if errors.Is(err, errMissingPagination) {
 			code = "pagination_required"
 		}
-		return respondError(c, http.StatusBadRequest, dto.NewError(code, perr.Error()))
+		return respondError(c, http.StatusBadRequest, dto.NewError(code, err.Error()))
 	}
 
-	params := ports.PaginationParams{Page: page, PageSize: size}
-
-	pagedItems, err := h.service.ListAttendancesByUser(c.Request().Context(), userID, params)
+	attendancesPage, err := h.service.ListAttendancesByUser(c.Request().Context(), userID, params)
 	if err != nil {
 		return respondError(c, http.StatusInternalServerError, dto.NewError("attendances_fetch_failed", "failed to list attendances for user"))
 	}
 
-	payload := presenter.MapAttendancesByUser(userID.String(), pagedItems.Items)
-
-	total := len(pagedItems.Items)
-	totalPages := 0
-	if size > 0 {
-		totalPages = (total + size - 1) / size
-	}
-
-	pagination := dto.Pagination{
-		Page:       page,
-		PageSize:   size,
-		TotalCount: int64(total),
-		TotalPages: totalPages,
-	}
-
+	pagination, payload := presenter.MapAttendancesPage(attendancesPage)
 	return respondPaginated(c, http.StatusOK, payload, pagination)
 }
 

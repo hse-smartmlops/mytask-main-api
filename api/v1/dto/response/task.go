@@ -36,14 +36,3 @@ type TaskStatus struct {
 type TasksPage struct {
 	Tasks []Task `json:"tasks"`
 }
-
-type TaskShort struct {
-	ID        string    `json:"id"`
-	StatusID  string    `json:"status_id"`
-	Name      string    `json:"name"`
-	Priority  int16     `json:"priority"`
-	StartDate time.Time `json:"start_date"`
-	Deadline  time.Time `json:"deadline,omitempty"`
-	UpdatedAt time.Time `json:"updated_at"`
-	CreatedAt time.Time `json:"created_at"`
-}

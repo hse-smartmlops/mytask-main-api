@@ -41,10 +41,6 @@ type HelpRequestWithAssigner struct {
 	UserLastName  *string         `json:"user_last_name,omitempty"`
 }
 
-type HelpRequestsForUser struct {
-	HelpRequests []HelpRequestWithAssigner `json:"help_requests"`
-}
-
 type ProblemItem struct {
 	ID          string   `json:"id"`
 	Description []string `json:"description,omitempty"`
@@ -52,6 +48,10 @@ type ProblemItem struct {
 
 type ReportsPage struct {
 	Reports []Report `json:"reports"`
+}
+
+type HelpRequestsPage struct {
+	HelpRequests []HelpRequestItem `json:"help_requests"`
 }
 
 type ReportUniversal struct {

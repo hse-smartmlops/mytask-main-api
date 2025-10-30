@@ -82,6 +82,15 @@ func ToReportDTO(report *models.DailyReport) response.Report {
 	}
 }
 
+func ToHelpRequestDTO(helpRequests *models.HelpRequest) response.HelpRequestItem {
+	return response.HelpRequestItem{
+		ID:          helpRequests.ID.String(),
+		Description: helpRequests.Description,
+		HelperID:    uuidPtrToString(helpRequests.HelperID),
+		Status:      helpRequests.Status,
+	}
+}
+
 func MapReportsPage(page *ports.Page[models.DailyReport]) (dto.Pagination, response.ReportsPage) {
 	if page == nil {
 		return dto.Pagination{}, response.ReportsPage{}
@@ -102,26 +111,22 @@ func MapReportsPage(page *ports.Page[models.DailyReport]) (dto.Pagination, respo
 	return pagination, response.ReportsPage{Reports: items}
 }
 
-func MapHelpRequestsForUser(items []models.HelpRequest) response.HelpRequestsForUser {
-	result := make([]response.HelpRequestWithAssigner, 0, len(items))
-	for i := range items {
-		item := items[i]
-		if item.Deleted != nil && *item.Deleted {
-			continue
-		}
-		entry := response.HelpRequestWithAssigner{
-			HelpRequest: response.HelpRequestItem{
-				ID:          item.ID.String(),
-				Description: item.Description,
-				HelperID:    uuidPtrToString(item.HelperID),
-				Status:      item.Status,
-			},
-		}
-		if item.Report != nil && item.Report.User != nil {
-			entry.UserFirstName = &item.Report.User.FirstName
-			entry.UserLastName = &item.Report.User.LastName
-		}
-		result = append(result, entry)
+func MapHelpRequestsPage(page *ports.Page[models.HelpRequest]) (dto.Pagination, response.HelpRequestsPage) {
+	if page == nil {
+		return dto.Pagination{}, response.HelpRequestsPage{}
 	}
-	return response.HelpRequestsForUser{HelpRequests: result}
+
+	items := make([]response.HelpRequestItem, len(page.Items))
+	for i := range page.Items {
+		items[i] = ToHelpRequestDTO(&page.Items[i])
+	}
+
+	pagination := dto.Pagination{
+		Page:       page.Page,
+		PageSize:   page.PageSize,
+		TotalCount: page.TotalCount,
+		TotalPages: page.TotalPages(),
+	}
+
+	return pagination, response.HelpRequestsPage{HelpRequests: items}
 }

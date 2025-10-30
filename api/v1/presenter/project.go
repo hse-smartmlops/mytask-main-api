@@ -5,8 +5,6 @@ import (
 	"emplacc-api/api/v1/dto/response"
 	"emplacc-api/internal/app/ports"
 	"emplacc-api/internal/domain/models"
-
-	"github.com/google/uuid"
 )
 
 func ToProjectDTO(project *models.Project) response.Project {
@@ -45,12 +43,4 @@ func MapProjectsPage(page *ports.Page[models.Project]) (dto.Pagination, response
 	}
 
 	return pagination, response.ProjectsPage{Projects: items}
-}
-
-func uuidString(value *uuid.UUID) *string {
-	if value == nil {
-		return nil
-	}
-	str := value.String()
-	return &str
 }

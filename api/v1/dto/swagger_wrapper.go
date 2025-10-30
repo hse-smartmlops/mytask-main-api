@@ -10,10 +10,6 @@ type AttendanceResponse struct {
 	SuccessResponse[response.Attendance]
 }
 
-type AttendancesByUserResponse struct {
-	SuccessResponse[response.AttendancesByUser]
-}
-
 type TasksListResponse struct {
 	SuccessResponse[response.TasksPage]
 }
@@ -50,8 +46,8 @@ type HelpRequestItemResponse struct {
 	SuccessResponse[response.HelpRequestItem]
 }
 
-type HelpRequestsForUserResponse struct {
-	SuccessResponse[response.HelpRequestsForUser]
+type HelpRequestsListResponse struct {
+	SuccessResponse[response.HelpRequestsPage]
 }
 
 type ReportUniversalResponse struct {

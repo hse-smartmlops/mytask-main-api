@@ -21,8 +21,3 @@ type Attendance struct {
 type AttendancesPage struct {
 	Attendances []Attendance `json:"attendances"`
 }
-
-type AttendancesByUser struct {
-	UserID      string       `json:"user_id"`
-	Attendances []Attendance `json:"attendances"`
-}

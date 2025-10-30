@@ -48,15 +48,3 @@ func MapAttendancesPage(page *ports.Page[models.Attendance]) (dto.Pagination, re
 
 	return pagination, response.AttendancesPage{Attendances: items}
 }
-
-func MapAttendancesByUser(userID string, attendances []models.Attendance) response.AttendancesByUser {
-	items := make([]response.Attendance, len(attendances))
-	for i := range attendances {
-		items[i] = ToAttendanceDTO(&attendances[i])
-	}
-
-	return response.AttendancesByUser{
-		UserID:      userID,
-		Attendances: items,
-	}
-}
