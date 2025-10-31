@@ -31,3 +31,11 @@ type ProjectUniversalResponse struct {
 	ID      string `json:"id"`
 	Message string `json:"message"`
 }
+
+type ProjectSearchResponse struct {
+    Query      string             `json:"query"`
+    Page       int                `json:"page"`
+    PageSize   int                `json:"pageSize"`
+    TotalCount int64              `json:"totalCount"`
+    Projects   []ProjectResponse  `json:"projects"`
+}

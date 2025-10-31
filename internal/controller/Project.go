@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -34,6 +35,7 @@ func RegisterProjectRoutes(e *echo.Echo, projectService service.ProjectService) 
 		projectGroup.DELETE("/:id", controller.DeleteProject)
 		projectGroup.GET("/user/:id", controller.GetProjectsByUser)
 		projectGroup.GET("/team/:team_id", controller.GetTeamProjects)
+		projectGroup.GET("/search", controller.SearchProjects)
 	}
 }
 
@@ -82,6 +84,68 @@ func (pc *ProjectController) GetAllProjects(c echo.Context) error {
 		})
 	}
 	return c.JSON(http.StatusOK, out)
+}
+
+// SearchProjects godoc
+// @Summary Поиск проектов с автодополнением и пагинацией
+// @Description Ищет проекты по имени, описанию или GitLab URL с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию.
+// @Tags Projects
+// @Accept json
+// @Produce json
+// @Param query query string true "Поисковый запрос"
+// @Param page query int true "Номер страницы"
+// @Param pagesize query int true "Размер страницы" minimum(1) maximum(100)
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Success 200 {object} response.ProjectSearchResponse "Результаты поиска проектов"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при поиске проектов"
+// @Router /project/search [get]
+func (pc *ProjectController) SearchProjects(c echo.Context) error {
+    query := strings.TrimSpace(c.QueryParam("query"))
+    
+    if query == "" {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Поисковый запрос не может быть пустым"})
+    }
+
+    page, err := strconv.Atoi(c.QueryParam("page"))
+    if err != nil || page <= 0 {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный номер страницы"})
+    }
+
+    pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
+    if err != nil || pageSize <= 0 || pageSize > 100 {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный размер страницы"})
+    }
+
+    projects, totalCount, err := pc.projectService.SearchProjects(query, page, pageSize)
+    if err != nil {
+        log.Printf("service error (search projects): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при поиске проектов"})
+    }
+
+    out := response.ProjectSearchResponse{
+        Query:     query,
+        Page:      page,
+        PageSize:  pageSize,
+        TotalCount: totalCount,
+    }
+    
+    for _, p := range projects {
+        out.Projects = append(out.Projects, response.ProjectResponse{
+            ID:              p.ID.String(),
+            Name:            utils.GetString(p.Name),
+            Description:     utils.GetString(p.Description),
+            GitlabProjectId: utils.GetInt(p.GitlabProjectID),
+            CreatedBy:       utils.GetUUIDString(p.CreatedBy),
+            Status:          utils.GetString(p.Status),
+            GitlabUrl:       utils.GetString(p.GitlabURL),
+            CreatedAt:       utils.GetTime(p.CreatedAt),
+            UpdatedAt:       utils.GetTime(p.UpdatedAt),
+        })
+    }
+    
+    return c.JSON(http.StatusOK, out)
 }
 
 // GetProjectByID godoc

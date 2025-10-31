@@ -27,6 +27,7 @@ type TaskService interface {
 	GetActiveTasksByUserId(userID uuid.UUID, page, pageSize int) ([]models.Task, int64, error)
 	GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardId, projectId uuid.UUID, err error)
 	GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXData, error)
+	SearchTasks(query string, page, pageSize int) ([]models.Task, int64, error)
 }
 
 type taskService struct {
@@ -42,6 +43,14 @@ func NewTaskService(repo repository.TaskRepository) TaskService {
 func (s *taskService) GetAllTasks(page, pageSize int) ([]models.Task, int64, error) {
 	offset := (page - 1) * pageSize
 	return s.repo.GetAllTasks(pageSize, offset)
+}
+
+func (s *taskService) SearchTasks(query string, page, pageSize int) ([]models.Task, int64, error) {
+	offset := (page - 1) * pageSize
+    if len(query) < 1 {
+        return s.repo.GetAllTasks(pageSize, offset)
+    }
+    return s.repo.SearchTasks(query, pageSize, offset)
 }
 
 func (s *taskService) GetTaskByID(taskID uuid.UUID) (*models.Task, error) {

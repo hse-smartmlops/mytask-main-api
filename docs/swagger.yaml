@@ -1021,6 +1021,21 @@ definitions:
       updated_at:
         type: string
     type: object
+  response.ProjectSearchResponse:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      projects:
+        items:
+          $ref: '#/definitions/response.ProjectResponse'
+        type: array
+      query:
+        type: string
+      totalCount:
+        type: integer
+    type: object
   response.ProjectShort:
     properties:
       created_by:
@@ -1394,6 +1409,57 @@ definitions:
       total_count:
         type: integer
     type: object
+  response.TaskProjectInfo:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  response.TaskSearchItem:
+    properties:
+      assigned_to:
+        $ref: '#/definitions/response.UserShort'
+      created_at:
+        type: string
+      created_by:
+        $ref: '#/definitions/response.UserShort'
+      deadline:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      project:
+        $ref: '#/definitions/response.TaskProjectInfo'
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/response.TaskStatusInfo'
+      updated_at:
+        type: string
+    type: object
+  response.TaskSearchResponse:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      query:
+        type: string
+      tasks:
+        items:
+          $ref: '#/definitions/response.TaskSearchItem'
+        type: array
+      totalCount:
+        type: integer
+    type: object
   response.TaskShort:
     properties:
       created_at:
@@ -1411,6 +1477,17 @@ definitions:
       status_id:
         type: string
       updated_at:
+        type: string
+    type: object
+  response.TaskStatusInfo:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      name:
         type: string
     type: object
   response.TaskUniversaResponse:
@@ -3057,6 +3134,61 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех проектов
+      tags:
+      - Projects
+  /project/search:
+    get:
+      consumes:
+      - application/json
+      description: Ищет проекты по имени, описанию или GitLab URL с автодополнением
+        после каждого введенного символа. Поддерживает автоматическую замену раскладки
+        клавиатуры (английская-русская) для расширенного поиска и пагинацию.
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: Номер страницы
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Результаты поиска проектов
+          schema:
+            $ref: '#/definitions/response.ProjectSearchResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при поиске проектов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Поиск проектов с автодополнением и пагинацией
       tags:
       - Projects
   /project/team/{team_id}:
@@ -5062,6 +5194,61 @@ paths:
       security:
       - BearerAuth: []
       summary: Переместить задачу в другой статус (столбец)
+      tags:
+      - Tasks
+  /task/search:
+    get:
+      consumes:
+      - application/json
+      description: Ищет задачи по названию с автодополнением после каждого введенного
+        символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская)
+        для расширенного поиска и пагинацию.
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: Номер страницы
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Результаты поиска задач
+          schema:
+            $ref: '#/definitions/response.TaskSearchResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при поиске задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Поиск задач с автодополнением и пагинацией
       tags:
       - Tasks
   /task/user/{id}/{page}/{pagesize}:

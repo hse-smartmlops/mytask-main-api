@@ -89,5 +89,9 @@ func GetDBConnection() *gorm.DB {
 		log.Fatal("AutoMigrate failed:", err)
 	}
 
+	if err := SetupFullTextSearch(db); err != nil {
+        log.Printf("Warning: Full-Text Search setup had issues: %v", err)
+    }
+
 	return db
 }

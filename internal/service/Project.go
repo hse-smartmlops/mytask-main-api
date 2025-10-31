@@ -20,6 +20,7 @@ type ProjectService interface {
 	CreateProject(req request.CreateProjectRequest) (uuid.UUID, error)
 	UpdateProject(projectID uuid.UUID, req request.UpdateProjectRequest) error
 	DeleteProject(projectID uuid.UUID) error
+	SearchProjects(query string, page, pageSize int) ([]models.Project, int64, error)
 }
 
 type projectService struct {
@@ -35,6 +36,14 @@ func NewProjectService(repo repository.ProjectRepository) ProjectService {
 func (s *projectService) GetAllProjects(page, pageSize int) ([]models.Project, int64, error) {
 	offset := (page - 1) * pageSize
 	return s.repo.GetAllProjects(pageSize, offset)
+}
+
+func (s *projectService) SearchProjects(query string, page, pageSize int) ([]models.Project, int64, error) {
+	offset := (page - 1) * pageSize
+    if len(query) < 1 {
+        return s.repo.GetAllProjects(pageSize, offset)
+    }
+    return s.repo.SearchProjects(query, pageSize, offset)
 }
 
 func (s *projectService) GetProjectByID(projectID uuid.UUID) (*models.Project, error) {

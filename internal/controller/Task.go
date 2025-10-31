@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -49,6 +50,7 @@ func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userServi
 		taskGroup.GET("/user/:id/:page/:pagesize/active", controller.GetActiveTasksByUserId)
 		taskGroup.GET("/board-project/:id", controller.GetTaskBoardAndProject)
 		taskGroup.GET("/export/active-tasks/xlsx", controller.ExportAllActiveTasksToXLSX)
+		taskGroup.GET("/search", controller.SearchTasks)
 	}
 }
 
@@ -103,6 +105,117 @@ func (tc *TaskController) GetAllTasks(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, taskList)
+}
+
+// SearchTasks godoc
+// @Summary Поиск задач с автодополнением и пагинацией
+// @Description Ищет задачи по названию с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию.
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param query query string true "Поисковый запрос"
+// @Param page query int true "Номер страницы"
+// @Param pagesize query int true "Размер страницы" minimum(1) maximum(100)
+// @Security BearerAuth
+// @Success 200 {object} response.TaskSearchResponse "Результаты поиска задач"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 500 {object} map[string]string "Ошибка сервера при поиске задач"
+// @Router /task/search [get]
+func (tc *TaskController) SearchTasks(c echo.Context) error {
+	query := strings.TrimSpace(c.QueryParam("query"))
+	
+	if query == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Поисковый запрос не может быть пустым"})
+	}
+
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный номер страницы"})
+	}
+
+	pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
+	if err != nil || pageSize <= 0 || pageSize > 100 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный размер страницы"})
+	}
+
+	log.Printf("Search tasks: query='%s', page=%d, pageSize=%d", query, page, pageSize)
+
+	tasks, totalCount, err := tc.taskService.SearchTasks(query, page, pageSize)
+	if err != nil {
+		log.Printf("Service error (search tasks): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при поиске задач"})
+	}
+
+	log.Printf("Search completed: found %d tasks out of %d total", len(tasks), totalCount)
+
+	taskSearch := response.TaskSearchResponse{
+		Query:      query,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		Tasks:      make([]response.TaskSearchItem, 0, len(tasks)),
+	}
+
+	for _, task := range tasks {
+		// Формируем информацию о статусе
+		var statusInfo response.TaskStatusInfo
+		if task.Status != nil {
+			statusInfo = response.TaskStatusInfo{
+				ID:    task.Status.ID.String(),
+				Name:  utils.GetString(task.Status.Name),
+				Color: utils.GetString(task.Status.Color),
+				Key:   utils.GetString(task.Status.Key),
+			}
+		}
+
+		// Формируем информацию о проекте
+		var projectInfo response.TaskProjectInfo
+		if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+			projectInfo = response.TaskProjectInfo{
+				ID:          task.Status.Board.Project.ID.String(),
+				Name:        utils.GetString(task.Status.Board.Project.Name),
+				Description: utils.GetString(task.Status.Board.Project.Description),
+			}
+		}
+
+		// Формируем информацию о назначенном пользователе
+		var assignedToInfo response.UserShort
+		if task.AssignedToUser != nil {
+			assignedToInfo = response.UserShort{
+				ID:        task.AssignedToUser.ID.String(),
+				FirstName: task.AssignedToUser.FirstName,
+				LastName:  task.AssignedToUser.LastName,
+			}
+		}
+
+		// Формируем информацию о создателе
+		var createdByInfo response.UserShort
+		if task.CreatedByUser != nil {
+			createdByInfo = response.UserShort{
+				ID:        task.CreatedByUser.ID.String(),
+				FirstName: task.CreatedByUser.FirstName,
+				LastName:  task.CreatedByUser.LastName,
+			}
+		}
+
+		taskSearch.Tasks = append(taskSearch.Tasks, response.TaskSearchItem{
+			ID:            task.ID.String(),
+			Name:          utils.GetString(task.Name),
+			Description:   utils.GetString(task.Description),
+			Priority:      utils.GetInt16(task.Priority),
+			StartDate:     utils.GetTime(task.StartDate),
+			Deadline:      utils.GetTime(task.Deadline),
+			CreatedAt:     utils.GetTime(task.CreatedAt),
+			UpdatedAt:     utils.GetTime(task.UpdatedAt),
+			Status:        statusInfo,
+			Project:       projectInfo,
+			AssignedTo:    assignedToInfo,
+			CreatedBy:     createdByInfo,
+		})
+	}
+
+	return c.JSON(http.StatusOK, taskSearch)
 }
 
 // GetTaskByID godoc

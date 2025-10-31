@@ -2,7 +2,9 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/utils"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,6 +29,7 @@ type TaskRepository interface {
 	GetActiveTasksByUserId(userID uuid.UUID, limit, offset int) ([]models.Task, int64, error)
 	GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardId, projectId uuid.UUID, err error)
 	GetAllActiveTasks() ([]models.Task, error)
+	SearchTasks(query string, limit, offset int) ([]models.Task, int64, error)
 }
 
 type taskRepository struct {
@@ -58,6 +61,115 @@ func (r *taskRepository) GetAllTasks(limit, offset int) ([]models.Task, int64, e
 	}
 
 	return tasks, totalCount, nil
+}
+
+func (r *taskRepository) SearchTasks(query string, limit, offset int) ([]models.Task, int64, error) {
+    if query == "" {
+        return []models.Task{}, 0, nil
+    }
+
+    var totalCount int64
+    var tasks []models.Task
+
+    // Подготавливаем поисковые запросы
+    searchQueries := prepareSearchQueries(query)
+    if len(searchQueries) == 0 {
+        return []models.Task{}, 0, nil
+    }
+
+    // Базовый запрос
+    baseQuery := r.db.Session(&gorm.Session{}).Model(&models.Task{}).
+        Joins("LEFT JOIN statuses ON tasks.status_id = statuses.id AND statuses.deleted = ?", false).
+        Joins("LEFT JOIN boards ON statuses.board_id = boards.id AND boards.deleted = ?", false).
+        Joins("LEFT JOIN projects ON boards.project_id = projects.id AND projects.deleted = ?", false).
+        Joins("LEFT JOIN users assigned_user ON tasks.assigned_to = assigned_user.id AND assigned_user.deleted = ?", false).
+        Where("tasks.deleted = ?", false)
+
+    // Добавляем условия Full-Text Search
+    baseQuery = addFullTextConditions(baseQuery, searchQueries)
+
+    // Считаем общее количество
+    if err := baseQuery.Count(&totalCount).Error; err != nil {
+        return nil, 0, err
+    }
+
+    if totalCount == 0 {
+        return []models.Task{}, 0, nil
+    }
+
+    // Получаем задачи
+    err := baseQuery.
+        Preload("Status", func(db *gorm.DB) *gorm.DB {
+            return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+        }).
+        Preload("Status.Board", func(db *gorm.DB) *gorm.DB {
+            return db.Session(&gorm.Session{}).Select("id, name, project_id").Where("deleted = ?", false)
+        }).
+        Preload("Status.Board.Project", func(db *gorm.DB) *gorm.DB {
+            return db.Session(&gorm.Session{}).Select("id, name, description").Where("deleted = ?", false)
+        }).
+        Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
+            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email, profession").Where("deleted = ?", false)
+        }).
+        Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
+            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email, profession").Where("deleted = ?", false)
+        }).
+        Limit(limit).
+        Offset(offset).
+        Order("tasks.created_at DESC").
+        Find(&tasks).Error
+
+    return tasks, totalCount, err
+}
+
+// prepareSearchQueries подготавливает варианты поисковых запросов
+func prepareSearchQueries(query string) []string {
+    variants := utils.PrepareSearchVariants(query)
+    searchQueries := make([]string, 0, len(variants))
+    
+    for _, variant := range variants {
+        if tsQuery := utils.PrepareTSQuery(variant); tsQuery != "" {
+            searchQueries = append(searchQueries, tsQuery)
+        }
+    }
+    
+    return searchQueries
+}
+
+// addFullTextConditions добавляет условия Full-Text Search на основе ваших моделей
+func addFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
+    if len(searchQueries) == 0 {
+        return db
+    }
+
+    var conditions []string
+    var args []interface{}
+
+    for _, tsQuery := range searchQueries {
+        // Используем только те поля, которые есть в ваших моделях
+        condition := `(
+            to_tsvector('russian', tasks.name) @@ to_tsquery(?) OR 
+            to_tsvector('russian', tasks.description) @@ to_tsquery(?) OR 
+            to_tsvector('russian', projects.name) @@ to_tsquery(?) OR 
+            to_tsvector('russian', projects.description) @@ to_tsquery(?) OR 
+            to_tsvector('russian', assigned_user.first_name) @@ to_tsquery(?) OR 
+            to_tsvector('russian', assigned_user.last_name) @@ to_tsquery(?) OR 
+            to_tsvector('russian', assigned_user.first_name || ' ' || assigned_user.last_name) @@ to_tsquery(?) OR 
+            to_tsvector('russian', assigned_user.profession) @@ to_tsquery(?)
+        )`
+        
+        conditions = append(conditions, condition)
+        // Добавляем tsQuery для каждого поля (8 раз)
+        for i := 0; i < 8; i++ {
+            args = append(args, tsQuery)
+        }
+    }
+
+    if len(conditions) > 0 {
+        return db.Session(&gorm.Session{}).Where(strings.Join(conditions, " OR "), args...)
+    }
+
+    return db
 }
 
 func (r *taskRepository) GetTaskByID(taskID uuid.UUID) (*models.Task, error) {

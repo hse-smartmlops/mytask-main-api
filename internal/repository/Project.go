@@ -2,7 +2,9 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/utils"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +21,7 @@ type ProjectRepository interface {
 	CreateProjectWithBoardAndStatuses(project models.Project, board models.Board, statuses []models.Status) error
 	UpdateProject(projectID uuid.UUID, updateData map[string]interface{}) (bool, error)
 	DeleteProject(projectID uuid.UUID) (bool, error)
+	SearchProjects(query string, limit, offset int) ([]models.Project, int64, error)
 }
 
 type projectRepository struct {
@@ -50,6 +53,49 @@ func (r *projectRepository) GetAllProjects(limit, offset int) ([]models.Project,
 	}
 
 	return projects, totalCount, nil
+}
+
+func (r *projectRepository) SearchProjects(query string, limit, offset int) ([]models.Project, int64, error) {
+    if query == "" {
+        return []models.Project{}, 0, nil
+    }
+
+    var totalCount int64
+    
+    enToRuPattern := "%" + strings.ToLower(utils.EnglishToRussianKeyboard(query)) + "%"
+    ruToEnPattern := "%" + strings.ToLower(utils.RussianToEnglishKeyboard(query)) + "%"
+    searchPattern := "%" + strings.ToLower(query) + "%"
+    
+    countQuery := r.db.Session(&gorm.Session{}).
+        Model(&models.Project{}).
+        Where("deleted = FALSE AND (" +
+            "LOWER(name) LIKE ? OR " +
+            "LOWER(description) LIKE ? OR " +
+            "LOWER(gitlab_url) LIKE ? OR " +
+            "LOWER(name) LIKE ? OR " +
+            "LOWER(description) LIKE ? OR " +
+            "LOWER(gitlab_url) LIKE ? OR " +
+            "LOWER(name) LIKE ? OR " +
+            "LOWER(description) LIKE ? OR " +
+            "LOWER(gitlab_url) LIKE ?" +
+            ")", searchPattern, searchPattern, searchPattern, enToRuPattern, enToRuPattern, enToRuPattern, ruToEnPattern, ruToEnPattern, ruToEnPattern)
+    
+    if err := countQuery.Count(&totalCount).Error; err != nil {
+        return nil, 0, err
+    }
+
+    var projects []models.Project
+    err := countQuery.
+        Limit(limit).
+        Offset(offset).
+        Order("name ASC").
+        Find(&projects).Error
+        
+    if err != nil {
+        return nil, 0, err
+    }
+
+    return projects, totalCount, nil
 }
 
 func (r *projectRepository) GetProjectByID(projectID uuid.UUID) (*models.Project, error) {

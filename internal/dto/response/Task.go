@@ -149,3 +149,39 @@ type TaskXLSXForTask struct {
     CreatedAt   time.Time `json:"created_at"`
     UpdatedAt   time.Time `json:"updated_at"`
 }
+
+type TaskSearchResponse struct {
+	Query      string            `json:"query"`
+	Page       int               `json:"page"`
+	PageSize   int               `json:"pageSize"`
+	TotalCount int64             `json:"totalCount"`
+	Tasks      []TaskSearchItem  `json:"tasks"`
+}
+
+type TaskSearchItem struct {
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	Description string            `json:"description,omitempty"`
+	Priority    int16             `json:"priority,omitempty"`
+	StartDate   time.Time        `json:"start_date,omitempty"`
+	Deadline    time.Time        `json:"deadline,omitempty"`
+	CreatedAt   time.Time        `json:"created_at"`
+	UpdatedAt   time.Time        `json:"updated_at"`
+	Status      TaskStatusInfo   `json:"status,omitempty"`
+	Project     TaskProjectInfo  `json:"project,omitempty"`
+	AssignedTo  UserShort        `json:"assigned_to"`
+	CreatedBy  UserShort         `json:"created_by"`
+}
+
+type TaskStatusInfo struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Color string `json:"color,omitempty"`
+	Key   string `json:"key,omitempty"`
+}
+
+type TaskProjectInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description,omitempty"`
+}
