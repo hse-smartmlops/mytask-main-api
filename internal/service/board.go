@@ -114,7 +114,10 @@ func (s *boardService) UpdateBoard(
 	return s.repo.UpdateBoard(ctx, id, updates)
 }
 
-func (s *boardService) DeleteBoard(ctx context.Context, id uuid.UUID) error {
+func (s *boardService) DeleteBoard(
+	ctx context.Context, 
+	id uuid.UUID,
+) error {
 	return s.repo.SoftDeleteBoard(ctx, id)
 }
 
