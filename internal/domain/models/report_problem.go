@@ -7,8 +7,8 @@ import (
 )
 
 type ReportProblem struct {
-	ReportID  uuid.UUID  `gorm:"type:uuid;primaryKey;column:report_id"`
-	ProblemID uuid.UUID  `gorm:"type:uuid;primaryKey;column:problem_id"`
+	ReportID  uuid.UUID  `gorm:"type:uuid;primaryKey;column:report_id;index"`
+	ProblemID uuid.UUID  `gorm:"type:uuid;primaryKey;column:problem_id;index"`
 	CreatedAt *time.Time `gorm:"type:timestamp"`
 	UpdatedAt *time.Time `gorm:"type:timestamp"`
 	Deleted   *bool      `gorm:"type:boolean;default:false"`

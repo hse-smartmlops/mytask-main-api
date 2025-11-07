@@ -30,5 +30,4 @@ WORKDIR /app
 # Копирование бинарного файла из builder stage
 COPY --from=builder /app/server ./
 # Копирование .env файла, если он нужен напрямую в корень или в /app
-COPY --from=builder /app/.env ./
 CMD ["./server"]

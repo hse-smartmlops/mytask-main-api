@@ -10,7 +10,7 @@ type Task struct {
 	Name           string       `json:"name"`
 	Description    *string      `json:"description,omitempty"`
 	CreatedBy      *string      `json:"created_by,omitempty"`
-	AssignedTo     *string      `json:"assigned_to,omitempty"`
+	AssignedTo     string       `json:"assigned_to,omitempty"`
 	Deadline       *time.Time   `json:"deadline,omitempty"`
 	StartDate      *time.Time   `json:"start_date,omitempty"`
 	GitlabIssueID  *int         `json:"gitlab_issue_id,omitempty"`

@@ -816,17 +816,9 @@ func ValidateCreateTaskPayload(req *request.CreateTask) error {
 		}
 	}
 
-	if req.AssignedTo != nil {
-		trimmed := strings.TrimSpace(*req.AssignedTo)
-		if trimmed == "" {
-			req.AssignedTo = nil
-		} else {
-			assigned, err := uuid.Parse(trimmed)
-			if err != nil {
-				return ValidationError{Message: "assigned_to must be a valid UUID"}
-			}
-			req.AssignedToUUID = &assigned
-		}
+	req.AssignedTo = strings.TrimSpace(req.AssignedTo)
+	if req.AssignedTo == "" {
+		return ValidationError{Message: "assigned_to must be a valid UUID"}
 	}
 
 	deadline, err := v1helpers.ParseTimePointer(req.Deadline)

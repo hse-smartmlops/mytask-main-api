@@ -98,7 +98,7 @@ type CreateTaskInput struct {
 	Name          string
 	Description   *string
 	CreatedBy     *uuid.UUID
-	AssignedTo    *uuid.UUID
+	AssignedTo    uuid.UUID
 	Deadline      *time.Time
 	StartDate     *time.Time
 	GitlabIssueID *int

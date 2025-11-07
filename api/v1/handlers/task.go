@@ -362,7 +362,7 @@ func (h *TaskHandler) ImproveTaskReport(c echo.Context) error {
 	if task.CreatedBy != nil {
 		meta["created_by"] = task.CreatedBy.String()
 	}
-	if task.AssignedTo != nil {
+	if task.AssignedToUser != nil {
 		meta["assigned_to"] = task.AssignedTo.String()
 	}
 
@@ -477,7 +477,7 @@ func (h *TaskHandler) ImproveTaskReportWS(c echo.Context) error {
 		if task.CreatedBy != nil {
 			meta["created_by"] = task.CreatedBy.String()
 		}
-		if task.AssignedTo != nil {
+		if task.AssignedToUser != nil {
 			meta["assigned_to"] = task.AssignedTo.String()
 		}
 

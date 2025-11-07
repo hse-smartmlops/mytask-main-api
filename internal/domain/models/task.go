@@ -12,12 +12,12 @@ type Task struct {
 	Name          *string    `gorm:"size:100"`
 	Description   *string    `gorm:"type:text"`
 	CreatedBy     *uuid.UUID `gorm:"type:uuid"`
-	AssignedTo    *uuid.UUID `gorm:"type:uuid"`
+	AssignedTo    uuid.UUID  `gorm:"type:uuid;index"`
 	Deadline      *time.Time
-	TimeSpent     *string `gorm:"type:interval"`
+	TimeSpent     *string    `gorm:"type:interval"`
 	StartDate     *time.Time
 	GitlabIssueID *int
-	StatusID      uuid.UUID `gorm:"type:uuid;index"`
+	StatusID      uuid.UUID  `gorm:"type:uuid;index"`
 	Category      *int8
 	Deleted       *bool      `gorm:"type:boolean"`
 	CreatedAt     *time.Time `gorm:"type:timestamp"`

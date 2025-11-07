@@ -39,7 +39,7 @@ func ToTaskDTO(task *models.Task) response.Task {
 		Name:           valueOrEmpty(task.Name),
 		Description:    task.Description,
 		CreatedBy:      uuidPtrToString(task.CreatedBy),
-		AssignedTo:     uuidPtrToString(task.AssignedTo),
+		AssignedTo:     task.AssignedTo.String(),
 		Deadline:       task.Deadline,
 		StartDate:      task.StartDate,
 		GitlabIssueID:  task.GitlabIssueID,
