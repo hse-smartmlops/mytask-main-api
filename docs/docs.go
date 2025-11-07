@@ -2072,7 +2072,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Ищет проекты по имени, описанию или GitLab URL с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию.",
+                "description": "Ищет проекты по имени, описанию или GitLab URL с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию. Проекты сортируются: сначала проекты где пользователь создатель, потом остальные.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2088,6 +2088,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Поисковый запрос",
                         "name": "query",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID пользователя для приоритетной сортировки",
+                        "name": "user_id",
                         "in": "query",
                         "required": true
                     },
@@ -5139,7 +5146,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Ищет задачи по названию с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию.",
+                "description": "Ищет задачи по названию с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию. Задачи сортируются: сначала задачи где пользователь исполнитель, потом где создатель, потом остальные.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5155,6 +5162,13 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Поисковый запрос",
                         "name": "query",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID пользователя для приоритетной сортировки",
+                        "name": "user_id",
                         "in": "query",
                         "required": true
                     },
@@ -8689,6 +8703,41 @@ const docTemplate = `{
                 }
             }
         },
+        "response.ProjectForSearchResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "created_by_user": {
+                    "$ref": "#/definitions/response.UserShort"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "gitlab_project_id": {
+                    "type": "integer"
+                },
+                "gitlab_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "response.ProjectListResponse": {
             "type": "object",
             "properties": {
@@ -8753,7 +8802,7 @@ const docTemplate = `{
                 "projects": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/response.ProjectResponse"
+                        "$ref": "#/definitions/response.ProjectForSearchResponse"
                     }
                 },
                 "query": {

@@ -109,11 +109,12 @@ func (tc *TaskController) GetAllTasks(c echo.Context) error {
 
 // SearchTasks godoc
 // @Summary Поиск задач с автодополнением и пагинацией
-// @Description Ищет задачи по названию с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию.
+// @Description Ищет задачи по названию с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию. Задачи сортируются: сначала задачи где пользователь исполнитель, потом где создатель, потом остальные.
 // @Tags Tasks
 // @Accept json
 // @Produce json
 // @Param query query string true "Поисковый запрос"
+// @Param user_id query string true "ID пользователя для приоритетной сортировки"
 // @Param page query int true "Номер страницы"
 // @Param pagesize query int true "Размер страницы" minimum(1) maximum(100)
 // @Security BearerAuth
@@ -123,99 +124,110 @@ func (tc *TaskController) GetAllTasks(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при поиске задач"
 // @Router /task/search [get]
 func (tc *TaskController) SearchTasks(c echo.Context) error {
-	query := strings.TrimSpace(c.QueryParam("query"))
-	
-	if query == "" {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Поисковый запрос не может быть пустым"})
-	}
+    query := strings.TrimSpace(c.QueryParam("query"))
+    userID := strings.TrimSpace(c.QueryParam("user_id"))
+    
+    if query == "" {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Поисковый запрос не может быть пустым"})
+    }
 
-	page, err := strconv.Atoi(c.QueryParam("page"))
-	if err != nil || page <= 0 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный номер страницы"})
-	}
+    if userID == "" {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "ID пользователя обязателен"})
+    }
 
-	pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
-	if err != nil || pageSize <= 0 || pageSize > 100 {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный размер страницы"})
-	}
+    // Валидируем userID как UUID
+    if _, err := uuid.Parse(userID); err != nil {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный формат ID пользователя"})
+    }
 
-	log.Printf("Search tasks: query='%s', page=%d, pageSize=%d", query, page, pageSize)
+    page, err := strconv.Atoi(c.QueryParam("page"))
+    if err != nil || page <= 0 {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный номер страницы"})
+    }
 
-	tasks, totalCount, err := tc.taskService.SearchTasks(query, page, pageSize)
-	if err != nil {
-		log.Printf("Service error (search tasks): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при поиске задач"})
-	}
+    pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
+    if err != nil || pageSize <= 0 || pageSize > 100 {
+        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный размер страницы"})
+    }
 
-	log.Printf("Search completed: found %d tasks out of %d total", len(tasks), totalCount)
+    log.Printf("Search tasks for user %s: query='%s', page=%d, pageSize=%d", userID, query, page, pageSize)
 
-	taskSearch := response.TaskSearchResponse{
-		Query:      query,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalCount: totalCount,
-		Tasks:      make([]response.TaskSearchItem, 0, len(tasks)),
-	}
+    // Передаем userID в сервис
+    tasks, totalCount, err := tc.taskService.SearchTasks(query, userID, page, pageSize)
+    if err != nil {
+        log.Printf("Service error (search tasks): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при поиске задач"})
+    }
 
-	for _, task := range tasks {
-		// Формируем информацию о статусе
-		var statusInfo response.TaskStatusInfo
-		if task.Status != nil {
-			statusInfo = response.TaskStatusInfo{
-				ID:    task.Status.ID.String(),
-				Name:  utils.GetString(task.Status.Name),
-				Color: utils.GetString(task.Status.Color),
-				Key:   utils.GetString(task.Status.Key),
-			}
-		}
+    log.Printf("Search completed: found %d tasks out of %d total", len(tasks), totalCount)
 
-		// Формируем информацию о проекте
-		var projectInfo response.TaskProjectInfo
-		if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
-			projectInfo = response.TaskProjectInfo{
-				ID:          task.Status.Board.Project.ID.String(),
-				Name:        utils.GetString(task.Status.Board.Project.Name),
-				Description: utils.GetString(task.Status.Board.Project.Description),
-			}
-		}
+    taskSearch := response.TaskSearchResponse{
+        Query:      query,
+        Page:       page,
+        PageSize:   pageSize,
+        TotalCount: totalCount,
+        Tasks:      make([]response.TaskSearchItem, 0, len(tasks)),
+    }
 
-		// Формируем информацию о назначенном пользователе
-		var assignedToInfo response.UserShort
-		if task.AssignedToUser != nil {
-			assignedToInfo = response.UserShort{
-				ID:        task.AssignedToUser.ID.String(),
-				FirstName: task.AssignedToUser.FirstName,
-				LastName:  task.AssignedToUser.LastName,
-			}
-		}
+    for _, task := range tasks {
+        // Формируем информацию о статусе
+        var statusInfo response.TaskStatusInfo
+        if task.Status != nil {
+            statusInfo = response.TaskStatusInfo{
+                ID:    task.Status.ID.String(),
+                Name:  utils.GetString(task.Status.Name),
+                Color: utils.GetString(task.Status.Color),
+                Key:   utils.GetString(task.Status.Key),
+            }
+        }
 
-		// Формируем информацию о создателе
-		var createdByInfo response.UserShort
-		if task.CreatedByUser != nil {
-			createdByInfo = response.UserShort{
-				ID:        task.CreatedByUser.ID.String(),
-				FirstName: task.CreatedByUser.FirstName,
-				LastName:  task.CreatedByUser.LastName,
-			}
-		}
+        // Формируем информацию о проекте
+        var projectInfo response.TaskProjectInfo
+        if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+            projectInfo = response.TaskProjectInfo{
+                ID:          task.Status.Board.Project.ID.String(),
+                Name:        utils.GetString(task.Status.Board.Project.Name),
+                Description: utils.GetString(task.Status.Board.Project.Description),
+            }
+        }
 
-		taskSearch.Tasks = append(taskSearch.Tasks, response.TaskSearchItem{
-			ID:            task.ID.String(),
-			Name:          utils.GetString(task.Name),
-			Description:   utils.GetString(task.Description),
-			Priority:      utils.GetInt16(task.Priority),
-			StartDate:     utils.GetTime(task.StartDate),
-			Deadline:      utils.GetTime(task.Deadline),
-			CreatedAt:     utils.GetTime(task.CreatedAt),
-			UpdatedAt:     utils.GetTime(task.UpdatedAt),
-			Status:        statusInfo,
-			Project:       projectInfo,
-			AssignedTo:    assignedToInfo,
-			CreatedBy:     createdByInfo,
-		})
-	}
+        // Формируем информацию о назначенном пользователе
+        var assignedToInfo response.UserShort
+        if task.AssignedToUser != nil {
+            assignedToInfo = response.UserShort{
+                ID:        task.AssignedToUser.ID.String(),
+                FirstName: task.AssignedToUser.FirstName,
+                LastName:  task.AssignedToUser.LastName,
+            }
+        }
 
-	return c.JSON(http.StatusOK, taskSearch)
+        // Формируем информацию о создателе
+        var createdByInfo response.UserShort
+        if task.CreatedByUser != nil {
+            createdByInfo = response.UserShort{
+                ID:        task.CreatedByUser.ID.String(),
+                FirstName: task.CreatedByUser.FirstName,
+                LastName:  task.CreatedByUser.LastName,
+            }
+        }
+
+        taskSearch.Tasks = append(taskSearch.Tasks, response.TaskSearchItem{
+            ID:            task.ID.String(),
+            Name:          utils.GetString(task.Name),
+            Description:   utils.GetString(task.Description),
+            Priority:      utils.GetInt16(task.Priority),
+            StartDate:     utils.GetTime(task.StartDate),
+            Deadline:      utils.GetTime(task.Deadline),
+            CreatedAt:     utils.GetTime(task.CreatedAt),
+            UpdatedAt:     utils.GetTime(task.UpdatedAt),
+            Status:        statusInfo,
+            Project:       projectInfo,
+            AssignedTo:    assignedToInfo,
+            CreatedBy:     createdByInfo,
+        })
+    }
+
+    return c.JSON(http.StatusOK, taskSearch)
 }
 
 // GetTaskByID godoc

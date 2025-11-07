@@ -29,7 +29,7 @@ type TaskRepository interface {
 	GetActiveTasksByUserId(userID uuid.UUID, limit, offset int) ([]models.Task, int64, error)
 	GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardId, projectId uuid.UUID, err error)
 	GetAllActiveTasks() ([]models.Task, error)
-	SearchTasks(query string, limit, offset int) ([]models.Task, int64, error)
+	SearchTasks(query, userID string, limit, offset int) ([]models.Task, int64, error)
 }
 
 type taskRepository struct {
@@ -63,7 +63,7 @@ func (r *taskRepository) GetAllTasks(limit, offset int) ([]models.Task, int64, e
 	return tasks, totalCount, nil
 }
 
-func (r *taskRepository) SearchTasks(query string, limit, offset int) ([]models.Task, int64, error) {
+func (r *taskRepository) SearchTasks(query, userID string, limit, offset int) ([]models.Task, int64, error) {
     if query == "" {
         return []models.Task{}, 0, nil
     }
@@ -77,7 +77,16 @@ func (r *taskRepository) SearchTasks(query string, limit, offset int) ([]models.
         return []models.Task{}, 0, nil
     }
 
-    // Базовый запрос
+    // Оптимизированная сортировка
+    orderClause := `
+        CASE 
+            WHEN tasks.assigned_to = '` + userID + `' THEN 1
+            WHEN tasks.created_by = '` + userID + `' THEN 2
+            ELSE 3
+        END ASC, 
+        tasks.created_at DESC
+    `
+
     baseQuery := r.db.Session(&gorm.Session{}).Model(&models.Task{}).
         Joins("LEFT JOIN statuses ON tasks.status_id = statuses.id AND statuses.deleted = ?", false).
         Joins("LEFT JOIN boards ON statuses.board_id = boards.id AND boards.deleted = ?", false).
@@ -85,10 +94,8 @@ func (r *taskRepository) SearchTasks(query string, limit, offset int) ([]models.
         Joins("LEFT JOIN users assigned_user ON tasks.assigned_to = assigned_user.id AND assigned_user.deleted = ?", false).
         Where("tasks.deleted = ?", false)
 
-    // Добавляем условия Full-Text Search
     baseQuery = addFullTextConditions(baseQuery, searchQueries)
 
-    // Считаем общее количество
     if err := baseQuery.Count(&totalCount).Error; err != nil {
         return nil, 0, err
     }
@@ -97,32 +104,40 @@ func (r *taskRepository) SearchTasks(query string, limit, offset int) ([]models.
         return []models.Task{}, 0, nil
     }
 
-    // Получаем задачи
     err := baseQuery.
         Preload("Status", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+            return db.Session(&gorm.Session{}).
+                Select("id, name, color, key, board_id").
+                Where("deleted = ?", false)
         }).
         Preload("Status.Board", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Select("id, name, project_id").Where("deleted = ?", false)
+            return db.Session(&gorm.Session{}).
+                Select("id, name, project_id").
+                Where("deleted = ?", false)
         }).
         Preload("Status.Board.Project", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Select("id, name, description").Where("deleted = ?", false)
+            return db.Session(&gorm.Session{}).
+                Select("id, name, description").
+                Where("deleted = ?", false)
         }).
         Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email, profession").Where("deleted = ?", false)
+            return db.Session(&gorm.Session{}).
+                Select("id, first_name, last_name, email").
+                Where("deleted = ?", false)
         }).
         Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email, profession").Where("deleted = ?", false)
+            return db.Session(&gorm.Session{}).
+                Select("id, first_name, last_name, email").
+                Where("deleted = ?", false)
         }).
         Limit(limit).
         Offset(offset).
-        Order("tasks.created_at DESC").
+        Order(orderClause).
         Find(&tasks).Error
 
     return tasks, totalCount, err
 }
 
-// prepareSearchQueries подготавливает варианты поисковых запросов
 func prepareSearchQueries(query string) []string {
     variants := utils.PrepareSearchVariants(query)
     searchQueries := make([]string, 0, len(variants))
@@ -136,7 +151,6 @@ func prepareSearchQueries(query string) []string {
     return searchQueries
 }
 
-// addFullTextConditions добавляет условия Full-Text Search на основе ваших моделей
 func addFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
     if len(searchQueries) == 0 {
         return db
@@ -146,21 +160,15 @@ func addFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
     var args []interface{}
 
     for _, tsQuery := range searchQueries {
-        // Используем только те поля, которые есть в ваших моделях
         condition := `(
             to_tsvector('russian', tasks.name) @@ to_tsquery(?) OR 
             to_tsvector('russian', tasks.description) @@ to_tsquery(?) OR 
             to_tsvector('russian', projects.name) @@ to_tsquery(?) OR 
-            to_tsvector('russian', projects.description) @@ to_tsquery(?) OR 
-            to_tsvector('russian', assigned_user.first_name) @@ to_tsquery(?) OR 
-            to_tsvector('russian', assigned_user.last_name) @@ to_tsquery(?) OR 
-            to_tsvector('russian', assigned_user.first_name || ' ' || assigned_user.last_name) @@ to_tsquery(?) OR 
-            to_tsvector('russian', assigned_user.profession) @@ to_tsquery(?)
+            to_tsvector('russian', assigned_user.first_name || ' ' || assigned_user.last_name) @@ to_tsquery(?)
         )`
         
         conditions = append(conditions, condition)
-        // Добавляем tsQuery для каждого поля (8 раз)
-        for i := 0; i < 8; i++ {
+        for i := 0; i < 4; i++ {
             args = append(args, tsQuery)
         }
     }

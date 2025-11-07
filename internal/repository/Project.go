@@ -2,7 +2,6 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/utils"
 	"errors"
 	"strings"
 	"time"
@@ -21,7 +20,7 @@ type ProjectRepository interface {
 	CreateProjectWithBoardAndStatuses(project models.Project, board models.Board, statuses []models.Status) error
 	UpdateProject(projectID uuid.UUID, updateData map[string]interface{}) (bool, error)
 	DeleteProject(projectID uuid.UUID) (bool, error)
-	SearchProjects(query string, limit, offset int) ([]models.Project, int64, error)
+	SearchProjects(query, userID string, limit, offset int) ([]models.Project, int64, error)
 }
 
 type projectRepository struct {
@@ -55,47 +54,94 @@ func (r *projectRepository) GetAllProjects(limit, offset int) ([]models.Project,
 	return projects, totalCount, nil
 }
 
-func (r *projectRepository) SearchProjects(query string, limit, offset int) ([]models.Project, int64, error) {
+func (r *projectRepository) SearchProjects(query, userID string, limit, offset int) ([]models.Project, int64, error) {
     if query == "" {
         return []models.Project{}, 0, nil
     }
 
     var totalCount int64
-    
-    enToRuPattern := "%" + strings.ToLower(utils.EnglishToRussianKeyboard(query)) + "%"
-    ruToEnPattern := "%" + strings.ToLower(utils.RussianToEnglishKeyboard(query)) + "%"
-    searchPattern := "%" + strings.ToLower(query) + "%"
-    
-    countQuery := r.db.Session(&gorm.Session{}).
-        Model(&models.Project{}).
-        Where("deleted = FALSE AND (" +
-            "LOWER(name) LIKE ? OR " +
-            "LOWER(description) LIKE ? OR " +
-            "LOWER(gitlab_url) LIKE ? OR " +
-            "LOWER(name) LIKE ? OR " +
-            "LOWER(description) LIKE ? OR " +
-            "LOWER(gitlab_url) LIKE ? OR " +
-            "LOWER(name) LIKE ? OR " +
-            "LOWER(description) LIKE ? OR " +
-            "LOWER(gitlab_url) LIKE ?" +
-            ")", searchPattern, searchPattern, searchPattern, enToRuPattern, enToRuPattern, enToRuPattern, ruToEnPattern, ruToEnPattern, ruToEnPattern)
-    
-    if err := countQuery.Count(&totalCount).Error; err != nil {
+    var projects []models.Project
+
+    // Подготавливаем поисковые запросы
+    searchQueries := prepareSearchQueries(query)
+    if len(searchQueries) == 0 {
+        return []models.Project{}, 0, nil
+    }
+
+    // Используем LEFT JOIN LATERAL для эффективной проверки членства в команде
+    orderClause := `
+        CASE 
+            WHEN EXISTS (
+                SELECT 1 FROM project_teams pt
+                JOIN teams t ON pt.team_id = t.id AND t.deleted = false
+                JOIN team_members tm ON t.id = tm.team_id AND tm.deleted = false
+                WHERE pt.project_id = projects.id AND pt.deleted = false AND tm.user_id = '` + userID + `'
+            ) THEN 1
+            WHEN projects.created_by = '` + userID + `' THEN 2
+            ELSE 3
+        END ASC, 
+        projects.name ASC
+    `
+
+    // Базовый запрос
+    baseQuery := r.db.Session(&gorm.Session{}).Model(&models.Project{}).
+        Where("projects.deleted = ?", false)
+
+    // Добавляем условия Full-Text Search
+    baseQuery = addProjectFullTextConditions(baseQuery, searchQueries)
+
+    // Считаем общее количество
+    if err := baseQuery.Count(&totalCount).Error; err != nil {
         return nil, 0, err
     }
 
-    var projects []models.Project
-    err := countQuery.
+    if totalCount == 0 {
+        return []models.Project{}, 0, nil
+    }
+
+    // Получаем проекты с приоритетной сортировкой
+    err := baseQuery.
+        Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
+            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email").Where("deleted = ?", false)
+        }).
+        // Убираем лишние прелоады для оптимизации
+        Preload("ProjectTeams.Team.TeamMembers", func(db *gorm.DB) *gorm.DB {
+            return db.Session(&gorm.Session{}).Where("team_members.user_id = ?", userID).Limit(1) // Только нужного пользователя
+        }).
         Limit(limit).
         Offset(offset).
-        Order("name ASC").
+        Order(orderClause).
         Find(&projects).Error
-        
-    if err != nil {
-        return nil, 0, err
+
+    return projects, totalCount, err
+}
+
+func addProjectFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
+    if len(searchQueries) == 0 {
+        return db
     }
 
-    return projects, totalCount, nil
+    var conditions []string
+    var args []interface{}
+
+    for _, tsQuery := range searchQueries {
+        condition := `(
+            to_tsvector('russian', projects.name) @@ to_tsquery(?) OR 
+            to_tsvector('russian', projects.description) @@ to_tsquery(?) OR 
+            to_tsvector('russian', projects.gitlab_url) @@ to_tsquery(?)
+        )`
+        
+        conditions = append(conditions, condition)
+        for i := 0; i < 3; i++ {
+            args = append(args, tsQuery)
+        }
+    }
+
+    if len(conditions) > 0 {
+        return db.Session(&gorm.Session{}).Where(strings.Join(conditions, " OR "), args...)
+    }
+
+    return db
 }
 
 func (r *projectRepository) GetProjectByID(projectID uuid.UUID) (*models.Project, error) {

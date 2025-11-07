@@ -159,18 +159,18 @@ type TaskSearchResponse struct {
 }
 
 type TaskSearchItem struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
-	Priority    int16             `json:"priority,omitempty"`
-	StartDate   time.Time        `json:"start_date,omitempty"`
-	Deadline    time.Time        `json:"deadline,omitempty"`
-	CreatedAt   time.Time        `json:"created_at"`
-	UpdatedAt   time.Time        `json:"updated_at"`
-	Status      TaskStatusInfo   `json:"status,omitempty"`
-	Project     TaskProjectInfo  `json:"project,omitempty"`
-	AssignedTo  UserShort        `json:"assigned_to"`
-	CreatedBy  UserShort         `json:"created_by"`
+    ID          string           `json:"id"`
+    Name        string           `json:"name"`
+    Description string           `json:"description,omitempty"`
+    Priority    int16            `json:"priority,omitempty"`
+    StartDate   time.Time        `json:"start_date,omitempty"`
+    Deadline    time.Time        `json:"deadline,omitempty"`
+    CreatedAt   time.Time        `json:"created_at"`
+    UpdatedAt   time.Time        `json:"updated_at"`
+    Status      TaskStatusInfo   `json:"status,omitempty"`
+    Project     TaskProjectInfo  `json:"project,omitempty"`
+    AssignedTo  UserShort        `json:"assigned_to"`
+    CreatedBy   UserShort        `json:"created_by"`
 }
 
 type TaskStatusInfo struct {
