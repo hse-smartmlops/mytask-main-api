@@ -18,15 +18,20 @@ type ProblemService interface {
 	CreateProblem(req request.ProblemCreateRequest) (uuid.UUID, error)
 	UpdateProblem(problemId uuid.UUID, req request.ProblemUpdateRequest) error
 	DeleteProblem(problemId uuid.UUID) error
+	CreateForumMessage(problemId uuid.UUID, description []string) (error)
 }
 
 type problemService struct {
 	repo repository.ProblemRepository
+	forumRepo repository.ForumMessageRepository
+	systemUserId uuid.UUID
 }
 
-func NewProblemService(repo repository.ProblemRepository) ProblemService {
+func NewProblemService(repo repository.ProblemRepository, forumRepo repository.ForumMessageRepository, systemUserId uuid.UUID) ProblemService {
 	return &problemService{
 		repo: repo,
+		forumRepo: forumRepo,
+		systemUserId: systemUserId,
 	}
 }
 
@@ -42,6 +47,34 @@ func (s *problemService) GetProblemsByUserId(creatorUUID uuid.UUID, page, pageSi
 
 func (s *problemService) GetProblemByID(problemId uuid.UUID) (*models.Problem, error) {
 	return s.repo.GetProblemByID(problemId)
+}
+
+func (s *problemService) CreateForumMessage(problemId uuid.UUID, description []string) (error) {
+	now := time.Now()
+	del := false
+
+	var desc pq.StringArray
+	if description != nil {
+		desc = pq.StringArray(description)
+	} else {
+		desc = pq.StringArray{}
+	}
+
+	fm := models.ForumMessage{
+		ID:          uuid.New(),
+		ProblemID:   problemId,
+		Description: desc,
+		CreatorID:   &s.systemUserId,
+		CreatedAt:   &now,
+		Deleted:     &del,
+	}
+
+	err := s.forumRepo.CreateForumMessage(fm)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *problemService) CreateProblem(req request.ProblemCreateRequest) (uuid.UUID, error) {
@@ -60,8 +93,10 @@ func (s *problemService) CreateProblem(req request.ProblemCreateRequest) (uuid.U
 		description = pq.StringArray{}
 	}
 
+	problemId := uuid.New()
+
 	p := models.Problem{
-		ID:          uuid.New(),
+		ID:          problemId,
 		Description: description,
 		CreatorID:   &creatorId,
 		Name:        req.Name,
@@ -72,6 +107,22 @@ func (s *problemService) CreateProblem(req request.ProblemCreateRequest) (uuid.U
 	err = s.repo.CreateProblem(p)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	description = pq.StringArray([]string{"Создана новая проблема"})
+
+	fm := models.ForumMessage{
+		ID:          uuid.New(),
+		ProblemID:   problemId,
+		Description: description,
+		CreatorID:   &s.systemUserId,
+		CreatedAt:   &now,
+		Deleted:     &del,
+	}
+
+	err = s.forumRepo.CreateForumMessage(fm)
+	if err != nil {
+		return p.ID, err
 	}
 
 	return p.ID, nil
@@ -97,6 +148,24 @@ func (s *problemService) UpdateProblem(problemId uuid.UUID, req request.ProblemU
 
 	if !updated {
 		return errors.New("problem not found")
+	}
+
+	del := false
+
+	description := pq.StringArray([]string{"Данная проблема обновлена"})
+
+	fm := models.ForumMessage{
+		ID:          uuid.New(),
+		ProblemID:   problemId,
+		Description: description,
+		CreatorID:   &s.systemUserId,
+		CreatedAt:   &now,
+		Deleted:     &del,
+	}
+
+	err = s.forumRepo.CreateForumMessage(fm)
+	if err != nil {
+		return err
 	}
 
 	return nil

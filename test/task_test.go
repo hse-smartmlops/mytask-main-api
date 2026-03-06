@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
+	"emplacc-api/internal/grpc/client"
 	"emplacc-api/internal/repository"
 	"emplacc-api/internal/service"
 )
@@ -29,7 +31,16 @@ func TestTask_FullCRUD(t *testing.T) {
 	// Создаем зависимости для новой архитектуры
 	taskRepo := repository.NewTaskRepository(testDB)
 	taskService := service.NewTaskService(taskRepo)
-	taskController := controller.NewTaskController(taskService)
+	userRepo := repository.NewUserRepository(testDB)
+	userService := service.NewUserService(userRepo)
+	projectRepo := repository.NewProjectRepository(testDB)
+	projectService := service.NewProjectService(projectRepo)
+	llmClient, err := client.NewLLMClient("grpc-service:50051") // используем docker service name
+	if err != nil {
+		log.Fatalf("Failed to create gRPC client: %v", err)
+	}
+	defer llmClient.Close()
+	taskController := controller.NewTaskController(taskService, userService, projectService, llmClient)
 
 	e := echo.New()
 

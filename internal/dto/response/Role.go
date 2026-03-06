@@ -21,3 +21,8 @@ type RoleUniversalResponse struct {
 	ID      string `json:"id"`
 	Message string `json:"message"`
 }
+
+type GetRoleByUserId struct {
+	UserId  string  `json:"user_id"`
+	Role    GetRoleResponse `json:"role"`
+}

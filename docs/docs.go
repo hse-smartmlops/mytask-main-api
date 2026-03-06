@@ -816,6 +816,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/boards/project/{projectId}/export/xlsx": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с задачами проекта, сгруппированными по доскам и статусам",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Boards"
+                ],
+                "summary": "Экспорт задач проекта в XLSX",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID проекта",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с задачами проекта",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор проекта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/boards/{id}": {
             "get": {
                 "security": [
@@ -2001,6 +2065,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/project/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ищет проекты по имени, описанию или GitLab URL с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию. Проекты сортируются: сначала проекты где пользователь создатель, потом остальные.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Поиск проектов с автодополнением и пагинацией",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Поисковый запрос",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID пользователя для приоритетной сортировки",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Результаты поиска проектов",
+                        "schema": {
+                            "$ref": "#/definitions/response.ProjectSearchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при поиске проектов",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/project/team/{team_id}": {
             "get": {
                 "security": [
@@ -2565,6 +2716,43 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при обновлении выполненной работы",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/report/export/tomorrow-plans/xlsx": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с планами на завтра из последних отчетов всех пользователей",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Экспорт планов на завтра в XLSX",
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с планами на завтра",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3177,7 +3365,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Отчет успешно получен",
                         "schema": {
-                            "$ref": "#/definitions/response.ReportResponse"
+                            "$ref": "#/definitions/response.ReportFullResponse"
                         }
                     },
                     "400": {
@@ -3189,17 +3377,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "401": {
-                        "description": "Нет или неверный токен",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
                     "404": {
-                        "description": "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены",
+                        "description": "Отчет не найден",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3488,6 +3667,79 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при получении ролей",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/role/user/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает роль пользователя по его ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Roles"
+                ],
+                "summary": "Получение роли по ID пользователя",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Роль пользователя успешно получена",
+                        "schema": {
+                            "$ref": "#/definitions/response.GetRoleByUserId"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный идентификатор пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Роль не найдена для данного пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении роли",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -4701,6 +4953,105 @@ const docTemplate = `{
                 }
             }
         },
+        "/task/board-project/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает ID доски и ID проекта, к которым принадлежит задача",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Получение доски и проекта задачи",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID задачи",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о доске и проекте",
+                        "schema": {}
+                    },
+                    "400": {
+                        "description": "Некорректный ID задачи",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Задача, статус или доска не найдены",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/task/export/active-tasks/xlsx": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Генерирует XLSX-файл с активными задачами всех пользователей, сгруппированными по пользователям",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Экспорт активных задач всех пользователей в XLSX",
+                "responses": {
+                    "200": {
+                        "description": "XLSX-файл с активными задачами",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при генерации отчёта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/task/move": {
             "post": {
                 "security": [
@@ -4788,6 +5139,93 @@ const docTemplate = `{
                 }
             }
         },
+        "/task/search": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ищет задачи по названию с автодополнением после каждого введенного символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская) для расширенного поиска и пагинацию. Задачи сортируются: сначала задачи где пользователь исполнитель, потом где создатель, потом остальные.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Поиск задач с автодополнением и пагинацией",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Поисковый запрос",
+                        "name": "query",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID пользователя для приоритетной сортировки",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Результаты поиска задач",
+                        "schema": {
+                            "$ref": "#/definitions/response.TaskSearchResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при поиске задач",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/task/user/{id}/{page}/{pagesize}": {
             "get": {
                 "security": [
@@ -4833,7 +5271,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Список задач успешно получен",
                         "schema": {
-                            "$ref": "#/definitions/response.TaskListResponse"
+                            "$ref": "#/definitions/response.UserTasksResponse"
                         }
                     },
                     "400": {
@@ -4847,6 +5285,178 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении задач",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/task/user/{id}/{page}/{pagesize}/active": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получение списка задач, назначенных на пользователя, где статус != 'done' и deleted = false",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Получение активных задач по ID пользователя (исключая статус Done)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список активных задач успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.UserTasksResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка при парсинге параметров или некорректный ID пользователя",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при получении задач",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/task/user/{user_id}/project/{project_id}/{page}/{pagesize}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Получает список задач, назначенных на указанного пользователя и принадлежащих заданному проекту, с пагинацией",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Получение задач пользователя в рамках проекта",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пользователя",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID проекта",
+                        "name": "project_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Размер страницы",
+                        "name": "pagesize",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список задач успешно получен",
+                        "schema": {
+                            "$ref": "#/definitions/response.UserProjectTasksResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID пользователя или проекта",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь или проект не найдены",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -5081,6 +5691,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/task/{id}/improve-report": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Принимает текст пользователя и улучшает его на основе описания задачи через LLM",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tasks"
+                ],
+                "summary": "Улучшить отчет по задаче с помощью LLM",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID задачи",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для улучшения отчета",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.ImproveReportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Улучшенный отчет",
+                        "schema": {
+                            "$ref": "#/definitions/response.ImprovedReportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID задачи или данные запроса",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Задача не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при обработке LLM",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/team": {
             "post": {
                 "security": [
@@ -5183,6 +5866,81 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Ошибка сервера при получении команд",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/team/member/role": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновляет специализацию (роль) пользователя в указанной команде",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Teams"
+                ],
+                "summary": "Изменение роли участника в команде",
+                "parameters": [
+                    {
+                        "description": "Данные для обновления роли",
+                        "name": "updateRole",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/request.TeamUpdateMemberRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Роль успешно обновлена",
+                        "schema": {
+                            "$ref": "#/definitions/response.TeamUniversalUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Ошибка в запросе или некорректные идентификаторы",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Нет или неверный токен",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Участник команды не найден",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера при обновлении роли",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6713,6 +7471,19 @@ const docTemplate = `{
                 }
             }
         },
+        "request.ImproveReportRequest": {
+            "type": "object",
+            "required": [
+                "user_text"
+            ],
+            "properties": {
+                "user_text": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "minLength": 1
+                }
+            }
+        },
         "request.LoginRequest": {
             "type": "object",
             "required": [
@@ -7069,6 +7840,25 @@ const docTemplate = `{
                 }
             }
         },
+        "request.TeamUpdateMemberRoleRequest": {
+            "type": "object",
+            "required": [
+                "specialization",
+                "team_id",
+                "user_id"
+            ],
+            "properties": {
+                "specialization": {
+                    "type": "string"
+                },
+                "team_id": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
         "request.TeamUpdateRequest": {
             "type": "object",
             "properties": {
@@ -7407,6 +8197,20 @@ const docTemplate = `{
                 }
             }
         },
+        "response.BoardRef": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                }
+            }
+        },
         "response.BoardResponse": {
             "type": "object",
             "properties": {
@@ -7458,6 +8262,20 @@ const docTemplate = `{
                 },
                 "task_id": {
                     "type": "string"
+                }
+            }
+        },
+        "response.CompletedWorkWithTask": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task": {
+                    "$ref": "#/definitions/response.TaskForReport"
                 }
             }
         },
@@ -7578,6 +8396,17 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/response.GetUserResponse"
                     }
+                }
+            }
+        },
+        "response.GetRoleByUserId": {
+            "type": "object",
+            "properties": {
+                "role": {
+                    "$ref": "#/definitions/response.GetRoleResponse"
+                },
+                "user_id": {
+                    "type": "string"
                 }
             }
         },
@@ -7741,6 +8570,48 @@ const docTemplate = `{
                 }
             }
         },
+        "response.ImprovedReportResponse": {
+            "type": "object",
+            "properties": {
+                "improved_text": {
+                    "type": "string"
+                },
+                "original_text": {
+                    "type": "string"
+                },
+                "task_description": {
+                    "type": "string"
+                },
+                "task_id": {
+                    "type": "string"
+                },
+                "task_title": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.InTaskBoard": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.InTaskProject": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "response.ProblemListResponse": {
             "type": "object",
             "properties": {
@@ -7832,6 +8703,41 @@ const docTemplate = `{
                 }
             }
         },
+        "response.ProjectForSearchResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "created_by_user": {
+                    "$ref": "#/definitions/response.UserShort"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "gitlab_project_id": {
+                    "type": "integer"
+                },
+                "gitlab_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "response.ProjectListResponse": {
             "type": "object",
             "properties": {
@@ -7884,6 +8790,49 @@ const docTemplate = `{
                 }
             }
         },
+        "response.ProjectSearchResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "projects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ProjectForSearchResponse"
+                    }
+                },
+                "query": {
+                    "type": "string"
+                },
+                "totalCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.ProjectShort": {
+            "type": "object",
+            "properties": {
+                "created_by": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "gitlab_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "response.ProjectUniversalResponse": {
             "type": "object",
             "properties": {
@@ -7929,6 +8878,56 @@ const docTemplate = `{
                 },
                 "user_id": {
                     "type": "string"
+                }
+            }
+        },
+        "response.ReportFullResponse": {
+            "type": "object",
+            "properties": {
+                "checked": {
+                    "type": "integer"
+                },
+                "completed_work": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.CompletedWorkWithTask"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "help_requests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.HelpRequestItem"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "plan_tomorrow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TomorrowPlansWithTask"
+                    }
+                },
+                "problem": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.ProblemResponse"
+                    }
+                },
+                "report_date": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "user_info": {
+                    "$ref": "#/definitions/response.UserShort"
                 }
             }
         },
@@ -8063,6 +9062,29 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/response.StatusResponse"
                     }
+                }
+            }
+        },
+        "response.StatusFull": {
+            "type": "object",
+            "properties": {
+                "board": {
+                    "$ref": "#/definitions/response.BoardRef"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_open": {
+                    "type": "boolean"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -8273,6 +9295,76 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TaskForReport": {
+            "type": "object",
+            "properties": {
+                "board": {
+                    "$ref": "#/definitions/response.InTaskBoard"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project": {
+                    "$ref": "#/definitions/response.InTaskProject"
+                }
+            }
+        },
+        "response.TaskFull": {
+            "type": "object",
+            "properties": {
+                "assigned_to_user": {
+                    "$ref": "#/definitions/response.UserFull"
+                },
+                "category": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_user": {
+                    "$ref": "#/definitions/response.UserFull"
+                },
+                "deadline": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "gitlab_issue_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/response.StatusFull"
+                },
+                "time_spent": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "response.TaskListResponse": {
             "type": "object",
             "properties": {
@@ -8289,6 +9381,84 @@ const docTemplate = `{
                     }
                 },
                 "total_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "response.TaskProjectInfo": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.TaskSearchItem": {
+            "type": "object",
+            "properties": {
+                "assigned_to": {
+                    "$ref": "#/definitions/response.UserShort"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "$ref": "#/definitions/response.UserShort"
+                },
+                "deadline": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "priority": {
+                    "type": "integer"
+                },
+                "project": {
+                    "$ref": "#/definitions/response.TaskProjectInfo"
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/response.TaskStatusInfo"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.TaskSearchResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "pageSize": {
+                    "type": "integer"
+                },
+                "query": {
+                    "type": "string"
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TaskSearchItem"
+                    }
+                },
+                "totalCount": {
                     "type": "integer"
                 }
             }
@@ -8318,6 +9488,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "response.TaskStatusInfo": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -8452,6 +9639,37 @@ const docTemplate = `{
                 }
             }
         },
+        "response.TomorrowPlansWithTask": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "task": {
+                    "$ref": "#/definitions/response.TaskForReport"
+                }
+            }
+        },
+        "response.UserFull": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                }
+            }
+        },
         "response.UserInfo": {
             "description": "Структура с информацией о пользователе из Keycloak",
             "type": "object",
@@ -8486,6 +9704,32 @@ const docTemplate = `{
                 }
             }
         },
+        "response.UserProjectTasksResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "project": {
+                    "$ref": "#/definitions/response.ProjectShort"
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TaskFull"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "user": {
+                    "$ref": "#/definitions/response.UserFull"
+                }
+            }
+        },
         "response.UserShort": {
             "type": "object",
             "properties": {
@@ -8497,6 +9741,26 @@ const docTemplate = `{
                 },
                 "last_name": {
                     "type": "string"
+                }
+            }
+        },
+        "response.UserTasksResponse": {
+            "type": "object",
+            "properties": {
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "tasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/response.TaskFull"
+                    }
+                },
+                "total_count": {
+                    "type": "integer"
                 }
             }
         },

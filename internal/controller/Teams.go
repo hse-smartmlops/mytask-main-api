@@ -37,6 +37,7 @@ func RegisterTeamRoutes(e *echo.Echo, teamService service.TeamService) {
 	teamGroup.DELETE("/project", controller.DeleteProjectFromTeam)
 	teamGroup.GET("/project/:project_id", controller.GetProjectTeams)
 	teamGroup.GET("/user/:id", controller.GetTeamByUserId)
+	teamGroup.PATCH("/member/role", controller.UpdateTeamMemberRole)
 }
 
 // GetTeams godoc
@@ -629,4 +630,57 @@ func (tc *TeamController) GetTeamByUserId(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, teamListResponse)
+}
+
+// UpdateTeamMemberRole godoc
+// @Summary Изменение роли участника в команде
+// @Description Обновляет специализацию (роль) пользователя в указанной команде
+// @Tags Teams
+// @Accept json
+// @Produce json
+// @Param updateRole body request.TeamUpdateMemberRoleRequest true "Данные для обновления роли"
+// @Security BearerAuth
+// @Success 200 {object} response.TeamUniversalUserResponse "Роль успешно обновлена"
+// @Failure 400 {object} map[string]string "Ошибка в запросе или некорректные идентификаторы"
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Failure 404 {object} map[string]string "Участник команды не найден"
+// @Failure 500 {object} map[string]string "Ошибка сервера при обновлении роли"
+// @Router /team/member/role [patch]
+func (tc *TeamController) UpdateTeamMemberRole(c echo.Context) error {
+	var req request.TeamUpdateMemberRoleRequest
+	if err := c.Bind(&req); err != nil {
+		log.Printf("Bind error (update role): %v", err)
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "Не удалось получить данные из запроса",
+		})
+	}
+
+	err := tc.teamService.UpdateTeamMemberRole(req.TeamID, req.UserID, req.Specialization)
+	if err != nil {
+		switch err.Error() {
+		case "team not found":
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Команда не найдена"})
+		case "user not found":
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Пользователь не найден"})
+		case "team member not found":
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Участник команды не найден"})
+		case "no changes":
+			return c.JSON(http.StatusOK, response.TeamUniversalUserResponse{
+				TeamID:  req.TeamID,
+				UserID:  req.UserID,
+				Message: "Роль не изменилась",
+			})
+		default:
+			log.Printf("service error (update team member role): %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Ошибка при обновлении роли участника",
+			})
+		}
+	}
+
+	return c.JSON(http.StatusOK, response.TeamUniversalUserResponse{
+		TeamID:  req.TeamID,
+		UserID:  req.UserID,
+		Message: "Роль успешно обновлена",
+	})
 }

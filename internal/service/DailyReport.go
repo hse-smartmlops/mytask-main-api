@@ -5,7 +5,9 @@ import (
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/repository"
+	"emplacc-api/internal/utils"
 	"errors"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,6 +29,7 @@ type ReportService interface {
 	GetHelpRequestsForUser(userID uuid.UUID) ([]models.HelpRequest, error)
 	DeleteHelpRequest(requestID uuid.UUID) error
 	GetReportByDateInXLSX(req request.ReportsByDateInXLSX) (*response.XLSXReportData, error)
+	GetTomorrowPlansForXLSX() (*response.TomorrowPlansXLSXData, error)
 }
 
 type reportService struct {
@@ -138,6 +141,94 @@ func (s *reportService) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyRepo
 
 func (s *reportService) GetReportsByProjectId(projectID uuid.UUID) ([]models.DailyReport, error) {
 	return s.repo.GetReportsByProjectId(projectID)
+}
+
+func (s *reportService) GetTomorrowPlansForXLSX() (*response.TomorrowPlansXLSXData, error) {
+    plans, err := s.repo.GetLatestTomorrowPlans()
+    if err != nil {
+        return nil, err
+    }
+
+    userPlansMap := make(map[uuid.UUID]*response.UserTomorrowPlans)
+    
+    for _, plan := range plans {
+        var userID uuid.UUID
+        var reportDate time.Time
+        var userName, userEmail string
+        
+        if plan.Report != nil {
+            userID = plan.Report.UserID
+            reportDate = utils.GetTime(plan.Report.ReportDate)
+            
+            if plan.Report.User != nil {
+                firstName := plan.Report.User.FirstName
+                lastName := plan.Report.User.LastName
+                if firstName != "" || lastName != "" {
+                    userName = strings.TrimSpace(firstName + " " + lastName)
+                } else {
+                    userName = plan.Report.User.Email
+                }
+                userEmail = plan.Report.User.Email
+            }
+        } else {
+            continue
+        }
+
+        if _, exists := userPlansMap[userID]; !exists {
+            userPlansMap[userID] = &response.UserTomorrowPlans{
+                UserID:     userID.String(),
+                UserName:   userName,
+                UserEmail:  userEmail,
+                ReportDate: reportDate,
+                Plans:      []response.TomorrowPlan{},
+            }
+        }
+
+        taskName := "Без задачи"
+        projectName := "Без проекта"
+        
+        if plan.Task != nil {
+            if plan.Task.Name != nil && *plan.Task.Name != "" {
+                taskName = *plan.Task.Name
+            }
+            
+            if plan.Task.Status != nil && 
+               plan.Task.Status.Board != nil && 
+               plan.Task.Status.Board.Project != nil {
+                if plan.Task.Status.Board.Project.Name != nil && *plan.Task.Status.Board.Project.Name != "" {
+                    projectName = *plan.Task.Status.Board.Project.Name
+                }
+            }
+        }
+
+        description := ""
+        if plan.Description != nil {
+            description = *plan.Description
+        }
+
+        tomorrowPlan := response.TomorrowPlan{
+            ID:          plan.ID.String(),
+            Description: description,
+            TaskName:    taskName,
+            ProjectName: projectName,
+            CreatedAt:   utils.GetTime(plan.CreatedAt),
+        }
+
+        userPlansMap[userID].Plans = append(userPlansMap[userID].Plans, tomorrowPlan)
+    }
+
+    users := make([]response.UserTomorrowPlans, 0, len(userPlansMap))
+    for _, userPlans := range userPlansMap {
+        users = append(users, *userPlans)
+    }
+
+    sort.Slice(users, func(i, j int) bool {
+        return users[i].UserName < users[j].UserName
+    })
+
+    return &response.TomorrowPlansXLSXData{
+        Users: users,
+    }, nil
 }
 
 func (s *reportService) CreateReport(req request.ReportCreateRequest) (uuid.UUID, error) {

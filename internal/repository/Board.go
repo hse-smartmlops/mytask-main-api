@@ -16,6 +16,7 @@ type BoardRepository interface {
 	CreateBoardWithStatuses(board models.Board, statuses []models.Status) error
 	UpdateBoard(boardID uuid.UUID, updateData map[string]interface{}) (bool, error)
 	DeleteBoard(boardID uuid.UUID) (bool, error)
+	GetBoardByProjectIdWithUsersAndProject(projectID uuid.UUID) ([]models.Board, error)
 }
 
 type boardRepository struct {
@@ -80,6 +81,33 @@ func (r *boardRepository) GetBoardByProjectId(projectID uuid.UUID) ([]models.Boa
 			return db.Session(&gorm.Session{}).Where("deleted = ?", false).Order("sort_order ASC")
 		}).
 		Preload("Statuses.Tasks", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		Find(&boards).Error; err != nil {
+		return nil, err
+	}
+
+	return boards, nil
+}
+
+func (r *boardRepository) GetBoardByProjectIdWithUsersAndProject(projectID uuid.UUID) ([]models.Board, error) {
+	var boards []models.Board
+	if err := r.db.Session(&gorm.Session{}).
+		Where("project_id = ? AND deleted = ?", projectID, false).
+		Order("created_at DESC NULLS LAST").
+		Preload("Project", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		Preload("Statuses", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false).Order("sort_order ASC")
+		}).
+		Preload("Statuses.Tasks", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		Preload("Statuses.Tasks.AssignedToUser", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+		}).
+		Preload("Statuses.Tasks.CreatedByUser", func(db *gorm.DB) *gorm.DB {
 			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		Find(&boards).Error; err != nil {

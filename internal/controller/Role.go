@@ -32,6 +32,7 @@ func RegisterRoleRoutes(e *echo.Echo, roleService service.RoleService) {
 		group.POST("", controller.CreateRole)
 		group.PATCH("/:id", controller.UpdateRole)
 		group.DELETE("/:id", controller.DeleteRole)
+		group.GET("/user/:id", controller.GetRoleByUserId)
 	}
 }
 
@@ -227,5 +228,48 @@ func (rc *RoleController) DeleteRole(c echo.Context) error {
 	return c.JSON(http.StatusOK, response.RoleUniversalResponse{
 		ID:      roleID.String(),
 		Message: "Роль удалена",
+	})
+}
+
+// GetRoleByUserId godoc
+// @Summary Получение роли по ID пользователя
+// @Description Получает роль пользователя по его ID
+// @Tags Roles
+// @Accept json
+// @Produce json
+// @Param id path string true "ID пользователя"
+// @Security BearerAuth
+// @Failure 401 {object} map[string]string "Нет или неверный токен"
+// @Success 200 {object} response.GetRoleByUserId "Роль пользователя успешно получена"
+// @Failure 400 {object} map[string]string "Некорректный идентификатор пользователя"
+// @Failure 404 {object} map[string]string "Роль не найдена для данного пользователя"
+// @Failure 500 {object} map[string]string "Ошибка сервера при получении роли"
+// @Router /role/user/{id} [get]
+func (rc *RoleController) GetRoleByUserId(c echo.Context) error {
+	userId, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор пользователя"})
+	}
+
+	role, err := rc.roleService.GetRoleByUserId(userId)
+	if err != nil {
+		if err.Error() == "role not found for user" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Роль не найдена для данного пользователя"})
+		}
+		log.Printf("service error (get role by user id): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении роли пользователя"})
+	}
+
+	roleResponse := response.GetRoleResponse{
+		ID:          role.ID.String(),
+		Name:        utils.GetString(role.Name),
+		Description: utils.GetString(role.Description),
+		UpdatedAt:   utils.GetTime(role.UpdatedAt),
+		CreatedAt:   utils.GetTime(role.CreatedAt),
+	}
+
+	return c.JSON(http.StatusOK, response.GetRoleByUserId{
+		UserId: userId.String(),
+		Role:   roleResponse,
 	})
 }

@@ -22,6 +22,7 @@ type UserService interface {
 	RestoreUser(req request.RestoreUserRequest) (uuid.UUID, error)
 	AddUserRole(req request.AddRoleUserRequest) (response.AddRoleUserResponse, error)
 	RemoveUserRole(req request.RemoveRoleUserRequest) (response.RemoveRoleUserResponse, error)
+	CreateSystemUser() (uuid.UUID, error)
 }
 
 type userService struct {
@@ -32,6 +33,35 @@ func NewUserService(repo repository.UserRepository) UserService {
 	return &userService{
 		repo: repo,
 	}
+}
+
+func (s *userService) CreateSystemUser() (uuid.UUID, error) {
+	newUUID := uuid.New()
+	now := time.Now()
+
+	user := models.User{
+		ID:            newUUID,
+		Email:         "system@system",
+		IsActive:      true,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+		EmailVerified: true,
+		FirstName:     "Системный",
+		LastName:      "Пользователь",
+		LastLogin:     now,
+		Deleted:       false,
+		TgID:          "",
+		TgUserID:      0,
+		Profession:    "",
+		UserRoles:     nil,
+	}
+
+	err := s.repo.CreateUser(user)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return newUUID, nil
 }
 
 func (s *userService) GetAllUsers(page, pageSize int) ([]models.User, int64, error) {

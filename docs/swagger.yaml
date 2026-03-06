@@ -181,6 +181,15 @@ definitions:
       status:
         type: string
     type: object
+  request.ImproveReportRequest:
+    properties:
+      user_text:
+        maxLength: 2000
+        minLength: 1
+        type: string
+    required:
+    - user_text
+    type: object
   request.LoginRequest:
     properties:
       email:
@@ -417,6 +426,19 @@ definitions:
       user_id:
         type: string
     type: object
+  request.TeamUpdateMemberRoleRequest:
+    properties:
+      specialization:
+        type: string
+      team_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - specialization
+    - team_id
+    - user_id
+    type: object
   request.TeamUpdateRequest:
     properties:
       description:
@@ -638,6 +660,15 @@ definitions:
       total_count:
         type: integer
     type: object
+  response.BoardRef:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      project_id:
+        type: string
+    type: object
   response.BoardResponse:
     properties:
       created_at:
@@ -672,6 +703,15 @@ definitions:
         type: string
       task_id:
         type: string
+    type: object
+  response.CompletedWorkWithTask:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task:
+        $ref: '#/definitions/response.TaskForReport'
     type: object
   response.ForumMessageListByProblemIdResponse:
     properties:
@@ -750,6 +790,13 @@ definitions:
         items:
           $ref: '#/definitions/response.GetUserResponse'
         type: array
+    type: object
+  response.GetRoleByUserId:
+    properties:
+      role:
+        $ref: '#/definitions/response.GetRoleResponse'
+      user_id:
+        type: string
     type: object
   response.GetRoleResponse:
     properties:
@@ -854,6 +901,33 @@ definitions:
           $ref: '#/definitions/response.HelpRequestWithAssignerID'
         type: array
     type: object
+  response.ImprovedReportResponse:
+    properties:
+      improved_text:
+        type: string
+      original_text:
+        type: string
+      task_description:
+        type: string
+      task_id:
+        type: string
+      task_title:
+        type: string
+    type: object
+  response.InTaskBoard:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  response.InTaskProject:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   response.ProblemListResponse:
     properties:
       page:
@@ -913,6 +987,29 @@ definitions:
           $ref: '#/definitions/response.ProjectResponse'
         type: array
     type: object
+  response.ProjectForSearchResponse:
+    properties:
+      created_at:
+        type: string
+      created_by:
+        type: string
+      created_by_user:
+        $ref: '#/definitions/response.UserShort'
+      description:
+        type: string
+      gitlab_project_id:
+        type: integer
+      gitlab_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
   response.ProjectListResponse:
     properties:
       page:
@@ -947,6 +1044,34 @@ definitions:
       updated_at:
         type: string
     type: object
+  response.ProjectSearchResponse:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      projects:
+        items:
+          $ref: '#/definitions/response.ProjectForSearchResponse'
+        type: array
+      query:
+        type: string
+      totalCount:
+        type: integer
+    type: object
+  response.ProjectShort:
+    properties:
+      created_by:
+        type: string
+      description:
+        type: string
+      gitlab_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
   response.ProjectUniversalResponse:
     properties:
       id:
@@ -977,6 +1102,39 @@ definitions:
         type: string
       user_id:
         type: string
+    type: object
+  response.ReportFullResponse:
+    properties:
+      checked:
+        type: integer
+      completed_work:
+        items:
+          $ref: '#/definitions/response.CompletedWorkWithTask'
+        type: array
+      created_at:
+        type: string
+      help_requests:
+        items:
+          $ref: '#/definitions/response.HelpRequestItem'
+        type: array
+      id:
+        type: string
+      plan_tomorrow:
+        items:
+          $ref: '#/definitions/response.TomorrowPlansWithTask'
+        type: array
+      problem:
+        items:
+          $ref: '#/definitions/response.ProblemResponse'
+        type: array
+      report_date:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: string
+      user_info:
+        $ref: '#/definitions/response.UserShort'
     type: object
   response.ReportListByProjectId:
     properties:
@@ -1064,6 +1222,21 @@ definitions:
         items:
           $ref: '#/definitions/response.StatusResponse'
         type: array
+    type: object
+  response.StatusFull:
+    properties:
+      board:
+        $ref: '#/definitions/response.BoardRef'
+      color:
+        type: string
+      id:
+        type: string
+      is_open:
+        type: boolean
+      key:
+        type: string
+      name:
+        type: string
     type: object
   response.StatusListResponse:
     properties:
@@ -1200,6 +1373,52 @@ definitions:
       message:
         type: string
     type: object
+  response.TaskForReport:
+    properties:
+      board:
+        $ref: '#/definitions/response.InTaskBoard'
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      project:
+        $ref: '#/definitions/response.InTaskProject'
+    type: object
+  response.TaskFull:
+    properties:
+      assigned_to_user:
+        $ref: '#/definitions/response.UserFull'
+      category:
+        type: integer
+      created_at:
+        type: string
+      created_by_user:
+        $ref: '#/definitions/response.UserFull'
+      deadline:
+        type: string
+      deleted:
+        type: boolean
+      description:
+        type: string
+      gitlab_issue_id:
+        type: integer
+      id:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/response.StatusFull'
+      time_spent:
+        type: string
+      updated_at:
+        type: string
+    type: object
   response.TaskListResponse:
     properties:
       page:
@@ -1211,6 +1430,57 @@ definitions:
           $ref: '#/definitions/response.TaskShort'
         type: array
       total_count:
+        type: integer
+    type: object
+  response.TaskProjectInfo:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  response.TaskSearchItem:
+    properties:
+      assigned_to:
+        $ref: '#/definitions/response.UserShort'
+      created_at:
+        type: string
+      created_by:
+        $ref: '#/definitions/response.UserShort'
+      deadline:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      priority:
+        type: integer
+      project:
+        $ref: '#/definitions/response.TaskProjectInfo'
+      start_date:
+        type: string
+      status:
+        $ref: '#/definitions/response.TaskStatusInfo'
+      updated_at:
+        type: string
+    type: object
+  response.TaskSearchResponse:
+    properties:
+      page:
+        type: integer
+      pageSize:
+        type: integer
+      query:
+        type: string
+      tasks:
+        items:
+          $ref: '#/definitions/response.TaskSearchItem'
+        type: array
+      totalCount:
         type: integer
     type: object
   response.TaskShort:
@@ -1230,6 +1500,17 @@ definitions:
       status_id:
         type: string
       updated_at:
+        type: string
+    type: object
+  response.TaskStatusInfo:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      key:
+        type: string
+      name:
         type: string
     type: object
   response.TaskUniversaResponse:
@@ -1316,6 +1597,26 @@ definitions:
       task_id:
         type: string
     type: object
+  response.TomorrowPlansWithTask:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      task:
+        $ref: '#/definitions/response.TaskForReport'
+    type: object
+  response.UserFull:
+    properties:
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: string
+      last_name:
+        type: string
+    type: object
   response.UserInfo:
     description: Структура с информацией о пользователе из Keycloak
     properties:
@@ -1341,6 +1642,23 @@ definitions:
         description: ID пользователя
         type: string
     type: object
+  response.UserProjectTasksResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      project:
+        $ref: '#/definitions/response.ProjectShort'
+      tasks:
+        items:
+          $ref: '#/definitions/response.TaskFull'
+        type: array
+      total_count:
+        type: integer
+      user:
+        $ref: '#/definitions/response.UserFull'
+    type: object
   response.UserShort:
     properties:
       first_name:
@@ -1349,6 +1667,19 @@ definitions:
         type: string
       last_name:
         type: string
+    type: object
+  response.UserTasksResponse:
+    properties:
+      page:
+        type: integer
+      page_size:
+        type: integer
+      tasks:
+        items:
+          $ref: '#/definitions/response.TaskFull'
+        type: array
+      total_count:
+        type: integer
     type: object
   response.UserUniversalResponse:
     properties:
@@ -2019,6 +2350,48 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение досок по ID проекта
+      tags:
+      - Boards
+  /boards/project/{projectId}/export/xlsx:
+    get:
+      consumes:
+      - application/json
+      description: Генерирует XLSX-файл с задачами проекта, сгруппированными по доскам
+        и статусам
+      parameters:
+      - description: ID проекта
+        in: path
+        name: projectId
+        required: true
+        type: string
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с задачами проекта
+          schema:
+            type: string
+        "400":
+          description: Некорректный идентификатор проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт задач проекта в XLSX
       tags:
       - Boards
   /forum-messages:
@@ -2786,6 +3159,67 @@ paths:
       summary: Получение списка всех проектов
       tags:
       - Projects
+  /project/search:
+    get:
+      consumes:
+      - application/json
+      description: 'Ищет проекты по имени, описанию или GitLab URL с автодополнением
+        после каждого введенного символа. Поддерживает автоматическую замену раскладки
+        клавиатуры (английская-русская) для расширенного поиска и пагинацию. Проекты
+        сортируются: сначала проекты где пользователь создатель, потом остальные.'
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: ID пользователя для приоритетной сортировки
+        in: query
+        name: user_id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Результаты поиска проектов
+          schema:
+            $ref: '#/definitions/response.ProjectSearchResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при поиске проектов
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Поиск проектов с автодополнением и пагинацией
+      tags:
+      - Projects
   /project/team/{team_id}:
     get:
       consumes:
@@ -2984,22 +3418,15 @@ paths:
         "200":
           description: Отчет успешно получен
           schema:
-            $ref: '#/definitions/response.ReportResponse'
+            $ref: '#/definitions/response.ReportFullResponse'
         "400":
           description: Некорректный идентификатор отчета
           schema:
             additionalProperties:
               type: string
             type: object
-        "401":
-          description: Нет или неверный токен
-          schema:
-            additionalProperties:
-              type: string
-            type: object
         "404":
-          description: Отчет, пользователь, запрос на помощь, выполненная работа или
-            план на завтра не найдены
+          description: Отчет не найден
           schema:
             additionalProperties:
               type: string
@@ -3168,6 +3595,30 @@ paths:
       security:
       - BearerAuth: []
       summary: Обновление выполненной работы
+      tags:
+      - Reports
+  /report/export/tomorrow-plans/xlsx:
+    get:
+      consumes:
+      - application/json
+      description: Генерирует XLSX-файл с планами на завтра из последних отчетов всех
+        пользователей
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с планами на завтра
+          schema:
+            type: string
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт планов на завтра в XLSX
       tags:
       - Reports
   /report/export/xlsx:
@@ -3766,6 +4217,53 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех ролей
+      tags:
+      - Roles
+  /role/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получает роль пользователя по его ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль пользователя успешно получена
+          schema:
+            $ref: '#/definitions/response.GetRoleByUserId'
+        "400":
+          description: Некорректный идентификатор пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Роль не найдена для данного пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение роли по ID пользователя
       tags:
       - Roles
   /status:
@@ -4513,6 +5011,54 @@ paths:
       summary: Обновление задачи
       tags:
       - Tasks
+  /task/{id}/improve-report:
+    post:
+      consumes:
+      - application/json
+      description: Принимает текст пользователя и улучшает его на основе описания
+        задачи через LLM
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Данные для улучшения отчета
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/request.ImproveReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Улучшенный отчет
+          schema:
+            $ref: '#/definitions/response.ImprovedReportResponse'
+        "400":
+          description: Некорректный ID задачи или данные запроса
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Задача не найдена
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка при обработке LLM
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Улучшить отчет по задаче с помощью LLM
+      tags:
+      - Tasks
   /task/all/{page}/{pagesize}:
     get:
       consumes:
@@ -4557,6 +5103,70 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех задач
+      tags:
+      - Tasks
+  /task/board-project/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает ID доски и ID проекта, к которым принадлежит задача
+      parameters:
+      - description: ID задачи
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о доске и проекте
+          schema: {}
+        "400":
+          description: Некорректный ID задачи
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Задача, статус или доска не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение доски и проекта задачи
+      tags:
+      - Tasks
+  /task/export/active-tasks/xlsx:
+    get:
+      consumes:
+      - application/json
+      description: Генерирует XLSX-файл с активными задачами всех пользователей, сгруппированными
+        по пользователям
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: XLSX-файл с активными задачами
+          schema:
+            type: string
+        "500":
+          description: Ошибка при генерации отчёта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Экспорт активных задач всех пользователей в XLSX
       tags:
       - Tasks
   /task/move:
@@ -4615,6 +5225,67 @@ paths:
       summary: Переместить задачу в другой статус (столбец)
       tags:
       - Tasks
+  /task/search:
+    get:
+      consumes:
+      - application/json
+      description: 'Ищет задачи по названию с автодополнением после каждого введенного
+        символа. Поддерживает автоматическую замену раскладки клавиатуры (английская-русская)
+        для расширенного поиска и пагинацию. Задачи сортируются: сначала задачи где
+        пользователь исполнитель, потом где создатель, потом остальные.'
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: query
+        required: true
+        type: string
+      - description: ID пользователя для приоритетной сортировки
+        in: query
+        name: user_id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: query
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: query
+        maximum: 100
+        minimum: 1
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Результаты поиска задач
+          schema:
+            $ref: '#/definitions/response.TaskSearchResponse'
+        "400":
+          description: Ошибка в запросе
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при поиске задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Поиск задач с автодополнением и пагинацией
+      tags:
+      - Tasks
   /task/user/{id}/{page}/{pagesize}:
     get:
       consumes:
@@ -4643,7 +5314,7 @@ paths:
         "200":
           description: Список задач успешно получен
           schema:
-            $ref: '#/definitions/response.TaskListResponse'
+            $ref: '#/definitions/response.UserTasksResponse'
         "400":
           description: Ошибка при парсинге параметров или некорректный ID пользователя
           schema:
@@ -4665,6 +5336,121 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение задач по ID пользователя
+      tags:
+      - Tasks
+  /task/user/{id}/{page}/{pagesize}/active:
+    get:
+      consumes:
+      - application/json
+      description: Получение списка задач, назначенных на пользователя, где статус
+        != 'done' и deleted = false
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список активных задач успешно получен
+          schema:
+            $ref: '#/definitions/response.UserTasksResponse'
+        "400":
+          description: Ошибка при парсинге параметров или некорректный ID пользователя
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение активных задач по ID пользователя (исключая статус Done)
+      tags:
+      - Tasks
+  /task/user/{user_id}/project/{project_id}/{page}/{pagesize}:
+    get:
+      consumes:
+      - application/json
+      description: Получает список задач, назначенных на указанного пользователя и
+        принадлежащих заданному проекту, с пагинацией
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: ID проекта
+        in: path
+        name: project_id
+        required: true
+        type: string
+      - description: Номер страницы
+        in: path
+        name: page
+        required: true
+        type: integer
+      - description: Размер страницы
+        in: path
+        name: pagesize
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список задач успешно получен
+          schema:
+            $ref: '#/definitions/response.UserProjectTasksResponse'
+        "400":
+          description: Некорректный ID пользователя или проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Пользователь или проект не найдены
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при получении задач
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получение задач пользователя в рамках проекта
       tags:
       - Tasks
   /team:
@@ -4870,6 +5656,54 @@ paths:
       security:
       - BearerAuth: []
       summary: Получение списка всех команд
+      tags:
+      - Teams
+  /team/member/role:
+    patch:
+      consumes:
+      - application/json
+      description: Обновляет специализацию (роль) пользователя в указанной команде
+      parameters:
+      - description: Данные для обновления роли
+        in: body
+        name: updateRole
+        required: true
+        schema:
+          $ref: '#/definitions/request.TeamUpdateMemberRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Роль успешно обновлена
+          schema:
+            $ref: '#/definitions/response.TeamUniversalUserResponse'
+        "400":
+          description: Ошибка в запросе или некорректные идентификаторы
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Нет или неверный токен
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Участник команды не найден
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Ошибка сервера при обновлении роли
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Изменение роли участника в команде
       tags:
       - Teams
   /team/project:

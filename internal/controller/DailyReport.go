@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -44,6 +45,7 @@ func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService) {
 		reportGroup.GET("/help-requests-by-user-id/:id", controller.GetHelpRequestsForUser)
 		reportGroup.DELETE("/help-request/:id", controller.DeleteHelpRequest)
 		reportGroup.POST("/export/xlsx", controller.GetReportByDateInXLSX)
+		reportGroup.GET("/export/tomorrow-plans/xlsx", controller.ExportTomorrowPlansToXLSX)
 	}
 }
 
@@ -143,6 +145,185 @@ func (rc *ReportController) GetAllReports(c echo.Context) error {
 		})
 	}
 	return c.JSON(http.StatusOK, out)
+}
+
+// ExportTomorrowPlansToXLSX godoc
+// @Summary Экспорт планов на завтра в XLSX
+// @Description Генерирует XLSX-файл с планами на завтра из последних отчетов всех пользователей
+// @Tags Reports
+// @Accept json
+// @Produce application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security BearerAuth
+// @Success 200 {string} file "XLSX-файл с планами на завтра"
+// @Failure 500 {object} map[string]string "Ошибка при генерации отчёта"
+// @Router /report/export/tomorrow-plans/xlsx [get]
+func (rc *ReportController) ExportTomorrowPlansToXLSX(c echo.Context) error {
+    data, err := rc.reportService.GetTomorrowPlansForXLSX()
+    if err != nil {
+        log.Printf("service error (get tomorrow plans for XLSX): %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
+    }
+
+    f := excelize.NewFile()
+
+    summarySheet := "Планы на завтра"
+    f.NewSheet(summarySheet)
+    
+    f.SetCellValue(summarySheet, "A1", "Отчет по планам на завтра")
+    f.SetCellValue(summarySheet, "A2", "Дата формирования: "+time.Now().Format("02.01.2006 15:04"))
+    f.SetCellValue(summarySheet, "A3", "Всего пользователей: "+strconv.Itoa(len(data.Users)))
+    f.SetCellValue(summarySheet, "A4", "Всего планов: "+strconv.Itoa(calculateTotalPlans(data.Users)))
+    
+    f.SetCellValue(summarySheet, "A5", "")
+
+    summaryHeaders := []interface{}{
+        "Пользователь", "Дата отчета", "Задача", "Проект", "Описание плана", 
+        "Создано",
+    }
+    
+    if err := f.SetSheetRow(summarySheet, "A6", &summaryHeaders); err != nil {
+        log.Printf("XLSX header error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании XLSX"})
+    }
+
+    rowIndex := 7
+    totalPlans := 0
+
+    for _, user := range data.Users {
+        userSheet := user.UserName
+        if userSheet == "" {
+            userSheet = user.UserEmail
+        }
+        
+        f.NewSheet(userSheet)
+        
+        f.SetCellValue(userSheet, "A1", "Пользователь: "+user.UserName)
+        if user.UserEmail != "" {
+            f.SetCellValue(userSheet, "A2", "Email: "+user.UserEmail)
+        }
+        f.SetCellValue(userSheet, "A3", "Дата отчета: "+user.ReportDate.Format("02.01.2006"))
+        f.SetCellValue(userSheet, "A4", "Количество планов: "+strconv.Itoa(len(user.Plans)))
+        
+        f.SetCellValue(userSheet, "A5", "")
+
+        userHeaders := []interface{}{
+            "Дата отчета", "Задача", "Проект", "Описание плана", "Создано",
+        }
+        f.SetSheetRow(userSheet, "A6", &userHeaders)
+        
+        userRowIndex := 7
+
+        for _, plan := range user.Plans {
+            totalPlans++
+            
+            summaryRow := []interface{}{
+                user.UserName,
+                user.ReportDate.Format("02.01.2006"),
+                plan.TaskName,      
+                plan.ProjectName,    
+                plan.Description,
+                plan.CreatedAt.Format("02.01.2006 15:04"),
+            }
+            
+            axis := fmt.Sprintf("A%d", rowIndex)
+            if err := f.SetSheetRow(summarySheet, axis, &summaryRow); err != nil {
+                log.Printf("XLSX summary row error: %v", err)
+                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+            }
+            rowIndex++
+
+            userRow := []interface{}{
+                user.ReportDate.Format("02.01.2006"),
+                plan.TaskName,       
+                plan.ProjectName,  
+                plan.Description,
+                plan.CreatedAt.Format("02.01.2006 15:04"),
+            }
+            
+            userAxis := fmt.Sprintf("A%d", userRowIndex)
+            if err := f.SetSheetRow(userSheet, userAxis, &userRow); err != nil {
+                log.Printf("XLSX user row error: %v", err)
+                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
+            }
+            userRowIndex++
+        }
+
+        f.SetColWidth(userSheet, "A", "E", 20)
+        f.SetColWidth(userSheet, "B", "C", 25) 
+        f.SetColWidth(userSheet, "D", "D", 40) 
+        
+        headerStyle, _ := f.NewStyle(&excelize.Style{
+            Font: &excelize.Font{Bold: true, Size: 12},
+        })
+        f.SetCellStyle(userSheet, "A1", "A4", headerStyle)
+        
+        tableStyle, _ := f.NewStyle(&excelize.Style{
+            Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+        })
+        f.SetCellStyle(userSheet, "A6", fmt.Sprintf("E%d", userRowIndex), tableStyle)
+        
+        tableHeaderStyle, _ := f.NewStyle(&excelize.Style{
+            Font: &excelize.Font{Bold: true},
+            Alignment: &excelize.Alignment{WrapText: true, Vertical: "center", Horizontal: "center"},
+            Fill: excelize.Fill{Type: "pattern", Color: []string{"E6E6FA"}, Pattern: 1},
+        })
+        f.SetCellStyle(userSheet, "A6", "E6", tableHeaderStyle)
+    }
+
+    f.SetColWidth(summarySheet, "A", "F", 20)
+    f.SetColWidth(summarySheet, "C", "D", 25) 
+    f.SetColWidth(summarySheet, "E", "E", 40) 
+    
+    titleStyle, _ := f.NewStyle(&excelize.Style{
+        Font: &excelize.Font{Bold: true, Size: 14},
+    })
+    f.SetCellStyle(summarySheet, "A1", "A1", titleStyle)
+    
+    infoStyle, _ := f.NewStyle(&excelize.Style{
+        Font: &excelize.Font{Bold: true},
+    })
+    f.SetCellStyle(summarySheet, "A2", "A4", infoStyle)
+    
+    tableStyle, _ := f.NewStyle(&excelize.Style{
+        Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+    })
+    f.SetCellStyle(summarySheet, "A6", fmt.Sprintf("F%d", rowIndex), tableStyle)
+    
+    tableHeaderStyle, _ := f.NewStyle(&excelize.Style{
+        Font: &excelize.Font{Bold: true},
+        Alignment: &excelize.Alignment{WrapText: true, Vertical: "center", Horizontal: "center"},
+        Fill: excelize.Fill{Type: "pattern", Color: []string{"E6E6FA"}, Pattern: 1},
+    })
+    f.SetCellStyle(summarySheet, "A6", "F6", tableHeaderStyle)
+
+    f.DeleteSheet("Sheet1")
+
+    index, err := f.GetSheetIndex(summarySheet)
+    if err != nil {
+        log.Printf("Creating list error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+    f.SetActiveSheet(index)
+
+    buf, err := f.WriteToBuffer()
+    if err != nil {
+        log.Printf("XLSX buffer error: %v", err)
+        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
+    }
+
+    filename := fmt.Sprintf("tomorrow_plans_%s.xlsx", time.Now().Format("2006-01-02"))
+
+    c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
+    return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+}
+
+func calculateTotalPlans(users []response.UserTomorrowPlans) int {
+    total := 0
+    for _, user := range users {
+        total += len(user.Plans)
+    }
+    return total
 }
 
 // GetAllReportsByUserId godoc
@@ -255,10 +436,9 @@ func (rc *ReportController) GetAllReportsByUserId(c echo.Context) error {
 // @Produce json
 // @Param id path string true "ID отчета"
 // @Security BearerAuth
-// @Failure 401 {object} map[string]string "Нет или неверный токен"
-// @Success 200 {object} response.ReportResponse "Отчет успешно получен"
+// @Success 200 {object} response.ReportFullResponse "Отчет успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор отчета"
-// @Failure 404 {object} map[string]string "Отчет, пользователь, запрос на помощь, выполненная работа или план на завтра не найдены"
+// @Failure 404 {object} map[string]string "Отчет не найден"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении отчета"
 // @Router /report/{id} [get]
 func (rc *ReportController) GetReport(c echo.Context) error {
@@ -281,22 +461,65 @@ func (rc *ReportController) GetReport(c echo.Context) error {
 		FirstName: r.User.FirstName,
 		LastName:  r.User.LastName,
 	}
-	var complWork []response.CompletedWork
+
+	var complWork []response.CompletedWorkWithTask
 	for _, w := range r.CompletedWork {
-		complWork = append(complWork, response.CompletedWork{
+		task := response.TaskForReport{}
+		if w.Task != nil {
+			task.ID = w.Task.ID.String()
+			task.Name = utils.GetString(w.Task.Name)
+			task.Description = utils.GetString(w.Task.Description)
+			
+			if w.Task.Status != nil && w.Task.Status.Board != nil {
+				task.Board = response.InTaskBoard{
+					BoardId:   w.Task.Status.Board.ID.String(),
+					BoardName: utils.GetString(w.Task.Status.Board.Name),
+				}
+				
+				if w.Task.Status.Board.Project != nil {
+					task.Project = response.InTaskProject{
+						ProjectId:   w.Task.Status.Board.Project.ID.String(),
+						ProjectName: utils.GetString(w.Task.Status.Board.Project.Name),
+					}
+				}
+			}
+		}
+		complWork = append(complWork, response.CompletedWorkWithTask{
 			ID:          w.ID.String(),
 			Description: utils.GetString(w.Description),
-			TaskId:  utils.GetUUIDString(w.TaskID),
+			Task:        task,
 		})
 	}
-	var plans []response.TomorrowPlans
+
+	var plans []response.TomorrowPlansWithTask
 	for _, p := range r.TomorrowPlans {
-		plans = append(plans, response.TomorrowPlans{
+		task := response.TaskForReport{}
+		if p.Task != nil {
+			task.ID = p.Task.ID.String()
+			task.Name = utils.GetString(p.Task.Name)
+			task.Description = utils.GetString(p.Task.Description)
+			
+			if p.Task.Status != nil && p.Task.Status.Board != nil {
+				task.Board = response.InTaskBoard{
+					BoardId:   p.Task.Status.Board.ID.String(),
+					BoardName: utils.GetString(p.Task.Status.Board.Name),
+				}
+				
+				if p.Task.Status.Board.Project != nil {
+					task.Project = response.InTaskProject{
+						ProjectId:   p.Task.Status.Board.Project.ID.String(),
+						ProjectName: utils.GetString(p.Task.Status.Board.Project.Name),
+					}
+				}
+			}
+		}
+		plans = append(plans, response.TomorrowPlansWithTask{
 			ID:          p.ID.String(),
 			Description: utils.GetString(p.Description),
-			TaskId:  utils.GetUUIDString(p.TaskID),
+			Task:        task,
 		})
 	}
+
 	var problemsResp []response.ProblemResponse
 	for _, rp := range r.ReportProblems {
 		if rp.Problem != nil {
@@ -310,6 +533,7 @@ func (rc *ReportController) GetReport(c echo.Context) error {
 			})
 		}
 	}
+
 	helpResp := []response.HelpRequestItem{}
 	for _, hr := range r.HelpRequests {
 		helpResp = append(helpResp, response.HelpRequestItem{
@@ -319,7 +543,8 @@ func (rc *ReportController) GetReport(c echo.Context) error {
 			Status:      utils.GetString(hr.Status),
 		})
 	}
-	return c.JSON(http.StatusOK, response.ReportResponse{
+
+	return c.JSON(http.StatusOK, response.ReportFullResponse{
 		ID:            r.ID.String(),
 		UserID:        r.UserID.String(),
 		ReportDate:    utils.GetTime(r.ReportDate),

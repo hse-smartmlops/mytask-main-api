@@ -22,6 +22,7 @@ type TeamService interface {
 	AddProjectToTeam(req request.TeamAddProjectRequest) (*models.ProjectTeam, error)
 	DeleteProjectFromTeam(teamID uuid.UUID, projectID uuid.UUID) error
 	GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error)
+	UpdateTeamMemberRole(teamID, userID, specialization string) error
 }
 
 type teamService struct {
@@ -252,6 +253,38 @@ func (s *teamService) DeleteProjectFromTeam(teamID uuid.UUID, projectID uuid.UUI
 
 	if !deleted {
 		return errors.New("project team not found")
+	}
+
+	return nil
+}
+
+func (s *teamService) UpdateTeamMemberRole(teamID, userID, specialization string) error {
+	teamUUID, err := uuid.Parse(teamID)
+	if err != nil {
+		return errors.New("team not found") // или отдельная ошибка, но для простоты
+	}
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// Проверим, что команда и пользователь существуют
+	_, err = s.repo.GetTeam(teamID)
+	if err != nil {
+		return errors.New("team not found")
+	}
+	_, err = s.repo.GetUser(userID)
+	if err != nil {
+		return errors.New("user not found")
+	}
+
+	// Обновляем specialization
+	updated, err := s.repo.UpdateTeamMemberSpecialization(teamUUID, userUUID, specialization)
+	if err != nil {
+		return err
+	}
+	if !updated {
+		return errors.New("team member not found")
 	}
 
 	return nil

@@ -26,7 +26,8 @@ func TestProblem_FullCRUD(t *testing.T) {
 
 	// Создаем зависимости для новой архитектуры
 	problemRepo := repository.NewProblemRepository(testDB)
-	problemService := service.NewProblemService(problemRepo)
+	forumMessageRepo := repository.NewForumMessageRepository(testDB)
+	problemService := service.NewProblemService(problemRepo, forumMessageRepo, uuid.New())
 	problemController := controller.NewProblemController(problemService)
 
 	e := echo.New()

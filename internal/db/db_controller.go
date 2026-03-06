@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -17,10 +16,6 @@ var DB_conn *gorm.DB = GetDBConnection()
 
 func GetDBConnection() *gorm.DB {
 	time.Sleep(5 * time.Second)
-
-	if err := godotenv.Load(".env"); err != nil {
-		log.Fatal("Error loading .env file")
-	}
 
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
@@ -93,6 +88,10 @@ func GetDBConnection() *gorm.DB {
 	); err != nil {
 		log.Fatal("AutoMigrate failed:", err)
 	}
+
+	if err := SetupFullTextSearch(db); err != nil {
+        log.Printf("Warning: Full-Text Search setup had issues: %v", err)
+    }
 
 	return db
 }

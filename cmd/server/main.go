@@ -13,16 +13,21 @@ import (
 	docs "emplacc-api/docs"
 	"emplacc-api/internal/controller"
 	"emplacc-api/internal/db"
+	"emplacc-api/internal/grpc/client"
 	"emplacc-api/internal/repository"
 	"emplacc-api/internal/service"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
+
+var systemUserId uuid.UUID
 
 func main() {
 	loc, err := time.LoadLocation("Europe/Moscow")
@@ -49,6 +54,14 @@ func main() {
 
 	// Подключение к БД через ваш существующий файл
 	dbConn := db.DB_conn
+	llmHost := os.Getenv("LLM_HOST")
+	llmAddr := llmHost + ":50051"
+
+	llmClient, err := client.NewLLMClient(llmAddr)
+	if err != nil {
+		log.Fatalf("Failed to create gRPC client: %v", err)
+	}
+	defer llmClient.Close()
 
 	// Создаем зависимости
 	userRepo := repository.NewUserRepository(dbConn)
@@ -60,7 +73,6 @@ func main() {
 	forumMessageRepo := repository.NewForumMessageRepository(dbConn)
 	forumMessageService := service.NewForumMessageService(forumMessageRepo)
 	problemRepo := repository.NewProblemRepository(dbConn)
-	problemService := service.NewProblemService(problemRepo)
 	projectRepo := repository.NewProjectRepository(dbConn)
 	projectService := service.NewProjectService(projectRepo)
 	attendanceRepo := repository.NewAttendanceRepository(dbConn)
@@ -76,7 +88,14 @@ func main() {
 	teamRepo := repository.NewTeamRepository(dbConn)
 	teamService := service.NewTeamService(teamRepo)
 	userService := service.NewUserService(userRepo)
-	
+
+	systemUserId, err = userService.CreateSystemUser()
+	if err != nil{
+		log.Fatalf("service error (create user): %v", err)
+	}
+
+	problemService := service.NewProblemService(problemRepo, forumMessageRepo, systemUserId)
+
 	// Keycloak auth middleware for protected endpoints
 	//e.Use(controller.KeycloakAuthMiddleware(authService)) // Передаем authService
 
@@ -87,7 +106,7 @@ func main() {
 	controller.RegisterAuthRoutes(e, authService)
 	controller.RegisterTeamRoutes(e, teamService)
 	controller.RegisterProjectRoutes(e, projectService)
-	controller.RegisterTaskRoutes(e, taskService)
+	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient)
 	controller.RegisterBoardRoutes(e, boardService)
 	controller.RegisterUserRoutes(e, userService)
 	controller.RegisterReportRoutes(e, reportService)

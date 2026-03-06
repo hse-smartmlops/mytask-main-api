@@ -4,6 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/repository"
+	"emplacc-api/internal/utils"
 	"errors"
 	"time"
 
@@ -19,6 +20,7 @@ type ProjectService interface {
 	CreateProject(req request.CreateProjectRequest) (uuid.UUID, error)
 	UpdateProject(projectID uuid.UUID, req request.UpdateProjectRequest) error
 	DeleteProject(projectID uuid.UUID) error
+	SearchProjects(query, userID string, page, pageSize int) ([]models.Project, int64, error)
 }
 
 type projectService struct {
@@ -34,6 +36,11 @@ func NewProjectService(repo repository.ProjectRepository) ProjectService {
 func (s *projectService) GetAllProjects(page, pageSize int) ([]models.Project, int64, error) {
 	offset := (page - 1) * pageSize
 	return s.repo.GetAllProjects(pageSize, offset)
+}
+
+func (s *projectService) SearchProjects(query, userID string, page, pageSize int) ([]models.Project, int64, error) {
+    offset := (page - 1) * pageSize
+    return s.repo.SearchProjects(query, userID, pageSize, offset)
 }
 
 func (s *projectService) GetProjectByID(projectID uuid.UUID) (*models.Project, error) {
@@ -104,7 +111,7 @@ func (s *projectService) CreateProject(req request.CreateProjectRequest) (uuid.U
 			Name:      &name,
 			Color:     &color,
 			IsDefault: &tr,
-			IsActive:  boolPtr(true),
+			IsActive:  utils.BoolPtr(true),
 			IsOpen:    &isOpen,
 			Deleted:   &deleted,
 			CreatedAt: &now,

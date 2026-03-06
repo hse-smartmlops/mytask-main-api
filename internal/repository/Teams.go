@@ -27,6 +27,7 @@ type TeamRepository interface {
 	DeleteProjectTeam(teamID uuid.UUID, projectID uuid.UUID, updateData map[string]interface{}) (bool, error)
 	GetUsersFromArray(userIDs []string) ([]models.User, error)
 	GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error)
+	UpdateTeamMemberSpecialization(teamID, userID uuid.UUID, specialization string) (bool, error)
 }
 
 type teamRepository struct {
@@ -316,6 +317,32 @@ func (r *teamRepository) DeleteProjectTeam(teamID uuid.UUID, projectID uuid.UUID
 
 	if err != nil {
 		if err.Error() == "project team not found" {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return affected > 0, nil
+}
+
+func (r *teamRepository) UpdateTeamMemberSpecialization(teamID, userID uuid.UUID, specialization string) (bool, error) {
+	var affected int64
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&models.TeamMember{}).
+			Where("team_id = ? AND user_id = ? AND deleted = ?", teamID, userID, false).
+			Update("specialization", &specialization)
+		if res.Error != nil {
+			return res.Error
+		}
+		affected = res.RowsAffected
+		if affected == 0 {
+			return errors.New("team member not found")
+		}
+		return nil
+	})
+
+	if err != nil {
+		if err.Error() == "team member not found" {
 			return false, nil
 		}
 		return false, err

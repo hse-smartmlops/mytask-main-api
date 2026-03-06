@@ -41,3 +41,9 @@ type TeamDeleteProjectRequest struct {
 	TeamID    string `json:"team_id"`
 	ProjectID string `json:"project_id"`
 }
+
+type TeamUpdateMemberRoleRequest struct {
+	TeamID         string `json:"team_id" validate:"required"`
+	UserID         string `json:"user_id" validate:"required"`
+	Specialization string `json:"specialization" validate:"required"`
+}
