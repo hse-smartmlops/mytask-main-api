@@ -21,6 +21,7 @@ type GetUserResponse struct {
 	FirstName      string    `json:"first_name"`
 	LastName       string    `json:"last_name"`
 	LastLogin      time.Time `json:"last_login"`
+	AvatarURL      string    `json:"avatar_url,omitempty"`
 }
 
 type UserUniversalResponse struct {

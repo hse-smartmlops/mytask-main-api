@@ -16,6 +16,7 @@ import (
 type UserRepository interface {
 	GetAllUsers(limit, offset int) ([]models.User, int64, error)
 	GetUserById(userId uuid.UUID) (*models.User, error)
+	GetUserByEmail(email string) (*models.User, error)
 	CreateUser(user models.User) error
 	UpdateUser(userId uuid.UUID, updateData map[string]interface{}) (bool, error)
 	DeleteUser(userId uuid.UUID) (bool, error)
@@ -40,14 +41,14 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (r *userRepository) GetAllUsers(limit, offset int) ([]models.User, int64, error) {
 	var totalCount int64
-	result := r.db.Session(&gorm.Session{}).Model(models.User{}).Where("deleted = FALSE").Count(&totalCount)
+	result := r.db.Table("users").Where("users.deleted = FALSE").Count(&totalCount)
 	if result.Error != nil {
 		return nil, 0, result.Error
 	}
 
 	var users []models.User
-	if err := r.db.Session(&gorm.Session{}).Model(models.User{}).
-		Where("deleted = FALSE").
+	if err := r.db.Table("users").
+		Where("users.deleted = FALSE").
 		Limit(limit).
 		Offset(offset).
 		Find(&users).Error; err != nil {
@@ -75,7 +76,7 @@ func (r *userRepository) CreateUser(user models.User) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		log.Printf("CreateUser: db transaction started for id=%s", user.ID)
 		
-		if err := tx.Create(&user).Error; err != nil {
+		if err := tx.Omit("UserRoles").Create(&user).Error; err != nil {
 			return err
 		}
 
@@ -184,6 +185,14 @@ func (r *userRepository) RestoreUser(req request.RestoreUserRequest) (uuid.UUID,
 	}
 
 	return userId, nil
+}
+
+func (r *userRepository) GetUserByEmail(email string) (*models.User, error) {
+	var user models.User
+	if err := r.db.Where("email = ? AND deleted = FALSE", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (r *userRepository) GetUser(userID string) (*models.User, error) {

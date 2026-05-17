@@ -23,21 +23,21 @@ func NewTeamController(teamService service.TeamService) *TeamController {
 	}
 }
 
-func RegisterTeamRoutes(e *echo.Echo, teamService service.TeamService) {
+func RegisterTeamRoutes(e *echo.Echo, teamService service.TeamService, managerMw echo.MiddlewareFunc) {
 	controller := NewTeamController(teamService)
-	teamGroup := e.Group("/team")
-	teamGroup.GET("/all", controller.GetTeams)
-	teamGroup.GET("/:id", controller.GetTeamByID)
-	teamGroup.POST("", controller.CreateTeam)
-	teamGroup.PATCH("/:id", controller.UpdateTeam)
-	teamGroup.DELETE("/:id", controller.DeleteTeam)
-	teamGroup.POST("/user", controller.AddUserToTeam)
-	teamGroup.DELETE("/user", controller.DeleteUserFromTeam)
-	teamGroup.POST("/project", controller.AddProjectToTeam)
-	teamGroup.DELETE("/project", controller.DeleteProjectFromTeam)
-	teamGroup.GET("/project/:project_id", controller.GetProjectTeams)
-	teamGroup.GET("/user/:id", controller.GetTeamByUserId)
-	teamGroup.PATCH("/member/role", controller.UpdateTeamMemberRole)
+	g := e.Group("/team")
+	g.GET("/all", controller.GetTeams)
+	g.GET("/:id", controller.GetTeamByID)
+	g.GET("/project/:project_id", controller.GetProjectTeams)
+	g.GET("/user/:id", controller.GetTeamByUserId)
+	g.POST("", controller.CreateTeam, managerMw)
+	g.PATCH("/:id", controller.UpdateTeam, managerMw)
+	g.DELETE("/:id", controller.DeleteTeam, managerMw)
+	g.POST("/user", controller.AddUserToTeam, managerMw)
+	g.DELETE("/user", controller.DeleteUserFromTeam, managerMw)
+	g.POST("/project", controller.AddProjectToTeam, managerMw)
+	g.DELETE("/project", controller.DeleteProjectFromTeam, managerMw)
+	g.PATCH("/member/role", controller.UpdateTeamMemberRole, managerMw)
 }
 
 // GetTeams godoc

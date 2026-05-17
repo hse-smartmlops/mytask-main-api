@@ -22,18 +22,22 @@ func NewUserController(userService service.UserService) *UserController {
 	}
 }
 
-func RegisterUserRoutes(e *echo.Echo, userService service.UserService) {
+func RegisterUserRoutes(e *echo.Echo, userService service.UserService, adminMw echo.MiddlewareFunc) {
 	controller := NewUserController(userService)
 	userGroup := e.Group("/user")
+
+	// Read: любой авторизованный пользователь
 	userGroup.GET("/all/:page/:pagesize", controller.GetAllUsers)
 	userGroup.GET("/:id", controller.GetUserById)
-	userGroup.POST("", controller.CreateUser)
-	userGroup.POST("/:id", controller.UpdateUser)
-	userGroup.DELETE("/:id", controller.BanUser)
-	userGroup.POST("/restore", controller.RestoreUser)
-	userGroup.POST("/role", controller.AddUserRole)
-	userGroup.DELETE("/role", controller.RemoveUserRole)
-	userGroup.DELETE("/full-delete/:id", controller.DeleteUser)
+
+	// Write: только admin
+	userGroup.POST("", controller.CreateUser, adminMw)
+	userGroup.POST("/:id", controller.UpdateUser, adminMw)
+	userGroup.DELETE("/:id", controller.BanUser, adminMw)
+	userGroup.POST("/restore", controller.RestoreUser, adminMw)
+	userGroup.POST("/role", controller.AddUserRole, adminMw)
+	userGroup.DELETE("/role", controller.RemoveUserRole, adminMw)
+	userGroup.DELETE("/full-delete/:id", controller.DeleteUser, adminMw)
 }
 
 // GetAllUsers godoc
@@ -103,6 +107,7 @@ func (uc *UserController) GetAllUsers(c echo.Context) error {
 			FirstName:     user.FirstName,
 			LastName:      user.LastName,
 			LastLogin:     user.LastLogin,
+			AvatarURL:     user.AvatarURL,
 		})
 	}
 	return c.JSON(http.StatusOK, userList)
@@ -157,6 +162,7 @@ func (uc *UserController) GetUserById(c echo.Context) error {
 		FirstName:     user.FirstName,
 		LastName:      user.LastName,
 		LastLogin:     user.LastLogin,
+		AvatarURL:     user.AvatarURL,
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
 }

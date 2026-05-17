@@ -23,17 +23,15 @@ func NewProblemController(problemService service.ProblemService) *ProblemControl
 	}
 }
 
-func RegisterProblemRoutes(e *echo.Echo, problemService service.ProblemService) {
+func RegisterProblemRoutes(e *echo.Echo, problemService service.ProblemService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewProblemController(problemService)
-	problemGroup := e.Group("/problem")
-	{
-		problemGroup.GET("/all/:page/:pagesize", controller.GetAllProblems)
-		problemGroup.GET("/:id", controller.GetProblemByID)
-		problemGroup.GET("/user/:id/:page/:pagesize", controller.GetProblemsByUserId)
-		problemGroup.POST("", controller.CreateProblem)
-		problemGroup.PATCH("/:id", controller.UpdateProblem)
-		problemGroup.DELETE("/:id", controller.DeleteProblem)
-	}
+	g := e.Group("/problem")
+	g.GET("/all/:page/:pagesize", controller.GetAllProblems)
+	g.GET("/:id", controller.GetProblemByID)
+	g.GET("/user/:id/:page/:pagesize", controller.GetProblemsByUserId)
+	g.POST("", controller.CreateProblem, employeeMw)
+	g.PATCH("/:id", controller.UpdateProblem, employeeMw)
+	g.DELETE("/:id", controller.DeleteProblem, managerMw)
 }
 
 // GetAllProblems godoc

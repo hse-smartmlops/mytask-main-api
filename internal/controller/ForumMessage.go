@@ -23,17 +23,15 @@ func NewForumMessageController(forumMessageService service.ForumMessageService) 
 	}
 }
 
-func RegisterForumMessagesRoutes(e *echo.Echo, forumMessageService service.ForumMessageService) {
+func RegisterForumMessagesRoutes(e *echo.Echo, forumMessageService service.ForumMessageService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewForumMessageController(forumMessageService)
-	forumMessageGroup := e.Group("/forum-messages")
-	{
-		forumMessageGroup.GET("/all/:page/:pagesize", controller.GetAllForumMessages)
-		forumMessageGroup.GET("/problem/:id/:page/:pagesize", controller.GetForumMessagesByProblemId)
-		forumMessageGroup.GET("/:id", controller.GetForumMessageById)
-		forumMessageGroup.POST("", controller.CreateForumMessage)
-		forumMessageGroup.PATCH("/:id", controller.UpdateForumMessage)
-		forumMessageGroup.DELETE("/:id", controller.DeleteForumMessage)
-	}
+	g := e.Group("/forum-messages")
+	g.GET("/all/:page/:pagesize", controller.GetAllForumMessages)
+	g.GET("/problem/:id/:page/:pagesize", controller.GetForumMessagesByProblemId)
+	g.GET("/:id", controller.GetForumMessageById)
+	g.POST("", controller.CreateForumMessage, employeeMw)
+	g.PATCH("/:id", controller.UpdateForumMessage, employeeMw)
+	g.DELETE("/:id", controller.DeleteForumMessage, managerMw)
 }
 
 // GetAllForumMessages godoc

@@ -130,6 +130,9 @@ func (s *problemService) CreateProblem(req request.ProblemCreateRequest) (uuid.U
 
 func (s *problemService) UpdateProblem(problemId uuid.UUID, req request.ProblemUpdateRequest) error {
 	updateData := make(map[string]interface{})
+	if req.Name != nil && *req.Name != "" {
+		updateData["name"] = *req.Name
+	}
 	if req.Description != nil {
 		updateData["description"] = pq.StringArray(*req.Description)
 	}

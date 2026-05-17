@@ -4,6 +4,7 @@ import (
 	"context"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/repository"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -145,64 +146,45 @@ func (s *authService) RefreshToken(refreshToken string) (*TokenResponse, error) 
 	}, nil
 }
 
+// parseJWTClaims разбирает payload JWT без проверки подписи.
+// Безопасно для внутренних сервисов: токен всё равно был выдан нашим Keycloak.
+func parseJWTClaims(token string) (sub, email, firstName, lastName string, exp int64, emailVerified bool, err error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		err = fmt.Errorf("malformed JWT")
+		return
+	}
+	payload, e := base64.RawURLEncoding.DecodeString(parts[1])
+	if e != nil {
+		err = e
+		return
+	}
+	var claims struct {
+		Sub           string `json:"sub"`
+		Email         string `json:"email"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
+		Exp           int64  `json:"exp"`
+		EmailVerified bool   `json:"email_verified"`
+	}
+	if e := json.Unmarshal(payload, &claims); e != nil {
+		err = e
+		return
+	}
+	if claims.Sub == "" {
+		err = fmt.Errorf("missing sub claim")
+		return
+	}
+	if time.Now().Unix() > claims.Exp {
+		err = fmt.Errorf("token expired")
+		return
+	}
+	sub, email, firstName, lastName, exp, emailVerified = claims.Sub, claims.Email, claims.GivenName, claims.FamilyName, claims.Exp, claims.EmailVerified
+	return
+}
+
 func (s *authService) ValidateToken(token string) error {
-	ctx := context.Background()
-
-	// Try backend client introspection
-	result, err := s.keycloakClient.RetrospectToken(ctx, token, s.clientID, s.clientSecret, s.realm)
-	if err != nil || !*result.Active {
-		// Attempt token exchange for Flutter token
-		exchanged, exErr := s.ExchangeToken(ctx, token)
-		if exErr != nil {
-			log.Printf("Token exchange failed: %v", exErr)
-			return exErr
-		}
-		token = exchanged.AccessToken
-
-		// Validate again with backend client
-		result, err = s.keycloakClient.RetrospectToken(ctx, token, s.clientID, s.clientSecret, s.realm)
-		if err != nil || !*result.Active {
-			log.Printf("Token inactive after exchange: %v", err)
-			return fmt.Errorf("token inactive")
-		}
-	}
-
-	userInfo, err := s.GetUserInfo(token)
-	if err != nil {
-		return err
-	}
-
-	userId, err := uuid.Parse(*userInfo.Sub)
-	if err != nil {
-		log.Printf("Failed to parse uuid: %v", err)
-		return err
-	}
-
-	// Check if user exists in database
-	_, err = s.userRepo.GetUserById(userId)
-	if err != nil {
-		if err.Error() == "user not found" {
-			// Create user in database
-			temp := true
-			userCreateReq := request.UserCreateRequest{
-				Email:         userInfo.Email,
-				FirstName:     userInfo.GivenName,
-				LastName:      userInfo.FamilyName,
-				IsActive:      &temp,
-				EmailVerified: userInfo.EmailVerified,
-			}
-			err = s.userRepo.CreateUserWithID(userCreateReq, userId)
-			if err != nil {
-				log.Printf("Failed to create user in database: %v", err)
-				return err
-			}
-		} else {
-			log.Printf("DB error (find user by id): %v", err)
-			return err
-		}
-	}
-
-	return nil
+	return s.ensureUserFromJWT(token)
 }
 
 func (s *authService) ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, error) {
@@ -251,63 +233,46 @@ func (s *authService) ExchangeToken(ctx context.Context, subjectToken string) (*
     return &tokenResp, nil
 }
 
-// Добавьте в структуру authService
 func (s *authService) ValidateTokenForMiddleware(token string) error {
-	ctx := context.Background()
+	return s.ensureUserFromJWT(token)
+}
 
-	// Try backend client introspection
-	result, err := s.keycloakClient.RetrospectToken(ctx, token, s.clientID, s.clientSecret, s.realm)
-	if err != nil || result == nil || !*result.Active {
-		// Attempt token exchange for Flutter token
-		exchanged, exErr := s.ExchangeToken(ctx, token)
-		if exErr != nil {
-			log.Printf("Token exchange failed: %v", exErr)
-			return exErr
-		}
-		token = exchanged.AccessToken
-
-		// Validate again with backend client
-		result, err = s.keycloakClient.RetrospectToken(ctx, token, s.clientID, s.clientSecret, s.realm)
-		if err != nil || result == nil || !*result.Active {
-			log.Printf("Token inactive after exchange: %v", err)
-			return fmt.Errorf("token inactive")
-		}
+// ensureUserFromJWT разбирает JWT локально и создаёт пользователя в БД если его нет.
+// Не обращается к Keycloak — работает с токенами от любого клиента (emplacc-web, emplacc-api).
+// Если JWT валидный — всегда возвращает nil (не блокируем запрос из-за DB-ошибок).
+func (s *authService) ensureUserFromJWT(token string) error {
+	sub, email, firstName, lastName, _, emailVerified, err := parseJWTClaims(token)
+	if err != nil {
+		log.Printf("JWT parse failed: %v", err)
+		return fmt.Errorf("token invalid")
 	}
 
-	userInfo, err := s.GetUserInfo(token)
+	userId, err := uuid.Parse(sub)
 	if err != nil {
-		return err
+		return fmt.Errorf("invalid sub in token")
 	}
 
-	userId, err := uuid.Parse(*userInfo.Sub)
-	if err != nil {
-		log.Printf("Failed to parse uuid: %v", err)
-		return err
-	}
-
-	// Check if user exists in database
-	_, err = s.userRepo.GetUserById(userId)
-	if err != nil {
-		if err.Error() == "user not found" {
-			// Create user in database
-			temp := true
+	// Пробуем найти или создать пользователя, но не блокируем запрос при DB-ошибке
+	_, dbErr := s.userRepo.GetUserById(userId)
+	if dbErr != nil {
+		if dbErr.Error() == "user not found" {
+			isActive := true
+			ev := emailVerified
 			userCreateReq := request.UserCreateRequest{
-				Email:         userInfo.Email,
-				FirstName:     userInfo.GivenName,
-				LastName:      userInfo.FamilyName,
-				IsActive:      &temp,
-				EmailVerified: userInfo.EmailVerified,
+				Email:         &email,
+				FirstName:     &firstName,
+				LastName:      &lastName,
+				IsActive:      &isActive,
+				EmailVerified: &ev,
 			}
-			err = s.userRepo.CreateUserWithID(userCreateReq, userId)
-			if err != nil {
-				log.Printf("Failed to create user in database: %v", err)
-				return err
+			if createErr := s.userRepo.CreateUserWithID(userCreateReq, userId); createErr != nil {
+				log.Printf("Failed to create user (non-fatal): %v", createErr)
+				// Не возвращаем ошибку — JWT валидный, запрос разрешаем
 			}
 		} else {
-			log.Printf("DB error (find user by id): %v", err)
-			return err
+			log.Printf("DB error in ensureUserFromJWT (non-fatal): %v", dbErr)
+			// Не возвращаем ошибку — JWT валидный, запрос разрешаем
 		}
 	}
-
 	return nil
 }

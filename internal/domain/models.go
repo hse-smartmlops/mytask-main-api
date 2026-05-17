@@ -11,6 +11,30 @@ import (
 // ===== Users & Roles =====
 //
 
+// TableName явно задаёт имена таблиц для ВСЕХ моделей —
+// предотвращает путаницу GORM с кэшем схем
+func (User)         TableName() string { return "users" }
+func (Role)         TableName() string { return "roles" }
+func (UserRole)     TableName() string { return "user_roles" }
+func (Project)      TableName() string { return "projects" }
+func (Board)        TableName() string { return "boards" }
+func (Status)       TableName() string { return "statuses" }
+func (Task)         TableName() string { return "tasks" }
+func (Team)         TableName() string { return "teams" }
+func (TeamMember)   TableName() string { return "team_members" }
+func (ProjectTeam)  TableName() string { return "project_teams" }
+func (Attendance)   TableName() string { return "attendances" }
+func (DailyReport)  TableName() string { return "daily_reports" }
+func (HelpRequest)  TableName() string { return "help_requests" }
+func (CompletedWork)TableName() string { return "completed_works" }
+func (TomorrowPlans)TableName() string { return "tomorrow_plans" }
+func (Problem)      TableName() string { return "problems" }
+func (ForumMessage) TableName() string { return "forum_messages" }
+func (ReportProblem)TableName() string { return "report_problems" }
+func (Subscription) TableName() string { return "subscriptions" }
+func (APIToken)     TableName() string { return "api_tokens" }
+func (LLMSettings)  TableName() string { return "llm_settings" }
+
 type User struct {
 	ID            uuid.UUID  `gorm:"type:uuid;primaryKey"`
 	Email         string    `gorm:"size:100"`
@@ -23,6 +47,7 @@ type User struct {
 	FirstName     string    `gorm:"size:50"`
 	LastName      string    `gorm:"size:50"`
 	LastLogin     time.Time
+	AvatarURL     string    `gorm:"size:500"`
 	Deleted       bool      `gorm:"type:boolean"`
 	UpdatedAt     time.Time `gorm:"type:timestamp"`
 
@@ -54,8 +79,6 @@ type UserRole struct {
 	//Role *Role `gorm:"foreignKey:RoleID;references:ID;constraint:OnDelete:CASCADE"`
 	//User *User `gorm:"foreignKey:UserID;references:ID;constraint:OnDelete:CASCADE"`
 }
-
-func (UserRole) TableName() string { return "user_roles" }
 
 //
 // ===== Project / Board / Task =====
@@ -314,3 +337,31 @@ type Status struct {
 	Tasks []Task `gorm:"foreignKey:StatusID;references:ID"`
 }
 
+
+// ===== API Tokens =====
+
+type APIToken struct {
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey"`
+	UserID      uuid.UUID  `gorm:"type:uuid;not null;index"`
+	Name        string     `gorm:"size:100"`
+	TokenHash   string     `gorm:"size:64;uniqueIndex"` // SHA-256 hex
+	LastUsedAt  *time.Time
+	ExpiresAt   *time.Time
+	Deleted     bool       `gorm:"default:false"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// ===== LLM Settings =====
+
+type LLMSettings struct {
+    ID           uint      `gorm:"primaryKey;autoIncrement"`
+    WebUIURL     string    `gorm:"size:500"`
+    WebUIToken   string    `gorm:"size:500"`
+    WebUIModel   string    `gorm:"size:100"`
+    SystemPrompt string    `gorm:"type:text"`
+    UpdatedAt    time.Time
+    UpdatedBy    string    `gorm:"size:100"`
+}
+
+// Sessions хранятся в Redis (без GORM-модели)

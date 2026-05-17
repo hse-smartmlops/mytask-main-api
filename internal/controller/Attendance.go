@@ -23,16 +23,14 @@ func NewAttendanceController(attendanceService service.AttendanceService) *Atten
 	}
 }
 
-func RegisterAttendanceRoutes(e *echo.Echo, attendanceService service.AttendanceService) {
+func RegisterAttendanceRoutes(e *echo.Echo, attendanceService service.AttendanceService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewAttendanceController(attendanceService)
-	attendanceGroup := e.Group("/attendance")
-	{
-		attendanceGroup.GET("/all/:page/:pagesize", controller.GetAllAttendances)
-		attendanceGroup.GET("/user/:id", controller.GetAttendancesByUserId)
-		attendanceGroup.POST("", controller.CreateAttendance)
-		attendanceGroup.PATCH("/:id", controller.UpdateAttendance)
-		attendanceGroup.DELETE("/:id", controller.DeleteAttendance)
-	}
+	g := e.Group("/attendance")
+	g.GET("/all/:page/:pagesize", controller.GetAllAttendances)
+	g.GET("/user/:id", controller.GetAttendancesByUserId)
+	g.POST("", controller.CreateAttendance, employeeMw)
+	g.PATCH("/:id", controller.UpdateAttendance, employeeMw)
+	g.DELETE("/:id", controller.DeleteAttendance, managerMw)
 }
 
 // GetAllAttendances godoc

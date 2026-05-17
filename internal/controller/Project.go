@@ -24,19 +24,17 @@ func NewProjectController(projectService service.ProjectService) *ProjectControl
 	}
 }
 
-func RegisterProjectRoutes(e *echo.Echo, projectService service.ProjectService) {
+func RegisterProjectRoutes(e *echo.Echo, projectService service.ProjectService, managerMw echo.MiddlewareFunc) {
 	controller := NewProjectController(projectService)
-	projectGroup := e.Group("/project")
-	{
-		projectGroup.GET("/all/:page/:pagesize", controller.GetAllProjects)
-		projectGroup.GET("/:id", controller.GetProjectByID)
-		projectGroup.POST("", controller.CreateProject)
-		projectGroup.PATCH("/:id", controller.UpdateProject)
-		projectGroup.DELETE("/:id", controller.DeleteProject)
-		projectGroup.GET("/user/:id", controller.GetProjectsByUser)
-		projectGroup.GET("/team/:team_id", controller.GetTeamProjects)
-		projectGroup.GET("/search", controller.SearchProjects)
-	}
+	g := e.Group("/project")
+	g.GET("/all/:page/:pagesize", controller.GetAllProjects)
+	g.GET("/:id", controller.GetProjectByID)
+	g.GET("/user/:id", controller.GetProjectsByUser)
+	g.GET("/team/:team_id", controller.GetTeamProjects)
+	g.GET("/search", controller.SearchProjects)
+	g.POST("", controller.CreateProject, managerMw)
+	g.PATCH("/:id", controller.UpdateProject, managerMw)
+	g.DELETE("/:id", controller.DeleteProject, managerMw)
 }
 
 // GetAllProjects godoc

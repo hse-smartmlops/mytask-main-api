@@ -27,26 +27,27 @@ func NewReportController(reportService service.ReportService) *ReportController 
 	}
 }
 
-func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService) {
+func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewReportController(reportService)
-	reportGroup := e.Group("/report")
-	{
-		reportGroup.GET("/all/:page/:pagesize", controller.GetAllReports)
-		reportGroup.GET("/:id", controller.GetReport)
-		reportGroup.GET("/task/:id", controller.GetReportsByTaskId)
-		reportGroup.GET("/project/:id", controller.GetReportsByProjectId)
-		reportGroup.POST("", controller.CreateReport)
-		reportGroup.PATCH("/:id", controller.UpdateReport)
-		reportGroup.DELETE("/:id", controller.DeleteReport)
-		reportGroup.PATCH("/help-request/:id", controller.UpdateHelpRequest)
-		reportGroup.PATCH("/completed-work/:id", controller.UpdateCompletedWork)
-		reportGroup.PATCH("/tomorrow-plans/:id", controller.UpdateTomorrowPlans)
-		reportGroup.GET("/user/:id/:page/:pagesize", controller.GetAllReportsByUserId)
-		reportGroup.GET("/help-requests-by-user-id/:id", controller.GetHelpRequestsForUser)
-		reportGroup.DELETE("/help-request/:id", controller.DeleteHelpRequest)
-		reportGroup.POST("/export/xlsx", controller.GetReportByDateInXLSX)
-		reportGroup.GET("/export/tomorrow-plans/xlsx", controller.ExportTomorrowPlansToXLSX)
-	}
+	g := e.Group("/report")
+	// Чтение — все авторизованные
+	g.GET("/all/:page/:pagesize", controller.GetAllReports)
+	g.GET("/:id", controller.GetReport)
+	g.GET("/task/:id", controller.GetReportsByTaskId)
+	g.GET("/project/:id", controller.GetReportsByProjectId)
+	g.GET("/user/:id/:page/:pagesize", controller.GetAllReportsByUserId)
+	g.GET("/help-requests-by-user-id/:id", controller.GetHelpRequestsForUser)
+	g.GET("/export/tomorrow-plans/xlsx", controller.ExportTomorrowPlansToXLSX)
+	// Запись — employee и выше
+	g.POST("", controller.CreateReport, employeeMw)
+	g.PATCH("/:id", controller.UpdateReport, employeeMw)
+	g.PATCH("/help-request/:id", controller.UpdateHelpRequest, employeeMw)
+	g.PATCH("/completed-work/:id", controller.UpdateCompletedWork, employeeMw)
+	g.PATCH("/tomorrow-plans/:id", controller.UpdateTomorrowPlans, employeeMw)
+	g.POST("/export/xlsx", controller.GetReportByDateInXLSX, employeeMw)
+	// Удаление — manager и admin
+	g.DELETE("/:id", controller.DeleteReport, managerMw)
+	g.DELETE("/help-request/:id", controller.DeleteHelpRequest, managerMw)
 }
 
 // GetAllReports godoc

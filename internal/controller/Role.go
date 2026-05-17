@@ -23,17 +23,19 @@ func NewRoleController(roleService service.RoleService) *RoleController {
 	}
 }
 
-func RegisterRoleRoutes(e *echo.Echo, roleService service.RoleService) {
+func RegisterRoleRoutes(e *echo.Echo, roleService service.RoleService, adminMw echo.MiddlewareFunc) {
 	controller := NewRoleController(roleService)
 	group := e.Group("/role")
-	{
-		group.GET("/all/:page/:pagesize", controller.GetAllRoles)
-		group.GET("/:id", controller.GetRoleById)
-		group.POST("", controller.CreateRole)
-		group.PATCH("/:id", controller.UpdateRole)
-		group.DELETE("/:id", controller.DeleteRole)
-		group.GET("/user/:id", controller.GetRoleByUserId)
-	}
+
+	// Read: любой авторизованный
+	group.GET("/all/:page/:pagesize", controller.GetAllRoles)
+	group.GET("/:id", controller.GetRoleById)
+	group.GET("/user/:id", controller.GetRoleByUserId)
+
+	// Write: только admin
+	group.POST("", controller.CreateRole, adminMw)
+	group.PATCH("/:id", controller.UpdateRole, adminMw)
+	group.DELETE("/:id", controller.DeleteRole, adminMw)
 }
 
 // GetAllRoles godoc

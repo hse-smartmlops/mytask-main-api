@@ -23,17 +23,15 @@ func NewStatusController(statusService service.StatusService) *StatusController 
 	}
 }
 
-func RegisterStatusRoutes(e *echo.Echo, statusService service.StatusService) {
+func RegisterStatusRoutes(e *echo.Echo, statusService service.StatusService, managerMw echo.MiddlewareFunc) {
 	controller := NewStatusController(statusService)
 	g := e.Group("/status")
-	{
-		g.GET("/all/:page/:pagesize", controller.GetAllStatuses)
-		g.GET("/:id", controller.GetStatusByID)
-		g.POST("", controller.CreateStatus)
-		g.PATCH("/:id", controller.UpdateStatus)
-		g.DELETE("/:id", controller.DeleteStatus)
-		g.GET("/board/:board_id", controller.GetStatusesByBoardId)
-	}
+	g.GET("/all/:page/:pagesize", controller.GetAllStatuses)
+	g.GET("/:id", controller.GetStatusByID)
+	g.GET("/board/:board_id", controller.GetStatusesByBoardId)
+	g.POST("", controller.CreateStatus, managerMw)
+	g.PATCH("/:id", controller.UpdateStatus, managerMw)
+	g.DELETE("/:id", controller.DeleteStatus, managerMw)
 }
 
 // GetAllStatuses godoc

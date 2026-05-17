@@ -1,94 +1,106 @@
 package controller
 
 import (
-	"emplacc-api/internal/service"
 	"log"
 	"net/http"
 	"strings"
 
+	"emplacc-api/internal/service"
+
 	"github.com/labstack/echo/v4"
 )
 
-/*
-type authController struct {
-	authService service.AuthService
-}*/
-
-// KeycloakAuthMiddleware validates Authorization header using Keycloak introspection
-// and attempts token exchange if necessary. On success it stores the active token
-// in the context under key "auth_token".
-func KeycloakAuthMiddleware(authService service.AuthService) echo.MiddlewareFunc {
-	controller := NewAuthController(authService)
-    return func(next echo.HandlerFunc) echo.HandlerFunc {
-        return func(c echo.Context) error {
-            // Allow public routes and preflight: don't enforce auth for them
-            p := c.Path()
-            if c.Request().Method == http.MethodOptions || strings.HasPrefix(p, "/swagger") || strings.HasPrefix(p, "/auth") || strings.HasPrefix(p, "/event") {
-                return next(c)
-            }
-            authHeader := c.Request().Header.Get("Authorization")
-
-            if authHeader == ""{
-                log.Print("No authorization header")
-                return c.JSON(http.StatusUnauthorized, map[string]string{
-                    "error": "missing authorization header",
-                })
-            }
-
-            token := strings.TrimPrefix(authHeader, "Bearer ")
-            if token == authHeader{
-                return c.JSON(http.StatusBadRequest, map[string]string{
-                    "error": "invalid authorization header format",
-                })
-            }
-
-            err := controller.authService.ValidateTokenForMiddleware(token)
-            if err != nil {
-                log.Printf("Token validation failed: %v", err)
-                return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Token invalid"})
-            }
-
-            // Save token for handlers
-            c.Set("auth_token", token)
-
-            return next(c)
-        }
-    }
+// SessionExpiredError — структура ответа при истёкшей сессии
+type SessionExpiredError struct {
+	Error  string `json:"error"`
+	Reason string `json:"reason"` // "" | "user_exit" | "long_absence"
 }
 
-/*func Authorize(authService service.AuthService) echo.MiddlewareFunc {
+// AppAuthMiddleware — новая стратегия авторизации:
+//   - sess_*     → сессионный токен (браузер)
+//   - emplacc_*  → MCP/интеграционный токен
+//
+// Keycloak НЕ вызывается на каждый запрос.
+func AppAuthMiddleware(sessionService service.SessionService, apiTokenService service.APITokenService) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			if t := c.Get("auth_token"); t != nil {
-				if _, ok := t.(string); ok {
-					return next(c)
+			p := c.Path()
+			// Пропускаем публичные маршруты
+			if c.Request().Method == http.MethodOptions ||
+				strings.HasPrefix(p, "/swagger") ||
+				strings.HasPrefix(p, "/auth") ||
+				strings.HasPrefix(p, "/event") {
+				return next(c)
+			}
+
+			h := c.Request().Header.Get("Authorization")
+			if h == "" {
+				log.Printf("Auth middleware: missing authorization header for %s %s", c.Request().Method, p)
+				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing authorization header"})
+			}
+			if !strings.HasPrefix(h, "Bearer ") {
+				log.Printf("Auth middleware: invalid header format for %s %s: %s", c.Request().Method, p, h[:min(20, len(h))])
+				return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid authorization header format"})
+			}
+			token := strings.TrimPrefix(h, "Bearer ")
+
+			switch {
+			// ── Сессионный токен браузера ──────────────────────────
+			case strings.HasPrefix(token, "sess_"):
+				validation, err := sessionService.Validate(token)
+				if err != nil {
+					log.Printf("Auth middleware: session validation failed: %v", err)
+					return c.JSON(http.StatusUnauthorized, SessionExpiredError{
+						Error:  "session not found",
+						Reason: "user_exit",
+					})
 				}
-			}
+				if validation.Expired {
+					log.Printf("Auth middleware: session expired for user %s, reason: %s", validation.UserID, validation.Reason)
+					return c.JSON(http.StatusUnauthorized, SessionExpiredError{
+						Error:  "session_expired",
+						Reason: validation.Reason, // "" = нужна ротация, иначе нужен реологин
+					})
+				}
+				c.Set("user_id", validation.UserID)
+				c.Set("session_token", token)
+				log.Printf("Auth middleware: session valid for user %s", validation.UserID)
 
-			authHeader := c.Request().Header.Get("Authorization")
+			// ── MCP/интеграционный токен ───────────────────────────
+			case strings.HasPrefix(token, "emplacc_"):
+				user, err := apiTokenService.ValidateToken(token)
+				if err != nil {
+					log.Printf("Auth middleware: API token validation failed: %v", err)
+					return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid API token"})
+				}
+				c.Set("user_id", user.ID.String())
+				c.Set("api_token_user_id", user.ID)
+				log.Printf("Auth middleware: API token valid for user %s", user.ID.String())
 
-			if authHeader == ""{
-				log.Print("No authorization header")
+			default:
+				log.Printf("Auth middleware: unknown token type for %s %s", c.Request().Method, p)
 				return c.JSON(http.StatusUnauthorized, map[string]string{
-					"error": "missing authorization header",
+					"error": "unknown token type, use sess_* or emplacc_*",
 				})
 			}
 
-			token := strings.TrimPrefix(authHeader, "Bearer ")
-			if token == authHeader{
-				return c.JSON(http.StatusBadRequest, map[string]string{
-					"error": "invalid authorization header format",
-				})
-			}
-
-			err := authService.ValidateTokenForMiddleware(token)
-			if err != nil {
-				log.Printf("Token validation failed: %v", err)
-				return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Token invalid"})
-			}
-
-			c.Set("auth_token", token)
 			return next(c)
 		}
 	}
-}*/
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// KeycloakAuthMiddleware — оставляем для совместимости, делегирует в AppAuthMiddleware
+func KeycloakAuthMiddleware(authService service.AuthService, apiTokenService service.APITokenService) echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			return next(c)
+		}
+	}
+}

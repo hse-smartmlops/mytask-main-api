@@ -1,6 +1,7 @@
 package controller
 
 import (
+	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/grpc/client"
@@ -16,42 +17,46 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/xuri/excelize/v2"
+	"gorm.io/gorm"
 )
 
 type TaskController struct {
-	taskService service.TaskService
-	userService service.UserService
+	taskService    service.TaskService
+	userService    service.UserService
 	projectService service.ProjectService
 	llmClient      *client.LLMClient
+	db             *gorm.DB
 }
 
-func NewTaskController(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient) *TaskController {
+func NewTaskController(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB) *TaskController {
 	return &TaskController{
-		taskService: taskService,
-		userService: userService,
+		taskService:    taskService,
+		userService:    userService,
 		projectService: projectService,
 		llmClient:      llmClient,
+		db:             db,
 	}
 }
 
-func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient,) {
-	controller := NewTaskController(taskService, userService, projectService, llmClient)
-	taskGroup := e.Group("/task")
-	{
-		taskGroup.GET("/all/:page/:pagesize", controller.GetAllTasks)
-		taskGroup.GET("/:id", controller.GetTaskByID)
-		taskGroup.POST("", controller.CreateTask)
-		taskGroup.PATCH("/:id", controller.UpdateTask)
-		taskGroup.DELETE("/:id", controller.DeleteTask)
-		taskGroup.GET("/user/:id/:page/:pagesize", controller.GetTasksByUserId)
-		taskGroup.POST("/move", controller.TaskMoveFunc)
-		taskGroup.GET("/user/:user_id/project/:project_id/:page/:pagesize", controller.GetUserProjectTasks)
-		taskGroup.POST("/:id/improve-report", controller.ImproveTaskReport)
-		taskGroup.GET("/user/:id/:page/:pagesize/active", controller.GetActiveTasksByUserId)
-		taskGroup.GET("/board-project/:id", controller.GetTaskBoardAndProject)
-		taskGroup.GET("/export/active-tasks/xlsx", controller.ExportAllActiveTasksToXLSX)
-		taskGroup.GET("/search", controller.SearchTasks)
-	}
+func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+	controller := NewTaskController(taskService, userService, projectService, llmClient, db)
+	g := e.Group("/task")
+	// Чтение — все авторизованные
+	g.GET("/all/:page/:pagesize", controller.GetAllTasks)
+	g.GET("/:id", controller.GetTaskByID)
+	g.GET("/user/:id/:page/:pagesize", controller.GetTasksByUserId)
+	g.GET("/user/:user_id/project/:project_id/:page/:pagesize", controller.GetUserProjectTasks)
+	g.GET("/user/:id/:page/:pagesize/active", controller.GetActiveTasksByUserId)
+	g.GET("/board-project/:id", controller.GetTaskBoardAndProject)
+	g.GET("/export/active-tasks/xlsx", controller.ExportAllActiveTasksToXLSX)
+	g.GET("/search", controller.SearchTasks)
+	// Запись — employee и выше (гость не может)
+	g.POST("", controller.CreateTask, employeeMw)
+	g.PATCH("/:id", controller.UpdateTask, employeeMw)
+	g.POST("/move", controller.TaskMoveFunc, employeeMw)
+	g.POST("/:id/improve-report", controller.ImproveTaskReport, employeeMw)
+	// Удаление — только manager и admin
+	g.DELETE("/:id", controller.DeleteTask, managerMw)
 }
 
 // GetAllTasks godoc
@@ -955,8 +960,21 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 		taskDescription = *task.Name
 	}
 
+	// Загружаем настройки LLM из БД
+	var overrides *client.LLMOverrides
+	if tc.db != nil {
+		var llmSettings models.LLMSettings
+		if err := tc.db.First(&llmSettings).Error; err == nil {
+			overrides = &client.LLMOverrides{
+				Model:        llmSettings.WebUIModel,
+				SystemPrompt: llmSettings.SystemPrompt,
+				URL:          llmSettings.WebUIURL,
+			}
+		}
+	}
+
 	// Вызываем gRPC сервис
-	improvedText, err := tc.llmClient.ProcessTaskWithLLM(c.Request().Context(), taskDescription, req.UserText, taskId)
+	improvedText, err := tc.llmClient.ProcessTaskWithLLM(c.Request().Context(), taskDescription, req.UserText, taskId, overrides)
 	if err != nil {
 		log.Printf("gRPC error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{

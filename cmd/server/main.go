@@ -16,6 +16,7 @@ import (
 	"emplacc-api/internal/grpc/client"
 	"emplacc-api/internal/repository"
 	"emplacc-api/internal/service"
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -24,6 +25,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/redis/go-redis/v9"
 	echoSwagger "github.com/swaggo/echo-swagger"
 )
 
@@ -37,6 +39,8 @@ func main() {
     time.Local = loc
 	
 	e := echo.New() 
+	// ── Recovery middleware — поймать панику перед логированием ──
+	e.Use(middleware.Recover())
 	e.Use(middleware.RemoveTrailingSlash())
 	e.Use(middleware.Logger())
 
@@ -88,6 +92,26 @@ func main() {
 	teamRepo := repository.NewTeamRepository(dbConn)
 	teamService := service.NewTeamService(teamRepo)
 	userService := service.NewUserService(userRepo)
+	apiTokenRepo := repository.NewAPITokenRepository(dbConn)
+	apiTokenService := service.NewAPITokenService(apiTokenRepo, userRepo)
+
+	// Redis — сессии без персистентности на диск
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       0,
+	})
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Fatalf("Redis connection failed: %v", err)
+	}
+	log.Printf("Redis connected: %s", redisAddr)
+
+	sessionRepo := repository.NewSessionRepository(rdb)
+	sessionService := service.NewSessionService(sessionRepo)
 
 	systemUserId, err = userService.CreateSystemUser()
 	if err != nil{
@@ -96,28 +120,43 @@ func main() {
 
 	problemService := service.NewProblemService(problemRepo, forumMessageRepo, systemUserId)
 
-	// Keycloak auth middleware for protected endpoints
-	//e.Use(controller.KeycloakAuthMiddleware(authService)) // Передаем authService
+	// S3/RustFS storage (опционально — не падаем если не настроен)
+	storageService, storageErr := service.NewStorageService()
+	if storageErr != nil {
+		log.Printf("Warning: S3 storage not configured: %v", storageErr)
+	}
 
 	// Swagger: не хардкодим host, оставляем пустым, чтобы UI брал текущий адрес запроса
 	docs.SwaggerInfo.Host = ""
 
-	// Регистрируем маршруты с зависимостями
-	controller.RegisterAuthRoutes(e, authService)
-	controller.RegisterTeamRoutes(e, teamService)
-	controller.RegisterProjectRoutes(e, projectService)
-	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient)
-	controller.RegisterBoardRoutes(e, boardService)
-	controller.RegisterUserRoutes(e, userService)
-	controller.RegisterReportRoutes(e, reportService)
-	controller.RegisterForumMessagesRoutes(e, forumMessageService)
-	controller.RegisterProblemRoutes(e, problemService)
-	controller.RegisterRoleRoutes(e, roleService)
-	controller.RegisterAttendanceRoutes(e, attendanceService)
-	controller.RegisterSubscriptionRoutes(e, subscriptionService)
-	controller.RegisterStatusRoutes(e, statusService)
+	// ── Главный middleware ПЕРЕД маршрутами — критический порядок ──
+	// Новый middleware: только сессии (sess_*) и MCP токены (emplacc_*)
+	e.Use(controller.AppAuthMiddleware(sessionService, apiTokenService))
 
-	e.Use(controller.KeycloakAuthMiddleware(authService))
+	// Role-based middleware — три уровня доступа
+	adminMw    := controller.RequireRoles(roleRepo, "admin")
+	managerMw  := controller.RequireRoles(roleRepo, "admin", "manager")
+	employeeMw := controller.RequireRoles(roleRepo, "admin", "manager", "employee")
+
+	// Регистрируем маршруты с зависимостями (ПОСЛЕ глобального middleware)
+	controller.RegisterAuthRoutes(e, authService, sessionService, userService)
+	controller.RegisterUserRoutes(e, userService, adminMw)
+	controller.RegisterRoleRoutes(e, roleService, adminMw)
+	controller.RegisterTeamRoutes(e, teamService, managerMw)
+	controller.RegisterProjectRoutes(e, projectService, managerMw)
+	controller.RegisterBoardRoutes(e, boardService, managerMw)
+	controller.RegisterStatusRoutes(e, statusService, managerMw)
+	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, dbConn, employeeMw, managerMw)
+	controller.RegisterLLMSettingsRoutes(e, dbConn, adminMw)
+	controller.RegisterReportRoutes(e, reportService, employeeMw, managerMw)
+	controller.RegisterForumMessagesRoutes(e, forumMessageService, employeeMw, managerMw)
+	controller.RegisterProblemRoutes(e, problemService, employeeMw, managerMw)
+	controller.RegisterAttendanceRoutes(e, attendanceService, employeeMw, managerMw)
+	controller.RegisterSubscriptionRoutes(e, subscriptionService)
+	controller.RegisterAPITokenRoutes(e, apiTokenService)
+	if storageService != nil {
+		controller.RegisterUploadRoutes(e, storageService, userService)
+	}
 
 	// Swagger UI
 	// Редиректим с /swagger на /swagger/index.html, чтобы работало без явного указания файла

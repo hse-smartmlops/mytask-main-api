@@ -25,18 +25,16 @@ func NewBoardController(boardService service.BoardService) *BoardController {
 	}
 }
 
-func RegisterBoardRoutes(e *echo.Echo, boardService service.BoardService) {
+func RegisterBoardRoutes(e *echo.Echo, boardService service.BoardService, managerMw echo.MiddlewareFunc) {
 	controller := NewBoardController(boardService)
-	projectGroup := e.Group("/boards")
-	{
-		projectGroup.GET("/all/:page/:pagesize", controller.GetAllBoards)
-		projectGroup.GET("/:id", controller.GetBoardById)
-		projectGroup.GET("/project/:projectId", controller.GetBoardByProjectId)
-		projectGroup.POST("", controller.CreateBoard)
-		projectGroup.PATCH("/:id", controller.UpdateBoard)
-		projectGroup.DELETE("/:id", controller.DeleteBoard)
-		projectGroup.GET("/project/:projectId/export/xlsx", controller.ExportProjectTasksToXLSX)
-	}
+	g := e.Group("/boards")
+	g.GET("/all/:page/:pagesize", controller.GetAllBoards)
+	g.GET("/:id", controller.GetBoardById)
+	g.GET("/project/:projectId", controller.GetBoardByProjectId)
+	g.GET("/project/:projectId/export/xlsx", controller.ExportProjectTasksToXLSX)
+	g.POST("", controller.CreateBoard, managerMw)
+	g.PATCH("/:id", controller.UpdateBoard, managerMw)
+	g.DELETE("/:id", controller.DeleteBoard, managerMw)
 }
 
 // GetAllBoards godoc

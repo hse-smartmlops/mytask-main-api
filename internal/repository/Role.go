@@ -31,17 +31,17 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 
 func (r *roleRepository) GetAllRoles(limit, offset int) ([]models.Role, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
-		Model(&models.Role{}).
-		Where("deleted = FALSE").
+	if err := r.db.
+		Table("roles").
+		Where("roles.deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
 		return nil, 0, err
 	}
 
 	var roles []models.Role
-	if err := r.db.Session(&gorm.Session{}).
-		Model(&models.Role{}).
-		Where("deleted = FALSE").
+	if err := r.db.
+		Table("roles").
+		Where("roles.deleted = FALSE").
 		Limit(limit).Offset(offset).
 		Find(&roles).Error; err != nil {
 		return nil, 0, err
@@ -54,7 +54,7 @@ func (r *roleRepository) GetRoleByUserId(userID uuid.UUID) (*models.Role, error)
 	var role models.Role
 	
 	// JOIN между roles и user_roles через таблицу связей
-	err := r.db.Session(&gorm.Session{}).Model(&models.Role{}).Joins("JOIN user_roles ur ON ur.role_id = roles.id").
+	err := r.db.Table("LRoles").Joins("JOIN user_roles ur ON ur.role_id = roles.id").
 		Where("ur.user_id = ? AND ur.deleted = FALSE AND roles.deleted = FALSE", userID).
 		First(&role).Error
 	
@@ -70,9 +70,9 @@ func (r *roleRepository) GetRoleByUserId(userID uuid.UUID) (*models.Role, error)
 
 func (r *roleRepository) GetRoleById(roleID uuid.UUID) (*models.Role, error) {
 	var role models.Role
-	res := r.db.Session(&gorm.Session{}).
+	res := r.db.
 		Model(&models.Role{}).
-		Where("id = ? AND deleted = FALSE", roleID).
+		Where("roles.id = ? AND roles.deleted = FALSE", roleID).
 		First(&role)
 	if res.Error != nil {
 		if res.Error == gorm.ErrRecordNotFound {

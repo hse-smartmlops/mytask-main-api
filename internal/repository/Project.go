@@ -37,7 +37,7 @@ func (r *projectRepository) GetAllProjects(limit, offset int) ([]models.Project,
 	var totalCount int64
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.Project{}).
-		Where("deleted = FALSE").
+		Where("projects.deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
 		return nil, 0, err
 	}
@@ -45,7 +45,7 @@ func (r *projectRepository) GetAllProjects(limit, offset int) ([]models.Project,
 	var projects []models.Project
 	if err := r.db.Session(&gorm.Session{}).
 		Model(&models.Project{}).
-		Where("deleted = FALSE").
+		Where("projects.deleted = FALSE").
 		Limit(limit).Offset(offset).
 		Find(&projects).Error; err != nil {
 		return nil, 0, err

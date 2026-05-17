@@ -17,6 +17,7 @@ type UserService interface {
 	GetUserById(userId uuid.UUID) (*models.User, error)
 	CreateUser(req request.UserCreateRequest) (uuid.UUID, error)
 	UpdateUser(userId uuid.UUID, req request.UpdateUserRequest) error
+	UpdateAvatarURL(userId uuid.UUID, avatarURL string) error
 	DeleteUser(userId uuid.UUID) error
 	BanUser(userId uuid.UUID) error
 	RestoreUser(req request.RestoreUserRequest) (uuid.UUID, error)
@@ -36,9 +37,14 @@ func NewUserService(repo repository.UserRepository) UserService {
 }
 
 func (s *userService) CreateSystemUser() (uuid.UUID, error) {
+	// Идемпотентно: если системный пользователь уже есть — возвращаем его ID
+	existing, err := s.repo.GetUserByEmail("system@system")
+	if err == nil && existing != nil {
+		return existing.ID, nil
+	}
+
 	newUUID := uuid.New()
 	now := time.Now()
-
 	user := models.User{
 		ID:            newUUID,
 		Email:         "system@system",
@@ -50,17 +56,11 @@ func (s *userService) CreateSystemUser() (uuid.UUID, error) {
 		LastName:      "Пользователь",
 		LastLogin:     now,
 		Deleted:       false,
-		TgID:          "",
-		TgUserID:      0,
-		Profession:    "",
-		UserRoles:     nil,
 	}
 
-	err := s.repo.CreateUser(user)
-	if err != nil {
+	if err := s.repo.CreateUser(user); err != nil {
 		return uuid.Nil, err
 	}
-
 	return newUUID, nil
 }
 
@@ -253,4 +253,8 @@ func (s *userService) RemoveUserRole(req request.RemoveRoleUserRequest) (respons
 	}
 
 	return deleteResponse, nil
+}
+func (s *userService) UpdateAvatarURL(userId uuid.UUID, avatarURL string) error {
+	_, err := s.repo.UpdateUser(userId, map[string]interface{}{"avatar_url": avatarURL})
+	return err
 }

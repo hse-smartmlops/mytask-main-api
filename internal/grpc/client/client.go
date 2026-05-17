@@ -12,9 +12,16 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+// LLMOverrides — параметры, которые переопределяют дефолты LLM-сервиса
+type LLMOverrides struct {
+	Model        string
+	URL          string
+	SystemPrompt string
+}
+
 type LLMClient struct {
 	conn   *grpc.ClientConn
-	client v1.MCPServiceClient 
+	client v1.MCPServiceClient
 }
 
 func NewLLMClient(addr string) (*LLMClient, error) {
@@ -25,26 +32,38 @@ func NewLLMClient(addr string) (*LLMClient, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	client := v1.NewMCPServiceClient(conn)
-	
-	return &LLMClient{
-		conn:   conn,
-		client: client,
-	}, nil
+	return &LLMClient{conn: conn, client: v1.NewMCPServiceClient(conn)}, nil
 }
 
-func (c *LLMClient) Close() error {
-	return c.conn.Close()
+func (c *LLMClient) Close() error { return c.conn.Close() }
+
+// buildMeta строит map для передачи оверрайдов в LLM-сервис
+func buildMeta(overrides *LLMOverrides) map[string]string {
+	meta := map[string]string{}
+	if overrides == nil {
+		return meta
+	}
+	if overrides.Model != "" {
+		meta["model"] = overrides.Model
+	}
+	if overrides.URL != "" {
+		meta["url"] = overrides.URL
+	}
+	if overrides.SystemPrompt != "" {
+		meta["system_prompt"] = overrides.SystemPrompt
+	}
+	return meta
 }
 
-func (c *LLMClient) ProcessTaskWithLLM(ctx context.Context, taskDescription, userText string, taskId string) (string, error) {
+// ProcessTaskWithLLM — синхронный вызов с опциональными оверрайдами настроек
+func (c *LLMClient) ProcessTaskWithLLM(ctx context.Context, taskDescription, userText, taskId string, overrides *LLMOverrides) (string, error) {
 	req := &v1.ProcessTaskRequest{
 		Description: taskDescription,
 		Text:        userText,
-		TaskId:      taskId,  
-		ContentType: "text/plain",      
-		TimeoutMs:   120000,           
+		TaskId:      taskId,
+		ContentType: "text/plain",
+		TimeoutMs:   120000,
+		Meta:        buildMeta(overrides),
 	}
 
 	resp, err := c.client.ProcessTask(ctx, req)
@@ -52,18 +71,18 @@ func (c *LLMClient) ProcessTaskWithLLM(ctx context.Context, taskDescription, use
 		log.Printf("gRPC call failed: %v", err)
 		return "", err
 	}
-
 	return resp.Result, nil
 }
 
-// ProcessTaskWithLLMStream - для потоковой обработки (опционально)
-func (c *LLMClient) ProcessTaskWithLLMStream(ctx context.Context, taskDescription, userText string, taskId string) (string, error) {
+// ProcessTaskWithLLMStream — потоковый вызов с опциональными оверрайдами
+func (c *LLMClient) ProcessTaskWithLLMStream(ctx context.Context, taskDescription, userText, taskId string, overrides *LLMOverrides) (string, error) {
 	req := &v1.ProcessTaskRequest{
 		Description: taskDescription,
 		Text:        userText,
 		TaskId:      taskId,
 		ContentType: "text/plain",
 		TimeoutMs:   120000,
+		Meta:        buildMeta(overrides),
 	}
 
 	stream, err := c.client.StreamProcessTask(ctx, req)
@@ -76,39 +95,17 @@ func (c *LLMClient) ProcessTaskWithLLMStream(ctx context.Context, taskDescriptio
 	for {
 		event, err := stream.Recv()
 		if err != nil {
-			log.Printf("Stream receive error: %v", err)
 			return "", err
 		}
-
 		switch e := event.Event.(type) {
 		case *v1.ProcessTaskEvent_Chunk:
-			// Собираем чанки
 			result += e.Chunk.Data
-			log.Printf("Received chunk %d: %s", e.Chunk.Index, e.Chunk.Data[:min(50, len(e.Chunk.Data))])
-		
 		case *v1.ProcessTaskEvent_Final:
-			// Финальный результат
-			result = e.Final.Result
-			log.Printf("Received final result, length: %d", len(result))
-			return result, nil
-		
+			return e.Final.Result, nil
 		case *v1.ProcessTaskEvent_Status:
-			// Логируем статус
-			log.Printf("Status: %s - %s (progress: %d%%)", 
-				e.Status.State, e.Status.Message, e.Status.Progress)
-		
+			log.Printf("LLM status: %s %s", e.Status.State, e.Status.Message)
 		case *v1.ProcessTaskEvent_Error:
-			// Обрабатываем ошибку
-			log.Printf("Error from LLM service: %d - %s", e.Error.Code, e.Error.Message)
 			return "", fmt.Errorf("LLM error %d: %s", e.Error.Code, e.Error.Message)
 		}
 	}
-}
-
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

@@ -85,6 +85,9 @@ func GetDBConnection() *gorm.DB {
 		&models.TomorrowPlans{},
 		&models.ProjectTeam{},  // ссылается на Project и Team
 		&models.Subscription{},
+		&models.APIToken{},
+		&models.LLMSettings{},
+		// Session — хранится в Redis, не в PostgreSQL
 	); err != nil {
 		log.Fatal("AutoMigrate failed:", err)
 	}
