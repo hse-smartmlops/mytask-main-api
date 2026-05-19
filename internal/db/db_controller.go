@@ -37,12 +37,6 @@ func GetDBConnection() *gorm.DB {
 		log.Fatal("Failed to connect to database", err)
 	}
 
-	db.InstanceSet("gorm:cache:prepared_statement", nil)
-	db.InstanceSet("gorm:cache:schema", nil)
-
-	// включаем каскадные FK
-	db = db.Set("gorm:foreignKeyConstraints", true)
-
 	// берем *sql.DB для raw запросов
 	sqlDB, err := db.DB()
 	if err != nil {
