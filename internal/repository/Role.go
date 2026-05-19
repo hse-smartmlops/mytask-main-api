@@ -31,7 +31,7 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 
 func (r *roleRepository) GetAllRoles(limit, offset int) ([]models.Role, int64, error) {
 	var totalCount int64
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Table("roles").
 		Where("roles.deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -39,7 +39,7 @@ func (r *roleRepository) GetAllRoles(limit, offset int) ([]models.Role, int64, e
 	}
 
 	var roles []models.Role
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Table("roles").
 		Where("roles.deleted = FALSE").
 		Limit(limit).Offset(offset).

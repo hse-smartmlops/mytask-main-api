@@ -44,7 +44,7 @@ func NewTaskRepository(db *gorm.DB) TaskRepository {
 
 func (r *taskRepository) GetAllTasks(limit, offset int) ([]models.Task, int64, error) {
 	var totalCount int64
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Table("tasks").
 		Where("tasks.deleted = ?", false).
 		Count(&totalCount).Error; err != nil {
@@ -52,7 +52,7 @@ func (r *taskRepository) GetAllTasks(limit, offset int) ([]models.Task, int64, e
 	}
 
 	var tasks []models.Task
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Table("tasks").
 		Where("tasks.deleted = ?", false).
 		Limit(limit).

@@ -43,7 +43,7 @@ func NewReportRepository(db *gorm.DB) ReportRepository {
 
 func (r *reportRepository) GetAllReports(limit, offset int) ([]models.DailyReport, int64, error) {
 	var totalCount int64
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Table("daily_reports").
 		Where("daily_reports.deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -51,7 +51,7 @@ func (r *reportRepository) GetAllReports(limit, offset int) ([]models.DailyRepor
 	}
 
 	var reports []models.DailyReport
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.DailyReport{}).
 		Preload("User", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
 		Preload("HelpRequests", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
@@ -72,7 +72,7 @@ func (r *reportRepository) GetAllReports(limit, offset int) ([]models.DailyRepor
 func (r *reportRepository) GetReportByDateInXLSX(startDate, endDate time.Time) ([]models.DailyReport, error) {
 	var reports []models.DailyReport
 
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.DailyReport{}).
 		Preload("User", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
 		Preload("CompletedWork", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
@@ -88,7 +88,7 @@ func (r *reportRepository) GetReportByDateInXLSX(startDate, endDate time.Time) (
 
 func (r *reportRepository) GetAllReportsByUserId(userID uuid.UUID, limit, offset int) ([]models.DailyReport, int64, error) {
 	var totalCount int64
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.DailyReport{}).
 		Where("daily_reports.deleted = FALSE and daily_reports.user_id = ?", userID).
 		Count(&totalCount).Error; err != nil {
@@ -96,7 +96,7 @@ func (r *reportRepository) GetAllReportsByUserId(userID uuid.UUID, limit, offset
 	}
 
 	var reports []models.DailyReport
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.DailyReport{}).
 		Preload("User", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
 		Preload("HelpRequests", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
@@ -116,7 +116,7 @@ func (r *reportRepository) GetAllReportsByUserId(userID uuid.UUID, limit, offset
 
 func (r *reportRepository) GetReport(reportID uuid.UUID) (*models.DailyReport, error) {
 	var report models.DailyReport
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.DailyReport{}).
 		Preload("User", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
 		Preload("HelpRequests", func(db *gorm.DB) *gorm.DB {return db.Where("deleted = FALSE")}).
@@ -145,19 +145,19 @@ func (r *reportRepository) GetReport(reportID uuid.UUID) (*models.DailyReport, e
 func (r *reportRepository) GetLatestTomorrowPlans() ([]models.TomorrowPlans, error) {
     var plans []models.TomorrowPlans
     
-    subquery := r.db.
+    subquery := r.db.Session(&gorm.Session{NewDB: true}).
         Model(&models.DailyReport{}).
         Select("id").
         Where("daily_reports.deleted = ?", false).
-        Where("(daily_reports.user_id, daily_reports.report_date) IN (?)", 
-            r.db.
+        Where("(daily_reports.user_id, daily_reports.report_date) IN (?)",
+            r.db.Session(&gorm.Session{NewDB: true}).
                 Model(&models.DailyReport{}).
                 Select("user_id, MAX(report_date)").
                 Where("daily_reports.deleted = ?", false).
                 Group("user_id"),
         )
 
-    err := r.db.
+    err := r.db.Session(&gorm.Session{NewDB: true}).
         Model(&models.TomorrowPlans{}).
         Where("tomorrow_plans.deleted = ? AND tomorrow_plans.report_id IN (?)", false, subquery).
         Preload("Report", func(db *gorm.DB) *gorm.DB {
@@ -190,7 +190,7 @@ func (r *reportRepository) GetLatestTomorrowPlans() ([]models.TomorrowPlans, err
 
 func (r *reportRepository) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyReport, error) {
 	var cw []models.CompletedWork
-	if err := r.db.
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.CompletedWork{}).
 		Where("completed_work.deleted = FALSE AND completed_work.task_id = ?", taskID).
 		Find(&cw).Error; err != nil {
