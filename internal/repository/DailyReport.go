@@ -311,7 +311,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 	delFalse := false
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Table("LDailyReports").Create(&rep); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Table("daily_reports").Create(&rep); res.Error != nil {
 			return res.Error
 		}
 
@@ -332,7 +332,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 				}
 				batch = append(batch, item)
 			}
-			if res := tx.Session(&gorm.Session{}).Table("LCompletedWorks").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{}).Table("completed_works").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}
@@ -354,7 +354,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 				}
 				batch = append(batch, item)
 			}
-			if res := tx.Session(&gorm.Session{}).Table("LTomorrowPlanss").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{}).Table("tomorrow_plans").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}
@@ -373,7 +373,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 					CreatedAt: &now,
 				})
 			}
-			if res := tx.Session(&gorm.Session{}).Table("LReportProblems").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{}).Table("report_problems").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}
@@ -406,7 +406,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 					CreatedAt:   &now,
 				})
 			}
-			if res := tx.Session(&gorm.Session{}).Table("LHelpRequests").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{}).Table("help_requests").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}

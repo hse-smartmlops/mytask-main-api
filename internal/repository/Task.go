@@ -88,7 +88,7 @@ func (r *taskRepository) SearchTasks(query, userID string, limit, offset int) ([
         tasks.created_at DESC
     `
 
-    baseQuery := r.db.Session(&gorm.Session{}).Table("LTasks").
+    baseQuery := r.db.Session(&gorm.Session{}).Table("tasks").
         Joins("LEFT JOIN statuses ON tasks.status_id = statuses.id AND statuses.deleted = ?", false).
         Joins("LEFT JOIN boards ON statuses.board_id = boards.id AND boards.deleted = ?", false).
         Joins("LEFT JOIN projects ON boards.project_id = projects.id AND projects.deleted = ?", false).
@@ -290,7 +290,7 @@ func (r *taskRepository) CreateTask(task models.Task) error {
 func (r *taskRepository) UpdateTask(taskID uuid.UUID, updates map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Table("LTasks").Where("id = ? AND deleted = FALSE", taskID).Updates(updates)
+		res := tx.Session(&gorm.Session{}).Table("tasks").Where("id = ? AND deleted = FALSE", taskID).Updates(updates)
 		if res.Error != nil {
 			return res.Error
 		}
@@ -310,7 +310,7 @@ func (r *taskRepository) DeleteTask(taskID uuid.UUID) (bool, error) {
 
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Table("LTasks").Where("id = ?", taskID).Updates(updateData)
+		res := tx.Session(&gorm.Session{}).Table("tasks").Where("id = ?", taskID).Updates(updateData)
 		if res.Error != nil {
 			return res.Error
 		}
@@ -327,7 +327,7 @@ func (r *taskRepository) DeleteTask(taskID uuid.UUID) (bool, error) {
 
 func (r *taskRepository) GetStatusByID(statusID uuid.UUID) (*models.Status, error) {
 	var status models.Status
-	if err := r.db.Session(&gorm.Session{}).Table("LStatuss").
+	if err := r.db.Session(&gorm.Session{}).Table("statuses").
 		Select("board_id").
 		Where("id = ? AND deleted = ?", statusID, false).
 		First(&status).Error; err != nil {
@@ -357,7 +357,7 @@ func (r *taskRepository) GetStatusesByBoardID(boardID uuid.UUID) ([]models.Statu
 }
 
 func (r *taskRepository) UpdateTaskStatus(taskID uuid.UUID, toStatusID uuid.UUID, updatedAt time.Time) error {
-	return r.db.Session(&gorm.Session{}).Table("LTasks").
+	return r.db.Session(&gorm.Session{}).Table("tasks").
 		Where("id = ?", taskID).
 		Updates(map[string]interface{}{
 			"status_id":   toStatusID,
@@ -367,7 +367,7 @@ func (r *taskRepository) UpdateTaskStatus(taskID uuid.UUID, toStatusID uuid.UUID
 
 func (r *taskRepository) UserExists(userID uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Session(&gorm.Session{}).Table("LUsers").
+	err := r.db.Session(&gorm.Session{}).Table("users").
 		Where("id = ? AND deleted = ?", userID, false).
 		Count(&count).Error
 	if err != nil {
@@ -378,7 +378,7 @@ func (r *taskRepository) UserExists(userID uuid.UUID) (bool, error) {
 
 func (r *taskRepository) StatusExists(statusID uuid.UUID) (bool, error) {
 	var count int64
-	if err := r.db.Session(&gorm.Session{}).Table("LStatuss").
+	if err := r.db.Session(&gorm.Session{}).Table("statuses").
 		Joins("INNER JOIN boards ON statuses.board_id = boards.id").
 		Where("statuses.id = ? AND statuses.deleted = ? AND boards.deleted = ?", statusID, false, false).
 		Count(&count).Error; err != nil {
