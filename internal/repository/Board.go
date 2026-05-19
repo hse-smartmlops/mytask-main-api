@@ -43,7 +43,7 @@ func (r *boardRepository) GetAllBoards(limit, offset int) ([]models.Board, int64
 		Order("created_at DESC NULLS LAST").
 		Limit(limit).Offset(offset).
 		Preload("Statuses", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false).Order("sort_order ASC")
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false).Order("sort_order ASC")
 		}).
 		Preload("Statuses.Tasks", "deleted = ?", false).
 		Find(&boards).Error; err != nil {
@@ -58,10 +58,10 @@ func (r *boardRepository) GetBoardById(boardID uuid.UUID) (*models.Board, error)
 	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("id = ? AND deleted = ?", boardID, false).
 		Preload("Statuses", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false).Order("sort_order ASC")
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false).Order("sort_order ASC")
 		}).
 		Preload("Statuses.Tasks", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		First(&board).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -78,10 +78,10 @@ func (r *boardRepository) GetBoardByProjectId(projectID uuid.UUID) ([]models.Boa
 		Where("project_id = ? AND deleted = ?", projectID, false).
 		Order("created_at DESC NULLS LAST").
 		Preload("Statuses", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false).Order("sort_order ASC")
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false).Order("sort_order ASC")
 		}).
 		Preload("Statuses.Tasks", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		Find(&boards).Error; err != nil {
 		return nil, err
@@ -96,19 +96,19 @@ func (r *boardRepository) GetBoardByProjectIdWithUsersAndProject(projectID uuid.
 		Where("project_id = ? AND deleted = ?", projectID, false).
 		Order("created_at DESC NULLS LAST").
 		Preload("Project", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		Preload("Statuses", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false).Order("sort_order ASC")
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false).Order("sort_order ASC")
 		}).
 		Preload("Statuses.Tasks", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		Preload("Statuses.Tasks.AssignedToUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		Preload("Statuses.Tasks.CreatedByUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		Find(&boards).Error; err != nil {
 		return nil, err

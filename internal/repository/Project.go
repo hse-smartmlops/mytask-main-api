@@ -102,11 +102,11 @@ func (r *projectRepository) SearchProjects(query, userID string, limit, offset i
     // Получаем проекты с приоритетной сортировкой
     err := baseQuery.
         Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{NewDB: true}).Select("id, first_name, last_name, email").Where("deleted = ?", false)
+            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email").Where("deleted = ?", false)
         }).
         // Убираем лишние прелоады для оптимизации
         Preload("ProjectTeams.Team.TeamMembers", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{NewDB: true}).Where("team_members.user_id = ?", userID).Limit(1) // Только нужного пользователя
+            return db.Session(&gorm.Session{}).Where("team_members.user_id = ?", userID).Limit(1) // Только нужного пользователя
         }).
         Limit(limit).
         Offset(offset).

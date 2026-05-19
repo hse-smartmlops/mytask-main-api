@@ -58,7 +58,7 @@ func (r *statusRepository) GetStatusesByBoardId(boardID uuid.UUID) ([]models.Sta
 		Where("board_id = ? AND deleted = ?", boardID, false).
 		Order("sort_order ASC").
 		Preload("Tasks", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		Find(&statuses).Error; err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (r *statusRepository) GetStatusByID(statusID uuid.UUID) (*models.Status, er
 	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("id = ? AND deleted = ?", statusID, false).
 		Preload("Tasks", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
 		}).
 		First(&s).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
