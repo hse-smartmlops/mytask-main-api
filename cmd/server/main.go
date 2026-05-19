@@ -10,13 +10,13 @@
 package main
 
 import (
+	"context"
 	docs "emplacc-api/docs"
 	"emplacc-api/internal/controller"
 	"emplacc-api/internal/db"
 	"emplacc-api/internal/grpc/client"
 	"emplacc-api/internal/repository"
 	"emplacc-api/internal/service"
-	"context"
 	"log"
 	"net/http"
 	"os"
@@ -33,27 +33,32 @@ var systemUserId uuid.UUID
 
 func main() {
 	loc, err := time.LoadLocation("Europe/Moscow")
-    if err != nil {
-        panic(err)
-    }
-    time.Local = loc
-	
-	e := echo.New() 
+	if err != nil {
+		panic(err)
+	}
+	time.Local = loc
+
+	e := echo.New()
 	// ── Recovery middleware — поймать панику перед логированием ──
 	e.Use(middleware.Recover())
 	e.Use(middleware.RemoveTrailingSlash())
 	e.Use(middleware.Logger())
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-    AllowOrigins: []string{"*"}, // или конкретный фронтенд, например "http://localhost:3000"
-    AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS, echo.PATCH},
-    AllowHeaders: []string{
-        echo.HeaderOrigin,
-        echo.HeaderContentType,
-        echo.HeaderAccept,
-        echo.HeaderAuthorization,
-    },
-    AllowCredentials: true,
+		AllowOrigins: []string{
+			"https://emplacc.g-309.ru",
+			"http://localhost:3000",
+			"http://localhost:3001",
+			"http://localhost:3002",
+		},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS, echo.PATCH},
+		AllowHeaders: []string{
+			echo.HeaderOrigin,
+			echo.HeaderContentType,
+			echo.HeaderAccept,
+			echo.HeaderAuthorization,
+		},
+		AllowCredentials: true,
 	}))
 
 	// Подключение к БД через ваш существующий файл
@@ -114,7 +119,7 @@ func main() {
 	sessionService := service.NewSessionService(sessionRepo)
 
 	systemUserId, err = userService.CreateSystemUser()
-	if err != nil{
+	if err != nil {
 		log.Fatalf("service error (create user): %v", err)
 	}
 
@@ -134,8 +139,8 @@ func main() {
 	e.Use(controller.AppAuthMiddleware(authService, sessionService, apiTokenService))
 
 	// Role-based middleware — три уровня доступа
-	adminMw    := controller.RequireRoles(roleRepo, "admin")
-	managerMw  := controller.RequireRoles(roleRepo, "admin", "manager")
+	adminMw := controller.RequireRoles(roleRepo, "admin")
+	managerMw := controller.RequireRoles(roleRepo, "admin", "manager")
 	employeeMw := controller.RequireRoles(roleRepo, "admin", "manager", "employee")
 
 	// Регистрируем маршруты с зависимостями (ПОСЛЕ глобального middleware)
