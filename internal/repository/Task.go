@@ -88,16 +88,17 @@ func (r *taskRepository) SearchTasks(query, userID string, limit, offset int) ([
         tasks.created_at DESC
     `
 
-    baseQuery := r.db.Session(&gorm.Session{}).Table("tasks").
-        Joins("LEFT JOIN statuses ON tasks.status_id = statuses.id AND statuses.deleted = ?", false).
-        Joins("LEFT JOIN boards ON statuses.board_id = boards.id AND boards.deleted = ?", false).
-        Joins("LEFT JOIN projects ON boards.project_id = projects.id AND projects.deleted = ?", false).
-        Joins("LEFT JOIN users assigned_user ON tasks.assigned_to = assigned_user.id AND assigned_user.deleted = ?", false).
-        Where("tasks.deleted = ?", false)
+    buildBase := func() *gorm.DB {
+        q := r.db.Session(&gorm.Session{NewDB: true}).Table("tasks").
+            Joins("LEFT JOIN statuses ON tasks.status_id = statuses.id AND statuses.deleted = ?", false).
+            Joins("LEFT JOIN boards ON statuses.board_id = boards.id AND boards.deleted = ?", false).
+            Joins("LEFT JOIN projects ON boards.project_id = projects.id AND projects.deleted = ?", false).
+            Joins("LEFT JOIN users assigned_user ON tasks.assigned_to = assigned_user.id AND assigned_user.deleted = ?", false).
+            Where("tasks.deleted = ?", false)
+        return addFullTextConditions(q, searchQueries)
+    }
 
-    baseQuery = addFullTextConditions(baseQuery, searchQueries)
-
-    if err := baseQuery.Count(&totalCount).Error; err != nil {
+    if err := buildBase().Count(&totalCount).Error; err != nil {
         return nil, 0, err
     }
 
@@ -105,7 +106,7 @@ func (r *taskRepository) SearchTasks(query, userID string, limit, offset int) ([
         return []models.Task{}, 0, nil
     }
 
-    err := baseQuery.
+    err := buildBase().
         Preload("Status", func(db *gorm.DB) *gorm.DB {
             return db.Session(&gorm.Session{}).
                 Select("id, name, color, key, board_id").

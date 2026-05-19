@@ -261,7 +261,7 @@ func (r *userRepository) CreateUserWithID(req request.UserCreateRequest, userID 
 	}
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(&models.User{}).Omit(clause.Associations).Create(&user); res.Error != nil {
+		if res := tx.Session(&gorm.Session{}).Omit(clause.Associations).Create(&user); res.Error != nil {
 			log.Printf("DB error (create user): %v", res.Error)
 			return res.Error
 		}
