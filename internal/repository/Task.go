@@ -176,7 +176,7 @@ func addFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
     }
 
     if len(conditions) > 0 {
-        return db.Session(&gorm.Session{NewDB: true}).Where(strings.Join(conditions, " OR "), args...)
+        return db.Where(strings.Join(conditions, " OR "), args...)
     }
 
     return db
