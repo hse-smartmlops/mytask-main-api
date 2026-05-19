@@ -189,7 +189,7 @@ func (r *userRepository) RestoreUser(req request.RestoreUserRequest) (uuid.UUID,
 
 func (r *userRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
-	if err := r.db.Where("email = ? AND deleted = FALSE", email).First(&user).Error; err != nil {
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Where("email = ? AND deleted = FALSE", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
