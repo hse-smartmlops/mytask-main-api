@@ -19,9 +19,10 @@ type SessionExpiredError struct {
 // AppAuthMiddleware — новая стратегия авторизации:
 //   - sess_*     → сессионный токен (браузер)
 //   - emplacc_*  → MCP/интеграционный токен
+//   - eyJ...     → Keycloak JWT для совместимости с текущим фронтом
 //
-// Keycloak НЕ вызывается на каждый запрос.
-func AppAuthMiddleware(sessionService service.SessionService, apiTokenService service.APITokenService) echo.MiddlewareFunc {
+// Keycloak JWT разбирается локально в authService, без обращения к Keycloak на каждый запрос.
+func AppAuthMiddleware(authService service.AuthService, sessionService service.SessionService, apiTokenService service.APITokenService) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			p := c.Path()
@@ -77,10 +78,25 @@ func AppAuthMiddleware(sessionService service.SessionService, apiTokenService se
 				c.Set("api_token_user_id", user.ID)
 				log.Printf("Auth middleware: API token valid for user %s", user.ID.String())
 
+			// ── Keycloak JWT для совместимости с прод-фронтом ───────
+			case strings.Count(token, ".") == 2:
+				if err := authService.ValidateTokenForMiddleware(token); err != nil {
+					log.Printf("Auth middleware: JWT validation failed: %v", err)
+					return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Token invalid"})
+				}
+				userID, err := extractSubFromJWT(token)
+				if err != nil {
+					log.Printf("Auth middleware: failed to extract JWT subject: %v", err)
+					return c.JSON(http.StatusUnauthorized, map[string]string{"message": "Token invalid"})
+				}
+				c.Set("user_id", userID.String())
+				c.Set("auth_token", token)
+				log.Printf("Auth middleware: JWT valid for user %s", userID.String())
+
 			default:
 				log.Printf("Auth middleware: unknown token type for %s %s", c.Request().Method, p)
 				return c.JSON(http.StatusUnauthorized, map[string]string{
-					"error": "unknown token type, use sess_* or emplacc_*",
+					"error": "unknown token type, use sess_*, emplacc_* or Keycloak JWT",
 				})
 			}
 

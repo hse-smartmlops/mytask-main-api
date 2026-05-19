@@ -131,7 +131,7 @@ func main() {
 
 	// ── Главный middleware ПЕРЕД маршрутами — критический порядок ──
 	// Новый middleware: только сессии (sess_*) и MCP токены (emplacc_*)
-	e.Use(controller.AppAuthMiddleware(sessionService, apiTokenService))
+	e.Use(controller.AppAuthMiddleware(authService, sessionService, apiTokenService))
 
 	// Role-based middleware — три уровня доступа
 	adminMw    := controller.RequireRoles(roleRepo, "admin")
