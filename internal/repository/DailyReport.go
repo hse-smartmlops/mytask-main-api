@@ -214,7 +214,7 @@ func (r *reportRepository) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyR
 	}
 
 	var reports []models.DailyReport
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.DailyReport{}).
 		Preload("User", "deleted = FALSE").
 		Preload("HelpRequests", "deleted = FALSE").
@@ -232,7 +232,7 @@ func (r *reportRepository) GetReportsByTaskId(taskID uuid.UUID) ([]models.DailyR
 
 func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.DailyReport, error) {
 	var statusIDs []uuid.UUID
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Status{}).
 		Select("statuses.id").
 		Joins("JOIN boards ON statuses.board_id = boards.id").
@@ -246,7 +246,7 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 	}
 
 	var tasks []models.Task
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Task{}).
 		Where("status_id IN ? AND deleted = ?", statusIDs, false).
 		Find(&tasks).Error; err != nil {
@@ -263,7 +263,7 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 	}
 
 	var completedWorks []models.CompletedWork
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.CompletedWork{}).
 		Where("task_id IN ? AND deleted = ?", taskIDs, false).
 		Find(&completedWorks).Error; err != nil {
@@ -291,7 +291,7 @@ func (r *reportRepository) GetReportsByProjectId(projectID uuid.UUID) ([]models.
 	}
 
 	var reports []models.DailyReport
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Preload("User", "deleted = FALSE").
 		Preload("HelpRequests", "deleted = FALSE").
 		Preload("CompletedWork", "deleted = FALSE").
@@ -311,7 +311,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 	delFalse := false
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Table("daily_reports").Create(&rep); res.Error != nil {
+		if res := tx.Session(&gorm.Session{NewDB: true}).Table("daily_reports").Create(&rep); res.Error != nil {
 			return res.Error
 		}
 
@@ -332,7 +332,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 				}
 				batch = append(batch, item)
 			}
-			if res := tx.Session(&gorm.Session{}).Table("completed_works").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{NewDB: true}).Table("completed_works").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}
@@ -354,7 +354,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 				}
 				batch = append(batch, item)
 			}
-			if res := tx.Session(&gorm.Session{}).Table("tomorrow_plans").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{NewDB: true}).Table("tomorrow_plans").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}
@@ -373,7 +373,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 					CreatedAt: &now,
 				})
 			}
-			if res := tx.Session(&gorm.Session{}).Table("report_problems").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{NewDB: true}).Table("report_problems").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}
@@ -406,7 +406,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 					CreatedAt:   &now,
 				})
 			}
-			if res := tx.Session(&gorm.Session{}).Table("help_requests").Create(&batch); res.Error != nil {
+			if res := tx.Session(&gorm.Session{NewDB: true}).Table("help_requests").Create(&batch); res.Error != nil {
 				return res.Error
 			}
 		}
@@ -639,7 +639,7 @@ func (r *reportRepository) DeleteReport(reportID uuid.UUID) (bool, error) {
 
 	var affected int64
 	txErr := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.DailyReport{}).
 			Where("id = ?", reportID).
 			Updates(update)
@@ -656,7 +656,7 @@ func (r *reportRepository) DeleteReport(reportID uuid.UUID) (bool, error) {
 		for _, tbl := range []interface{}{
 			&models.HelpRequest{}, &models.CompletedWork{}, &models.TomorrowPlans{}, &models.ReportProblem{},
 		} {
-			if res := tx.Session(&gorm.Session{}).
+			if res := tx.Session(&gorm.Session{NewDB: true}).
 				Model(tbl).
 				Where("report_id = ?", reportID).
 				Updates(update); res.Error != nil {
@@ -677,7 +677,7 @@ func (r *reportRepository) DeleteReport(reportID uuid.UUID) (bool, error) {
 }
 
 func (r *reportRepository) UpdateHelpRequest(helpID uuid.UUID, updateData map[string]interface{}) (bool, error) {
-	res := r.db.Session(&gorm.Session{}).
+	res := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.HelpRequest{}).
 		Where("id = ? AND deleted = FALSE", helpID).
 		Updates(updateData)
@@ -688,7 +688,7 @@ func (r *reportRepository) UpdateHelpRequest(helpID uuid.UUID, updateData map[st
 }
 
 func (r *reportRepository) UpdateCompletedWork(cwID uuid.UUID, updateData map[string]interface{}) (bool, error) {
-	res := r.db.Session(&gorm.Session{}).
+	res := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.CompletedWork{}).
 		Where("id = ? AND deleted = FALSE", cwID).
 		Updates(updateData)
@@ -699,7 +699,7 @@ func (r *reportRepository) UpdateCompletedWork(cwID uuid.UUID, updateData map[st
 }
 
 func (r *reportRepository) UpdateTomorrowPlans(tpID uuid.UUID, updateData map[string]interface{}) (bool, error) {
-	res := r.db.Session(&gorm.Session{}).
+	res := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.TomorrowPlans{}).
 		Where("id = ? AND deleted = FALSE", tpID).
 		Updates(updateData)
@@ -711,7 +711,7 @@ func (r *reportRepository) UpdateTomorrowPlans(tpID uuid.UUID, updateData map[st
 
 func (r *reportRepository) GetHelpRequestsForUser(userID uuid.UUID) ([]models.HelpRequest, error) {
 	var helpRequests []models.HelpRequest
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.HelpRequest{}).
 		Preload("Report", "deleted = FALSE").
 		Preload("Report.User", "deleted = FALSE").
@@ -731,7 +731,7 @@ func (r *reportRepository) DeleteHelpRequest(requestID uuid.UUID) (bool, error) 
 	}
 
 	txErr := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.HelpRequest{}).
 			Where("id = ?", requestID).
 			Updates(update)

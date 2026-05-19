@@ -35,7 +35,7 @@ func NewProjectRepository(db *gorm.DB) ProjectRepository {
 
 func (r *projectRepository) GetAllProjects(limit, offset int) ([]models.Project, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Project{}).
 		Where("projects.deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -43,7 +43,7 @@ func (r *projectRepository) GetAllProjects(limit, offset int) ([]models.Project,
 	}
 
 	var projects []models.Project
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Project{}).
 		Where("projects.deleted = FALSE").
 		Limit(limit).Offset(offset).
@@ -84,7 +84,7 @@ func (r *projectRepository) SearchProjects(query, userID string, limit, offset i
     `
 
     // Базовый запрос
-    baseQuery := r.db.Session(&gorm.Session{}).Model(&models.Project{}).
+    baseQuery := r.db.Session(&gorm.Session{NewDB: true}).Model(&models.Project{}).
         Where("projects.deleted = ?", false)
 
     // Добавляем условия Full-Text Search
@@ -102,11 +102,11 @@ func (r *projectRepository) SearchProjects(query, userID string, limit, offset i
     // Получаем проекты с приоритетной сортировкой
     err := baseQuery.
         Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email").Where("deleted = ?", false)
+            return db.Session(&gorm.Session{NewDB: true}).Select("id, first_name, last_name, email").Where("deleted = ?", false)
         }).
         // Убираем лишние прелоады для оптимизации
         Preload("ProjectTeams.Team.TeamMembers", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Where("team_members.user_id = ?", userID).Limit(1) // Только нужного пользователя
+            return db.Session(&gorm.Session{NewDB: true}).Where("team_members.user_id = ?", userID).Limit(1) // Только нужного пользователя
         }).
         Limit(limit).
         Offset(offset).
@@ -138,7 +138,7 @@ func addProjectFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB 
     }
 
     if len(conditions) > 0 {
-        return db.Session(&gorm.Session{}).Where(strings.Join(conditions, " OR "), args...)
+        return db.Session(&gorm.Session{NewDB: true}).Where(strings.Join(conditions, " OR "), args...)
     }
 
     return db
@@ -146,7 +146,7 @@ func addProjectFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB 
 
 func (r *projectRepository) GetProjectByID(projectID uuid.UUID) (*models.Project, error) {
 	var p models.Project
-	res := r.db.Session(&gorm.Session{}).
+	res := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Project{}).
 		Where("id = ? AND deleted = FALSE", projectID).
 		First(&p)
@@ -162,7 +162,7 @@ func (r *projectRepository) GetProjectByID(projectID uuid.UUID) (*models.Project
 
 func (r *projectRepository) GetProjectsByUser(userID uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	res := r.db.Session(&gorm.Session{}).
+	res := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Project{}).
 		Select("projects.*").
 		Joins("JOIN project_teams pt ON pt.project_id = projects.id").
@@ -185,7 +185,7 @@ func (r *projectRepository) GetProjectsByUser(userID uuid.UUID) ([]models.Projec
 
 func (r *projectRepository) GetTeamProjects(teamID uuid.UUID) ([]models.ProjectTeam, error) {
 	var pts []models.ProjectTeam
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.ProjectTeam{}).
 		Where("team_id = ? AND deleted = FALSE", teamID).
 		Find(&pts).Error; err != nil {
@@ -197,7 +197,7 @@ func (r *projectRepository) GetTeamProjects(teamID uuid.UUID) ([]models.ProjectT
 
 func (r *projectRepository) GetProjectsByIDs(projectIDs []uuid.UUID) ([]models.Project, error) {
 	var projects []models.Project
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Project{}).
 		Where("id IN ? AND deleted = FALSE", projectIDs).
 		Find(&projects).Error; err != nil {
@@ -209,20 +209,20 @@ func (r *projectRepository) GetProjectsByIDs(projectIDs []uuid.UUID) ([]models.P
 
 func (r *projectRepository) CreateProjectWithBoardAndStatuses(project models.Project, board models.Board, statuses []models.Status) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Project{}).
 			Omit(clause.Associations).
 			Create(&project).Error; err != nil {
 			return err
 		}
 
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Board{}).
 			Create(&board).Error; err != nil {
 			return err
 		}
 
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Status{}).
 			Create(&statuses).Error; err != nil {
 			return err
@@ -235,7 +235,7 @@ func (r *projectRepository) CreateProjectWithBoardAndStatuses(project models.Pro
 func (r *projectRepository) UpdateProject(projectID uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Project{}).
 			Where("id = ? AND deleted = FALSE", projectID).
 			Updates(updateData)
@@ -265,7 +265,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// 1. Проверяем, существует ли неудалённый проект
 		var count int64
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Project{}).
 			Where("id = ? AND deleted = ?", projectID, false).
 			Count(&count).Error; err != nil {
@@ -277,7 +277,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 
 		// 2. Получаем ID всех досок проекта
 		var boardIDs []uuid.UUID
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Board{}).
 			Where("project_id = ? AND deleted = ?", projectID, false).
 			Pluck("id", &boardIDs).Error; err != nil {
@@ -287,7 +287,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 		// 3. Получаем ID всех статусов этих досок
 		var statusIDs []uuid.UUID
 		if len(boardIDs) > 0 {
-			if err := tx.Session(&gorm.Session{}).
+			if err := tx.Session(&gorm.Session{NewDB: true}).
 				Model(&models.Status{}).
 				Where("board_id IN ?", boardIDs).
 				Pluck("id", &statusIDs).Error; err != nil {
@@ -297,7 +297,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 
 		// 4. Удаляем задачи (привязаны к статусам)
 		if len(statusIDs) > 0 {
-			if err := tx.Session(&gorm.Session{}).
+			if err := tx.Session(&gorm.Session{NewDB: true}).
 				Model(&models.Task{}).
 				Where("status_id IN ?", statusIDs).
 				Updates(updateData).Error; err != nil {
@@ -307,7 +307,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 
 		// 5. Удаляем статусы
 		if len(boardIDs) > 0 {
-			if err := tx.Session(&gorm.Session{}).
+			if err := tx.Session(&gorm.Session{NewDB: true}).
 				Model(&models.Status{}).
 				Where("board_id IN ?", boardIDs).
 				Updates(updateData).Error; err != nil {
@@ -316,7 +316,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 		}
 
 		// 6. Удаляем доски
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Board{}).
 			Where("project_id = ?", projectID).
 			Updates(updateData).Error; err != nil {
@@ -324,7 +324,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 		}
 
 		// 7. Удаляем связи с командами
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.ProjectTeam{}).
 			Where("project_id = ?", projectID).
 			Updates(updateData).Error; err != nil {
@@ -332,7 +332,7 @@ func (r *projectRepository) DeleteProject(projectID uuid.UUID) (bool, error) {
 		}
 
 		// 8. Удаляем сам проект
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Project{}).
 			Where("id = ?", projectID).
 			Updates(updateData).Error; err != nil {

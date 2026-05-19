@@ -27,7 +27,7 @@ func NewAttendanceRepository(db *gorm.DB) AttendanceRepository {
 }
 
 func (r *attendanceRepository) GetAllAttendances(limit, offset int) ([]models.Attendance, int64, error) {
-	dbq := r.db.Session(&gorm.Session{}).
+	dbq := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Attendance{}).
 		Where("deleted = FALSE")
 
@@ -49,7 +49,7 @@ func (r *attendanceRepository) GetAllAttendances(limit, offset int) ([]models.At
 }
 
 func (r *attendanceRepository) GetAttendancesByUserId(userID uuid.UUID) ([]models.Attendance, error) {
-	dbq := r.db.Session(&gorm.Session{}).
+	dbq := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Attendance{}).
 		Where("deleted = FALSE AND user_id = ?", userID)
 
@@ -65,7 +65,7 @@ func (r *attendanceRepository) GetAttendancesByUserId(userID uuid.UUID) ([]model
 
 func (r *attendanceRepository) CreateAttendance(attendance models.Attendance) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Attendance{}).
 			Create(&attendance).Error; err != nil {
 			return err
@@ -77,7 +77,7 @@ func (r *attendanceRepository) CreateAttendance(attendance models.Attendance) er
 func (r *attendanceRepository) UpdateAttendance(attendanceID uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Attendance{}).
 			Where("id = ? AND deleted = FALSE", attendanceID).
 			Updates(updateData)
@@ -105,7 +105,7 @@ func (r *attendanceRepository) DeleteAttendance(attendanceID uuid.UUID) (bool, e
 
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Attendance{}).
 			Where("id = ? AND deleted = FALSE", attendanceID).
 			Updates(updateData)

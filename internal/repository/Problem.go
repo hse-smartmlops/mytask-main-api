@@ -30,7 +30,7 @@ func NewProblemRepository(db *gorm.DB) ProblemRepository {
 
 func (r *problemRepository) GetAllProblems(limit, offset int) ([]models.Problem, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Problem{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -38,7 +38,7 @@ func (r *problemRepository) GetAllProblems(limit, offset int) ([]models.Problem,
 	}
 
 	var problems []models.Problem
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Problem{}).
 		Where("deleted = FALSE").
 		Limit(limit).
@@ -52,7 +52,7 @@ func (r *problemRepository) GetAllProblems(limit, offset int) ([]models.Problem,
 
 func (r *problemRepository) GetProblemsByUserId(creatorUUID uuid.UUID, limit, offset int) ([]models.Problem, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Problem{}).
 		Where("creator_id = ? AND deleted = FALSE", creatorUUID).
 		Count(&totalCount).Error; err != nil {
@@ -60,7 +60,7 @@ func (r *problemRepository) GetProblemsByUserId(creatorUUID uuid.UUID, limit, of
 	}
 
 	var problems []models.Problem
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Problem{}).
 		Where("creator_id = ? AND deleted = FALSE", creatorUUID).
 		Limit(limit).
@@ -74,7 +74,7 @@ func (r *problemRepository) GetProblemsByUserId(creatorUUID uuid.UUID, limit, of
 
 func (r *problemRepository) GetProblemByID(problemId uuid.UUID) (*models.Problem, error) {
 	var p models.Problem
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Problem{}).
 		Where("id = ? AND deleted = FALSE", problemId).
 		First(&p).Error; err != nil {
@@ -88,7 +88,7 @@ func (r *problemRepository) GetProblemByID(problemId uuid.UUID) (*models.Problem
 
 func (r *problemRepository) CreateProblem(p models.Problem) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).
+		if res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Problem{}).
 			Create(&p); res.Error != nil {
 			return res.Error
@@ -100,7 +100,7 @@ func (r *problemRepository) CreateProblem(p models.Problem) error {
 func (r *problemRepository) UpdateProblem(problemId uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Problem{}).
 			Where("id = ? AND deleted = FALSE", problemId).
 			Updates(updateData)
@@ -129,7 +129,7 @@ func (r *problemRepository) DeleteProblem(problemId uuid.UUID) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// помечаем проблему удалённой
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Problem{}).
 			Where("id = ?", problemId).
 			Updates(update)
@@ -142,14 +142,14 @@ func (r *problemRepository) DeleteProblem(problemId uuid.UUID) (bool, error) {
 		}
 
 		// каскадно помечаем связанные сущности
-		if res := tx.Session(&gorm.Session{}).
+		if res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.ForumMessage{}).
 			Where("problem_id = ?", problemId).
 			Updates(update); res.Error != nil {
 			return res.Error
 		}
 
-		if res := tx.Session(&gorm.Session{}).
+		if res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.ReportProblem{}).
 			Where("problem_id = ?", problemId).
 			Updates(update); res.Error != nil {

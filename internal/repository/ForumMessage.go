@@ -30,7 +30,7 @@ func NewForumMessageRepository(db *gorm.DB) ForumMessageRepository {
 
 func (r *forumMessageRepository) GetAllForumMessages(limit, offset int) ([]models.ForumMessage, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -38,7 +38,7 @@ func (r *forumMessageRepository) GetAllForumMessages(limit, offset int) ([]model
 	}
 
 	var forumMessages []models.ForumMessage
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE").
 		Limit(limit).
@@ -52,7 +52,7 @@ func (r *forumMessageRepository) GetAllForumMessages(limit, offset int) ([]model
 
 func (r *forumMessageRepository) GetForumMessagesByProblemId(problemID uuid.UUID, limit, offset int) ([]models.ForumMessage, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE AND problem_id = ?", problemID).
 		Count(&totalCount).Error; err != nil {
@@ -60,7 +60,7 @@ func (r *forumMessageRepository) GetForumMessagesByProblemId(problemID uuid.UUID
 	}
 
 	var forumMessages []models.ForumMessage
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.ForumMessage{}).
 		Where("deleted = FALSE AND problem_id = ?", problemID).
 		Limit(limit).
@@ -74,7 +74,7 @@ func (r *forumMessageRepository) GetForumMessagesByProblemId(problemID uuid.UUID
 
 func (r *forumMessageRepository) GetForumMessageById(messageID uuid.UUID) (*models.ForumMessage, error) {
 	var m models.ForumMessage
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.ForumMessage{}).
 		Where("id = ? AND deleted = FALSE", messageID).
 		First(&m).Error; err != nil {
@@ -88,7 +88,7 @@ func (r *forumMessageRepository) GetForumMessageById(messageID uuid.UUID) (*mode
 
 func (r *forumMessageRepository) CreateForumMessage(fm models.ForumMessage) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).
+		if res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.ForumMessage{}).
 			Create(&fm); res.Error != nil {
 			return res.Error
@@ -100,7 +100,7 @@ func (r *forumMessageRepository) CreateForumMessage(fm models.ForumMessage) erro
 func (r *forumMessageRepository) UpdateForumMessage(messageID uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.ForumMessage{}).
 			Where("id = ? AND deleted = FALSE", messageID).
 			Updates(updateData)
@@ -128,7 +128,7 @@ func (r *forumMessageRepository) DeleteForumMessage(messageID uuid.UUID) (bool, 
 
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.ForumMessage{}).
 			Where("id = ?", messageID).
 			Updates(update)

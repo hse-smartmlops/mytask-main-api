@@ -86,7 +86,7 @@ func (r *roleRepository) GetRoleById(roleID uuid.UUID) (*models.Role, error) {
 
 func (r *roleRepository) CreateRole(role models.Role) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Session(&gorm.Session{}).
+		return tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Role{}).
 			Omit(clause.Associations).
 			Create(&role).Error
@@ -96,7 +96,7 @@ func (r *roleRepository) CreateRole(role models.Role) error {
 func (r *roleRepository) UpdateRole(roleID uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Role{}).
 			Where("id = ? AND deleted = FALSE", roleID).
 			Updates(updateData)
@@ -122,7 +122,7 @@ func (r *roleRepository) DeleteRole(roleID uuid.UUID) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// сама роль
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Role{}).
 			Where("id = ? AND deleted = FALSE", roleID).
 			Updates(update)
@@ -134,7 +134,7 @@ func (r *roleRepository) DeleteRole(roleID uuid.UUID) (bool, error) {
 			return errors.New("role not found")
 		}
 		// помечаем связи user_roles как удалённые (если используешь soft delete там)
-		if res := tx.Session(&gorm.Session{}).
+		if res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.UserRole{}).
 			Where("role_id = ?", roleID).
 			Updates(update); res.Error != nil {

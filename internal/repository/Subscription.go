@@ -31,7 +31,7 @@ func NewSubscriptionRepository(db *gorm.DB) SubscriptionRepository {
 
 func (r *subscriptionRepository) GetAllSubscriptions(limit, offset int) ([]models.Subscription, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE").
 		Count(&totalCount).Error; err != nil {
@@ -39,7 +39,7 @@ func (r *subscriptionRepository) GetAllSubscriptions(limit, offset int) ([]model
 	}
 
 	var subs []models.Subscription
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE").
 		Limit(limit).Offset(offset).
@@ -52,7 +52,7 @@ func (r *subscriptionRepository) GetAllSubscriptions(limit, offset int) ([]model
 
 func (r *subscriptionRepository) GetSubscriptionsByUserId(userUUID uuid.UUID, limit, offset int) ([]models.Subscription, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND user_id = ?", userUUID).
 		Count(&totalCount).Error; err != nil {
@@ -60,7 +60,7 @@ func (r *subscriptionRepository) GetSubscriptionsByUserId(userUUID uuid.UUID, li
 	}
 
 	var subs []models.Subscription
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND user_id = ?", userUUID).
 		Limit(limit).Offset(offset).
@@ -73,7 +73,7 @@ func (r *subscriptionRepository) GetSubscriptionsByUserId(userUUID uuid.UUID, li
 
 func (r *subscriptionRepository) GetSubscriptionBySubObject(subObjUUID uuid.UUID, typeId int8, limit, offset int) ([]models.Subscription, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND subscription_id = ? AND type_id = ?", subObjUUID, typeId).
 		Count(&totalCount).Error; err != nil {
@@ -81,7 +81,7 @@ func (r *subscriptionRepository) GetSubscriptionBySubObject(subObjUUID uuid.UUID
 	}
 
 	var subs []models.Subscription
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND subscription_id = ? AND type_id = ?", subObjUUID, typeId).
 		Limit(limit).Offset(offset).
@@ -94,7 +94,7 @@ func (r *subscriptionRepository) GetSubscriptionBySubObject(subObjUUID uuid.UUID
 
 func (r *subscriptionRepository) GetSubscriptionById(subId uuid.UUID) (*models.Subscription, error) {
 	var subscription models.Subscription
-	result := r.db.Session(&gorm.Session{}).
+	result := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Subscription{}).
 		Where("deleted = FALSE AND id = ?", subId).
 		First(&subscription)
@@ -110,7 +110,7 @@ func (r *subscriptionRepository) GetSubscriptionById(subId uuid.UUID) (*models.S
 
 func (r *subscriptionRepository) CreateSubscription(sub models.Subscription) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		return tx.Session(&gorm.Session{}).
+		return tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Subscription{}).
 			Create(&sub).Error
 	})
@@ -121,7 +121,7 @@ func (r *subscriptionRepository) DeleteSubscription(subUUID uuid.UUID) (bool, er
 
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Subscription{}).
 			Where("id = ?", subUUID).
 			Updates(updateData)
@@ -141,7 +141,7 @@ func (r *subscriptionRepository) DeleteSubscription(subUUID uuid.UUID) (bool, er
 
 func (r *subscriptionRepository) TaskExists(taskID uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Session(&gorm.Session{}).
+	err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Task{}).
 		Where("id = ? AND deleted = FALSE", taskID).
 		Count(&count).Error
@@ -153,7 +153,7 @@ func (r *subscriptionRepository) TaskExists(taskID uuid.UUID) (bool, error) {
 
 func (r *subscriptionRepository) ProblemExists(problemID uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Session(&gorm.Session{}).
+	err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Problem{}).
 		Where("id = ? AND deleted = FALSE", problemID).
 		Count(&count).Error

@@ -43,7 +43,7 @@ func NewTeamRepository(db *gorm.DB) TeamRepository {
 func (r *teamRepository) GetTeams() ([]models.Team, error) {
 	var teams []models.Team
 
-	err := r.db.Session(&gorm.Session{}).
+	err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("deleted = ?", false).
 		Preload("TeamMembers", "deleted = ?", false).
 		Preload("TeamMembers.User", "deleted = ?", false).
@@ -59,7 +59,7 @@ func (r *teamRepository) GetTeams() ([]models.Team, error) {
 func (r *teamRepository) GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error) {
 	var teams []models.Team
 
-	err := r.db.Session(&gorm.Session{}).
+	err := r.db.Session(&gorm.Session{NewDB: true}).
 		Joins("JOIN team_members ON teams.id = team_members.team_id").
 		Where("team_members.user_id = ? AND teams.deleted = ? AND team_members.deleted = ?", 
 			userID, false, false).
@@ -76,7 +76,7 @@ func (r *teamRepository) GetTeamsByUserID(userID uuid.UUID) ([]models.Team, erro
 
 func (r *teamRepository) GetProjectTeams(projectID uuid.UUID) ([]models.ProjectTeam, error) {
 	var projectTeams []models.ProjectTeam
-	err := r.db.Session(&gorm.Session{}).
+	err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("project_id = ? AND deleted = ?", projectID, false).
 		Preload("Team", "deleted = ?", false).
 		Preload("Team.TeamMembers", "deleted = ?", false).
@@ -92,7 +92,7 @@ func (r *teamRepository) GetProjectTeams(projectID uuid.UUID) ([]models.ProjectT
 
 func (r *teamRepository) GetTeamByID(teamUUID uuid.UUID) (*models.Team, error) {
 	var team models.Team
-	err := r.db.Session(&gorm.Session{}).
+	err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("id = ? AND deleted = ?", teamUUID, false).
 		Preload("TeamMembers", "deleted = ?", false).
 		Preload("TeamMembers.User", "deleted = ?", false).
@@ -110,7 +110,7 @@ func (r *teamRepository) GetTeamByID(teamUUID uuid.UUID) (*models.Team, error) {
 
 func (r *teamRepository) CreateTeam(team models.Team) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.Team{}).Omit(clause.Associations).Create(&team); res.Error != nil {
+		if res := tx.Session(&gorm.Session{NewDB: true}).Model(models.Team{}).Omit(clause.Associations).Create(&team); res.Error != nil {
 			return res.Error
 		}
 		return nil
@@ -119,7 +119,7 @@ func (r *teamRepository) CreateTeam(team models.Team) error {
 
 func (r *teamRepository) TeamExists(teamUUID uuid.UUID) (bool, error) {
 	var count int64
-	if err := r.db.Session(&gorm.Session{}).Model(models.Team{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(models.Team{}).
 		Where("id = ? AND deleted = FALSE", teamUUID).
 		Count(&count).Error; err != nil {
 		return false, err
@@ -130,7 +130,7 @@ func (r *teamRepository) TeamExists(teamUUID uuid.UUID) (bool, error) {
 func (r *teamRepository) UpdateTeam(teamUUID uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(&models.Team{}).Where("id = ?", teamUUID).Updates(updateData)
+		res := tx.Session(&gorm.Session{NewDB: true}).Model(&models.Team{}).Where("id = ?", teamUUID).Updates(updateData)
 		if res.Error != nil {
 			return res.Error
 		}
@@ -150,7 +150,7 @@ func (r *teamRepository) DeleteTeam(teamIDParam string) (bool, error) {
 
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
+		res := tx.Session(&gorm.Session{NewDB: true}).Model(models.Team{}).Where("id = ?", teamIDParam).Updates(updateData)
 		if res.Error != nil {
 			return res.Error
 		}
@@ -159,10 +159,10 @@ func (r *teamRepository) DeleteTeam(teamIDParam string) (bool, error) {
 			return errors.New("team not found")
 		}
 
-		if res = tx.Session(&gorm.Session{}).Model(models.TeamMember{}).Where("team_id = ?", teamIDParam).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{NewDB: true}).Model(models.TeamMember{}).Where("team_id = ?", teamIDParam).Updates(updateData); res.Error != nil {
 			return res.Error
 		}
-		if res = tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).Where("team_id = ?", teamIDParam).Updates(updateData); res.Error != nil {
+		if res = tx.Session(&gorm.Session{NewDB: true}).Model(models.ProjectTeam{}).Where("team_id = ?", teamIDParam).Updates(updateData); res.Error != nil {
 			return res.Error
 		}
 		return nil
@@ -180,7 +180,7 @@ func (r *teamRepository) DeleteTeam(teamIDParam string) (bool, error) {
 
 func (r *teamRepository) GetUser(userID string) (*models.User, error) {
 	var user models.User
-	if err := r.db.Session(&gorm.Session{}).Model(models.User{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(models.User{}).
 		Select("id, profession").
 		Where("id = ? AND deleted = FALSE", userID).
 		First(&user).Error; err != nil {
@@ -203,7 +203,7 @@ func (r *teamRepository) GetUsersFromArray(userIds []string) ([]models.User, err
 	}
 
 	var users []models.User
-	if err := r.db.Session(&gorm.Session{}).Model(models.User{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(models.User{}).
 		Where("deleted = FALSE and id IN ?", userIDs).
 		Find(&users).Error; err != nil {
 		return nil, err
@@ -214,7 +214,7 @@ func (r *teamRepository) GetUsersFromArray(userIds []string) ([]models.User, err
 
 func (r *teamRepository) GetTeam(teamID string) (*models.Team, error) {
 	var team models.Team
-	if err := r.db.Session(&gorm.Session{}).Model(models.Team{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(models.Team{}).
 		Where("id = ? AND deleted = FALSE", teamID).
 		First(&team).Error; err != nil {
 		return nil, err
@@ -224,7 +224,7 @@ func (r *teamRepository) GetTeam(teamID string) (*models.Team, error) {
 
 func (r *teamRepository) GetProject(projectID string) (*models.Project, error) {
 	var project models.Project
-	if err := r.db.Session(&gorm.Session{}).Model(models.Project{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(models.Project{}).
 		Where("id = ? AND deleted = FALSE", projectID).
 		First(&project).Error; err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func (r *teamRepository) GetProject(projectID string) (*models.Project, error) {
 
 func (r *teamRepository) CreateTeamMember(teamMember models.TeamMember) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).Create(&teamMember); res.Error != nil {
+		if res := tx.Session(&gorm.Session{NewDB: true}).Model(models.TeamMember{}).Create(&teamMember); res.Error != nil {
 			return res.Error
 		}
 		return nil
@@ -261,7 +261,7 @@ func (r *teamRepository) DeleteTeamMember(userID uuid.UUID, teamID uuid.UUID) (b
 	updateData := map[string]interface{}{"deleted": true}
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.TeamMember{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).Model(models.TeamMember{}).
 			Where("user_id = ? AND team_id = ?", userID, teamID).
 			Updates(updateData)
 		if res.Error != nil {
@@ -302,7 +302,7 @@ func (r *teamRepository) UpsertProjectTeam(projectTeam models.ProjectTeam) error
 func (r *teamRepository) DeleteProjectTeam(teamID uuid.UUID, projectID uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.ProjectTeam{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).Model(models.ProjectTeam{}).
 			Where("team_id = ? AND project_id = ?", teamID, projectID).
 			Updates(updateData)
 		if res.Error != nil {

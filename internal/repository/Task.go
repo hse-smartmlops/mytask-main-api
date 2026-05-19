@@ -108,27 +108,27 @@ func (r *taskRepository) SearchTasks(query, userID string, limit, offset int) ([
 
     err := buildBase().
         Preload("Status", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).
+            return db.Session(&gorm.Session{NewDB: true}).
                 Select("id, name, color, key, board_id").
                 Where("deleted = ?", false)
         }).
         Preload("Status.Board", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).
+            return db.Session(&gorm.Session{NewDB: true}).
                 Select("id, name, project_id").
                 Where("deleted = ?", false)
         }).
         Preload("Status.Board.Project", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).
+            return db.Session(&gorm.Session{NewDB: true}).
                 Select("id, name, description").
                 Where("deleted = ?", false)
         }).
         Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).
+            return db.Session(&gorm.Session{NewDB: true}).
                 Select("id, first_name, last_name, email").
                 Where("deleted = ?", false)
         }).
         Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).
+            return db.Session(&gorm.Session{NewDB: true}).
                 Select("id, first_name, last_name, email").
                 Where("deleted = ?", false)
         }).
@@ -176,7 +176,7 @@ func addFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
     }
 
     if len(conditions) > 0 {
-        return db.Session(&gorm.Session{}).Where(strings.Join(conditions, " OR "), args...)
+        return db.Session(&gorm.Session{NewDB: true}).Where(strings.Join(conditions, " OR "), args...)
     }
 
     return db
@@ -184,16 +184,16 @@ func addFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
 
 func (r *taskRepository) GetTaskByID(taskID uuid.UUID) (*models.Task, error) {
 	var task models.Task
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("id = ? AND deleted = ?", taskID, false).
 		Preload("Status", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
 		}).
 		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
 		}).
 		Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
 		}).
 		First(&task).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
@@ -208,7 +208,7 @@ func (r *taskRepository) GetTaskByID(taskID uuid.UUID) (*models.Task, error) {
 func (r *taskRepository) GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardID uuid.UUID, projectID uuid.UUID, err error) {
     // 1. Получаем задачу
     var task models.Task
-    if err := r.db.Session(&gorm.Session{}).
+    if err := r.db.Session(&gorm.Session{NewDB: true}).
         Where("id = ? AND deleted = ?", taskID, false).
         First(&task).Error; err != nil {
         if err == gorm.ErrRecordNotFound {
@@ -219,7 +219,7 @@ func (r *taskRepository) GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardID uu
 
     // 2. Получаем статус (только board_id)
     var status models.Status
-    if err := r.db.Session(&gorm.Session{}).
+    if err := r.db.Session(&gorm.Session{NewDB: true}).
         Select("board_id").
         Where("id = ? AND deleted = ?", task.StatusID, false).
         First(&status).Error; err != nil {
@@ -231,7 +231,7 @@ func (r *taskRepository) GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardID uu
 
     // 3. Получаем доску (только project_id)
     var board models.Board
-    if err := r.db.Session(&gorm.Session{}).
+    if err := r.db.Session(&gorm.Session{NewDB: true}).
         Select("project_id").
         Where("id = ? AND deleted = ?", status.BoardID, false).
         First(&board).Error; err != nil {
@@ -247,7 +247,7 @@ func (r *taskRepository) GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardID uu
 func (r *taskRepository) GetTasksByProjectID(projectID uuid.UUID, limit, offset int) ([]models.Task, int64, error) {
 	// Подзапрос: все status_id, принадлежащие доскам этого проекта
 	var statusIDs []uuid.UUID
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Status{}).
 		Select("statuses.id").
 		Joins("JOIN boards ON statuses.board_id = boards.id").
@@ -260,7 +260,7 @@ func (r *taskRepository) GetTasksByProjectID(projectID uuid.UUID, limit, offset 
 	if len(statusIDs) == 0 {
 		totalCount = 0
 	} else {
-		if err := r.db.Session(&gorm.Session{}).
+		if err := r.db.Session(&gorm.Session{NewDB: true}).
 			Model(&models.Task{}).
 			Where("tasks.status_id IN ? AND tasks.deleted = ?", statusIDs, false).
 			Count(&totalCount).Error; err != nil {
@@ -270,7 +270,7 @@ func (r *taskRepository) GetTasksByProjectID(projectID uuid.UUID, limit, offset 
 
 	var tasks []models.Task
 	if len(statusIDs) > 0 {
-		if err := r.db.Session(&gorm.Session{}).
+		if err := r.db.Session(&gorm.Session{NewDB: true}).
 			Where("tasks.status_id IN ? AND tasks.deleted = ?", statusIDs, false).
 			Limit(limit).
 			Offset(offset).
@@ -291,7 +291,7 @@ func (r *taskRepository) CreateTask(task models.Task) error {
 func (r *taskRepository) UpdateTask(taskID uuid.UUID, updates map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Table("tasks").Where("id = ? AND deleted = FALSE", taskID).Updates(updates)
+		res := tx.Session(&gorm.Session{NewDB: true}).Table("tasks").Where("id = ? AND deleted = FALSE", taskID).Updates(updates)
 		if res.Error != nil {
 			return res.Error
 		}
@@ -311,7 +311,7 @@ func (r *taskRepository) DeleteTask(taskID uuid.UUID) (bool, error) {
 
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Table("tasks").Where("id = ?", taskID).Updates(updateData)
+		res := tx.Session(&gorm.Session{NewDB: true}).Table("tasks").Where("id = ?", taskID).Updates(updateData)
 		if res.Error != nil {
 			return res.Error
 		}
@@ -328,7 +328,7 @@ func (r *taskRepository) DeleteTask(taskID uuid.UUID) (bool, error) {
 
 func (r *taskRepository) GetStatusByID(statusID uuid.UUID) (*models.Status, error) {
 	var status models.Status
-	if err := r.db.Session(&gorm.Session{}).Table("statuses").
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Table("statuses").
 		Select("board_id").
 		Where("id = ? AND deleted = ?", statusID, false).
 		First(&status).Error; err != nil {
@@ -343,12 +343,12 @@ func (r *taskRepository) GetStatusByID(statusID uuid.UUID) (*models.Status, erro
 
 func (r *taskRepository) GetStatusesByBoardID(boardID uuid.UUID) ([]models.Status, error) {
 	var statuses []models.Status
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Status{}).
 		Where("board_id = ? AND deleted = ?", boardID, false).
 		Order("sort_order ASC").
 		Preload("Tasks", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).Where("deleted = ?", false)
+			return db.Session(&gorm.Session{NewDB: true}).Where("deleted = ?", false)
 		}).
 		Find(&statuses).Error; err != nil {
 		return nil, err
@@ -358,7 +358,7 @@ func (r *taskRepository) GetStatusesByBoardID(boardID uuid.UUID) ([]models.Statu
 }
 
 func (r *taskRepository) UpdateTaskStatus(taskID uuid.UUID, toStatusID uuid.UUID, updatedAt time.Time) error {
-	return r.db.Session(&gorm.Session{}).Table("tasks").
+	return r.db.Session(&gorm.Session{NewDB: true}).Table("tasks").
 		Where("id = ?", taskID).
 		Updates(map[string]interface{}{
 			"status_id":   toStatusID,
@@ -368,7 +368,7 @@ func (r *taskRepository) UpdateTaskStatus(taskID uuid.UUID, toStatusID uuid.UUID
 
 func (r *taskRepository) UserExists(userID uuid.UUID) (bool, error) {
 	var count int64
-	err := r.db.Session(&gorm.Session{}).Table("users").
+	err := r.db.Session(&gorm.Session{NewDB: true}).Table("users").
 		Where("id = ? AND deleted = ?", userID, false).
 		Count(&count).Error
 	if err != nil {
@@ -379,7 +379,7 @@ func (r *taskRepository) UserExists(userID uuid.UUID) (bool, error) {
 
 func (r *taskRepository) StatusExists(statusID uuid.UUID) (bool, error) {
 	var count int64
-	if err := r.db.Session(&gorm.Session{}).Table("statuses").
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Table("statuses").
 		Joins("INNER JOIN boards ON statuses.board_id = boards.id").
 		Where("statuses.id = ? AND statuses.deleted = ? AND boards.deleted = ?", statusID, false, false).
 		Count(&count).Error; err != nil {
@@ -391,7 +391,7 @@ func (r *taskRepository) StatusExists(statusID uuid.UUID) (bool, error) {
 func (r *taskRepository) GetTasksByUserIDAndProjectID(userID, projectID uuid.UUID, limit, offset int) ([]models.Task, int64, error) {
 	var totalCount int64
 
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Task{}).
 		Joins("JOIN statuses ON tasks.status_id = statuses.id").
 		Joins("JOIN boards ON statuses.board_id = boards.id").
@@ -407,7 +407,7 @@ func (r *taskRepository) GetTasksByUserIDAndProjectID(userID, projectID uuid.UUI
 	}
 
 	var tasks []models.Task
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("tasks.assigned_to = ? AND tasks.deleted = ?", userID, false).
 		Joins("JOIN statuses ON tasks.status_id = statuses.id").
 		Joins("JOIN boards ON statuses.board_id = boards.id").
@@ -416,21 +416,21 @@ func (r *taskRepository) GetTasksByUserIDAndProjectID(userID, projectID uuid.UUI
 		Limit(limit).
 		Offset(offset).
 		Preload("Status", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Where("deleted = ?", false). // ← ИСПРАВЛЕНО
 				Preload("Board", func(d *gorm.DB) *gorm.DB {
-					return d.Session(&gorm.Session{}).
+					return d.Session(&gorm.Session{NewDB: true}).
 						Select("id, name, project_id").
 						Where("deleted = ?", false)
 				})
 		}).
 		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).
 		Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).
@@ -445,7 +445,7 @@ func (r *taskRepository) GetActiveTasksByUserId(userID uuid.UUID, limit, offset 
 	var totalCount int64
 	
 	// Для подсчета используем подзапрос
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Task{}).
 		Where("tasks.assigned_to = ? AND tasks.deleted = ?", userID, false).
 		Where("tasks.status_id NOT IN (SELECT id FROM statuses WHERE name = ? AND deleted = ?)", "Done", false).
@@ -459,27 +459,27 @@ func (r *taskRepository) GetActiveTasksByUserId(userID uuid.UUID, limit, offset 
 
 	var tasks []models.Task
 	// В основном запросе используем Preload с условием
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("tasks.assigned_to = ? AND tasks.deleted = ?", userID, false).
 		Where("tasks.status_id NOT IN (SELECT id FROM statuses WHERE name = ? AND deleted = ?)", "Done", false).
 		Limit(limit).
 		Offset(offset).
 		Preload("Status", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Where("deleted = ? AND name != ?", false, "Done")
 		}).
 		Preload("Status.Board", func(d *gorm.DB) *gorm.DB {
-			return d.Session(&gorm.Session{}).
+			return d.Session(&gorm.Session{NewDB: true}).
 				Select("id, name, project_id").
 				Where("deleted = ?", false)
 		}).
 		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).
 		Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).
@@ -492,7 +492,7 @@ func (r *taskRepository) GetActiveTasksByUserId(userID uuid.UUID, limit, offset 
 
 func (r *taskRepository) GetTasksByUserId(userID uuid.UUID, limit, offset int) ([]models.Task, int64, error) {
 	var totalCount int64
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Model(&models.Task{}).
 		Where("tasks.assigned_to = ? AND tasks.deleted = ?", userID, false).
 		Count(&totalCount).Error; err != nil {
@@ -504,26 +504,26 @@ func (r *taskRepository) GetTasksByUserId(userID uuid.UUID, limit, offset int) (
 	}
 
 	var tasks []models.Task
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("tasks.assigned_to = ? AND tasks.deleted = ?", userID, false).
 		Limit(limit).
 		Offset(offset).
 		Preload("Status", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Where("deleted = ?", false).
 				Preload("Board", func(d *gorm.DB) *gorm.DB {
-					return d.Session(&gorm.Session{}).
+					return d.Session(&gorm.Session{NewDB: true}).
 						Select("id, name, project_id").
 						Where("deleted = ?", false)
 				})
 		}).
 		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).
 		Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).
@@ -536,30 +536,30 @@ func (r *taskRepository) GetTasksByUserId(userID uuid.UUID, limit, offset int) (
 
 func (r *taskRepository) GetAllActiveTasks() ([]models.Task, error) {
 	var tasks []models.Task
-	if err := r.db.Session(&gorm.Session{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).
 		Where("tasks.deleted = ?", false).
 		Where("tasks.status_id NOT IN (SELECT id FROM statuses WHERE name = ? AND deleted = ?)", "Done", false).
 		Preload("Status", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Where("deleted = ? AND name != ?", false, "Done")
 		}).
 		Preload("Status.Board", func(d *gorm.DB) *gorm.DB {
-			return d.Session(&gorm.Session{}).
+			return d.Session(&gorm.Session{NewDB: true}).
 				Select("id, name, project_id").
 				Where("deleted = ?", false)
 		}).
 		Preload("Status.Board.Project", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, name").
 				Where("deleted = ?", false)
 		}).
 		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).
 		Preload("AssignedToUser", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
+			return db.Session(&gorm.Session{NewDB: true}).
 				Select("id, first_name, last_name, email").
 				Where("deleted = ?", false)
 		}).

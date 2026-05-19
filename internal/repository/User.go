@@ -60,7 +60,7 @@ func (r *userRepository) GetAllUsers(limit, offset int) ([]models.User, int64, e
 
 func (r *userRepository) GetUserById(userId uuid.UUID) (*models.User, error) {
 	var user models.User
-	result := r.db.Session(&gorm.Session{}).Model(models.User{}).
+	result := r.db.Session(&gorm.Session{NewDB: true}).Model(models.User{}).
 		Where("id = ? AND deleted = FALSE", userId).
 		First(&user)
 	if result.Error != nil {
@@ -89,7 +89,7 @@ func (r *userRepository) CreateUser(user models.User) error {
 func (r *userRepository) UpdateUser(userId uuid.UUID, updateData map[string]interface{}) (bool, error) {
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(models.User{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).Model(models.User{}).
 			Where("id = ? AND deleted = FALSE", userId).
 			Updates(updateData)
 		if res.Error != nil {
@@ -109,7 +109,7 @@ func (r *userRepository) UpdateUser(userId uuid.UUID, updateData map[string]inte
 func (r *userRepository) DeleteUser(userId uuid.UUID) (bool, error) {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
 		// Удаляем пользователя
-		result := tx.Session(&gorm.Session{}).Model(&models.User{}).Where("id = ?", userId).Delete(&models.User{})
+		result := tx.Session(&gorm.Session{NewDB: true}).Model(&models.User{}).Where("id = ?", userId).Delete(&models.User{})
 		if result.Error != nil {
 			return result.Error
 		}
@@ -135,7 +135,7 @@ func (r *userRepository) BanUser(userId uuid.UUID) (bool, error) {
 
 	var affected int64
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Session(&gorm.Session{}).Model(&models.User{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).Model(&models.User{}).
 			Where("id = ? AND deleted = FALSE", userId).
 			Updates(updateData)
 		if res.Error != nil {
@@ -161,13 +161,13 @@ func (r *userRepository) RestoreUser(req request.RestoreUserRequest) (uuid.UUID,
 	var userId uuid.UUID
 	var user models.User
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Session(&gorm.Session{}).Model(&models.User{}).
+		if err := tx.Session(&gorm.Session{NewDB: true}).Model(&models.User{}).
 			Where("email = ? AND deleted = TRUE", req.Email).
 			First(&user).Error; err != nil {
 			return err
 		}
 
-		res := tx.Session(&gorm.Session{}).Model(&models.User{}).
+		res := tx.Session(&gorm.Session{NewDB: true}).Model(&models.User{}).
 			Where("email = ? AND deleted = TRUE", req.Email).
 			Updates(updateData)
 		if res.Error != nil {
@@ -197,7 +197,7 @@ func (r *userRepository) GetUserByEmail(email string) (*models.User, error) {
 
 func (r *userRepository) GetUser(userID string) (*models.User, error) {
 	var user models.User
-	if err := r.db.Session(&gorm.Session{}).Model(models.User{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(models.User{}).
 		Select("id, profession").
 		Where("id = ? AND deleted = FALSE", userID).
 		First(&user).Error; err != nil {
@@ -208,7 +208,7 @@ func (r *userRepository) GetUser(userID string) (*models.User, error) {
 
 func (r *userRepository) GetRole(roleID string) (*models.Role, error) {
 	var role models.Role
-	if err := r.db.Session(&gorm.Session{}).Model(models.Role{}).
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(models.Role{}).
 		Select("id").
 		Where("id = ? AND deleted = FALSE", roleID).
 		First(&role).Error; err != nil {
@@ -218,7 +218,7 @@ func (r *userRepository) GetRole(roleID string) (*models.Role, error) {
 }
 
 func (r *userRepository) CreateUserRole(userRole models.UserRole) error {
-	return r.db.Session(&gorm.Session{}).Omit(clause.Associations).Create(&userRole).Error
+	return r.db.Session(&gorm.Session{NewDB: true}).Omit(clause.Associations).Create(&userRole).Error
 }
 
 func (r *userRepository) RemoveUserRole(userID uuid.UUID, roleID uuid.UUID) (bool, error) {
@@ -228,7 +228,7 @@ func (r *userRepository) RemoveUserRole(userID uuid.UUID, roleID uuid.UUID) (boo
 	}
 
 	var affected int64
-	result := r.db.Session(&gorm.Session{}).Model(models.UserRole{}).
+	result := r.db.Session(&gorm.Session{NewDB: true}).Model(models.UserRole{}).
 		Where("user_id = ? AND role_id = ? AND deleted = FALSE", userID, roleID).
 		Updates(updateData)
 	if result.Error != nil {
@@ -261,7 +261,7 @@ func (r *userRepository) CreateUserWithID(req request.UserCreateRequest, userID 
 	}
 
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		if res := tx.Session(&gorm.Session{}).Omit(clause.Associations).Create(&user); res.Error != nil {
+		if res := tx.Session(&gorm.Session{NewDB: true}).Omit(clause.Associations).Create(&user); res.Error != nil {
 			log.Printf("DB error (create user): %v", res.Error)
 			return res.Error
 		}
