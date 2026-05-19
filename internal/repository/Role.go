@@ -54,7 +54,7 @@ func (r *roleRepository) GetRoleByUserId(userID uuid.UUID) (*models.Role, error)
 	var role models.Role
 	
 	// JOIN между roles и user_roles через таблицу связей
-	err := r.db.Table("roles").Joins("JOIN user_roles ur ON ur.role_id = roles.id").
+	err := r.db.Session(&gorm.Session{NewDB: true}).Table("roles").Joins("JOIN user_roles ur ON ur.role_id = roles.id").
 		Where("ur.user_id = ? AND ur.deleted = FALSE AND roles.deleted = FALSE", userID).
 		First(&role).Error
 	

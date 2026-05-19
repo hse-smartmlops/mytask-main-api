@@ -416,7 +416,7 @@ func (r *reportRepository) CreateReportWithRelations(rep models.DailyReport, req
 }
 
 func (r *reportRepository) UpdateReport(report models.DailyReport, updateData map[string]interface{}) error {
-	return r.db.Model(&report).Updates(updateData).Error
+	return r.db.Session(&gorm.Session{NewDB: true}).Model(&report).Updates(updateData).Error
 }
 
 func (r *reportRepository) UpdateReportRelations(reportID uuid.UUID, req request.ReportReplaceRequest, now time.Time) error {

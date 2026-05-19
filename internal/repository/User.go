@@ -41,13 +41,13 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 
 func (r *userRepository) GetAllUsers(limit, offset int) ([]models.User, int64, error) {
 	var totalCount int64
-	result := r.db.Table("users").Where("users.deleted = FALSE").Count(&totalCount)
+	result := r.db.Session(&gorm.Session{NewDB: true}).Table("users").Where("users.deleted = FALSE").Count(&totalCount)
 	if result.Error != nil {
 		return nil, 0, result.Error
 	}
 
 	var users []models.User
-	if err := r.db.Table("users").
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Table("users").
 		Where("users.deleted = FALSE").
 		Limit(limit).
 		Offset(offset).
