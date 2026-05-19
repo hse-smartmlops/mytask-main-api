@@ -29,8 +29,8 @@ func RegisterRoleRoutes(e *echo.Echo, roleService service.RoleService, adminMw e
 
 	// Read: любой авторизованный
 	group.GET("/all/:page/:pagesize", controller.GetAllRoles)
-	group.GET("/:id", controller.GetRoleById)
 	group.GET("/user/:id", controller.GetRoleByUserId)
+	group.GET("/:id", controller.GetRoleById)
 
 	// Write: только admin
 	group.POST("", controller.CreateRole, adminMw)
@@ -256,7 +256,10 @@ func (rc *RoleController) GetRoleByUserId(c echo.Context) error {
 	role, err := rc.roleService.GetRoleByUserId(userId)
 	if err != nil {
 		if err.Error() == "role not found for user" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Роль не найдена для данного пользователя"})
+			return c.JSON(http.StatusOK, response.GetRoleByUserId{
+				UserId: userId.String(),
+				Role:   nil,
+			})
 		}
 		log.Printf("service error (get role by user id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении роли пользователя"})
@@ -272,6 +275,6 @@ func (rc *RoleController) GetRoleByUserId(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, response.GetRoleByUserId{
 		UserId: userId.String(),
-		Role:   roleResponse,
+		Role:   &roleResponse,
 	})
 }
