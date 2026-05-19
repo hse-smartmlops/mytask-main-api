@@ -394,6 +394,11 @@ func (uc *UserController) AddUserRole(c echo.Context) error {
 		})
 	}
 
+	// assigner — текущий авторизованный пользователь
+	if assignerID, ok := c.Get("user_id").(string); ok && assignerID != "" {
+		req.AssignerId = assignerID
+	}
+
 	addResponse, err := uc.userService.AddUserRole(req)
 	if err != nil {
 		log.Printf("service error (add user role): %v", err)
