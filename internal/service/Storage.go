@@ -15,12 +15,13 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// presignedURLExpiry — срок действия ссылки для загрузки файла.
-// Ссылка содержит HMAC-подпись, подделать без секрета нельзя.
-const presignedURLExpiry = 365 * 24 * time.Hour
+// presignedURLExpiry — максимум по S3 Signature V4: 7 дней (604800 сек).
+// Для долгосрочного хранения используй /media/refresh endpoint.
+const presignedURLExpiry = 7 * 24 * time.Hour
 
 type StorageService interface {
-	UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, error)
+	UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error)
+	RefreshURL(objectPath string) (string, error)
 }
 
 type storageService struct {
@@ -78,7 +79,36 @@ func NewStorageService() (StorageService, error) {
 	return &storageService{client: client, bucket: bucket, publicURL: strings.TrimRight(publicURL, "/"), useSSL: useSSL}, nil
 }
 
-func (s *storageService) UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, error) {
+func (s *storageService) RefreshURL(objectPath string) (string, error) {
+	presigned, err := s.client.PresignedGetObject(
+		context.Background(),
+		s.bucket,
+		objectPath,
+		presignedURLExpiry,
+		url.Values{},
+	)
+	if err != nil {
+		return "", fmt.Errorf("presign refresh: %w", err)
+	}
+	result := presigned.String()
+	// Заменяем только scheme+host, без пути bucket (он уже есть в presigned URL)
+	internalScheme := "http"
+	if s.useSSL {
+		internalScheme = "https"
+	}
+	internalBase := fmt.Sprintf("%s://%s", internalScheme, s.client.EndpointURL().Host)
+	if s.publicURL != "" && strings.HasPrefix(result, internalBase) {
+		// Извлекаем только scheme+host из publicURL (без пути)
+		publicHost := s.publicURL
+		if idx := strings.Index(publicHost[8:], "/"); idx >= 0 {
+			publicHost = publicHost[:8+idx] // обрезаем путь, оставляем только https://host
+		}
+		result = strings.Replace(result, internalBase, publicHost, 1)
+	}
+	return result, nil
+}
+
+func (s *storageService) UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error) {
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if ext == "" {
 		ext = ".bin"
@@ -99,31 +129,13 @@ func (s *storageService) UploadFile(file multipart.File, header *multipart.FileH
 		minio.PutObjectOptions{ContentType: contentType},
 	)
 	if err != nil {
-		return "", fmt.Errorf("put object: %w", err)
+		return "", "", fmt.Errorf("put object: %w", err)
 	}
 
-	// Генерируем presigned URL — содержит HMAC-подпись, действует ограниченное время
-	presigned, err := s.client.PresignedGetObject(
-		context.Background(),
-		s.bucket,
-		objectName,
-		presignedURLExpiry,
-		url.Values{},
-	)
+	presignedURL, err := s.RefreshURL(objectName)
 	if err != nil {
-		return "", fmt.Errorf("presign: %w", err)
+		return "", "", err
 	}
 
-	// Подменяем внутренний host на публичный если задан S3_PUBLIC_URL
-	result := presigned.String()
-	if s.publicURL != "" {
-		scheme := "http"
-		if s.useSSL {
-			scheme = "https"
-		}
-		internalBase := fmt.Sprintf("%s://%s", scheme, s.client.EndpointURL().Host)
-		result = strings.Replace(result, internalBase, s.publicURL, 1)
-	}
-
-	return result, nil
+	return presignedURL, objectName, nil
 }

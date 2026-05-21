@@ -24,114 +24,97 @@ func RegisterUploadRoutes(e *echo.Echo, storageService service.StorageService, u
 	g.POST("/image", ctrl.UploadImage)
 	g.POST("/file", ctrl.UploadFile)
 	g.POST("/avatar/:user_id", ctrl.UploadAvatar)
+	g.GET("/refresh", ctrl.RefreshURL)
 }
 
-// UploadImage godoc
-// @Summary Загрузить изображение
-// @Description Загружает файл в S3/RustFS и возвращает публичный URL
-// @Tags Upload
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Файл изображения"
-// @Security BearerAuth
-// @Success 200 {object} map[string]string "url"
-// @Router /upload/image [post]
 func (u *UploadController) UploadImage(c echo.Context) error {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
 	}
-
 	file, err := fileHeader.Open()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "не удалось открыть файл"})
 	}
 	defer file.Close()
 
-	url, err := u.storageService.UploadFile(file, fileHeader, "images")
+	presignedURL, objectPath, err := u.storageService.UploadFile(file, fileHeader, "images")
 	if err != nil {
 		log.Printf("upload image error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "ошибка загрузки файла"})
 	}
-
-	return c.JSON(http.StatusOK, map[string]string{"url": url})
+	return c.JSON(http.StatusOK, map[string]string{"url": presignedURL, "path": objectPath})
 }
 
-// UploadFile godoc
-// @Summary Загрузить произвольный файл
-// @Description Загружает любой файл (документ, видео, архив и т.д.) и возвращает публичный URL
-// @Tags Upload
-// @Accept multipart/form-data
-// @Produce json
-// @Param file formData file true "Файл"
-// @Security BearerAuth
-// @Success 200 {object} map[string]string "url, name, size, content_type"
-// @Router /upload/file [post]
 func (u *UploadController) UploadFile(c echo.Context) error {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
 	}
-
 	file, err := fileHeader.Open()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "не удалось открыть файл"})
 	}
 	defer file.Close()
 
-	url, err := u.storageService.UploadFile(file, fileHeader, "files")
+	presignedURL, objectPath, err := u.storageService.UploadFile(file, fileHeader, "files")
 	if err != nil {
 		log.Printf("upload file error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "ошибка загрузки файла"})
 	}
-
 	return c.JSON(http.StatusOK, map[string]interface{}{
-		"url":          url,
+		"url":          presignedURL,
+		"path":         objectPath,
 		"name":         fileHeader.Filename,
 		"size":         fileHeader.Size,
 		"content_type": fileHeader.Header.Get("Content-Type"),
 	})
 }
 
-// UploadAvatar godoc
-// @Summary Загрузить аватар пользователя
-// @Description Загружает аватар в S3/RustFS и обновляет URL в профиле
-// @Tags Upload
-// @Accept multipart/form-data
-// @Produce json
-// @Param user_id path string true "UUID пользователя"
-// @Param file formData file true "Файл аватара"
-// @Security BearerAuth
-// @Success 200 {object} map[string]string "url"
-// @Router /upload/avatar/{user_id} [post]
 func (u *UploadController) UploadAvatar(c echo.Context) error {
 	userID, err := uuid.Parse(c.Param("user_id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "некорректный user_id"})
 	}
-
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
 	}
-
 	file, err := fileHeader.Open()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "не удалось открыть файл"})
 	}
 	defer file.Close()
 
-	avatarURL, err := u.storageService.UploadFile(file, fileHeader, "avatars")
+	presignedURL, _, err := u.storageService.UploadFile(file, fileHeader, "avatars")
 	if err != nil {
 		log.Printf("upload avatar error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "ошибка загрузки аватара"})
 	}
-
-	// Сохраняем URL в профиле пользователя
-	if err := u.userService.UpdateAvatarURL(userID, avatarURL); err != nil {
+	if err := u.userService.UpdateAvatarURL(userID, presignedURL); err != nil {
 		log.Printf("update avatar url error: %v", err)
-		// Не фатально — URL всё равно возвращаем
 	}
+	return c.JSON(http.StatusOK, map[string]string{"url": presignedURL})
+}
 
-	return c.JSON(http.StatusOK, map[string]string{"url": avatarURL})
+// RefreshURL godoc
+// @Summary Обновить presigned URL для файла
+// @Description Генерирует новый presigned URL для объекта по его пути
+// @Tags Upload
+// @Produce json
+// @Param path query string true "Путь к объекту (например: images/uuid.jpg)"
+// @Security BearerAuth
+// @Success 200 {object} map[string]string "url"
+// @Router /upload/refresh [get]
+func (u *UploadController) RefreshURL(c echo.Context) error {
+	objectPath := c.QueryParam("path")
+	if objectPath == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "path обязателен"})
+	}
+	newURL, err := u.storageService.RefreshURL(objectPath)
+	if err != nil {
+		log.Printf("refresh url error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "ошибка обновления ссылки"})
+	}
+	return c.JSON(http.StatusOK, map[string]string{"url": newURL})
 }
