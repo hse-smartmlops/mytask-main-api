@@ -61,7 +61,7 @@ func buildForumMessageResponse(m models.ForumMessage) response.ForumMessageRespo
 		}
 	}
 
-	if m.ReplyTo != nil {
+	if m.ReplyTo != nil && (m.ReplyTo.Deleted == nil || !*m.ReplyTo.Deleted) {
 		text := strings.Join([]string(m.ReplyTo.Description), " ")
 		if len(text) > 100 {
 			text = text[:100] + "…"

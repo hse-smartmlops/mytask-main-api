@@ -66,7 +66,9 @@ func (r *forumMessageRepository) GetForumMessagesByProblemId(problemID uuid.UUID
 		Offset(offset).
 		Order("forum_messages.created_at ASC").
 		Preload("User").
-		Preload("ReplyTo").
+		Preload("ReplyTo", func(db *gorm.DB) *gorm.DB {
+			return db.Where("deleted = ?", false)
+		}).
 		Preload("ReplyTo.User").
 		Find(&forumMessages).Error; err != nil {
 		return nil, 0, err
