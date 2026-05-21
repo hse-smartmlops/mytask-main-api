@@ -55,6 +55,7 @@ func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userServi
 	g.PATCH("/:id", controller.UpdateTask, employeeMw)
 	g.POST("/move", controller.TaskMoveFunc, employeeMw)
 	g.POST("/:id/improve-report", controller.ImproveTaskReport, employeeMw)
+	g.POST("/improve-text", controller.ImproveText, employeeMw)
 	// Удаление — только manager и admin
 	g.DELETE("/:id", controller.DeleteTask, managerMw)
 }
@@ -964,16 +965,13 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 		taskDescription = *task.Name
 	}
 
-	// Загружаем настройки LLM из БД
-	var overrides *client.LLMOverrides
+	// Загружаем настройки LLM из БД, но используем промпт для описания задачи
+	overrides := &client.LLMOverrides{SystemPrompt: taskDescriptionSystemPrompt}
 	if tc.db != nil {
 		var llmSettings models.LLMSettings
 		if err := tc.db.First(&llmSettings).Error; err == nil {
-			overrides = &client.LLMOverrides{
-				Model:        llmSettings.WebUIModel,
-				SystemPrompt: llmSettings.SystemPrompt,
-				URL:          llmSettings.WebUIURL,
-			}
+			overrides.Model = llmSettings.WebUIModel
+			overrides.URL = llmSettings.WebUIURL
 		}
 	}
 
@@ -992,6 +990,57 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 		ImprovedText:    improvedText,
 		TaskTitle:       utils.GetString(task.Name),
 		TaskDescription: taskDescription,
+	})
+}
+
+const taskDescriptionSystemPrompt = `Ты — помощник по управлению задачами. Твоя роль: улучшать и дополнять описания задач.
+
+Правила:
+- Сделай описание чётким, структурированным и информативным
+- Сохрани исходный смысл, но улучши формулировки
+- Добавь контекст и детали если они очевидны из контекста
+- Используй Markdown для форматирования: заголовки, списки, выделение
+- Пиши на том же языке, что и входной текст
+- Не добавляй лишних вводных фраз — сразу давай результат
+- Ответ должен быть готов к использованию как описание задачи`
+
+// ImproveText godoc
+// @Summary Улучшить произвольный текст для описания задачи через LLM
+// @Description Улучшает текст без привязки к конкретной задаче — для использования при создании задачи
+// @Tags Tasks
+// @Accept json
+// @Produce json
+// @Param request body request.ImproveReportRequest true "Текст для улучшения"
+// @Security BearerAuth
+// @Success 200 {object} map[string]string "improved_text"
+// @Router /task/improve-text [post]
+func (tc *TaskController) ImproveText(c echo.Context) error {
+	var req request.ImproveReportRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Неверный формат запроса"})
+	}
+	if req.UserText == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Текст не может быть пустым"})
+	}
+
+	overrides := &client.LLMOverrides{SystemPrompt: taskDescriptionSystemPrompt}
+	if tc.db != nil {
+		var llmSettings models.LLMSettings
+		if err := tc.db.First(&llmSettings).Error; err == nil {
+			overrides.Model = llmSettings.WebUIModel
+			overrides.URL = llmSettings.WebUIURL
+		}
+	}
+
+	improved, err := tc.llmClient.ProcessTaskWithLLM(c.Request().Context(), "", req.UserText, "", overrides)
+	if err != nil {
+		log.Printf("gRPC error (improve-text): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обработке текста LLM"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{
+		"improved_text": improved,
+		"original_text": req.UserText,
 	})
 }
 
