@@ -222,7 +222,7 @@ type DailyReport struct {
 
 type Problem struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
-	Description pq.StringArray `gorm:"type:varchar(255)[]"`
+	Description pq.StringArray `gorm:"type:text[]"`
 	CreatorID   *uuid.UUID     `gorm:"type:uuid;index"`
 	Name        *string        `gorm:"type:varchar(255)"`
 	CreatedAt   *time.Time     `gorm:"type:timestamp"`
@@ -236,7 +236,7 @@ type Problem struct {
 type ForumMessage struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primaryKey"`
 	ProblemID   uuid.UUID      `gorm:"type:uuid;index"`
-	Description pq.StringArray `gorm:"type:varchar(255)[]"`
+	Description pq.StringArray `gorm:"type:text[]"`
 	CreatorID   *uuid.UUID     `gorm:"type:uuid;index"`
 	ReplyToID   *uuid.UUID     `gorm:"type:uuid;index"`
 	CreatedAt   *time.Time     `gorm:"type:timestamp"`
