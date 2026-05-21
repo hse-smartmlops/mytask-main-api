@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"mime/multipart"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,10 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
+// presignedURLExpiry — срок действия ссылки для загрузки файла.
+// Ссылка содержит HMAC-подпись, подделать без секрета нельзя.
+const presignedURLExpiry = 365 * 24 * time.Hour
+
 type StorageService interface {
 	UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, error)
 }
@@ -22,6 +27,7 @@ type storageService struct {
 	client    *minio.Client
 	bucket    string
 	publicURL string
+	useSSL    bool
 }
 
 func NewStorageService() (StorageService, error) {
@@ -44,7 +50,6 @@ func NewStorageService() (StorageService, error) {
 		return nil, fmt.Errorf("minio client: %w", err)
 	}
 
-	// Создаём bucket если не существует
 	ctx := context.Background()
 	exists, err := client.BucketExists(ctx, bucket)
 	if err != nil {
@@ -54,11 +59,12 @@ func NewStorageService() (StorageService, error) {
 		if err := client.MakeBucket(ctx, bucket, minio.MakeBucketOptions{}); err != nil {
 			return nil, fmt.Errorf("make bucket: %w", err)
 		}
-		// Делаем bucket публичным (read-only)
-		policy := fmt.Sprintf(`{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*","Action":["s3:GetObject"],"Resource":["arn:aws:s3:::%s/*"]}]}`, bucket)
-		if err := client.SetBucketPolicy(ctx, bucket, policy); err != nil {
-			return nil, fmt.Errorf("set bucket policy: %w", err)
-		}
+	}
+
+	// Удаляем публичную политику bucket — доступ только через presigned URLs
+	if err := client.SetBucketPolicy(ctx, bucket, ""); err != nil {
+		// Не фатально, логируем но продолжаем
+		_ = err
 	}
 
 	if publicURL == "" {
@@ -66,10 +72,10 @@ func NewStorageService() (StorageService, error) {
 		if useSSL {
 			scheme = "https"
 		}
-		publicURL = fmt.Sprintf("%s://%s/%s", scheme, endpoint, bucket)
+		publicURL = fmt.Sprintf("%s://%s", scheme, endpoint)
 	}
 
-	return &storageService{client: client, bucket: bucket, publicURL: strings.TrimRight(publicURL, "/")}, nil
+	return &storageService{client: client, bucket: bucket, publicURL: strings.TrimRight(publicURL, "/"), useSSL: useSSL}, nil
 }
 
 func (s *storageService) UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, error) {
@@ -96,5 +102,28 @@ func (s *storageService) UploadFile(file multipart.File, header *multipart.FileH
 		return "", fmt.Errorf("put object: %w", err)
 	}
 
-	return fmt.Sprintf("%s/%s", s.publicURL, objectName), nil
+	// Генерируем presigned URL — содержит HMAC-подпись, действует ограниченное время
+	presigned, err := s.client.PresignedGetObject(
+		context.Background(),
+		s.bucket,
+		objectName,
+		presignedURLExpiry,
+		url.Values{},
+	)
+	if err != nil {
+		return "", fmt.Errorf("presign: %w", err)
+	}
+
+	// Подменяем внутренний host на публичный если задан S3_PUBLIC_URL
+	result := presigned.String()
+	if s.publicURL != "" {
+		scheme := "http"
+		if s.useSSL {
+			scheme = "https"
+		}
+		internalBase := fmt.Sprintf("%s://%s", scheme, s.client.EndpointURL().Host)
+		result = strings.Replace(result, internalBase, s.publicURL, 1)
+	}
+
+	return result, nil
 }
