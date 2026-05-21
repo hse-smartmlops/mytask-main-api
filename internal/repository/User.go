@@ -218,7 +218,15 @@ func (r *userRepository) GetRole(roleID string) (*models.Role, error) {
 }
 
 func (r *userRepository) CreateUserRole(userRole models.UserRole) error {
-	return r.db.Session(&gorm.Session{NewDB: true}).Omit(clause.Associations).Create(&userRole).Error
+	now := time.Now()
+	userRole.UpdatedAt = &now
+	return r.db.Session(&gorm.Session{NewDB: true}).
+		Omit(clause.Associations).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "user_id"}, {Name: "role_id"}},
+			DoUpdates: clause.AssignmentColumns([]string{"deleted", "assigned_at", "assigned_by", "updated_at"}),
+		}).
+		Create(&userRole).Error
 }
 
 func (r *userRepository) RemoveUserRole(userID uuid.UUID, roleID uuid.UUID) (bool, error) {
