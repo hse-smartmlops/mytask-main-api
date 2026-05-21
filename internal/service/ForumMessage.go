@@ -69,11 +69,20 @@ func (s *forumMessageService) CreateForumMessage(req request.CreateForumMessageR
 		description = pq.StringArray{}
 	}
 
+	var replyToID *uuid.UUID
+	if req.ReplyToID != nil && *req.ReplyToID != "" {
+		v, err := uuid.Parse(*req.ReplyToID)
+		if err == nil {
+			replyToID = &v
+		}
+	}
+
 	fm := models.ForumMessage{
 		ID:          uuid.New(),
 		ProblemID:   problemId,
 		Description: description,
 		CreatorID:   creatorId,
+		ReplyToID:   replyToID,
 		CreatedAt:   &now,
 		Deleted:     &del,
 	}

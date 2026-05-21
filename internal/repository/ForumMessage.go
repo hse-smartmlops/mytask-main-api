@@ -61,10 +61,13 @@ func (r *forumMessageRepository) GetForumMessagesByProblemId(problemID uuid.UUID
 
 	var forumMessages []models.ForumMessage
 	if err := r.db.Session(&gorm.Session{NewDB: true}).
-		Model(&models.ForumMessage{}).
-		Where("deleted = FALSE AND problem_id = ?", problemID).
+		Where("forum_messages.deleted = FALSE AND forum_messages.problem_id = ?", problemID).
 		Limit(limit).
 		Offset(offset).
+		Order("forum_messages.created_at ASC").
+		Preload("User").
+		Preload("ReplyTo").
+		Preload("ReplyTo.User").
 		Find(&forumMessages).Error; err != nil {
 		return nil, 0, err
 	}
