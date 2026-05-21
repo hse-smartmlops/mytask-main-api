@@ -25,10 +25,10 @@ type StorageService interface {
 }
 
 type storageService struct {
-	client    *minio.Client
-	bucket    string
-	publicURL string
-	useSSL    bool
+	client        *minio.Client // внутренний endpoint для загрузки объектов
+	presignClient *minio.Client // публичный endpoint для генерации presigned URL
+	bucket        string
+	useSSL        bool
 }
 
 func NewStorageService() (StorageService, error) {
@@ -76,11 +76,34 @@ func NewStorageService() (StorageService, error) {
 		publicURL = fmt.Sprintf("%s://%s", scheme, endpoint)
 	}
 
-	return &storageService{client: client, bucket: bucket, publicURL: strings.TrimRight(publicURL, "/"), useSSL: useSSL}, nil
+	// Второй клиент для presigned URLs — использует публичный endpoint
+	// чтобы подпись совпадала с hostname в URL (S3 подписывает Host header)
+	var presignClient *minio.Client
+	if publicURL != "" {
+		pubEndpoint := strings.TrimRight(publicURL, "/")
+		// Извлекаем host из publicURL (убираем scheme и путь)
+		pubEndpoint = strings.TrimPrefix(pubEndpoint, "https://")
+		pubEndpoint = strings.TrimPrefix(pubEndpoint, "http://")
+		if idx := strings.Index(pubEndpoint, "/"); idx >= 0 {
+			pubEndpoint = pubEndpoint[:idx]
+		}
+		pubSSL := strings.HasPrefix(publicURL, "https://")
+		presignClient, _ = minio.New(pubEndpoint, &minio.Options{
+			Creds:  credentials.NewStaticV4(accessKey, secretKey, ""),
+			Secure: pubSSL,
+		})
+	}
+	if presignClient == nil {
+		presignClient = client
+	}
+
+	return &storageService{client: client, presignClient: presignClient, bucket: bucket, useSSL: useSSL}, nil
 }
 
 func (s *storageService) RefreshURL(objectPath string) (string, error) {
-	presigned, err := s.client.PresignedGetObject(
+	// Используем presignClient — он настроен на публичный endpoint,
+	// поэтому подпись будет валидна для публичного URL
+	presigned, err := s.presignClient.PresignedGetObject(
 		context.Background(),
 		s.bucket,
 		objectPath,
@@ -88,24 +111,9 @@ func (s *storageService) RefreshURL(objectPath string) (string, error) {
 		url.Values{},
 	)
 	if err != nil {
-		return "", fmt.Errorf("presign refresh: %w", err)
+		return "", fmt.Errorf("presign: %w", err)
 	}
-	result := presigned.String()
-	// Заменяем только scheme+host, без пути bucket (он уже есть в presigned URL)
-	internalScheme := "http"
-	if s.useSSL {
-		internalScheme = "https"
-	}
-	internalBase := fmt.Sprintf("%s://%s", internalScheme, s.client.EndpointURL().Host)
-	if s.publicURL != "" && strings.HasPrefix(result, internalBase) {
-		// Извлекаем только scheme+host из publicURL (без пути)
-		publicHost := s.publicURL
-		if idx := strings.Index(publicHost[8:], "/"); idx >= 0 {
-			publicHost = publicHost[:8+idx] // обрезаем путь, оставляем только https://host
-		}
-		result = strings.Replace(result, internalBase, publicHost, 1)
-	}
-	return result, nil
+	return presigned.String(), nil
 }
 
 func (s *storageService) UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error) {
