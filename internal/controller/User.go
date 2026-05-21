@@ -28,6 +28,7 @@ func RegisterUserRoutes(e *echo.Echo, userService service.UserService, adminMw e
 
 	// Read: любой авторизованный пользователь
 	userGroup.GET("/all/:page/:pagesize", controller.GetAllUsers)
+	userGroup.GET("/me", controller.GetCurrentUser)
 	userGroup.GET("/:id", controller.GetUserById)
 
 	// Write: только admin
@@ -165,6 +166,48 @@ func (uc *UserController) GetUserById(c echo.Context) error {
 		AvatarURL:     user.AvatarURL,
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
+}
+
+// GetCurrentUser godoc
+// @Summary Текущий пользователь
+// @Description Возвращает данные пользователя из токена (sess_*, emplacc_*, JWT)
+// @Tags Users
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} response.GetUserResponse
+// @Failure 401 {object} map[string]string
+// @Router /user/me [get]
+func (uc *UserController) GetCurrentUser(c echo.Context) error {
+	idStr, ok := c.Get("user_id").(string)
+	if !ok || idStr == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+	userId, err := uuid.Parse(idStr)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+	user, err := uc.userService.GetUserById(userId)
+	if err != nil {
+		if err.Error() == "user not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "Пользователь не найден"})
+		}
+		log.Printf("service error (get current user): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении пользователя"})
+	}
+	return c.JSON(http.StatusOK, response.GetUserResponse{
+		ID:            user.ID.String(),
+		Email:         user.Email,
+		IsActive:      user.IsActive,
+		CreatedAt:     user.CreatedAt,
+		TgId:          user.TgID,
+		TgUserId:      user.TgUserID,
+		Profession:    user.Profession,
+		EmailVerified: user.EmailVerified,
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
+		LastLogin:     user.LastLogin,
+		AvatarURL:     user.AvatarURL,
+	})
 }
 
 // CreateUser godoc

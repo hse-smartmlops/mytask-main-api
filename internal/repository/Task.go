@@ -464,15 +464,8 @@ func (r *taskRepository) GetActiveTasksByUserId(userID uuid.UUID, limit, offset 
 		Where("tasks.status_id NOT IN (SELECT id FROM statuses WHERE name = ? AND deleted = ?)", "Done", false).
 		Limit(limit).
 		Offset(offset).
-		Preload("Status", func(db *gorm.DB) *gorm.DB {
-			return db.Session(&gorm.Session{}).
-				Where("deleted = ? AND name != ?", false, "Done")
-		}).
-		Preload("Status.Board", func(d *gorm.DB) *gorm.DB {
-			return d.Session(&gorm.Session{NewDB: true}).
-				Select("id, name, project_id").
-				Where("deleted = ?", false)
-		}).
+		Preload("Status").
+		Preload("Status.Board").
 		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
 			return db.Session(&gorm.Session{}).
 				Select("id, first_name, last_name, email").
