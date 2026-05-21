@@ -71,6 +71,7 @@ func (tc *TeamController) GetTeams(c echo.Context) error {
 				FirstName:      user.FirstName,
 				LastName:       user.LastName,
 				Email:          user.Email,
+			AvatarURL:      user.AvatarURL,
 			})
 		}
 
@@ -148,7 +149,8 @@ func (tc *TeamController) GetProjectTeams(c echo.Context) error {
 				Specialization: utils.GetString(tm.Specialization),
 				FirstName:      tm.User.FirstName,                 
 				LastName:       tm.User.LastName,                  
-				Email:          tm.User.Email,                     
+				Email:          tm.User.Email,
+			AvatarURL:      tm.User.AvatarURL,
 			})
 		}
 
@@ -213,7 +215,8 @@ func (tc *TeamController) GetTeamByID(c echo.Context) error {
 			Specialization: utils.GetString(tm.Specialization), 
 			FirstName:      tm.User.FirstName,                  
 			LastName:       tm.User.LastName,                   
-			Email:          tm.User.Email,                      
+			Email:          tm.User.Email,
+			AvatarURL:      tm.User.AvatarURL,
 		})
 	}
 
@@ -616,6 +619,7 @@ func (tc *TeamController) GetTeamByUserId(c echo.Context) error {
 				FirstName:      tm.User.FirstName,
 				LastName:       tm.User.LastName,
 				Email:          tm.User.Email,
+			AvatarURL:      tm.User.AvatarURL,
 			})
 		}
 

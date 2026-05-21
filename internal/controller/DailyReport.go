@@ -92,6 +92,7 @@ func (rc *ReportController) GetAllReports(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
+			AvatarURL: r.User.AvatarURL,
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {
@@ -373,6 +374,7 @@ func (rc *ReportController) GetAllReportsByUserId(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
+			AvatarURL: r.User.AvatarURL,
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {
@@ -592,6 +594,7 @@ func (rc *ReportController) GetReportsByTaskId(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
+			AvatarURL: r.User.AvatarURL,
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {
@@ -680,6 +683,7 @@ func (rc *ReportController) GetReportsByProjectId(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
+			AvatarURL: r.User.AvatarURL,
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {

@@ -203,6 +203,7 @@ func (tc *TaskController) SearchTasks(c echo.Context) error {
                 ID:        task.AssignedToUser.ID.String(),
                 FirstName: task.AssignedToUser.FirstName,
                 LastName:  task.AssignedToUser.LastName,
+                AvatarURL: task.AssignedToUser.AvatarURL,
             }
         }
 
@@ -213,6 +214,7 @@ func (tc *TaskController) SearchTasks(c echo.Context) error {
                 ID:        task.CreatedByUser.ID.String(),
                 FirstName: task.CreatedByUser.FirstName,
                 LastName:  task.CreatedByUser.LastName,
+                AvatarURL: task.CreatedByUser.AvatarURL,
             }
         }
 
@@ -273,6 +275,7 @@ func (tc *TaskController) GetTaskByID(c echo.Context) error {
 			ID:        task.CreatedByUser.ID.String(),
 			FirstName: task.CreatedByUser.FirstName,
 			LastName:  task.CreatedByUser.LastName,
+			AvatarURL: task.CreatedByUser.AvatarURL,
 		}
 	}
 
@@ -283,6 +286,7 @@ func (tc *TaskController) GetTaskByID(c echo.Context) error {
 			ID:        task.AssignedToUser.ID.String(),
 			FirstName: task.AssignedToUser.FirstName,
 			LastName:  task.AssignedToUser.LastName,
+			AvatarURL: task.AssignedToUser.AvatarURL,
 		}
 	}
 
