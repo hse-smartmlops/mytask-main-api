@@ -17,16 +17,18 @@ import (
 
 type ForumMessageController struct {
 	forumMessageService service.ForumMessageService
+	freshAvatarURL func(string) string
 }
 
-func NewForumMessageController(forumMessageService service.ForumMessageService) *ForumMessageController {
+func NewForumMessageController(forumMessageService service.ForumMessageService, freshAvatarURL func(string) string) *ForumMessageController {
 	return &ForumMessageController{
 		forumMessageService: forumMessageService,
+			freshAvatarURL: freshAvatarURL,
 	}
 }
 
-func RegisterForumMessagesRoutes(e *echo.Echo, forumMessageService service.ForumMessageService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
-	controller := NewForumMessageController(forumMessageService)
+func RegisterForumMessagesRoutes(e *echo.Echo, forumMessageService service.ForumMessageService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+	controller := NewForumMessageController(forumMessageService, freshAvatarURL)
 	g := e.Group("/forum-messages")
 	g.GET("/all/:page/:pagesize", controller.GetAllForumMessages)
 	g.GET("/problem/:id/:page/:pagesize", controller.GetForumMessagesByProblemId)
@@ -36,7 +38,7 @@ func RegisterForumMessagesRoutes(e *echo.Echo, forumMessageService service.Forum
 	g.DELETE("/:id", controller.DeleteForumMessage, employeeMw) // ownership check inside
 }
 
-func buildForumMessageResponse(m models.ForumMessage) response.ForumMessageResponse {
+func buildForumMessageResponse(m models.ForumMessage, freshAvatarURL func(string) string) response.ForumMessageResponse {
 	r := response.ForumMessageResponse{
 		ID:        m.ID.String(),
 		ProblemID: m.ProblemID.String(),
@@ -56,7 +58,7 @@ func buildForumMessageResponse(m models.ForumMessage) response.ForumMessageRespo
 			ID:        m.User.ID.String(),
 			FirstName: m.User.FirstName,
 			LastName:  m.User.LastName,
-			AvatarURL: m.User.AvatarURL,
+			AvatarURL: freshAvatarURL(m.User.AvatarURL),
 			Email:     m.User.Email,
 		}
 	}
@@ -98,7 +100,7 @@ func (fmc *ForumMessageController) GetAllForumMessages(c echo.Context) error {
 
 	out := response.ForumMessageListResponse{Page: page, PageSize: pageSize, TotalCount: totalCount}
 	for _, m := range forumMessages {
-		out.Messages = append(out.Messages, buildForumMessageResponse(m))
+		out.Messages = append(out.Messages, buildForumMessageResponse(m, fmc.freshAvatarURL))
 	}
 	return c.JSON(http.StatusOK, out)
 }
@@ -127,7 +129,7 @@ func (fmc *ForumMessageController) GetForumMessagesByProblemId(c echo.Context) e
 		ProblemId: problemID.String(), Page: page, PageSize: pageSize, TotalCount: totalCount,
 	}
 	for _, m := range forumMessages {
-		out.Messages = append(out.Messages, buildForumMessageResponse(m))
+		out.Messages = append(out.Messages, buildForumMessageResponse(m, fmc.freshAvatarURL))
 	}
 	return c.JSON(http.StatusOK, out)
 }
@@ -144,7 +146,7 @@ func (fmc *ForumMessageController) GetForumMessageById(c echo.Context) error {
 		}
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении сообщения"})
 	}
-	return c.JSON(http.StatusOK, buildForumMessageResponse(*m))
+	return c.JSON(http.StatusOK, buildForumMessageResponse(*m, fmc.freshAvatarURL))
 }
 
 func (fmc *ForumMessageController) CreateForumMessage(c echo.Context) error {

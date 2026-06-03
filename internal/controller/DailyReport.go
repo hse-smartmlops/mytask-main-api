@@ -19,16 +19,18 @@ import (
 
 type ReportController struct {
 	reportService service.ReportService
+	freshAvatarURL func(string) string
 }
 
-func NewReportController(reportService service.ReportService) *ReportController {
+func NewReportController(reportService service.ReportService, freshAvatarURL func(string) string) *ReportController {
 	return &ReportController{
 		reportService: reportService,
+			freshAvatarURL: freshAvatarURL,
 	}
 }
 
-func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
-	controller := NewReportController(reportService)
+func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+	controller := NewReportController(reportService, freshAvatarURL)
 	g := e.Group("/report")
 	// Чтение — все авторизованные
 	g.GET("/all/:page/:pagesize", controller.GetAllReports)
@@ -92,7 +94,7 @@ func (rc *ReportController) GetAllReports(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
-			AvatarURL: r.User.AvatarURL,
+			AvatarURL: rc.freshAvatarURL(r.User.AvatarURL),
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {
@@ -374,7 +376,7 @@ func (rc *ReportController) GetAllReportsByUserId(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
-			AvatarURL: r.User.AvatarURL,
+			AvatarURL: rc.freshAvatarURL(r.User.AvatarURL),
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {
@@ -594,7 +596,7 @@ func (rc *ReportController) GetReportsByTaskId(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
-			AvatarURL: r.User.AvatarURL,
+			AvatarURL: rc.freshAvatarURL(r.User.AvatarURL),
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {
@@ -683,7 +685,7 @@ func (rc *ReportController) GetReportsByProjectId(c echo.Context) error {
 			ID:        r.UserID.String(),
 			FirstName: r.User.FirstName,
 			LastName:  r.User.LastName,
-			AvatarURL: r.User.AvatarURL,
+			AvatarURL: rc.freshAvatarURL(r.User.AvatarURL),
 		}
 		var complWork []response.CompletedWork
 		for _, w := range r.CompletedWork {

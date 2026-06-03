@@ -22,6 +22,11 @@ const presignedURLExpiry = 7 * 24 * time.Hour
 type StorageService interface {
 	UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error)
 	RefreshURL(objectPath string) (string, error)
+	// FreshAvatarURL returns a fresh presigned URL for the stored value.
+	// Accepts either an object path ("avatars/uuid.jpg") or a legacy
+	// presigned URL containing X-Amz-Signature (auto-extracts the path).
+	// Returns "" on error or empty input.
+	FreshAvatarURL(storedValue string) string
 }
 
 type storageService struct {
@@ -114,6 +119,31 @@ func (s *storageService) RefreshURL(objectPath string) (string, error) {
 		return "", fmt.Errorf("presign: %w", err)
 	}
 	return presigned.String(), nil
+}
+
+func (s *storageService) FreshAvatarURL(storedValue string) string {
+	if storedValue == "" {
+		return ""
+	}
+	objectPath := storedValue
+	// Если это старый presigned URL (содержит X-Amz-Signature) — извлекаем путь
+	if strings.Contains(storedValue, "X-Amz-Signature") {
+		u, err := url.Parse(storedValue)
+		if err != nil {
+			return ""
+		}
+		// u.Path выглядит как /bucket/folder/file.ext — убираем bucket (первый сегмент)
+		parts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2)
+		if len(parts) < 2 {
+			return ""
+		}
+		objectPath = parts[1]
+	}
+	fresh, err := s.RefreshURL(objectPath)
+	if err != nil {
+		return ""
+	}
+	return fresh
 }
 
 func (s *storageService) UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error) {

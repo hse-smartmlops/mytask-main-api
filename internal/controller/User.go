@@ -13,17 +13,19 @@ import (
 )
 
 type UserController struct {
-	userService service.UserService
+	userService    service.UserService
+	freshAvatarURL func(string) string
 }
 
-func NewUserController(userService service.UserService) *UserController {
+func NewUserController(userService service.UserService, freshAvatarURL func(string) string) *UserController {
 	return &UserController{
-		userService: userService,
+		userService:    userService,
+		freshAvatarURL: freshAvatarURL,
 	}
 }
 
-func RegisterUserRoutes(e *echo.Echo, userService service.UserService, adminMw echo.MiddlewareFunc) {
-	controller := NewUserController(userService)
+func RegisterUserRoutes(e *echo.Echo, userService service.UserService, freshAvatarURL func(string) string, adminMw echo.MiddlewareFunc) {
+	controller := NewUserController(userService, freshAvatarURL)
 	userGroup := e.Group("/user")
 
 	// Read: любой авторизованный пользователь
@@ -108,7 +110,7 @@ func (uc *UserController) GetAllUsers(c echo.Context) error {
 			FirstName:     user.FirstName,
 			LastName:      user.LastName,
 			LastLogin:     user.LastLogin,
-			AvatarURL:     user.AvatarURL,
+			AvatarURL:     uc.freshAvatarURL(user.AvatarURL),
 		})
 	}
 	return c.JSON(http.StatusOK, userList)

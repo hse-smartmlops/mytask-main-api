@@ -86,12 +86,14 @@ func (u *UploadController) UploadAvatar(c echo.Context) error {
 	}
 	defer file.Close()
 
-	presignedURL, _, err := u.storageService.UploadFile(file, fileHeader, "avatars")
+	presignedURL, objectPath, err := u.storageService.UploadFile(file, fileHeader, "avatars")
 	if err != nil {
 		log.Printf("upload avatar error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "ошибка загрузки аватара"})
 	}
-	if err := u.userService.UpdateAvatarURL(userID, presignedURL); err != nil {
+	// Храним objectPath (путь), а не presigned URL — URL истекает через 7 дней,
+	// путь — вечный. FreshAvatarURL генерирует свежий URL при каждом запросе.
+	if err := u.userService.UpdateAvatarURL(userID, objectPath); err != nil {
 		log.Printf("update avatar url error: %v", err)
 	}
 	return c.JSON(http.StatusOK, map[string]string{"url": presignedURL})

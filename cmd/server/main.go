@@ -143,18 +143,25 @@ func main() {
 	managerMw := controller.RequireRoles(roleRepo, "admin", "manager")
 	employeeMw := controller.RequireRoles(roleRepo, "admin", "manager", "employee")
 
+	// freshAvatarURL — хелпер для генерации свежих presigned URL из хранимых путей/URL
+	// Если storage не настроен — возвращает значение как есть (деградирует gracefully)
+	freshAvatarURL := func(s string) string { return s }
+	if storageService != nil {
+		freshAvatarURL = storageService.FreshAvatarURL
+	}
+
 	// Регистрируем маршруты с зависимостями (ПОСЛЕ глобального middleware)
 	controller.RegisterAuthRoutes(e, authService, sessionService, userService)
-	controller.RegisterUserRoutes(e, userService, adminMw)
+	controller.RegisterUserRoutes(e, userService, freshAvatarURL, adminMw)
 	controller.RegisterRoleRoutes(e, roleService, adminMw)
-	controller.RegisterTeamRoutes(e, teamService, managerMw)
+	controller.RegisterTeamRoutes(e, teamService, freshAvatarURL, managerMw)
 	controller.RegisterProjectRoutes(e, projectService, managerMw)
 	controller.RegisterBoardRoutes(e, boardService, managerMw)
 	controller.RegisterStatusRoutes(e, statusService, managerMw)
-	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, dbConn, employeeMw, managerMw)
+	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, dbConn, freshAvatarURL, employeeMw, managerMw)
 	controller.RegisterLLMSettingsRoutes(e, dbConn, adminMw)
-	controller.RegisterReportRoutes(e, reportService, employeeMw, managerMw)
-	controller.RegisterForumMessagesRoutes(e, forumMessageService, employeeMw, managerMw)
+	controller.RegisterReportRoutes(e, reportService, freshAvatarURL, employeeMw, managerMw)
+	controller.RegisterForumMessagesRoutes(e, forumMessageService, freshAvatarURL, employeeMw, managerMw)
 	controller.RegisterProblemRoutes(e, problemService, employeeMw, managerMw)
 	controller.RegisterAttendanceRoutes(e, attendanceService, employeeMw, managerMw)
 	controller.RegisterSubscriptionRoutes(e, subscriptionService)

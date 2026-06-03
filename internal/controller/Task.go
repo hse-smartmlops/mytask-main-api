@@ -26,20 +26,22 @@ type TaskController struct {
 	projectService service.ProjectService
 	llmClient      *client.LLMClient
 	db             *gorm.DB
+	freshAvatarURL func(string) string
 }
 
-func NewTaskController(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB) *TaskController {
+func NewTaskController(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB, freshAvatarURL func(string) string) *TaskController {
 	return &TaskController{
 		taskService:    taskService,
 		userService:    userService,
 		projectService: projectService,
 		llmClient:      llmClient,
 		db:             db,
+			freshAvatarURL: freshAvatarURL,
 	}
 }
 
-func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
-	controller := NewTaskController(taskService, userService, projectService, llmClient, db)
+func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+	controller := NewTaskController(taskService, userService, projectService, llmClient, db, freshAvatarURL)
 	g := e.Group("/task")
 	// Чтение — все авторизованные
 	g.GET("/all/:page/:pagesize", controller.GetAllTasks)
@@ -204,7 +206,7 @@ func (tc *TaskController) SearchTasks(c echo.Context) error {
                 ID:        task.AssignedToUser.ID.String(),
                 FirstName: task.AssignedToUser.FirstName,
                 LastName:  task.AssignedToUser.LastName,
-                AvatarURL: task.AssignedToUser.AvatarURL,
+                AvatarURL: tc.freshAvatarURL(task.AssignedToUser.AvatarURL),
             }
         }
 
@@ -215,7 +217,7 @@ func (tc *TaskController) SearchTasks(c echo.Context) error {
                 ID:        task.CreatedByUser.ID.String(),
                 FirstName: task.CreatedByUser.FirstName,
                 LastName:  task.CreatedByUser.LastName,
-                AvatarURL: task.CreatedByUser.AvatarURL,
+                AvatarURL: tc.freshAvatarURL(task.CreatedByUser.AvatarURL),
             }
         }
 
@@ -276,7 +278,7 @@ func (tc *TaskController) GetTaskByID(c echo.Context) error {
 			ID:        task.CreatedByUser.ID.String(),
 			FirstName: task.CreatedByUser.FirstName,
 			LastName:  task.CreatedByUser.LastName,
-			AvatarURL: task.CreatedByUser.AvatarURL,
+			AvatarURL: tc.freshAvatarURL(task.CreatedByUser.AvatarURL),
 		}
 	}
 
@@ -287,7 +289,7 @@ func (tc *TaskController) GetTaskByID(c echo.Context) error {
 			ID:        task.AssignedToUser.ID.String(),
 			FirstName: task.AssignedToUser.FirstName,
 			LastName:  task.AssignedToUser.LastName,
-			AvatarURL: task.AssignedToUser.AvatarURL,
+			AvatarURL: tc.freshAvatarURL(task.AssignedToUser.AvatarURL),
 		}
 	}
 

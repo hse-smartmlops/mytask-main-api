@@ -15,16 +15,18 @@ import (
 
 type TeamController struct {
 	teamService service.TeamService
+	freshAvatarURL func(string) string
 }
 
-func NewTeamController(teamService service.TeamService) *TeamController {
+func NewTeamController(teamService service.TeamService, freshAvatarURL func(string) string) *TeamController {
 	return &TeamController{
 		teamService: teamService,
+			freshAvatarURL: freshAvatarURL,
 	}
 }
 
-func RegisterTeamRoutes(e *echo.Echo, teamService service.TeamService, managerMw echo.MiddlewareFunc) {
-	controller := NewTeamController(teamService)
+func RegisterTeamRoutes(e *echo.Echo, teamService service.TeamService, freshAvatarURL func(string) string, managerMw echo.MiddlewareFunc) {
+	controller := NewTeamController(teamService, freshAvatarURL)
 	g := e.Group("/team")
 	g.GET("/all", controller.GetTeams)
 	g.GET("/:id", controller.GetTeamByID)
@@ -71,7 +73,7 @@ func (tc *TeamController) GetTeams(c echo.Context) error {
 				FirstName:      user.FirstName,
 				LastName:       user.LastName,
 				Email:          user.Email,
-			AvatarURL:      user.AvatarURL,
+			AvatarURL:      tc.freshAvatarURL(user.AvatarURL),
 			})
 		}
 
@@ -150,7 +152,7 @@ func (tc *TeamController) GetProjectTeams(c echo.Context) error {
 				FirstName:      tm.User.FirstName,                 
 				LastName:       tm.User.LastName,                  
 				Email:          tm.User.Email,
-			AvatarURL:      tm.User.AvatarURL,
+			AvatarURL:      tc.freshAvatarURL(tm.User.AvatarURL),
 			})
 		}
 
@@ -216,7 +218,7 @@ func (tc *TeamController) GetTeamByID(c echo.Context) error {
 			FirstName:      tm.User.FirstName,                  
 			LastName:       tm.User.LastName,                   
 			Email:          tm.User.Email,
-			AvatarURL:      tm.User.AvatarURL,
+			AvatarURL:      tc.freshAvatarURL(tm.User.AvatarURL),
 		})
 	}
 
@@ -619,7 +621,7 @@ func (tc *TeamController) GetTeamByUserId(c echo.Context) error {
 				FirstName:      tm.User.FirstName,
 				LastName:       tm.User.LastName,
 				Email:          tm.User.Email,
-			AvatarURL:      tm.User.AvatarURL,
+			AvatarURL:      tc.freshAvatarURL(tm.User.AvatarURL),
 			})
 		}
 
