@@ -30,7 +30,7 @@ func createTestStatus(t *testing.T, db *gorm.DB, boardID uuid.UUID, name string)
 	del := false
 
 	namePtr := &name
-	
+
 	zero := 0
 	key := statusID.String()[:8]
 	status := models.Status{
@@ -39,7 +39,7 @@ func createTestStatus(t *testing.T, db *gorm.DB, boardID uuid.UUID, name string)
 		Key:       &key,
 		Name:      namePtr,
 		Color:     strPtr("#6C757D"),
-		SortOrder:     &zero,
+		SortOrder: &zero,
 		IsDefault: &del,
 		IsActive:  boolPtr(true),
 		IsOpen:    boolPtr(true),
@@ -93,7 +93,7 @@ func createTestProblem(t *testing.T, db *gorm.DB, name string, creatorID uuid.UU
 
 // Вспомогательные функции для указателей
 func strPtr(s string) *string { return &s }
-func boolPtr(b bool) *bool   { return &b }
+func boolPtr(b bool) *bool    { return &b }
 
 func TestReport_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
@@ -101,7 +101,7 @@ func TestReport_FullCRUD(t *testing.T) {
 	// Создаем зависимости для новой архитектуры
 	reportRepo := repository.NewReportRepository(testDB)
 	reportService := service.NewReportService(reportRepo)
-	reportController := controller.NewReportController(reportService)
+	reportController := controller.NewReportController(reportService, testFreshAvatarURL)
 
 	e := echo.New()
 
@@ -138,7 +138,7 @@ func TestReport_FullCRUD(t *testing.T) {
 			PlanTomorrow: []request.TomorrowPlanCreateRequest{
 				{
 					Description: "Plan for tomorrow",
-					TaskId: taskId,
+					TaskId:      taskId,
 				},
 			},
 			Problems: []string{problemID.String()},

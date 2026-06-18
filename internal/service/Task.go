@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var ErrTaskMoveCloseGateRequired = errors.New("close gate required")
+
 type TaskService interface {
 	GetAllTasks(page, pageSize int) ([]models.Task, int64, error)
 	GetTaskByID(taskID uuid.UUID) (*models.Task, error)
@@ -23,7 +25,7 @@ type TaskService interface {
 	DeleteTask(taskID uuid.UUID) error
 	GetTasksByUserId(userID uuid.UUID, page, pageSize int) ([]models.Task, int64, error)
 	TaskMoveFunc(taskID, toStatusID uuid.UUID) ([]models.Status, error)
-	GetTasksByUserIDAndProjectID(userID, projectID uuid.UUID, page, pageSize int) ([]models.Task, int64, error)	
+	GetTasksByUserIDAndProjectID(userID, projectID uuid.UUID, page, pageSize int) ([]models.Task, int64, error)
 	GetActiveTasksByUserId(userID uuid.UUID, page, pageSize int) ([]models.Task, int64, error)
 	GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardId, projectId uuid.UUID, err error)
 	GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXData, error)
@@ -46,8 +48,8 @@ func (s *taskService) GetAllTasks(page, pageSize int) ([]models.Task, int64, err
 }
 
 func (s *taskService) SearchTasks(query, userID string, page, pageSize int) ([]models.Task, int64, error) {
-    offset := (page - 1) * pageSize
-    return s.repo.SearchTasks(query, userID, pageSize, offset)
+	offset := (page - 1) * pageSize
+	return s.repo.SearchTasks(query, userID, pageSize, offset)
 }
 
 func (s *taskService) GetTaskByID(taskID uuid.UUID) (*models.Task, error) {
@@ -236,81 +238,81 @@ func (s *taskService) GetActiveTasksByUserId(userID uuid.UUID, page, pageSize in
 }
 
 func (s *taskService) GetAllActiveTasksForXLSX() (*response.AllActiveTasksXLSXData, error) {
-    tasks, err := s.repo.GetAllActiveTasks()
-    if err != nil {
-        return nil, err
-    }
+	tasks, err := s.repo.GetAllActiveTasks()
+	if err != nil {
+		return nil, err
+	}
 
-    userTasksMap := make(map[uuid.UUID]*response.UserTasksXLSX)
-    
-    for _, task := range tasks {
-        if task.AssignedTo == nil {
-            continue
-        }
+	userTasksMap := make(map[uuid.UUID]*response.UserTasksXLSX)
 
-        userID := *task.AssignedTo
-        if _, exists := userTasksMap[userID]; !exists {
-            userName := "Неизвестный пользователь"
-            userEmail := ""
-            if task.AssignedToUser != nil {
-                firstName := task.AssignedToUser.FirstName
-                lastName := task.AssignedToUser.LastName
-                if firstName != "" || lastName != "" {
-                    userName = strings.TrimSpace(firstName + " " + lastName)
-                } else {
-                    userName = task.AssignedToUser.Email
-                }
-                userEmail = task.AssignedToUser.Email
-            }
+	for _, task := range tasks {
+		if task.AssignedTo == nil {
+			continue
+		}
 
-            userTasksMap[userID] = &response.UserTasksXLSX{
-                UserID:    userID.String(),
-                UserName:  userName,
-                UserEmail: userEmail,
-                Tasks:     []response.TaskXLSXForTask{},
-            }
-        }
+		userID := *task.AssignedTo
+		if _, exists := userTasksMap[userID]; !exists {
+			userName := "Unknown user"
+			userEmail := ""
+			if task.AssignedToUser != nil {
+				firstName := task.AssignedToUser.FirstName
+				lastName := task.AssignedToUser.LastName
+				if firstName != "" || lastName != "" {
+					userName = strings.TrimSpace(firstName + " " + lastName)
+				} else {
+					userName = task.AssignedToUser.Email
+				}
+				userEmail = task.AssignedToUser.Email
+			}
 
-        projectName := "Без проекта"
-        if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
-            if task.Status.Board.Project.Name != nil {
-                projectName = *task.Status.Board.Project.Name
-            }
-        }
+			userTasksMap[userID] = &response.UserTasksXLSX{
+				UserID:    userID.String(),
+				UserName:  userName,
+				UserEmail: userEmail,
+				Tasks:     []response.TaskXLSXForTask{},
+			}
+		}
 
-        taskXLSX := response.TaskXLSXForTask{
-            ID:          task.ID.String(),
-            Name:        utils.GetString(task.Name),
-            Description: utils.GetString(task.Description),
-            Priority:    utils.GetInt16(task.Priority),
-            StartDate:   utils.GetTime(task.StartDate),
-            Deadline:    utils.GetTime(task.Deadline),
-            StatusName:  utils.GetString(task.Status.Name),
-            BoardName:   utils.GetString(task.Status.Board.Name),
-            ProjectName: projectName,
-            CreatedAt:   utils.GetTime(task.CreatedAt),
-            UpdatedAt:   utils.GetTime(task.UpdatedAt),
-        }
+		projectName := "No project"
+		if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+			if task.Status.Board.Project.Name != nil {
+				projectName = *task.Status.Board.Project.Name
+			}
+		}
 
-        userTasksMap[userID].Tasks = append(userTasksMap[userID].Tasks, taskXLSX)
-    }
+		taskXLSX := response.TaskXLSXForTask{
+			ID:          task.ID.String(),
+			Name:        utils.GetString(task.Name),
+			Description: utils.GetString(task.Description),
+			Priority:    utils.GetInt16(task.Priority),
+			StartDate:   utils.GetTime(task.StartDate),
+			Deadline:    utils.GetTime(task.Deadline),
+			StatusName:  utils.GetString(task.Status.Name),
+			BoardName:   utils.GetString(task.Status.Board.Name),
+			ProjectName: projectName,
+			CreatedAt:   utils.GetTime(task.CreatedAt),
+			UpdatedAt:   utils.GetTime(task.UpdatedAt),
+		}
 
-    users := make([]response.UserTasksXLSX, 0, len(userTasksMap))
-    for _, userTasks := range userTasksMap {
-        users = append(users, *userTasks)
-    }
+		userTasksMap[userID].Tasks = append(userTasksMap[userID].Tasks, taskXLSX)
+	}
 
-    sort.Slice(users, func(i, j int) bool {
-        return users[i].UserName < users[j].UserName
-    })
+	users := make([]response.UserTasksXLSX, 0, len(userTasksMap))
+	for _, userTasks := range userTasksMap {
+		users = append(users, *userTasks)
+	}
 
-    return &response.AllActiveTasksXLSXData{
-        Users: users,
-    }, nil
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].UserName < users[j].UserName
+	})
+
+	return &response.AllActiveTasksXLSXData{
+		Users: users,
+	}, nil
 }
 
 func (s *taskService) GetTaskBoardAndProjectIDs(taskID uuid.UUID) (boardId, projectId uuid.UUID, err error) {
-    return s.repo.GetTaskBoardAndProjectIDs(taskID)
+	return s.repo.GetTaskBoardAndProjectIDs(taskID)
 }
 
 func (s *taskService) TaskMoveFunc(taskID, toStatusID uuid.UUID) ([]models.Status, error) {
@@ -337,6 +339,10 @@ func (s *taskService) TaskMoveFunc(taskID, toStatusID uuid.UUID) ([]models.Statu
 
 	if currentStatus.BoardID != targetStatus.BoardID {
 		return nil, errors.New("different board")
+	}
+
+	if targetStatus.IsOpen != nil && !*targetStatus.IsOpen {
+		return nil, ErrTaskMoveCloseGateRequired
 	}
 
 	updatedAt := time.Now()

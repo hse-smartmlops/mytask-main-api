@@ -1,12 +1,15 @@
 package controller
 
 import (
+	"context"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/grpc/client"
 	"emplacc-api/internal/service"
 	utils "emplacc-api/internal/utils"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,12 +24,17 @@ import (
 )
 
 type TaskController struct {
-	taskService    service.TaskService
-	userService    service.UserService
-	projectService service.ProjectService
-	llmClient      *client.LLMClient
-	db             *gorm.DB
-	freshAvatarURL func(string) string
+	taskService     service.TaskService
+	userService     service.UserService
+	projectService  service.ProjectService
+	llmClient       taskLLMClient
+	conveyorService service.ConveyorService
+	db              *gorm.DB
+	freshAvatarURL  func(string) string
+}
+
+type taskLLMClient interface {
+	ProcessTaskWithLLM(ctx context.Context, taskDescription, userText, taskID string, overrides *client.LLMOverrides) (string, error)
 }
 
 func NewTaskController(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB, freshAvatarURL func(string) string) *TaskController {
@@ -36,12 +44,18 @@ func NewTaskController(taskService service.TaskService, userService service.User
 		projectService: projectService,
 		llmClient:      llmClient,
 		db:             db,
-			freshAvatarURL: freshAvatarURL,
+		freshAvatarURL: freshAvatarURL,
 	}
 }
 
-func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func NewTaskControllerWithConveyor(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, db *gorm.DB, freshAvatarURL func(string) string) *TaskController {
 	controller := NewTaskController(taskService, userService, projectService, llmClient, db, freshAvatarURL)
+	controller.conveyorService = conveyorService
+	return controller
+}
+
+func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, db *gorm.DB, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+	controller := NewTaskControllerWithConveyor(taskService, userService, projectService, llmClient, conveyorService, db, freshAvatarURL)
 	g := e.Group("/task")
 	// Чтение — все авторизованные
 	g.GET("/all/:page/:pagesize", controller.GetAllTasks)
@@ -105,10 +119,10 @@ func (tc *TaskController) GetAllTasks(c echo.Context) error {
 			StatusID:  task.StatusID.String(), // ← uuid.UUID → string
 			Name:      utils.GetString(task.Name),
 			Priority:  utils.GetInt16(task.Priority),
-			StartDate: utils.GetTime(task.StartDate),   // ← важно: обработка nil
-			Deadline:  utils.GetTime(task.Deadline),    // ← важно: обработка nil
-			CreatedAt: utils.GetTime(task.CreatedAt),   // ← важно
-			UpdatedAt: utils.GetTime(task.UpdatedAt),   // ← важно
+			StartDate: utils.GetTime(task.StartDate),
+			Deadline:  utils.GetTime(task.Deadline),
+			CreatedAt: utils.GetTime(task.CreatedAt),
+			UpdatedAt: utils.GetTime(task.UpdatedAt),
 		})
 	}
 
@@ -132,112 +146,112 @@ func (tc *TaskController) GetAllTasks(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера при поиске задач"
 // @Router /task/search [get]
 func (tc *TaskController) SearchTasks(c echo.Context) error {
-    query := strings.TrimSpace(c.QueryParam("query"))
-    userID := strings.TrimSpace(c.QueryParam("user_id"))
-    
-    if query == "" {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Поисковый запрос не может быть пустым"})
-    }
+	query := strings.TrimSpace(c.QueryParam("query"))
+	userID := strings.TrimSpace(c.QueryParam("user_id"))
 
-    if userID == "" {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "ID пользователя обязателен"})
-    }
+	if query == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "search query is required"})
+	}
 
-    // Валидируем userID как UUID
-    if _, err := uuid.Parse(userID); err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный формат ID пользователя"})
-    }
+	if userID == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "user_id is required"})
+	}
 
-    page, err := strconv.Atoi(c.QueryParam("page"))
-    if err != nil || page <= 0 {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный номер страницы"})
-    }
+	// Validate userID as UUID.
+	if _, err := uuid.Parse(userID); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid user_id format"})
+	}
 
-    pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
-    if err != nil || pageSize <= 0 || pageSize > 100 {
-        return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный размер страницы"})
-    }
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid page number"})
+	}
 
-    log.Printf("Search tasks for user %s: query='%s', page=%d, pageSize=%d", userID, query, page, pageSize)
+	pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
+	if err != nil || pageSize <= 0 || pageSize > 100 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid page size"})
+	}
 
-    // Передаем userID в сервис
-    tasks, totalCount, err := tc.taskService.SearchTasks(query, userID, page, pageSize)
-    if err != nil {
-        log.Printf("Service error (search tasks): %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при поиске задач"})
-    }
+	log.Printf("Search tasks for user %s: query='%s', page=%d, pageSize=%d", userID, query, page, pageSize)
 
-    log.Printf("Search completed: found %d tasks out of %d total", len(tasks), totalCount)
+	// Pass userID to the service.
+	tasks, totalCount, err := tc.taskService.SearchTasks(query, userID, page, pageSize)
+	if err != nil {
+		log.Printf("Service error (search tasks): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "task search failed"})
+	}
 
-    taskSearch := response.TaskSearchResponse{
-        Query:      query,
-        Page:       page,
-        PageSize:   pageSize,
-        TotalCount: totalCount,
-        Tasks:      make([]response.TaskSearchItem, 0, len(tasks)),
-    }
+	log.Printf("Search completed: found %d tasks out of %d total", len(tasks), totalCount)
 
-    for _, task := range tasks {
-        // Формируем информацию о статусе
-        var statusInfo response.TaskStatusInfo
-        if task.Status != nil {
-            statusInfo = response.TaskStatusInfo{
-                ID:    task.Status.ID.String(),
-                Name:  utils.GetString(task.Status.Name),
-                Color: utils.GetString(task.Status.Color),
-                Key:   utils.GetString(task.Status.Key),
-            }
-        }
+	taskSearch := response.TaskSearchResponse{
+		Query:      query,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		Tasks:      make([]response.TaskSearchItem, 0, len(tasks)),
+	}
 
-        // Формируем информацию о проекте
-        var projectInfo response.TaskProjectInfo
-        if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
-            projectInfo = response.TaskProjectInfo{
-                ID:          task.Status.Board.Project.ID.String(),
-                Name:        utils.GetString(task.Status.Board.Project.Name),
-                Description: utils.GetString(task.Status.Board.Project.Description),
-            }
-        }
+	for _, task := range tasks {
+		// Build status information.
+		var statusInfo response.TaskStatusInfo
+		if task.Status != nil {
+			statusInfo = response.TaskStatusInfo{
+				ID:    task.Status.ID.String(),
+				Name:  utils.GetString(task.Status.Name),
+				Color: utils.GetString(task.Status.Color),
+				Key:   utils.GetString(task.Status.Key),
+			}
+		}
 
-        // Формируем информацию о назначенном пользователе
-        var assignedToInfo response.UserShort
-        if task.AssignedToUser != nil {
-            assignedToInfo = response.UserShort{
-                ID:        task.AssignedToUser.ID.String(),
-                FirstName: task.AssignedToUser.FirstName,
-                LastName:  task.AssignedToUser.LastName,
-                AvatarURL: tc.freshAvatarURL(task.AssignedToUser.AvatarURL),
-            }
-        }
+		// Build project information.
+		var projectInfo response.TaskProjectInfo
+		if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+			projectInfo = response.TaskProjectInfo{
+				ID:          task.Status.Board.Project.ID.String(),
+				Name:        utils.GetString(task.Status.Board.Project.Name),
+				Description: utils.GetString(task.Status.Board.Project.Description),
+			}
+		}
 
-        // Формируем информацию о создателе
-        var createdByInfo response.UserShort
-        if task.CreatedByUser != nil {
-            createdByInfo = response.UserShort{
-                ID:        task.CreatedByUser.ID.String(),
-                FirstName: task.CreatedByUser.FirstName,
-                LastName:  task.CreatedByUser.LastName,
-                AvatarURL: tc.freshAvatarURL(task.CreatedByUser.AvatarURL),
-            }
-        }
+		// Build assigned user information.
+		var assignedToInfo response.UserShort
+		if task.AssignedToUser != nil {
+			assignedToInfo = response.UserShort{
+				ID:        task.AssignedToUser.ID.String(),
+				FirstName: task.AssignedToUser.FirstName,
+				LastName:  task.AssignedToUser.LastName,
+				AvatarURL: tc.freshAvatarURL(task.AssignedToUser.AvatarURL),
+			}
+		}
 
-        taskSearch.Tasks = append(taskSearch.Tasks, response.TaskSearchItem{
-            ID:            task.ID.String(),
-            Name:          utils.GetString(task.Name),
-            Description:   utils.GetString(task.Description),
-            Priority:      utils.GetInt16(task.Priority),
-            StartDate:     utils.GetTime(task.StartDate),
-            Deadline:      utils.GetTime(task.Deadline),
-            CreatedAt:     utils.GetTime(task.CreatedAt),
-            UpdatedAt:     utils.GetTime(task.UpdatedAt),
-            Status:        statusInfo,
-            Project:       projectInfo,
-            AssignedTo:    assignedToInfo,
-            CreatedBy:     createdByInfo,
-        })
-    }
+		// Build creator information.
+		var createdByInfo response.UserShort
+		if task.CreatedByUser != nil {
+			createdByInfo = response.UserShort{
+				ID:        task.CreatedByUser.ID.String(),
+				FirstName: task.CreatedByUser.FirstName,
+				LastName:  task.CreatedByUser.LastName,
+				AvatarURL: tc.freshAvatarURL(task.CreatedByUser.AvatarURL),
+			}
+		}
 
-    return c.JSON(http.StatusOK, taskSearch)
+		taskSearch.Tasks = append(taskSearch.Tasks, response.TaskSearchItem{
+			ID:          task.ID.String(),
+			Name:        utils.GetString(task.Name),
+			Description: utils.GetString(task.Description),
+			Priority:    utils.GetInt16(task.Priority),
+			StartDate:   utils.GetTime(task.StartDate),
+			Deadline:    utils.GetTime(task.Deadline),
+			CreatedAt:   utils.GetTime(task.CreatedAt),
+			UpdatedAt:   utils.GetTime(task.UpdatedAt),
+			Status:      statusInfo,
+			Project:     projectInfo,
+			AssignedTo:  assignedToInfo,
+			CreatedBy:   createdByInfo,
+		})
+	}
+
+	return c.JSON(http.StatusOK, taskSearch)
 }
 
 // GetTaskByID godoc
@@ -249,23 +263,23 @@ func (tc *TaskController) SearchTasks(c echo.Context) error {
 // @Param id path string true "ID задачи"
 // @Security BearerAuth
 // @Success 200 {object} response.GetTaskByIDResponse "Задача успешно получена"
-// @Failure 400 {object} map[string]string "Некорректный идентификатор задачи"
+// @Failure 400 {object} map[string]string "invalid task id"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
-// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 404 {object} map[string]string "task not found"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задачи"
 // @Router /task/{id} [get]
 func (tc *TaskController) GetTaskByID(c echo.Context) error {
 	taskID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор задачи",
+			"error": "invalid task id",
 		})
 	}
 
 	task, err := tc.taskService.GetTaskByID(taskID)
 	if err != nil {
 		if err.Error() == "task not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "task not found"})
 		}
 		log.Printf("service error (find task by id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задачи"})
@@ -347,7 +361,7 @@ func (tc *TaskController) GetTasksByProjectID(c echo.Context) error {
 	tasks, totalCount, err := tc.taskService.GetTasksByProjectID(projectID, page, pageSize)
 	if err != nil {
 		if err.Error() == "project not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Проект не найден"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "project not found"})
 		}
 		log.Printf("service error (get tasks by project id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении статусов проекта"})
@@ -417,7 +431,7 @@ func (tc *TaskController) CreateTask(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор статуса"})
 		}
 		if err.Error() == "status not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Статус не найден или привязан к удалённой доске"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "status not found or linked to a deleted board"})
 		}
 		log.Printf("service error (create task): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании задачи"})
@@ -441,14 +455,14 @@ func (tc *TaskController) CreateTask(c echo.Context) error {
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskUniversaResponse "Задача успешно обновлена"
 // @Failure 400 {object} map[string]string "Некорректный идентификатор или ошибка в запросе"
-// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 404 {object} map[string]string "task not found"
 // @Failure 500 {object} map[string]string "Ошибка сервера при обновлении задачи"
 // @Router /task/{id} [patch]
 func (tc *TaskController) UpdateTask(c echo.Context) error {
 	id := c.Param("id")
 	taskID, err := uuid.Parse(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор задачи"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid task id"})
 	}
 
 	var req request.TaskUpdateRequest
@@ -463,7 +477,7 @@ func (tc *TaskController) UpdateTask(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Нет данных для обновления"})
 		}
 		if err.Error() == "task not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "task not found"})
 		}
 		if err.Error() == "invalid assigned_to" {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор исполнителя"})
@@ -488,14 +502,14 @@ func (tc *TaskController) UpdateTask(c echo.Context) error {
 // @Security BearerAuth
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
 // @Success 200 {object} response.TaskUniversaResponse "Задача успешно удалена"
-// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 404 {object} map[string]string "task not found"
 // @Failure 500 {object} map[string]string "Ошибка сервера при удалении задачи"
 // @Router /task/{id} [delete]
 func (tc *TaskController) DeleteTask(c echo.Context) error {
 	id := c.Param("id")
 	taskID, err := uuid.Parse(id)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор задачи"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid task id"})
 	}
 
 	err = tc.taskService.DeleteTask(taskID)
@@ -731,13 +745,16 @@ func (tc *TaskController) TaskMoveFunc(c echo.Context) error {
 	statuses, err := tc.taskService.TaskMoveFunc(taskID, toStatusID)
 	if err != nil {
 		if err.Error() == "task not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "task not found"})
 		}
 		if err.Error() == "status not found" {
 			return c.JSON(http.StatusNotFound, map[string]string{"error": "Целевой статус не найден"})
 		}
 		if err.Error() == "different board" {
 			return c.JSON(http.StatusConflict, map[string]string{"error": "Нельзя переместить задачу в статус с другой доски"})
+		}
+		if errors.Is(err, service.ErrTaskMoveCloseGateRequired) {
+			return c.JSON(http.StatusConflict, map[string]string{"error": "approval_required"})
 		}
 		log.Printf("service error (task move): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении статуса задачи"})
@@ -753,14 +770,14 @@ func (tc *TaskController) TaskMoveFunc(c echo.Context) error {
 		tasks := make([]response.TaskShort, 0, len(status.Tasks))
 		for _, task := range status.Tasks {
 			tasks = append(tasks, response.TaskShort{
-				ID:          task.ID.String(),
-				Name:        utils.GetString(task.Name),
-				StatusID:    task.StatusID.String(),
-				Priority:    utils.GetInt16(task.Priority),
-				CreatedAt:   utils.GetTime(task.CreatedAt),
-				UpdatedAt:   utils.GetTime(task.UpdatedAt),
-				StartDate:   utils.GetTime(task.StartDate),
-				Deadline:    utils.GetTime(task.Deadline),
+				ID:        task.ID.String(),
+				Name:      utils.GetString(task.Name),
+				StatusID:  task.StatusID.String(),
+				Priority:  utils.GetInt16(task.Priority),
+				CreatedAt: utils.GetTime(task.CreatedAt),
+				UpdatedAt: utils.GetTime(task.UpdatedAt),
+				StartDate: utils.GetTime(task.StartDate),
+				Deadline:  utils.GetTime(task.Deadline),
 			})
 		}
 
@@ -796,7 +813,7 @@ func (tc *TaskController) TaskMoveFunc(c echo.Context) error {
 // @Success 200 {object} response.UserProjectTasksResponse "Список задач успешно получен"
 // @Failure 400 {object} map[string]string "Некорректный ID пользователя или проекта"
 // @Failure 401 {object} map[string]string "Нет или неверный токен"
-// @Failure 404 {object} map[string]string "Пользователь или проект не найдены"
+// @Failure 404 {object} map[string]string "user or project not found"
 // @Failure 500 {object} map[string]string "Ошибка сервера при получении задач"
 // @Router /task/user/{user_id}/project/{project_id}/{page}/{pagesize} [get]
 func (tc *TaskController) GetUserProjectTasks(c echo.Context) error {
@@ -832,11 +849,11 @@ func (tc *TaskController) GetUserProjectTasks(c echo.Context) error {
 	// Получаем данные пользователя и проекта для верхнего уровня
 	user, err := tc.userService.GetUserById(userID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "Пользователь не найден"})
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "user not found"})
 	}
 	project, err := tc.projectService.GetProjectByID(projectID)
 	if err != nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "Проект не найден"})
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "project not found"})
 	}
 
 	userResp := response.UserFull{
@@ -919,7 +936,7 @@ func (tc *TaskController) GetUserProjectTasks(c echo.Context) error {
 // @Security BearerAuth
 // @Success 200 {object} response.ImprovedReportResponse "Улучшенный отчет"
 // @Failure 400 {object} map[string]string "Некорректный ID задачи или данные запроса"
-// @Failure 404 {object} map[string]string "Задача не найдена"
+// @Failure 404 {object} map[string]string "task not found"
 // @Failure 500 {object} map[string]string "Ошибка при обработке LLM"
 // @Router /task/{id}/improve-report [post]
 func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
@@ -927,7 +944,7 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 	taskID, err := uuid.Parse(taskId)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Некорректный идентификатор задачи",
+			"error": "invalid task id",
 		})
 	}
 
@@ -935,7 +952,7 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 	task, err := tc.taskService.GetTaskByID(taskID)
 	if err != nil {
 		if err.Error() == "task not found" {
-			return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "task not found"})
 		}
 		log.Printf("service error (get task by id): %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении задачи"})
@@ -977,13 +994,41 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 		}
 	}
 
+	actor, actorErr := actorFromContext(c)
+	var agentRunID uuid.UUID
+	if tc.conveyorService != nil && actorErr == nil {
+		registered, err := tc.conveyorService.RegisterAgentRun(c.Request().Context(), actor, service.RegisterAgentRunRequest{
+			WorkItemID: taskID,
+			Source:     "backend",
+			Harness:    "llm-task-report",
+			Status:     models.AgentRunStatusRunning,
+			Summary:    "LLM task report improvement started",
+			Metadata:   llmAgentRunMetadata(taskID.String(), "ImproveTaskReport", "text/plain", safeLLMMetaKeys(overrides), "started"),
+		})
+		if err != nil {
+			log.Printf("agent run registration failed: %v", err)
+			return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "agent_run_unavailable"})
+		}
+		agentRunID = registered.EntityID
+	}
+
 	// Вызываем gRPC сервис
 	improvedText, err := tc.llmClient.ProcessTaskWithLLM(c.Request().Context(), taskDescription, req.UserText, taskId, overrides)
 	if err != nil {
+		if tc.conveyorService != nil && actorErr == nil && agentRunID != uuid.Nil {
+			if _, updateErr := tc.conveyorService.UpdateAgentRun(c.Request().Context(), actor, taskID, agentRunID, service.UpdateAgentRunRequest{Status: models.AgentRunStatusFailed, Summary: "LLM task report improvement failed", Metadata: llmAgentRunMetadata(taskID.String(), "ImproveTaskReport", "text/plain", nil, "grpc_error")}); updateErr != nil {
+				log.Printf("agent run failure update failed: %v", updateErr)
+			}
+		}
 		log.Printf("gRPC error: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Ошибка при обработке текста LLM",
 		})
+	}
+	if tc.conveyorService != nil && actorErr == nil && agentRunID != uuid.Nil {
+		if _, updateErr := tc.conveyorService.UpdateAgentRun(c.Request().Context(), actor, taskID, agentRunID, service.UpdateAgentRunRequest{Status: models.AgentRunStatusSucceeded, Summary: "LLM task report improvement succeeded", Metadata: llmAgentRunMetadata(taskID.String(), "ImproveTaskReport", "text/plain", nil, "succeeded")}); updateErr != nil {
+			log.Printf("agent run success update failed: %v", updateErr)
+		}
 	}
 
 	return c.JSON(http.StatusOK, response.ImprovedReportResponse{
@@ -993,6 +1038,38 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 		TaskTitle:       utils.GetString(task.Name),
 		TaskDescription: taskDescription,
 	})
+}
+
+func llmAgentRunMetadata(taskID string, route string, contentType string, metaKeys []string, outcome string) json.RawMessage {
+	metadata := map[string]any{"task_id": taskID, "route": route, "content_type": contentType}
+	if len(metaKeys) > 0 {
+		metadata["meta_keys"] = metaKeys
+	}
+	if outcome != "" {
+		metadata["outcome"] = outcome
+	}
+	encoded, err := json.Marshal(metadata)
+	if err != nil {
+		return nil
+	}
+	return encoded
+}
+
+func safeLLMMetaKeys(overrides *client.LLMOverrides) []string {
+	if overrides == nil {
+		return nil
+	}
+	keys := make([]string, 0, 3)
+	if overrides.Model != "" {
+		keys = append(keys, "model")
+	}
+	if overrides.URL != "" {
+		keys = append(keys, "url")
+	}
+	if overrides.SystemPrompt != "" {
+		keys = append(keys, "system_prompt")
+	}
+	return keys
 }
 
 const taskDescriptionSystemPrompt = `Ты — помощник по управлению задачами. Твоя роль: улучшать и дополнять описания задач.
@@ -1060,35 +1137,35 @@ func (tc *TaskController) ImproveText(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка сервера"
 // @Router /task/board-project/{id} [get]
 func (tc *TaskController) GetTaskBoardAndProject(c echo.Context) error {
-    taskID, err := uuid.Parse(c.Param("id"))
-    if err != nil {
-        return c.JSON(http.StatusBadRequest, map[string]string{
-            "error": "Некорректный идентификатор задачи",
-        })
-    }
-    
-   	boardId, projectId , err := tc.taskService.GetTaskBoardAndProjectIDs(taskID)
+	taskID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{
+			"error": "invalid task id",
+		})
+	}
 
-    if err != nil {
-        if err.Error() == "task not found" {
-            return c.JSON(http.StatusNotFound, map[string]string{"error": "Задача не найдена"})
-        }
-        if err.Error() == "status not found" {
-            return c.JSON(http.StatusNotFound, map[string]string{"error": "Статус задачи не найден"})
-        }
-        if err.Error() == "board not found" {
-            return c.JSON(http.StatusNotFound, map[string]string{"error": "Доска не найдена"})
-        }
-        if err.Error() == "project not found" {
-            return c.JSON(http.StatusNotFound, map[string]string{"error": "Проект не найден"})
-        }
-        log.Printf("service error (get task board and project): %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении данных задачи"})
-    }
+	boardId, projectId, err := tc.taskService.GetTaskBoardAndProjectIDs(taskID)
 
-    return c.JSON(http.StatusOK, response.TaskBoardProjectResponse{
-		TaskID: taskID.String(),
-		BoardID: boardId.String(),
+	if err != nil {
+		if err.Error() == "task not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "task not found"})
+		}
+		if err.Error() == "status not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "task status not found"})
+		}
+		if err.Error() == "board not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "board not found"})
+		}
+		if err.Error() == "project not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"error": "project not found"})
+		}
+		log.Printf("service error (get task board and project): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to get task data"})
+	}
+
+	return c.JSON(http.StatusOK, response.TaskBoardProjectResponse{
+		TaskID:    taskID.String(),
+		BoardID:   boardId.String(),
 		ProjectID: projectId.String(),
 	})
 }
@@ -1104,131 +1181,131 @@ func (tc *TaskController) GetTaskBoardAndProject(c echo.Context) error {
 // @Failure 500 {object} map[string]string "Ошибка при генерации отчёта"
 // @Router /task/export/active-tasks/xlsx [get]
 func (tc *TaskController) ExportAllActiveTasksToXLSX(c echo.Context) error {
-    data, err := tc.taskService.GetAllActiveTasksForXLSX()
-    if err != nil {
-        log.Printf("service error (get all active tasks for XLSX): %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при подготовке данных"})
-    }
+	data, err := tc.taskService.GetAllActiveTasksForXLSX()
+	if err != nil {
+		log.Printf("service error (get all active tasks for XLSX): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to prepare data"})
+	}
 
-    f := excelize.NewFile()
+	f := excelize.NewFile()
 
-    summarySheet := "Сводка по активным задачам"
-    f.NewSheet(summarySheet)
+	summarySheet := "Active tasks summary"
+	f.NewSheet(summarySheet)
 
-    summaryHeaders := []interface{}{
-        "Пользователь", "Название задачи", "Описание", 
-        "Приоритет", "Дата начала", "Дедлайн", "Статус",
-        "Доска", "Проект", "Создана", "Обновлена",
-    }
-    
-    if err := f.SetSheetRow(summarySheet, "A1", &summaryHeaders); err != nil {
-        log.Printf("XLSX header error: %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при создании XLSX"})
-    }
+	summaryHeaders := []interface{}{
+		"User", "Task title", "Description",
+		"Priority", "Start date", "Deadline", "Status",
+		"Board", "Project", "Created", "Updated",
+	}
 
-    rowIndex := 2
-    totalTasks := 0
+	if err := f.SetSheetRow(summarySheet, "A1", &summaryHeaders); err != nil {
+		log.Printf("XLSX header error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create XLSX"})
+	}
 
-    for _, user := range data.Users {
-        userSheet := user.UserName
-        if userSheet == "" {
-            userSheet = user.UserEmail
-        }
-        
-        f.NewSheet(userSheet)
+	rowIndex := 2
+	totalTasks := 0
 
-        userHeaders := []interface{}{
-            "Название задачи", "Описание", 
-            "Приоритет", "Дата начала", "Дедлайн", "Статус",
-            "Доска", "Проект", "Создана", "Обновлена",
-        }
-        f.SetSheetRow(userSheet, "A1", &userHeaders)
-        
-        userRowIndex := 2
+	for _, user := range data.Users {
+		userSheet := user.UserName
+		if userSheet == "" {
+			userSheet = user.UserEmail
+		}
 
-        for _, task := range user.Tasks {
-            totalTasks++
+		f.NewSheet(userSheet)
 
-            priorityText := utils.ConvertPriorityToText(task.Priority)
+		userHeaders := []interface{}{
+			"Task title", "Description",
+			"Priority", "Start date", "Deadline", "Status",
+			"Board", "Project", "Created", "Updated",
+		}
+		f.SetSheetRow(userSheet, "A1", &userHeaders)
 
-            summaryRow := []interface{}{
-                user.UserName,
-                task.Name,
-                task.Description,
-                priorityText,
-                utils.FormatTimeForExcel(task.StartDate),
-                utils.FormatTimeForExcel(task.Deadline),
-                task.StatusName,
-                task.BoardName,
-                task.ProjectName,
-                task.CreatedAt.Format("02.01.2006 15:04"),
-                task.UpdatedAt.Format("02.01.2006 15:04"),
-            }
-            
-            axis := fmt.Sprintf("A%d", rowIndex)
-            if err := f.SetSheetRow(summarySheet, axis, &summaryRow); err != nil {
-                log.Printf("XLSX summary row error: %v", err)
-                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
-            }
-            rowIndex++
+		userRowIndex := 2
 
-            userRow := []interface{}{
-                task.Name,
-                task.Description,
-                priorityText,
-                utils.FormatTimeForExcel(task.StartDate),
-                utils.FormatTimeForExcel(task.Deadline),
-                task.StatusName,
-                task.BoardName,
-                task.ProjectName,
-                task.CreatedAt.Format("02.01.2006 15:04"),
-                task.UpdatedAt.Format("02.01.2006 15:04"),
-            }
-            
-            userAxis := fmt.Sprintf("A%d", userRowIndex)
-            if err := f.SetSheetRow(userSheet, userAxis, &userRow); err != nil {
-                log.Printf("XLSX user row error: %v", err)
-                return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при заполнении XLSX"})
-            }
-            userRowIndex++
-        }
+		for _, task := range user.Tasks {
+			totalTasks++
 
-        f.SetColWidth(userSheet, "A", "J", 20)
-        f.SetColWidth(userSheet, "A", "B", 30)
-        styleID, _ := f.NewStyle(&excelize.Style{
-            Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
-        })
-        f.SetCellStyle(userSheet, "A1", fmt.Sprintf("J%d", userRowIndex), styleID)
-    }
+			priorityText := utils.ConvertPriorityToText(task.Priority)
 
-    f.SetCellValue(summarySheet, "A1", "Всего активных задач: "+strconv.Itoa(totalTasks))
-    f.SetCellValue(summarySheet, "B1", "Всего пользователей: "+strconv.Itoa(len(data.Users)))
+			summaryRow := []interface{}{
+				user.UserName,
+				task.Name,
+				task.Description,
+				priorityText,
+				utils.FormatTimeForExcel(task.StartDate),
+				utils.FormatTimeForExcel(task.Deadline),
+				task.StatusName,
+				task.BoardName,
+				task.ProjectName,
+				task.CreatedAt.Format("02.01.2006 15:04"),
+				task.UpdatedAt.Format("02.01.2006 15:04"),
+			}
 
-    f.SetColWidth(summarySheet, "A", "K", 20)
-    f.SetColWidth(summarySheet, "B", "C", 30)
-    styleID, _ := f.NewStyle(&excelize.Style{
-        Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
-    })
-    f.SetCellStyle(summarySheet, "A2", fmt.Sprintf("K%d", rowIndex), styleID)
+			axis := fmt.Sprintf("A%d", rowIndex)
+			if err := f.SetSheetRow(summarySheet, axis, &summaryRow); err != nil {
+				log.Printf("XLSX summary row error: %v", err)
+				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to fill XLSX"})
+			}
+			rowIndex++
 
-    f.DeleteSheet("Sheet1")
+			userRow := []interface{}{
+				task.Name,
+				task.Description,
+				priorityText,
+				utils.FormatTimeForExcel(task.StartDate),
+				utils.FormatTimeForExcel(task.Deadline),
+				task.StatusName,
+				task.BoardName,
+				task.ProjectName,
+				task.CreatedAt.Format("02.01.2006 15:04"),
+				task.UpdatedAt.Format("02.01.2006 15:04"),
+			}
 
-    index, err := f.GetSheetIndex(summarySheet)
-    if err != nil {
-        log.Printf("Creating list error: %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
-    }
-    f.SetActiveSheet(index)
+			userAxis := fmt.Sprintf("A%d", userRowIndex)
+			if err := f.SetSheetRow(userSheet, userAxis, &userRow); err != nil {
+				log.Printf("XLSX user row error: %v", err)
+				return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to fill XLSX"})
+			}
+			userRowIndex++
+		}
 
-    buf, err := f.WriteToBuffer()
-    if err != nil {
-        log.Printf("XLSX buffer error: %v", err)
-        return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при генерации файла"})
-    }
+		f.SetColWidth(userSheet, "A", "J", 20)
+		f.SetColWidth(userSheet, "A", "B", 30)
+		styleID, _ := f.NewStyle(&excelize.Style{
+			Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+		})
+		f.SetCellStyle(userSheet, "A1", fmt.Sprintf("J%d", userRowIndex), styleID)
+	}
 
-    filename := fmt.Sprintf("active_tasks_%s.xlsx", time.Now().Format("2006-01-02"))
+	f.SetCellValue(summarySheet, "A1", "Total active tasks: "+strconv.Itoa(totalTasks))
+	f.SetCellValue(summarySheet, "B1", "Total users: "+strconv.Itoa(len(data.Users)))
 
-    c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
-    return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
+	f.SetColWidth(summarySheet, "A", "K", 20)
+	f.SetColWidth(summarySheet, "B", "C", 30)
+	styleID, _ := f.NewStyle(&excelize.Style{
+		Alignment: &excelize.Alignment{WrapText: true, Vertical: "top"},
+	})
+	f.SetCellStyle(summarySheet, "A2", fmt.Sprintf("K%d", rowIndex), styleID)
+
+	f.DeleteSheet("Sheet1")
+
+	index, err := f.GetSheetIndex(summarySheet)
+	if err != nil {
+		log.Printf("Creating list error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to generate file"})
+	}
+	f.SetActiveSheet(index)
+
+	buf, err := f.WriteToBuffer()
+	if err != nil {
+		log.Printf("XLSX buffer error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to generate file"})
+	}
+
+	filename := fmt.Sprintf("active_tasks_%s.xlsx", time.Now().Format("2006-01-02"))
+
+	c.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Response().Header().Set("Content-Disposition", "attachment; filename="+filename)
+	return c.Blob(http.StatusOK, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", buf.Bytes())
 }

@@ -24,16 +24,16 @@ import (
 func TestProblem_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
-	// Создаем зависимости для новой архитектуры
+	// Create test entities before wiring services that need a system user.
+	userID := createTestUser(t, testDB, "user@example.com")
+
+	// Create dependencies for the current architecture.
 	problemRepo := repository.NewProblemRepository(testDB)
 	forumMessageRepo := repository.NewForumMessageRepository(testDB)
-	problemService := service.NewProblemService(problemRepo, forumMessageRepo, uuid.New())
+	problemService := service.NewProblemService(problemRepo, forumMessageRepo, userID)
 	problemController := controller.NewProblemController(problemService)
 
 	e := echo.New()
-
-	// Создаём тестовые сущности
-	userID := createTestUser(t, testDB, "user@example.com")
 
 	var problemID uuid.UUID
 
