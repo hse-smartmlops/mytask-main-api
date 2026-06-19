@@ -68,20 +68,24 @@ func (r *projectRepository) SearchProjects(query, userID string, limit, offset i
         return []models.Project{}, 0, nil
     }
 
-    // Используем LEFT JOIN LATERAL для эффективной проверки членства в команде
-    orderClause := `
-        CASE 
+    // Приоритетная сортировка: сначала проекты команд пользователя, затем созданные им.
+    // userID связывается как параметр (а не конкатенацией) — иначе это SQL-инъекция в ORDER BY.
+    orderClause := clause.Expr{
+        SQL: `
+        CASE
             WHEN EXISTS (
                 SELECT 1 FROM project_teams pt
                 JOIN teams t ON pt.team_id = t.id AND t.deleted = false
                 JOIN team_members tm ON t.id = tm.team_id AND tm.deleted = false
-                WHERE pt.project_id = projects.id AND pt.deleted = false AND tm.user_id = '` + userID + `'
+                WHERE pt.project_id = projects.id AND pt.deleted = false AND tm.user_id = ?::uuid
             ) THEN 1
-            WHEN projects.created_by = '` + userID + `' THEN 2
+            WHEN projects.created_by = ?::uuid THEN 2
             ELSE 3
-        END ASC, 
+        END ASC,
         projects.name ASC
-    `
+    `,
+        Vars: []interface{}{userID, userID},
+    }
 
     // Базовый запрос
     baseQuery := r.db.Session(&gorm.Session{NewDB: true}).Model(&models.Project{}).

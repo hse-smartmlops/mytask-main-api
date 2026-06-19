@@ -107,6 +107,10 @@ func (sc *SubscriptionController) GetSubscriptionsByUserId(c echo.Context) error
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор подписки"})
 	}
+	// IDOR-защита: список подписок можно смотреть только по своему user_id.
+	if callerID, _ := c.Get("user_id").(string); userUUID.String() != callerID {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "Нет доступа к подпискам другого пользователя"})
+	}
 	page, err := strconv.Atoi(c.Param("page"))
 	if err != nil || page <= 0 {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Ошибка при парсинге страницы"})
@@ -230,6 +234,11 @@ func (sc *SubscriptionController) GetSubscriptionById(c echo.Context) error{
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при получении подписки"})
 	}
 
+	// IDOR-защита: видеть можно только свою подписку.
+	if callerID, _ := c.Get("user_id").(string); subscription.UserID.String() != callerID {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "Нет доступа к этой подписке"})
+	}
+
 	return c.JSON(http.StatusOK, response.SubscriptionResponse{
 		ID:             subscription.ID.String(),
 		UserId:         subscription.UserID.String(),
@@ -258,6 +267,14 @@ func (sc *SubscriptionController) CreateSubscription(c echo.Context) error{
 		log.Printf("Bind error: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
+
+	// IDOR-защита: подписка всегда создаётся от имени владельца токена,
+	// user_id из тела игнорируется (иначе можно подписать любого пользователя).
+	callerID, _ := c.Get("user_id").(string)
+	if callerID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+	req.UserId = callerID
 
 	subID, err := sc.subscriptionService.CreateSubscription(req)
 	if err != nil {
@@ -303,6 +320,20 @@ func (sc *SubscriptionController) DeleteSubscription(c echo.Context) error {
 	subUUID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор подписки"})
+	}
+
+	// IDOR-защита: удалять можно только свою подписку.
+	callerID, _ := c.Get("user_id").(string)
+	existing, err := sc.subscriptionService.GetSubscriptionById(subUUID)
+	if err != nil {
+		if err.Error() == "subscription not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не удалено"})
+		}
+		log.Printf("service error (get subscription for delete): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при удалении подписки"})
+	}
+	if existing.UserID.String() != callerID {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "Можно удалять только свои подписки"})
 	}
 
 	err = sc.subscriptionService.DeleteSubscription(subUUID)

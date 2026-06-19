@@ -43,6 +43,8 @@ func (r *forumMessageRepository) GetAllForumMessages(limit, offset int) ([]model
 		Where("deleted = FALSE").
 		Limit(limit).
 		Offset(offset).
+		Order("forum_messages.created_at ASC").
+		Preload("User"). // иначе автор/аватар не отдаются в /forum-message/all
 		Find(&forumMessages).Error; err != nil {
 		return nil, 0, err
 	}

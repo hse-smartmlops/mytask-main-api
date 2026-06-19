@@ -14,6 +14,7 @@ import (
 
 type UserService interface {
 	GetAllUsers(page, pageSize int) ([]models.User, int64, error)
+	SearchUsers(query string, page, pageSize int) ([]models.User, int64, error)
 	GetUserById(userId uuid.UUID) (*models.User, error)
 	CreateUser(req request.UserCreateRequest) (uuid.UUID, error)
 	UpdateUser(userId uuid.UUID, req request.UpdateUserRequest) error
@@ -34,6 +35,11 @@ func NewUserService(repo repository.UserRepository) UserService {
 	return &userService{
 		repo: repo,
 	}
+}
+
+func (s *userService) SearchUsers(query string, page, pageSize int) ([]models.User, int64, error) {
+	offset := (page - 1) * pageSize
+	return s.repo.SearchUsers(query, pageSize, offset)
 }
 
 func (s *userService) CreateSystemUser() (uuid.UUID, error) {

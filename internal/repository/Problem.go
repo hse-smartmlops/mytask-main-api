@@ -3,6 +3,7 @@ package repository
 import (
 	models "emplacc-api/internal/domain"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +14,7 @@ type ProblemRepository interface {
 	GetAllProblems(limit, offset int) ([]models.Problem, int64, error)
 	GetProblemsByUserId(creatorUUID uuid.UUID, limit, offset int) ([]models.Problem, int64, error)
 	GetProblemByID(problemId uuid.UUID) (*models.Problem, error)
+	SearchProblems(query string, limit, offset int) ([]models.Problem, int64, error)
 	CreateProblem(p models.Problem) error
 	UpdateProblem(problemId uuid.UUID, updateData map[string]interface{}) (bool, error)
 	DeleteProblem(problemId uuid.UUID) (bool, error)
@@ -70,6 +72,58 @@ func (r *problemRepository) GetProblemsByUserId(creatorUUID uuid.UUID, limit, of
 	}
 
 	return problems, totalCount, nil
+}
+
+// SearchProblems — полнотекстовый поиск по имени и описанию проблемы.
+// Использует тот же prepareSearchQueries, что и поиск проектов/задач.
+func (r *problemRepository) SearchProblems(query string, limit, offset int) ([]models.Problem, int64, error) {
+	if query == "" {
+		return []models.Problem{}, 0, nil
+	}
+	searchQueries := prepareSearchQueries(query)
+	if len(searchQueries) == 0 {
+		return []models.Problem{}, 0, nil
+	}
+
+	base := r.db.Session(&gorm.Session{NewDB: true}).
+		Model(&models.Problem{}).
+		Where("deleted = FALSE")
+	base = addProblemFullTextConditions(base, searchQueries)
+
+	var totalCount int64
+	if err := base.Count(&totalCount).Error; err != nil {
+		return nil, 0, err
+	}
+	if totalCount == 0 {
+		return []models.Problem{}, 0, nil
+	}
+
+	var problems []models.Problem
+	err := base.
+		Limit(limit).
+		Offset(offset).
+		Order("problems.created_at DESC").
+		Find(&problems).Error
+
+	return problems, totalCount, err
+}
+
+func addProblemFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
+	if len(searchQueries) == 0 {
+		return db
+	}
+
+	var conditions []string
+	var args []interface{}
+	for _, tsQuery := range searchQueries {
+		conditions = append(conditions, `(
+			to_tsvector('russian', coalesce(problems.name, '')) @@ to_tsquery(?) OR
+			to_tsvector('russian', array_to_string(problems.description, ' ')) @@ to_tsquery(?)
+		)`)
+		args = append(args, tsQuery, tsQuery)
+	}
+
+	return db.Where(strings.Join(conditions, " OR "), args...)
 }
 
 func (r *problemRepository) GetProblemByID(problemId uuid.UUID) (*models.Problem, error) {

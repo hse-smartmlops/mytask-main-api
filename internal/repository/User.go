@@ -15,6 +15,7 @@ import (
 
 type UserRepository interface {
 	GetAllUsers(limit, offset int) ([]models.User, int64, error)
+	SearchUsers(query string, limit, offset int) ([]models.User, int64, error)
 	GetUserById(userId uuid.UUID) (*models.User, error)
 	GetUserByEmail(email string) (*models.User, error)
 	CreateUser(user models.User) error
@@ -56,6 +57,39 @@ func (r *userRepository) GetAllUsers(limit, offset int) ([]models.User, int64, e
 	}
 
 	return users, totalCount, nil
+}
+
+// SearchUsers — поиск пользователей по имени, фамилии, email или профессии (ILIKE,
+// регистронезависимо). Отдельно матчим "Имя Фамилия", чтобы искать по полному имени.
+func (r *userRepository) SearchUsers(query string, limit, offset int) ([]models.User, int64, error) {
+	if query == "" {
+		return []models.User{}, 0, nil
+	}
+	like := "%" + query + "%"
+	cond := `users.deleted = FALSE AND (
+		users.first_name ILIKE ? OR users.last_name ILIKE ? OR users.email ILIKE ?
+		OR users.profession ILIKE ? OR (users.first_name || ' ' || users.last_name) ILIKE ?
+	)`
+	args := []interface{}{like, like, like, like, like}
+
+	var totalCount int64
+	if err := r.db.Session(&gorm.Session{NewDB: true}).Model(&models.User{}).
+		Where(cond, args...).Count(&totalCount).Error; err != nil {
+		return nil, 0, err
+	}
+	if totalCount == 0 {
+		return []models.User{}, 0, nil
+	}
+
+	var users []models.User
+	err := r.db.Session(&gorm.Session{NewDB: true}).Model(&models.User{}).
+		Where(cond, args...).
+		Limit(limit).
+		Offset(offset).
+		Order("users.last_name ASC, users.first_name ASC").
+		Find(&users).Error
+
+	return users, totalCount, err
 }
 
 func (r *userRepository) GetUserById(userId uuid.UUID) (*models.User, error) {

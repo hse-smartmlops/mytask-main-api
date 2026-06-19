@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -30,6 +31,7 @@ func RegisterUserRoutes(e *echo.Echo, userService service.UserService, freshAvat
 
 	// Read: любой авторизованный пользователь
 	userGroup.GET("/all/:page/:pagesize", controller.GetAllUsers)
+	userGroup.GET("/search", controller.SearchUsers)
 	userGroup.GET("/me", controller.GetCurrentUser)
 	userGroup.GET("/:id", controller.GetUserById)
 
@@ -97,6 +99,65 @@ func (uc *UserController) GetAllUsers(c echo.Context) error {
 		TotalCount: totalCount,
 	}
 
+	for _, user := range users {
+		userList.Users = append(userList.Users, response.GetUserResponse{
+			ID:            user.ID.String(),
+			Email:         user.Email,
+			IsActive:      user.IsActive,
+			CreatedAt:     user.CreatedAt,
+			TgId:          user.TgID,
+			TgUserId:      user.TgUserID,
+			Profession:    user.Profession,
+			EmailVerified: user.EmailVerified,
+			FirstName:     user.FirstName,
+			LastName:      user.LastName,
+			LastLogin:     user.LastLogin,
+			AvatarURL:     uc.freshAvatarURL(user.AvatarURL),
+		})
+	}
+	return c.JSON(http.StatusOK, userList)
+}
+
+// SearchUsers godoc
+// @Summary Поиск пользователей
+// @Description Поиск по имени, фамилии, email или профессии с пагинацией
+// @Tags Users
+// @Accept json
+// @Produce json
+// @Param query query string true "Поисковый запрос"
+// @Param page query int true "Номер страницы"
+// @Param pagesize query int true "Размер страницы"
+// @Security BearerAuth
+// @Success 200 {object} response.GetAllUsersResponse "Список найденных пользователей"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при поиске"
+// @Router /user/search [get]
+func (uc *UserController) SearchUsers(c echo.Context) error {
+	query := strings.TrimSpace(c.QueryParam("query"))
+	if query == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Поисковый запрос не может быть пустым"})
+	}
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page <= 0 {
+		page = 1
+	}
+	pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
+	if err != nil || pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	users, totalCount, err := uc.userService.SearchUsers(query, page, pageSize)
+	if err != nil {
+		log.Printf("service error (search users): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при поиске пользователей"})
+	}
+
+	userList := response.GetAllUsersResponse{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		Users:      make([]response.GetUserResponse, 0, len(users)),
+	}
 	for _, user := range users {
 		userList.Users = append(userList.Users, response.GetUserResponse{
 			ID:            user.ID.String(),

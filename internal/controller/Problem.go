@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -27,6 +28,7 @@ func RegisterProblemRoutes(e *echo.Echo, problemService service.ProblemService, 
 	controller := NewProblemController(problemService)
 	g := e.Group("/problem")
 	g.GET("/all/:page/:pagesize", controller.GetAllProblems)
+	g.GET("/search", controller.SearchProblems)
 	g.GET("/:id", controller.GetProblemByID)
 	g.GET("/user/:id/:page/:pagesize", controller.GetProblemsByUserId)
 	g.POST("", controller.CreateProblem, employeeMw)
@@ -76,6 +78,60 @@ func (pc *ProblemController) GetAllProblems(c echo.Context) error {
 			ID:          p.ID.String(),
 			Name:        utils.GetString(p.Name),
 			Description: desc,
+			CreatorId:   utils.GetUUIDString(p.CreatorID),
+			CreatedAt:   utils.GetTime(p.CreatedAt),
+			UpdatedAt:   utils.GetTime(p.UpdatedAt),
+		})
+	}
+
+	return c.JSON(http.StatusOK, out)
+}
+
+// SearchProblems godoc
+// @Summary Полнотекстовый поиск проблем
+// @Description Поиск проблем по имени и описанию с пагинацией
+// @Tags Problems
+// @Accept json
+// @Produce json
+// @Param query query string true "Поисковый запрос"
+// @Param page query int true "Номер страницы"
+// @Param pagesize query int true "Размер страницы"
+// @Security BearerAuth
+// @Success 200 {object} response.ProblemListResponse "Список найденных проблем"
+// @Failure 400 {object} map[string]string "Ошибка в запросе"
+// @Failure 500 {object} map[string]string "Ошибка сервера при поиске"
+// @Router /problem/search [get]
+func (pc *ProblemController) SearchProblems(c echo.Context) error {
+	query := strings.TrimSpace(c.QueryParam("query"))
+	if query == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Поисковый запрос не может быть пустым"})
+	}
+	page, err := strconv.Atoi(c.QueryParam("page"))
+	if err != nil || page <= 0 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный номер страницы"})
+	}
+	pageSize, err := strconv.Atoi(c.QueryParam("pagesize"))
+	if err != nil || pageSize <= 0 || pageSize > 100 {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный размер страницы"})
+	}
+
+	problems, totalCount, err := pc.problemService.SearchProblems(query, page, pageSize)
+	if err != nil {
+		log.Printf("service error (search problems): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при поиске проблем"})
+	}
+
+	out := response.ProblemListResponse{
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		Problems:   make([]response.ProblemResponse, 0, len(problems)),
+	}
+	for _, p := range problems {
+		out.Problems = append(out.Problems, response.ProblemResponse{
+			ID:          p.ID.String(),
+			Name:        utils.GetString(p.Name),
+			Description: []string(p.Description),
 			CreatorId:   utils.GetUUIDString(p.CreatorID),
 			CreatedAt:   utils.GetTime(p.CreatedAt),
 			UpdatedAt:   utils.GetTime(p.UpdatedAt),
@@ -236,6 +292,23 @@ func (pc *ProblemController) UpdateProblem(c echo.Context) error {
 	problemId, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Некорректный идентификатор проблемы"})
+	}
+
+	// IDOR-защита: редактировать может только автор проблемы либо менеджер/админ.
+	userIDStr, _ := c.Get("user_id").(string)
+	userRole, _ := c.Get("user_role").(string)
+	existing, err := pc.problemService.GetProblemByID(problemId)
+	if err != nil {
+		if err.Error() == "problem not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{"message": "Ничего не обновлено"})
+		}
+		log.Printf("service error (get problem for update): %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обновлении проблемы"})
+	}
+	isPrivileged := userRole == "manager" || userRole == "admin"
+	isOwner := existing.CreatorID != nil && existing.CreatorID.String() == userIDStr
+	if !isPrivileged && !isOwner {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "Можно редактировать только свои проблемы"})
 	}
 
 	var req request.ProblemUpdateRequest

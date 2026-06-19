@@ -26,11 +26,11 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			p := c.Path()
-			// Пропускаем публичные маршруты
+			// Пропускаем публичные маршруты. Проверка по границе сегмента (со слешем),
+			// чтобы префикс не открывал случайно похожие пути (напр. /authz, /eventlog).
 			if c.Request().Method == http.MethodOptions ||
-				strings.HasPrefix(p, "/swagger") ||
-				strings.HasPrefix(p, "/auth") ||
-				strings.HasPrefix(p, "/event") {
+				p == "/swagger" || strings.HasPrefix(p, "/swagger/") ||
+				p == "/auth" || strings.HasPrefix(p, "/auth/") {
 				return next(c)
 			}
 
@@ -40,7 +40,8 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing authorization header"})
 			}
 			if !strings.HasPrefix(h, "Bearer ") {
-				log.Printf("Auth middleware: invalid header format for %s %s: %s", c.Request().Method, p, h[:min(20, len(h))])
+				// Не логируем содержимое заголовка — даже префикс токена это утечка.
+				log.Printf("Auth middleware: invalid header format for %s %s", c.Request().Method, p)
 				return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid authorization header format"})
 			}
 			token := strings.TrimPrefix(h, "Bearer ")
@@ -65,7 +66,6 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 				}
 				c.Set("user_id", validation.UserID)
 				c.Set("session_token", token)
-				log.Printf("Auth middleware: session valid for user %s", validation.UserID)
 
 			// ── MCP/интеграционный токен ───────────────────────────
 			case strings.HasPrefix(token, "emplacc_"):
@@ -76,7 +76,6 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 				}
 				c.Set("user_id", user.ID.String())
 				c.Set("api_token_user_id", user.ID)
-				log.Printf("Auth middleware: API token valid for user %s", user.ID.String())
 
 			// ── Keycloak JWT для совместимости с прод-фронтом ───────
 			case strings.Count(token, ".") == 2:
@@ -91,7 +90,6 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 				}
 				c.Set("user_id", userID.String())
 				c.Set("auth_token", token)
-				log.Printf("Auth middleware: JWT valid for user %s", userID.String())
 
 			default:
 				log.Printf("Auth middleware: unknown token type for %s %s", c.Request().Method, p)
@@ -103,13 +101,6 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 			return next(c)
 		}
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // KeycloakAuthMiddleware — оставляем для совместимости, делегирует в AppAuthMiddleware

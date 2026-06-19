@@ -15,6 +15,7 @@ type ProblemService interface {
 	GetAllProblems(page, pageSize int) ([]models.Problem, int64, error)
 	GetProblemsByUserId(creatorUUID uuid.UUID, page, pageSize int) ([]models.Problem, int64, error)
 	GetProblemByID(problemId uuid.UUID) (*models.Problem, error)
+	SearchProblems(query string, page, pageSize int) ([]models.Problem, int64, error)
 	CreateProblem(req request.ProblemCreateRequest) (uuid.UUID, error)
 	UpdateProblem(problemId uuid.UUID, req request.ProblemUpdateRequest) error
 	DeleteProblem(problemId uuid.UUID) error
@@ -47,6 +48,11 @@ func (s *problemService) GetProblemsByUserId(creatorUUID uuid.UUID, page, pageSi
 
 func (s *problemService) GetProblemByID(problemId uuid.UUID) (*models.Problem, error) {
 	return s.repo.GetProblemByID(problemId)
+}
+
+func (s *problemService) SearchProblems(query string, page, pageSize int) ([]models.Problem, int64, error) {
+	offset := (page - 1) * pageSize
+	return s.repo.SearchProblems(query, pageSize, offset)
 }
 
 func (s *problemService) CreateForumMessage(problemId uuid.UUID, description []string) (error) {

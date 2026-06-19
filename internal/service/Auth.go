@@ -146,8 +146,9 @@ func (s *authService) RefreshToken(refreshToken string) (*TokenResponse, error) 
 	}, nil
 }
 
-// parseJWTClaims разбирает payload JWT без проверки подписи.
-// Безопасно для внутренних сервисов: токен всё равно был выдан нашим Keycloak.
+// parseJWTClaims разбирает payload JWT для извлечения полей.
+// ВАЖНО: не проверяет подпись — вызывающий код обязан сначала вызвать verifyJWTSignature
+// (как это делает ensureUserFromJWT).
 func parseJWTClaims(token string) (sub, email, firstName, lastName string, exp int64, emailVerified bool, err error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
@@ -237,10 +238,32 @@ func (s *authService) ValidateTokenForMiddleware(token string) error {
 	return s.ensureUserFromJWT(token)
 }
 
-// ensureUserFromJWT разбирает JWT локально и создаёт пользователя в БД если его нет.
-// Не обращается к Keycloak — работает с токенами от любого клиента (emplacc-web, emplacc-api).
-// Если JWT валидный — всегда возвращает nil (не блокируем запрос из-за DB-ошибок).
+// verifyJWTSignature проверяет подпись токена по JWKS нашего Keycloak realm.
+// gocloak кэширует сертификаты, так что в горячем пути это не сетевой вызов на каждый запрос.
+// Без этой проверки любой может подделать payload (sub/email) и выдать себя за другого
+// пользователя, включая админа — поэтому подпись обязательна.
+func (s *authService) verifyJWTSignature(token string) error {
+	ctx := context.Background()
+	decoded, _, err := s.keycloakClient.DecodeAccessToken(ctx, token, s.realm)
+	if err != nil {
+		return fmt.Errorf("token signature invalid: %w", err)
+	}
+	if decoded == nil || !decoded.Valid {
+		return fmt.Errorf("token invalid")
+	}
+	return nil
+}
+
+// ensureUserFromJWT проверяет подпись JWT по Keycloak realm, затем разбирает payload
+// и создаёт пользователя в БД если его нет.
+// Если JWT валидный — всегда возвращает nil по DB-ошибкам (не блокируем запрос из-за БД),
+// но невалидная подпись/claims всегда отклоняются.
 func (s *authService) ensureUserFromJWT(token string) error {
+	if err := s.verifyJWTSignature(token); err != nil {
+		log.Printf("JWT signature verification failed: %v", err)
+		return fmt.Errorf("token invalid")
+	}
+
 	sub, email, firstName, lastName, _, emailVerified, err := parseJWTClaims(token)
 	if err != nil {
 		log.Printf("JWT parse failed: %v", err)

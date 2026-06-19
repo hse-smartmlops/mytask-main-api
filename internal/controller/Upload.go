@@ -4,10 +4,20 @@ import (
 	"emplacc-api/internal/service"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
+
+const (
+	maxImageSize = 10 << 20 // 10 MiB для картинок/аватаров
+	maxFileSize  = 25 << 20 // 25 MiB для произвольных файлов
+)
+
+// allowedRefreshPrefixes — RefreshURL может обновлять ссылки только на объекты
+// из известных папок, чтобы нельзя было выписать presigned URL на произвольный ключ бакета.
+var allowedRefreshPrefixes = []string{"images/", "files/", "avatars/"}
 
 type UploadController struct {
 	storageService service.StorageService
@@ -32,6 +42,9 @@ func (u *UploadController) UploadImage(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
 	}
+	if fileHeader.Size > maxImageSize {
+		return c.JSON(http.StatusRequestEntityTooLarge, map[string]string{"error": "файл слишком большой (макс. 10MB)"})
+	}
 	file, err := fileHeader.Open()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "не удалось открыть файл"})
@@ -50,6 +63,9 @@ func (u *UploadController) UploadFile(c echo.Context) error {
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
+	}
+	if fileHeader.Size > maxFileSize {
+		return c.JSON(http.StatusRequestEntityTooLarge, map[string]string{"error": "файл слишком большой (макс. 25MB)"})
 	}
 	file, err := fileHeader.Open()
 	if err != nil {
@@ -76,9 +92,16 @@ func (u *UploadController) UploadAvatar(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "некорректный user_id"})
 	}
+	// IDOR-защита: менять можно только свой аватар.
+	if callerID, _ := c.Get("user_id").(string); callerID != userID.String() {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "можно менять только свой аватар"})
+	}
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
+	}
+	if fileHeader.Size > maxImageSize {
+		return c.JSON(http.StatusRequestEntityTooLarge, map[string]string{"error": "файл слишком большой (макс. 10MB)"})
 	}
 	file, err := fileHeader.Open()
 	if err != nil {
@@ -112,6 +135,18 @@ func (u *UploadController) RefreshURL(c echo.Context) error {
 	objectPath := c.QueryParam("path")
 	if objectPath == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "path обязателен"})
+	}
+	// Защита от выписывания presigned URL на произвольный ключ бакета:
+	// разрешаем только известные папки и запрещаем обход вверх по пути.
+	allowed := false
+	for _, p := range allowedRefreshPrefixes {
+		if strings.HasPrefix(objectPath, p) {
+			allowed = true
+			break
+		}
+	}
+	if !allowed || strings.Contains(objectPath, "..") {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "недопустимый path"})
 	}
 	newURL, err := u.storageService.RefreshURL(objectPath)
 	if err != nil {

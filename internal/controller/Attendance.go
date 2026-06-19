@@ -156,6 +156,14 @@ func (ac *AttendanceController) CreateAttendance(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Не удалось получить данные из запроса"})
 	}
 
+	// IDOR-защита: обычный сотрудник может создавать посещения только для себя.
+	// UserId из тела игнорируется и берётся из токена; менеджер/админ может указать чужого.
+	callerID, _ := c.Get("user_id").(string)
+	callerRole, _ := c.Get("user_role").(string)
+	if callerRole != "manager" && callerRole != "admin" {
+		req.UserId = callerID
+	}
+
 	attendanceID, err := ac.attendanceService.CreateAttendance(req)
 	if err != nil {
 		log.Printf("service error (create attendance): %v", err)
