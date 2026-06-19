@@ -117,6 +117,7 @@ func TestConveyorControllerMapsConflict(t *testing.T) {
 	ctx.SetParamNames("id")
 	ctx.SetParamValues(itemID)
 
+	ctx.Set("user_id", uuid.New().String())
 	controller := &ConveyorController{svc: fakeConveyorService{listCriteriaErr: service.ErrConflict}}
 	err := controller.ListCriteria(ctx)
 
@@ -136,6 +137,7 @@ func TestConveyorControllerListsLinks(t *testing.T) {
 	ctx.SetParamNames("id")
 	ctx.SetParamValues(itemID.String())
 
+	ctx.Set("user_id", uuid.New().String())
 	controller := &ConveyorController{svc: fakeConveyorService{links: []models.TaskLink{{ID: linkID, SourceTaskID: itemID, TargetTaskID: targetID, LinkType: models.TaskLinkTypeRelatesTo}}}}
 	err := controller.ListLinks(ctx)
 
@@ -187,6 +189,7 @@ func TestConveyorControllerMapsLinksError(t *testing.T) {
 	ctx.SetParamNames("id")
 	ctx.SetParamValues(itemID)
 
+	ctx.Set("user_id", uuid.New().String())
 	controller := &ConveyorController{svc: fakeConveyorService{listLinksErr: service.ErrNotFound}}
 	err := controller.ListLinks(ctx)
 
@@ -221,6 +224,7 @@ func TestConveyorControllerCreatesAndListsAgentRuns(t *testing.T) {
 	listCtx := e.NewContext(listReq, listRec)
 	listCtx.SetParamNames("id")
 	listCtx.SetParamValues(workItemID.String())
+	listCtx.Set("user_id", actorID.String())
 
 	run := models.AgentRun{ID: agentRunID, WorkItemID: workItemID, Source: "rest", Harness: "external-harness", Status: models.AgentRunStatusQueued, Summary: "queued", LogURI: "https://example.test/log", WorkspaceURI: "file:///workspace", Metadata: json.RawMessage(`{"task_id":"task-1"}`)}
 	controller = &ConveyorController{svc: fakeConveyorService{agentRuns: []models.AgentRun{run}}}
@@ -295,6 +299,7 @@ func TestConveyorControllerMapsAgentRunNotFound(t *testing.T) {
 	ctx.SetParamNames("id", "agent_run_id")
 	ctx.SetParamValues(workItemID.String(), runID.String())
 
+	ctx.Set("user_id", uuid.New().String())
 	controller := &ConveyorController{svc: fakeConveyorService{getAgentRunErr: service.ErrNotFound}}
 	err := controller.GetAgentRun(ctx)
 
@@ -316,6 +321,7 @@ func TestConveyorControllerExposesAgentRunTimingFields(t *testing.T) {
 	ctx.SetParamNames("id", "agent_run_id")
 	ctx.SetParamValues(workItemID.String(), agentRunID.String())
 
+	ctx.Set("user_id", uuid.New().String())
 	run := &models.AgentRun{ID: agentRunID, WorkItemID: workItemID, Source: "rest", Harness: "llm-task-report", Status: models.AgentRunStatusSucceeded, Summary: "completed", StartedAt: &startedAt, HeartbeatAt: &heartbeatAt, FinishedAt: &finishedAt, CreatedAt: startedAt, UpdatedAt: finishedAt}
 	controller := &ConveyorController{svc: fakeConveyorService{agentRun: run}}
 	err := controller.GetAgentRun(ctx)

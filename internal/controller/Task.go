@@ -1021,8 +1021,10 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 			}
 		}
 		log.Printf("gRPC error: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Ошибка при обработке текста LLM",
+		// LLM — внешняя зависимость; её сбой это 503 (dependency_unavailable),
+		// а не наша 500. Фронт распознаёт 503 как retryable, а не generic unknown.
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{
+			"error": "dependency_unavailable",
 		})
 	}
 	if tc.conveyorService != nil && actorErr == nil && agentRunID != uuid.Nil {
@@ -1114,7 +1116,7 @@ func (tc *TaskController) ImproveText(c echo.Context) error {
 	improved, err := tc.llmClient.ProcessTaskWithLLM(c.Request().Context(), "", req.UserText, "", overrides)
 	if err != nil {
 		log.Printf("gRPC error (improve-text): %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка при обработке текста LLM"})
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{"error": "dependency_unavailable"})
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{

@@ -300,6 +300,13 @@ func (c *ConveyorController) ListCriteria(ctx echo.Context) error {
 	if err != nil {
 		return conveyorError(ctx, service.ErrValidation)
 	}
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	if err := c.svc.AuthorizeWorkItemAccess(ctx.Request().Context(), actor, taskID); err != nil {
+		return conveyorError(ctx, err)
+	}
 	items, err := c.svc.ListAcceptanceCriteria(ctx.Request().Context(), taskID)
 	if err != nil {
 		return conveyorError(ctx, err)
@@ -349,6 +356,13 @@ func (c *ConveyorController) ListEvents(ctx echo.Context) error {
 	if err != nil {
 		return conveyorError(ctx, service.ErrValidation)
 	}
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	if err := c.svc.AuthorizeWorkItemAccess(ctx.Request().Context(), actor, taskID); err != nil {
+		return conveyorError(ctx, err)
+	}
 	items, err := c.svc.ListEvents(ctx.Request().Context(), taskID)
 	if err != nil {
 		return conveyorError(ctx, err)
@@ -371,6 +385,13 @@ func (c *ConveyorController) ListLinks(ctx echo.Context) error {
 	if err != nil {
 		return conveyorError(ctx, service.ErrValidation)
 	}
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	if err := c.svc.AuthorizeWorkItemAccess(ctx.Request().Context(), actor, taskID); err != nil {
+		return conveyorError(ctx, err)
+	}
 	items, err := c.svc.ListTaskLinks(ctx.Request().Context(), taskID)
 	if err != nil {
 		return conveyorError(ctx, err)
@@ -391,6 +412,13 @@ func (c *ConveyorController) ListAgentRuns(ctx echo.Context) error {
 	taskID, err := parseUUIDParam(ctx, "id")
 	if err != nil {
 		return conveyorError(ctx, service.ErrValidation)
+	}
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	if err := c.svc.AuthorizeWorkItemAccess(ctx.Request().Context(), actor, taskID); err != nil {
+		return conveyorError(ctx, err)
 	}
 	items, err := c.svc.ListAgentRuns(ctx.Request().Context(), taskID)
 	if err != nil {
@@ -418,6 +446,13 @@ func (c *ConveyorController) GetAgentRun(ctx echo.Context) error {
 	runID, err := parseUUIDParam(ctx, "agent_run_id")
 	if err != nil {
 		return conveyorError(ctx, service.ErrValidation)
+	}
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	if err := c.svc.AuthorizeWorkItemAccess(ctx.Request().Context(), actor, taskID); err != nil {
+		return conveyorError(ctx, err)
 	}
 	item, err := c.svc.GetAgentRun(ctx.Request().Context(), taskID, runID)
 	if err != nil {
@@ -1303,6 +1338,13 @@ func (c *ConveyorController) ListApprovalRequests(ctx echo.Context) error {
 	taskID, err := parseUUIDParam(ctx, "id")
 	if err != nil {
 		return conveyorError(ctx, service.ErrValidation)
+	}
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	if err := c.svc.AuthorizeWorkItemAccess(ctx.Request().Context(), actor, taskID); err != nil {
+		return conveyorError(ctx, err)
 	}
 	approvals, err := c.svc.ListApprovalRequests(ctx.Request().Context(), taskID)
 	if err != nil {

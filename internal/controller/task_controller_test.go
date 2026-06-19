@@ -91,7 +91,7 @@ func TestImproveTaskReportRecordsFailedAgentRunOnLLMError(t *testing.T) {
 	err := controller.ImproveTaskReport(ctx)
 
 	require.NoError(t, err)
-	require.Equal(t, http.StatusInternalServerError, rec.Code)
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
 	require.Len(t, conveyorSvc.registerRequests, 1)
 	require.Len(t, conveyorSvc.updateRequests, 1)
 	require.Equal(t, models.AgentRunStatusFailed, conveyorSvc.updateRequests[0].Status)
