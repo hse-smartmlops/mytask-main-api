@@ -66,7 +66,7 @@ func main() {
 	llmHost := os.Getenv("LLM_HOST")
 	llmAddr := llmHost + ":50051"
 
-	llmClient, err := client.NewLLMClient(llmAddr)
+	llmClient, err := client.NewLLMClient(llmAddr, os.Getenv("LLM_GRPC_AUTH_TOKEN"))
 	if err != nil {
 		log.Fatalf("Failed to create gRPC client: %v", err)
 	}
@@ -94,6 +94,9 @@ func main() {
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo)
 	taskRepo := repository.NewTaskRepository(dbConn)
 	taskService := service.NewTaskService(taskRepo)
+	conveyorRepo := repository.NewConveyorRepository(dbConn)
+	conveyorService := service.NewConveyorServiceWithReportLLM(conveyorRepo, service.NewBackendGeneratedReportLLMClient(llmClient))
+	pmImportService := service.NewPMImportService(conveyorRepo)
 	teamRepo := repository.NewTeamRepository(dbConn)
 	teamService := service.NewTeamService(teamRepo)
 	userService := service.NewUserService(userRepo)
@@ -158,7 +161,8 @@ func main() {
 	controller.RegisterProjectRoutes(e, projectService, managerMw)
 	controller.RegisterBoardRoutes(e, boardService, managerMw)
 	controller.RegisterStatusRoutes(e, statusService, managerMw)
-	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, dbConn, freshAvatarURL, employeeMw, managerMw)
+	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, conveyorService, dbConn, freshAvatarURL, employeeMw, managerMw)
+	controller.RegisterConveyorRoutes(e, conveyorService, pmImportService, employeeMw)
 	controller.RegisterLLMSettingsRoutes(e, dbConn, adminMw)
 	controller.RegisterReportRoutes(e, reportService, freshAvatarURL, employeeMw, managerMw)
 	controller.RegisterForumMessagesRoutes(e, forumMessageService, freshAvatarURL, employeeMw, managerMw)

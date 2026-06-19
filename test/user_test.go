@@ -48,7 +48,7 @@ func TestCreateUser_10Users(t *testing.T) {
 	// Создаем зависимости для новой архитектуры
 	userRepo := repository.NewUserRepository(testDB)
 	userService := service.NewUserService(userRepo)
-	userController := controller.NewUserController(userService)
+	userController := controller.NewUserController(userService, testFreshAvatarURL)
 
 	e := echo.New()
 
@@ -116,7 +116,7 @@ func TestUser_FullCRUD(t *testing.T) {
 	// Создаем зависимости для новой архитектуры
 	userRepo := repository.NewUserRepository(testDB)
 	userService := service.NewUserService(userRepo)
-	userController := controller.NewUserController(userService)
+	userController := controller.NewUserController(userService, testFreshAvatarURL)
 
 	e := echo.New()
 
@@ -215,7 +215,7 @@ func TestUser_FullCRUD(t *testing.T) {
 		require.NoError(t, testDB.First(&updated, "id = ?", userID).Error)
 		assert.Equal(t, newEmail, updated.Email)
 		assert.Equal(t, newFirstName, updated.FirstName)
-		
+
 		// Обновляем текущий email
 		currentEmail = newEmail
 	})
