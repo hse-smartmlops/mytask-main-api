@@ -57,6 +57,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 
 		// Используем метод контроллера вместо глобальной функции
 		err := subscriptionController.CreateSubscription(c)
@@ -88,6 +89,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 
 		err := subscriptionController.CreateSubscription(c)
 		assert.NoError(t, err)
@@ -105,6 +107,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/subscription/%s", subscriptionID), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 		c.SetParamNames("id")
 		c.SetParamValues(subscriptionID.String())
 
@@ -125,6 +128,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/subscription/user/%s/1/10", userID), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 		c.SetParamNames("id", "page", "pagesize")
 		c.SetParamValues(userID.String(), "1", "10")
 
@@ -148,6 +152,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/subscription/sub-object/%s/0/1/10", taskID), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 		c.SetParamNames("id", "type", "page", "pagesize")
 		c.SetParamValues(taskID.String(), "0", "1", "10")
 
@@ -172,6 +177,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/subscription/sub-object/%s/1/1/10", problemID), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 		c.SetParamNames("id", "type", "page", "pagesize")
 		c.SetParamValues(problemID.String(), "1", "1", "10")
 
@@ -196,6 +202,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/subscription/all/1/10", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 		c.SetParamNames("page", "pagesize")
 		c.SetParamValues("1", "10")
 
@@ -218,6 +225,7 @@ func TestSubscription_FullCRUD(t *testing.T) {
 		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/subscription/%s", subscriptionID), nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 		c.SetParamNames("id")
 		c.SetParamValues(subscriptionID.String())
 

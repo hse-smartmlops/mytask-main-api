@@ -83,6 +83,7 @@ func TestAttendance_FullCRUD(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
+		c.Set("user_id", userID.String())
 
 		err := attendanceController.CreateAttendance(c)
 		assert.NoError(t, err)

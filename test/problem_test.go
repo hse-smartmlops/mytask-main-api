@@ -126,6 +126,7 @@ func TestProblem_FullCRUD(t *testing.T) {
 		c := e.NewContext(req, rec)
 		c.SetParamNames("id")
 		c.SetParamValues(problemID.String())
+		c.Set("user_id", userID.String())
 
 		err := problemController.UpdateProblem(c)
 		assert.NoError(t, err)
