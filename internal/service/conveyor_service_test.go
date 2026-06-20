@@ -1090,6 +1090,16 @@ func (r *fakeConveyorRepository) UpdateApprovalRequest(ctx context.Context, requ
 	return nil
 }
 
+func (r *fakeConveyorRepository) ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error) {
+	var out []models.ApprovalRequest
+	for _, request := range r.approvals {
+		if request.Status == models.ApprovalStatusPending {
+			out = append(out, *request)
+		}
+	}
+	return out, nil
+}
+
 func (r *fakeConveyorRepository) ListApprovalRequests(ctx context.Context, workItemID uuid.UUID) ([]models.ApprovalRequest, error) {
 	var out []models.ApprovalRequest
 	for _, request := range r.approvals {

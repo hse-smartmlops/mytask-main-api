@@ -76,6 +76,7 @@ type ConveyorService interface {
 	DenyApproval(ctx context.Context, actor ConveyorActor, approvalID uuid.UUID, req DecideApprovalRequest) (*ConveyorMutationResult, error)
 	GetApprovalRequest(ctx context.Context, id uuid.UUID) (*models.ApprovalRequest, error)
 	ListApprovalRequests(ctx context.Context, workItemID uuid.UUID) ([]models.ApprovalRequest, error)
+	ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error)
 }
 
 type conveyorService struct {
@@ -1718,6 +1719,10 @@ func (s *conveyorService) GetApprovalRequest(ctx context.Context, id uuid.UUID) 
 
 func (s *conveyorService) ListApprovalRequests(ctx context.Context, workItemID uuid.UUID) ([]models.ApprovalRequest, error) {
 	return s.repo.ListApprovalRequests(ctx, workItemID)
+}
+
+func (s *conveyorService) ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error) {
+	return s.repo.ListPendingApprovals(ctx, limit)
 }
 
 func approvalEventWorkItem(id *uuid.UUID) uuid.UUID {

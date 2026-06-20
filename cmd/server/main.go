@@ -162,7 +162,7 @@ func main() {
 	controller.RegisterBoardRoutes(e, boardService, managerMw)
 	controller.RegisterStatusRoutes(e, statusService, managerMw)
 	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, conveyorService, dbConn, freshAvatarURL, employeeMw, managerMw)
-	controller.RegisterConveyorRoutes(e, conveyorService, pmImportService, employeeMw)
+	controller.RegisterConveyorRoutes(e, conveyorService, pmImportService, employeeMw, managerMw)
 	controller.RegisterLLMSettingsRoutes(e, dbConn, adminMw)
 	controller.RegisterReportRoutes(e, reportService, freshAvatarURL, employeeMw, managerMw)
 	controller.RegisterForumMessagesRoutes(e, forumMessageService, freshAvatarURL, employeeMw, managerMw)

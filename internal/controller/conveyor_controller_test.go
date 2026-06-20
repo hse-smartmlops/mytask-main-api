@@ -1009,3 +1009,7 @@ func (s fakeConveyorService) GetApprovalRequest(ctx context.Context, id uuid.UUI
 func (s fakeConveyorService) ListApprovalRequests(ctx context.Context, workItemID uuid.UUID) ([]models.ApprovalRequest, error) {
 	return nil, errors.New("not implemented")
 }
+
+func (s fakeConveyorService) ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error) {
+	return nil, errors.New("not implemented")
+}

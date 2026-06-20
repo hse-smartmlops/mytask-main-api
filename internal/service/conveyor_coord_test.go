@@ -471,6 +471,16 @@ func (r *coordRepo) ListApprovalRequests(ctx context.Context, workItemID uuid.UU
 	return out, nil
 }
 
+func (r *coordRepo) ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error) {
+	var out []models.ApprovalRequest
+	for _, request := range r.approvals {
+		if request.Status == models.ApprovalStatusPending {
+			out = append(out, request)
+		}
+	}
+	return out, nil
+}
+
 func (r *coordRepo) addStatus(boardID uuid.UUID, name string, open bool) uuid.UUID {
 	id := uuid.New()
 	r.statuses[id] = models.Status{ID: id, BoardID: boardID, Name: &name, IsOpen: &open, Deleted: ptrBool(false)}

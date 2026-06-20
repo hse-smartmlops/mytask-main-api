@@ -310,3 +310,7 @@ func (s *recordingConveyorService) GetApprovalRequest(ctx context.Context, id uu
 func (s *recordingConveyorService) ListApprovalRequests(ctx context.Context, workItemID uuid.UUID) ([]models.ApprovalRequest, error) {
 	return nil, errors.New("not implemented")
 }
+
+func (s *recordingConveyorService) ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error) {
+	return nil, errors.New("not implemented")
+}

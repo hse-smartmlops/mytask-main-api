@@ -63,6 +63,7 @@ type ConveyorRepository interface {
 	GetApprovalRequest(ctx context.Context, id uuid.UUID) (*models.ApprovalRequest, error)
 	UpdateApprovalRequest(ctx context.Context, request *models.ApprovalRequest) error
 	ListApprovalRequests(ctx context.Context, workItemID uuid.UUID) ([]models.ApprovalRequest, error)
+	ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error)
 }
 
 func (r *conveyorRepository) CreateTask(ctx context.Context, task *models.Task) error {
@@ -538,5 +539,19 @@ func (r *conveyorRepository) UpdateApprovalRequest(ctx context.Context, request 
 func (r *conveyorRepository) ListApprovalRequests(ctx context.Context, workItemID uuid.UUID) ([]models.ApprovalRequest, error) {
 	var requests []models.ApprovalRequest
 	err := r.db.WithContext(ctx).Where("work_item_id = ?", workItemID).Order("created_at ASC").Find(&requests).Error
+	return requests, err
+}
+
+// ListPendingApprovals — все ожидающие решения approval-запросы по платформе
+// (для админ-очереди). Старые сверху, чтобы решать в порядке поступления.
+func (r *conveyorRepository) ListPendingApprovals(ctx context.Context, limit int) ([]models.ApprovalRequest, error) {
+	var requests []models.ApprovalRequest
+	q := r.db.WithContext(ctx).
+		Where("status = ?", models.ApprovalStatusPending).
+		Order("created_at ASC")
+	if limit > 0 {
+		q = q.Limit(limit)
+	}
+	err := q.Find(&requests).Error
 	return requests, err
 }

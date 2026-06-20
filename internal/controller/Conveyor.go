@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -188,7 +189,7 @@ type conveyorPMImportRequest struct {
 	IdempotencyKey  string            `json:"idempotency_key" example:"pm-import-1"`
 }
 
-func RegisterConveyorRoutes(e *echo.Echo, svc service.ConveyorService, pmImport service.PMImportService, employeeMw echo.MiddlewareFunc) {
+func RegisterConveyorRoutes(e *echo.Echo, svc service.ConveyorService, pmImport service.PMImportService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	c := &ConveyorController{svc: svc, pmImport: pmImport}
 	g := e.Group("/api/work-items")
 	g.GET("/:id/criteria", c.ListCriteria)
@@ -243,6 +244,7 @@ func RegisterConveyorRoutes(e *echo.Echo, svc service.ConveyorService, pmImport 
 
 	conveyor := e.Group("/api/conveyor")
 	conveyor.POST("/pm-import", c.ImportPMCanon, employeeMw)
+	conveyor.GET("/pending-approvals", c.ListPendingApprovals, managerMw)
 }
 
 // ImportPMCanon godoc
@@ -1351,6 +1353,29 @@ func (c *ConveyorController) ListApprovalRequests(ctx echo.Context) error {
 		return conveyorError(ctx, err)
 	}
 	return ctx.JSON(http.StatusOK, approvals)
+}
+
+// ListPendingApprovals godoc
+// @Summary List all pending approval requests across the platform (admin queue)
+// @Tags conveyor
+// @Produce json
+// @Param limit query int false "Max items (default 200)"
+// @Success 200 {array} models.ApprovalRequest
+// @Failure 403 {object} conveyorErrorResponse
+// @Router /api/conveyor/pending-approvals [get]
+// @Security BearerAuth
+func (c *ConveyorController) ListPendingApprovals(ctx echo.Context) error {
+	limit := 200
+	if raw := ctx.QueryParam("limit"); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil && n > 0 && n <= 500 {
+			limit = n
+		}
+	}
+	items, err := c.svc.ListPendingApprovals(ctx.Request().Context(), limit)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	return ctx.JSON(http.StatusOK, items)
 }
 
 type conveyorLLMTextResponse struct {
