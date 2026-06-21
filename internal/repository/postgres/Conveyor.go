@@ -54,7 +54,16 @@ func (r *conveyorRepository) ActorCanAccessTask(ctx context.Context, actorID uui
 		Joins("LEFT JOIN boards ON boards.id = statuses.board_id AND boards.deleted = ?", false).
 		Joins("LEFT JOIN project_teams ON project_teams.project_id = boards.project_id AND project_teams.deleted = ?", false).
 		Joins("LEFT JOIN team_members ON team_members.team_id = project_teams.team_id AND team_members.user_id = ? AND team_members.deleted = ?", actorID, false).
-		Where("tasks.id = ? AND tasks.deleted = ? AND (tasks.created_by = ? OR tasks.assigned_to = ? OR team_members.user_id IS NOT NULL)", taskID, false, actorID, actorID).
+		Where(`tasks.id = ? AND tasks.deleted = ? AND (
+			tasks.created_by = ?
+			OR tasks.assigned_to = ?
+			OR team_members.user_id IS NOT NULL
+			OR EXISTS (
+				SELECT 1 FROM user_roles ur
+				JOIN roles r ON r.id = ur.role_id AND r.deleted = FALSE
+				WHERE ur.user_id = ? AND ur.deleted = FALSE AND lower(r.name) IN ('admin', 'manager')
+			)
+		)`, taskID, false, actorID, actorID, actorID).
 		Count(&count).Error
 	if err != nil {
 		return false, err

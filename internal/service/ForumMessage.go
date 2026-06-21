@@ -86,6 +86,7 @@ func (s *forumMessageService) CreateForumMessage(req request.CreateForumMessageR
 		CreatorID:   creatorId,
 		ReplyToID:   replyToID,
 		CreatedAt:   &now,
+		UpdatedAt:   &now, // равно CreatedAt на создании, иначе GORM проставит свой time.Now() при INSERT и сообщение будет выглядеть «изменённым»
 		Deleted:     &del,
 	}
 
