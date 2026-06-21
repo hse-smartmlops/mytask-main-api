@@ -1022,6 +1022,7 @@ type fakeConveyorRepository struct {
 	links            map[string]models.TaskLink
 	workOrders       map[uuid.UUID]*models.WorkOrder
 	agentRuns        map[uuid.UUID]*models.AgentRun
+	inboxItems       map[uuid.UUID]*models.AgentInboxItem
 	generatedReports map[uuid.UUID]*models.GeneratedReport
 	forumDigests     map[uuid.UUID]*models.ForumDigest
 	forumCandidates  map[uuid.UUID]*models.ForumActionCandidate
@@ -1042,6 +1043,7 @@ func newFakeConveyorRepository() *fakeConveyorRepository {
 		links:            map[string]models.TaskLink{},
 		workOrders:       map[uuid.UUID]*models.WorkOrder{},
 		agentRuns:        map[uuid.UUID]*models.AgentRun{},
+		inboxItems:       map[uuid.UUID]*models.AgentInboxItem{},
 		generatedReports: map[uuid.UUID]*models.GeneratedReport{},
 		forumDigests:     map[uuid.UUID]*models.ForumDigest{},
 		forumCandidates:  map[uuid.UUID]*models.ForumActionCandidate{},
@@ -1130,12 +1132,12 @@ func (r *fakeConveyorRepository) GetTask(ctx context.Context, id uuid.UUID) (*mo
 }
 
 func (r *fakeConveyorRepository) ActorCanAccessTask(ctx context.Context, actorID uuid.UUID, taskID uuid.UUID) (bool, error) {
-	if _, ok := r.tasks[taskID]; !ok {
-		return false, ErrNotFound
-	}
 	if byActor, ok := r.taskAccess[taskID]; ok {
 		allowed, exists := byActor[actorID]
 		return exists && allowed, nil
+	}
+	if _, ok := r.tasks[taskID]; !ok {
+		return false, ErrNotFound
 	}
 	return true, nil
 }
@@ -1319,6 +1321,37 @@ func (r *fakeConveyorRepository) ListAgentRuns(ctx context.Context, workItemID u
 		}
 	}
 	return out, nil
+}
+func (r *fakeConveyorRepository) CreateAgentInboxItem(ctx context.Context, item *models.AgentInboxItem) error {
+	cp := *item
+	r.inboxItems[cp.ID] = &cp
+	return nil
+}
+func (r *fakeConveyorRepository) ListAgentInboxItems(ctx context.Context, recipientID uuid.UUID) ([]models.AgentInboxItem, error) {
+	var out []models.AgentInboxItem
+	for _, item := range r.inboxItems {
+		if item.RecipientID == recipientID {
+			out = append(out, *item)
+		}
+	}
+	return out, nil
+}
+func (r *fakeConveyorRepository) GetAgentInboxItem(ctx context.Context, id uuid.UUID) (*models.AgentInboxItem, error) {
+	item, ok := r.inboxItems[id]
+	if !ok {
+		return nil, ErrNotFound
+	}
+	cp := *item
+	return &cp, nil
+}
+func (r *fakeConveyorRepository) UpdateAgentInboxItemAck(ctx context.Context, itemID uuid.UUID, recipientID uuid.UUID, state string, at time.Time) error {
+	item, ok := r.inboxItems[itemID]
+	if !ok || item.RecipientID != recipientID {
+		return ErrNotFound
+	}
+	item.AckState = state
+	item.UpdatedAt = at
+	return nil
 }
 func (r *fakeConveyorRepository) UpdateAgentRun(ctx context.Context, run *models.AgentRun) error {
 	if _, ok := r.agentRuns[run.ID]; !ok {
