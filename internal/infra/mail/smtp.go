@@ -4,6 +4,7 @@ package mail
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/smtp"
@@ -94,9 +95,10 @@ func (m *smtpMailer) Send(to, subject, body string) error {
 	msg := strings.Join([]string{
 		"From: " + m.from,
 		"To: " + to,
-		"Subject: " + subject,
+		// RFC 2047 encoded-word — иначе кириллическая тема бьётся в части клиентов.
+		"Subject: =?UTF-8?B?" + base64.StdEncoding.EncodeToString([]byte(subject)) + "?=",
 		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=UTF-8",
+		"Content-Type: text/html; charset=UTF-8",
 		"",
 		body,
 	}, "\r\n")
