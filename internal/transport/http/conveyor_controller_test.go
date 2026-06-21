@@ -720,6 +720,9 @@ type fakeConveyorService struct {
 	markdownErr           error
 	forumDigest           *service.ForumDigestResponse
 	forumDigests          []service.ForumDigestResponse
+	inboxItems            []service.AgentInboxItemResponse
+	inboxItem             *service.AgentInboxItemResponse
+	ackInboxErr           error
 }
 
 func (s fakeConveyorService) AuthorizeWorkItemAccess(ctx context.Context, actor service.ConveyorActor, taskID uuid.UUID) error {
@@ -848,6 +851,18 @@ func (s fakeConveyorService) GetAgentRun(ctx context.Context, workItemID uuid.UU
 }
 func (s fakeConveyorService) ListAgentRuns(ctx context.Context, workItemID uuid.UUID) ([]models.AgentRun, error) {
 	return s.agentRuns, nil
+}
+func (s fakeConveyorService) ListAgentInbox(ctx context.Context, actor service.ConveyorActor) ([]service.AgentInboxItemResponse, error) {
+	return s.inboxItems, nil
+}
+func (s fakeConveyorService) AckAgentInboxItem(ctx context.Context, actor service.ConveyorActor, itemID uuid.UUID, state string) (*service.AgentInboxItemResponse, error) {
+	if s.ackInboxErr != nil {
+		return nil, s.ackInboxErr
+	}
+	if s.inboxItem != nil {
+		return s.inboxItem, nil
+	}
+	return nil, errors.New("not implemented")
 }
 func (s fakeConveyorService) GenerateProjectReport(ctx context.Context, actor service.ConveyorActor, req service.GenerateProjectReportRequest) (*service.GeneratedReportResponse, error) {
 	if s.generatedReport != nil {
