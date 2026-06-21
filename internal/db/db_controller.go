@@ -93,6 +93,8 @@ func GetDBConnection() *gorm.DB {
 		&models.ForumActionCandidate{},
 		&models.Waiver{},
 		&models.ApprovalRequest{},
+		&models.CodeRepository{}, // git commit-tracker
+		&models.Commit{},
 		// Session is stored in Redis, not PostgreSQL.
 	); err != nil {
 		log.Fatal("AutoMigrate failed:", err)

@@ -103,6 +103,13 @@ func main() {
 	apiTokenRepo := repository.NewAPITokenRepository(dbConn)
 	apiTokenService := service.NewAPITokenService(apiTokenRepo, userRepo)
 
+	// Git commit-tracker: host-agnostic (порт CommitProvider) + адаптеры GitHub/GitFlic.
+	gitRepo := repository.NewGitRepository(dbConn)
+	gitService := service.NewGitService(gitRepo, userRepo,
+		service.NewGitHubProvider(os.Getenv("GITHUB_TOKEN")),
+		service.NewGitFlicProvider(os.Getenv("GITFLIC_TOKEN"), os.Getenv("GITFLIC_API_URL")),
+	)
+
 	// Redis — сессии без персистентности на диск
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
@@ -180,6 +187,9 @@ func main() {
 
 	// SSE realtime stream (/v2/stream) — auth по query-токену, см. Stream.go
 	controller.RegisterStreamRoutes(e, eventHub, sessionService, apiTokenService)
+
+	// Git commit-tracker (репозитории/коммиты/привязка к задачам)
+	controller.RegisterGitRoutes(e, gitService, employeeMw, managerMw)
 
 	// Swagger UI
 	// Редиректим с /swagger на /swagger/index.html, чтобы работало без явного указания файла
