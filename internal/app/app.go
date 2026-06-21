@@ -109,6 +109,7 @@ func Bootstrap() (*App, error) {
 	userService := service.NewUserService(userRepo)
 	apiTokenRepo := repository.NewAPITokenRepository(dbConn)
 	apiTokenService := service.NewAPITokenService(apiTokenRepo, userRepo)
+	llmSettingsService := service.NewLLMSettingsService(repository.NewLLMSettingsRepository(dbConn))
 
 	// Git commit-tracker: host-agnostic (порт CommitProvider) + адаптеры GitHub/GitFlic.
 	gitRepo := repository.NewGitRepository(dbConn)
@@ -178,9 +179,9 @@ func Bootstrap() (*App, error) {
 	controller.RegisterProjectRoutes(e, projectService, managerMw)
 	controller.RegisterBoardRoutes(e, boardService, managerMw)
 	controller.RegisterStatusRoutes(e, statusService, managerMw)
-	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, conveyorService, dbConn, freshAvatarURL, employeeMw, managerMw)
+	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, conveyorService, llmSettingsService, freshAvatarURL, employeeMw, managerMw)
 	controller.RegisterConveyorRoutes(e, conveyorService, pmImportService, employeeMw, managerMw)
-	controller.RegisterLLMSettingsRoutes(e, dbConn, adminMw)
+	controller.RegisterLLMSettingsRoutes(e, llmSettingsService, adminMw)
 	controller.RegisterReportRoutes(e, reportService, freshAvatarURL, employeeMw, managerMw)
 	controller.RegisterForumMessagesRoutes(e, forumMessageService, freshAvatarURL, employeeMw, managerMw)
 	controller.RegisterProblemRoutes(e, problemService, employeeMw, managerMw)

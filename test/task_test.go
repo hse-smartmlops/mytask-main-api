@@ -41,7 +41,8 @@ func TestTask_FullCRUD(t *testing.T) {
 		log.Fatalf("Failed to create gRPC client: %v", err)
 	}
 	defer llmClient.Close()
-	taskController := controller.NewTaskController(taskService, userService, projectService, llmClient, testDB, testFreshAvatarURL)
+	llmSettingsService := service.NewLLMSettingsService(repository.NewLLMSettingsRepository(testDB))
+	taskController := controller.NewTaskController(taskService, userService, projectService, llmClient, llmSettingsService, testFreshAvatarURL)
 
 	e := echo.New()
 

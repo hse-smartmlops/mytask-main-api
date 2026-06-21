@@ -113,9 +113,6 @@ func isRawDriver(imp string) bool {
 //   - service→net/http+gocloak / service→minio : paid down in 3.4 (infra adapters
 //     behind ports: KeycloakPort, StoragePort, CommitProvider HTTP client)
 var allowedLayerViolations = map[string]bool{
-	// R1 — transport touching gorm directly (paid down in 3.5: handlers → services)
-	"internal/controller/LLMSettings.go|gorm.io/gorm": true,
-	"internal/controller/Task.go|gorm.io/gorm":        true,
 	// R2 — Auth still uses net/http + gocloak directly. Keycloak behind a port is
 	// DEFERRED: AuthService.GetUserInfo returns *gocloak.UserInfo straight to the
 	// controller, so a clean port changes the /me response contract (FE-visible) —

@@ -20,7 +20,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/xuri/excelize/v2"
-	"gorm.io/gorm"
 )
 
 type TaskController struct {
@@ -29,7 +28,7 @@ type TaskController struct {
 	projectService  service.ProjectService
 	llmClient       taskLLMClient
 	conveyorService service.ConveyorService
-	db              *gorm.DB
+	llmSettings     service.LLMSettingsService
 	freshAvatarURL  func(string) string
 }
 
@@ -37,25 +36,25 @@ type taskLLMClient interface {
 	ProcessTaskWithLLM(ctx context.Context, taskDescription, userText, taskID string, overrides *client.LLMOverrides) (string, error)
 }
 
-func NewTaskController(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, db *gorm.DB, freshAvatarURL func(string) string) *TaskController {
+func NewTaskController(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, llmSettings service.LLMSettingsService, freshAvatarURL func(string) string) *TaskController {
 	return &TaskController{
 		taskService:    taskService,
 		userService:    userService,
 		projectService: projectService,
 		llmClient:      llmClient,
-		db:             db,
+		llmSettings:    llmSettings,
 		freshAvatarURL: freshAvatarURL,
 	}
 }
 
-func NewTaskControllerWithConveyor(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, db *gorm.DB, freshAvatarURL func(string) string) *TaskController {
-	controller := NewTaskController(taskService, userService, projectService, llmClient, db, freshAvatarURL)
+func NewTaskControllerWithConveyor(taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, llmSettings service.LLMSettingsService, freshAvatarURL func(string) string) *TaskController {
+	controller := NewTaskController(taskService, userService, projectService, llmClient, llmSettings, freshAvatarURL)
 	controller.conveyorService = conveyorService
 	return controller
 }
 
-func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, db *gorm.DB, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
-	controller := NewTaskControllerWithConveyor(taskService, userService, projectService, llmClient, conveyorService, db, freshAvatarURL)
+func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, llmSettings service.LLMSettingsService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+	controller := NewTaskControllerWithConveyor(taskService, userService, projectService, llmClient, conveyorService, llmSettings, freshAvatarURL)
 	g := e.Group("/task")
 	// Чтение — все авторизованные
 	g.GET("/all/:page/:pagesize", controller.GetAllTasks)
@@ -986,11 +985,10 @@ func (tc *TaskController) ImproveTaskReport(c echo.Context) error {
 
 	// Загружаем настройки LLM из БД, но используем промпт для описания задачи
 	overrides := &client.LLMOverrides{SystemPrompt: taskDescriptionSystemPrompt}
-	if tc.db != nil {
-		var llmSettings models.LLMSettings
-		if err := tc.db.First(&llmSettings).Error; err == nil {
-			overrides.Model = llmSettings.WebUIModel
-			overrides.URL = llmSettings.WebUIURL
+	if tc.llmSettings != nil {
+		if s, err := tc.llmSettings.Get(); err == nil && s != nil {
+			overrides.Model = s.WebUIModel
+			overrides.URL = s.WebUIURL
 		}
 	}
 
@@ -1105,11 +1103,10 @@ func (tc *TaskController) ImproveText(c echo.Context) error {
 	}
 
 	overrides := &client.LLMOverrides{SystemPrompt: taskDescriptionSystemPrompt}
-	if tc.db != nil {
-		var llmSettings models.LLMSettings
-		if err := tc.db.First(&llmSettings).Error; err == nil {
-			overrides.Model = llmSettings.WebUIModel
-			overrides.URL = llmSettings.WebUIURL
+	if tc.llmSettings != nil {
+		if s, err := tc.llmSettings.Get(); err == nil && s != nil {
+			overrides.Model = s.WebUIModel
+			overrides.URL = s.WebUIURL
 		}
 	}
 

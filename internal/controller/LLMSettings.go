@@ -1,24 +1,23 @@
 package controller
 
 import (
-	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/service"
 	"net/http"
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"gorm.io/gorm"
 )
 
 type LLMSettingsController struct {
-	db *gorm.DB
+	svc service.LLMSettingsService
 }
 
-func NewLLMSettingsController(db *gorm.DB) *LLMSettingsController {
-	return &LLMSettingsController{db: db}
+func NewLLMSettingsController(svc service.LLMSettingsService) *LLMSettingsController {
+	return &LLMSettingsController{svc: svc}
 }
 
-func RegisterLLMSettingsRoutes(e *echo.Echo, db *gorm.DB, adminMw echo.MiddlewareFunc) {
-	c := NewLLMSettingsController(db)
+func RegisterLLMSettingsRoutes(e *echo.Echo, svc service.LLMSettingsService, adminMw echo.MiddlewareFunc) {
+	c := NewLLMSettingsController(svc)
 	g := e.Group("/admin/llm-settings")
 	g.GET("", c.Get, adminMw)
 	g.PATCH("", c.Update, adminMw)
@@ -47,20 +46,14 @@ type LLMSettingsUpdateRequest struct {
 // @Security BearerAuth
 // @Router /admin/llm-settings [get]
 func (c *LLMSettingsController) Get(ctx echo.Context) error {
-	var s models.LLMSettings
-	if err := c.db.First(&s).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			// Возвращаем дефолтные значения из env
-			return ctx.JSON(http.StatusOK, LLMSettingsResponse{
-				WebUIURL:     "",
-				WebUIModel:   "",
-				SystemPrompt: "",
-				HasToken:     false,
-			})
-		}
+	s, err := c.svc.Get()
+	if err != nil {
 		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to load settings"})
 	}
-
+	if s == nil {
+		// Нет записи — возвращаем пустые дефолты
+		return ctx.JSON(http.StatusOK, LLMSettingsResponse{})
+	}
 	return ctx.JSON(http.StatusOK, LLMSettingsResponse{
 		WebUIURL:     s.WebUIURL,
 		WebUIModel:   s.WebUIModel,
@@ -84,7 +77,6 @@ func (c *LLMSettingsController) Update(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
 	}
 
-	// Получаем кто делает запрос
 	updatedBy := ""
 	if token, _ := ctx.Get("auth_token").(string); token != "" {
 		if sub, err := extractSubFromJWT(token); err == nil {
@@ -92,32 +84,14 @@ func (c *LLMSettingsController) Update(ctx echo.Context) error {
 		}
 	}
 
-	var s models.LLMSettings
-	c.db.First(&s) // игнорируем ошибку — создадим новую запись если нет
-
-	if req.WebUIURL != nil {
-		s.WebUIURL = *req.WebUIURL
-	}
-	if req.WebUIToken != nil && *req.WebUIToken != "" {
-		s.WebUIToken = *req.WebUIToken
-	}
-	if req.WebUIModel != nil {
-		s.WebUIModel = *req.WebUIModel
-	}
-	if req.SystemPrompt != nil {
-		s.SystemPrompt = *req.SystemPrompt
-	}
-	s.UpdatedAt = time.Now()
-	s.UpdatedBy = updatedBy
-
-	if s.ID == 0 {
-		if err := c.db.Create(&s).Error; err != nil {
-			return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to create settings"})
-		}
-	} else {
-		if err := c.db.Save(&s).Error; err != nil {
-			return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save settings"})
-		}
+	if err := c.svc.Update(service.LLMSettingsUpdate{
+		WebUIURL:     req.WebUIURL,
+		WebUIToken:   req.WebUIToken,
+		WebUIModel:   req.WebUIModel,
+		SystemPrompt: req.SystemPrompt,
+		UpdatedBy:    updatedBy,
+	}); err != nil {
+		return ctx.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to save settings"})
 	}
 
 	return ctx.JSON(http.StatusOK, map[string]string{"message": "settings updated"})
