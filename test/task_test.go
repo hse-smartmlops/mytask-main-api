@@ -31,7 +31,7 @@ func TestTask_FullCRUD(t *testing.T) {
 
 	// Создаем зависимости для новой архитектуры
 	taskRepo := postgres.NewTaskRepository(testDB)
-	taskService := service.NewTaskService(taskRepo)
+	taskService := service.NewTaskService(taskRepo, nil)
 	userRepo := postgres.NewUserRepository(testDB)
 	userService := service.NewUserService(userRepo)
 	projectRepo := postgres.NewProjectRepository(testDB)

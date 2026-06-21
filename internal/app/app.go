@@ -101,8 +101,9 @@ func Bootstrap() (*App, error) {
 	statusService := service.NewStatusService(statusRepo)
 	subscriptionRepo := postgres.NewSubscriptionRepository(dbConn)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo)
+	notificationService := service.NewNotificationService(postgres.NewNotificationRepository(dbConn))
 	taskRepo := postgres.NewTaskRepository(dbConn)
-	taskService := service.NewTaskService(taskRepo)
+	taskService := service.NewTaskService(taskRepo, notificationService)
 	conveyorRepo := postgres.NewConveyorRepository(dbConn)
 	conveyorService := service.NewConveyorServiceWithReportLLM(conveyorRepo, service.NewBackendGeneratedReportLLMClient(llmClient))
 	pmImportService := service.NewPMImportService(conveyorRepo)
@@ -193,6 +194,7 @@ func Bootstrap() (*App, error) {
 		httpapi.RegisterSubscriptionRoutes(r, subscriptionService)
 		httpapi.RegisterAPITokenRoutes(r, apiTokenService)
 		httpapi.RegisterGitRoutes(r, gitService, employeeMw, managerMw)
+		httpapi.RegisterNotificationRoutes(r, notificationService, employeeMw)
 		if storageService != nil {
 			httpapi.RegisterUploadRoutes(r, storageService, userService)
 		}

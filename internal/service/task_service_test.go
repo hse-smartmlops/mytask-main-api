@@ -27,7 +27,7 @@ func TestTaskMoveRejectsClosedTargetStatusWithoutMutation(t *testing.T) {
 			closedStatusID:  {ID: closedStatusID, BoardID: boardID, IsOpen: &closed},
 		},
 	}
-	svc := NewTaskService(repo)
+	svc := NewTaskService(repo, nil)
 
 	statuses, err := svc.TaskMoveFunc(taskID, closedStatusID)
 
@@ -55,7 +55,7 @@ func TestTaskMoveUpdatesOpenTargetStatus(t *testing.T) {
 			boardID: {{ID: currentStatusID, BoardID: boardID}, {ID: openStatusID, BoardID: boardID}},
 		},
 	}
-	svc := NewTaskService(repo)
+	svc := NewTaskService(repo, nil)
 
 	statuses, err := svc.TaskMoveFunc(taskID, openStatusID)
 

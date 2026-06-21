@@ -33,12 +33,21 @@ type TaskService interface {
 }
 
 type taskService struct {
-	repo ports.TaskRepository
+	repo     ports.TaskRepository
+	notifier ports.Notifier
 }
 
-func NewTaskService(repo ports.TaskRepository) TaskService {
+func NewTaskService(repo ports.TaskRepository, notifier ports.Notifier) TaskService {
 	return &taskService{
-		repo: repo,
+		repo:     repo,
+		notifier: notifier,
+	}
+}
+
+// notify уведомляет пользователя о задаче, если notifier подключён (nil-safe).
+func (s *taskService) notify(userID uuid.UUID, typ, title, body string, taskID uuid.UUID) {
+	if s.notifier != nil {
+		s.notifier.Notify(userID, typ, title, body, "task", &taskID)
 	}
 }
 
@@ -140,6 +149,13 @@ func (s *taskService) CreateTask(req request.TaskCreateRequest) (uuid.UUID, erro
 	}
 
 	publishGlobal(StreamEvent{Type: "task.created", WorkItemID: task.ID.String()})
+	if assigneeID != creatorID {
+		name := ""
+		if req.Name != nil {
+			name = *req.Name
+		}
+		s.notify(assigneeID, "task.assigned", "Вам назначена задача", name, task.ID)
+	}
 	return task.ID, nil
 }
 
@@ -195,6 +211,11 @@ func (s *taskService) UpdateTask(taskID uuid.UUID, req request.TaskUpdateRequest
 	}
 
 	publishGlobal(StreamEvent{Type: "task.updated", WorkItemID: taskID.String()})
+	if req.AssignedTo != nil && *req.AssignedTo != "" {
+		if assignedUUID, err := uuid.Parse(*req.AssignedTo); err == nil {
+			s.notify(assignedUUID, "task.assigned", "Вам назначена задача", "", taskID)
+		}
+	}
 	return nil
 }
 
