@@ -26,7 +26,7 @@ func TestForumMessage_FullCRUD(t *testing.T) {
 
 	// Создаем зависимости для новой архитектуры
 	forumMessageRepo := postgres.NewForumMessageRepository(testDB)
-	forumMessageService := service.NewForumMessageService(forumMessageRepo)
+	forumMessageService := service.NewForumMessageService(forumMessageRepo, nil)
 	forumMessageController := httpapi.NewForumMessageController(forumMessageService, testFreshAvatarURL)
 
 	// Создаём Echo instance

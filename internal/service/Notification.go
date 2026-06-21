@@ -19,11 +19,13 @@ type NotificationService interface {
 }
 
 type notificationService struct {
-	repo ports.NotificationRepository
+	repo     ports.NotificationRepository
+	userRepo ports.UserRepository
+	mailer   ports.Mailer // optional (nil → email disabled)
 }
 
-func NewNotificationService(repo ports.NotificationRepository) NotificationService {
-	return &notificationService{repo: repo}
+func NewNotificationService(repo ports.NotificationRepository, userRepo ports.UserRepository, mailer ports.Mailer) NotificationService {
+	return &notificationService{repo: repo, userRepo: userRepo, mailer: mailer}
 }
 
 // Notify создаёт уведомление и шлёт realtime-сигнал. Best-effort: ошибка БД не
@@ -49,6 +51,30 @@ func (s *notificationService) Notify(userID uuid.UUID, typ, title, body, entityT
 	}
 	// Сигнал клиенту: «у тебя что-то изменилось — дозапроси свой счётчик/список».
 	publishGlobal(StreamEvent{Type: "notification", WorkItemID: userID.String()})
+
+	// Email — best-effort, в фоне, чтобы не блокировать бизнес-операцию на SMTP.
+	if s.mailer != nil && s.userRepo != nil {
+		go s.sendEmail(userID, title, body)
+	}
+}
+
+func (s *notificationService) sendEmail(userID uuid.UUID, title, body string) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("notify email: panic recovered: %v", r)
+		}
+	}()
+	user, err := s.userRepo.GetUserById(userID)
+	if err != nil || user == nil || user.Email == "" {
+		return
+	}
+	text := body
+	if text == "" {
+		text = title
+	}
+	if err := s.mailer.Send(user.Email, title, text); err != nil {
+		log.Printf("notify email: send to %s failed (non-fatal): %v", user.Email, err)
+	}
 }
 
 func (s *notificationService) List(userID uuid.UUID, page, pageSize int, onlyUnread bool) ([]models.Notification, int64, error) {

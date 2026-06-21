@@ -18,6 +18,7 @@ import (
 	"emplacc-api/internal/grpc/client"
 	infragit "emplacc-api/internal/infra/git"
 	"emplacc-api/internal/infra/keycloak"
+	"emplacc-api/internal/infra/mail"
 	"emplacc-api/internal/infra/storage"
 	"emplacc-api/internal/repository/postgres"
 	redisrepo "emplacc-api/internal/repository/redis"
@@ -84,12 +85,13 @@ func Bootstrap() (*App, error) {
 	// ── Repositories + services ──
 	userRepo := postgres.NewUserRepository(dbConn)
 	authService := service.NewAuthService(userRepo, keycloak.New())
+	notificationService := service.NewNotificationService(postgres.NewNotificationRepository(dbConn), userRepo, mail.New())
 	boardRepo := postgres.NewBoardRepository(dbConn)
 	boardService := service.NewBoardService(boardRepo)
 	reportRepo := postgres.NewReportRepository(dbConn)
 	reportService := service.NewReportService(reportRepo)
 	forumMessageRepo := postgres.NewForumMessageRepository(dbConn)
-	forumMessageService := service.NewForumMessageService(forumMessageRepo)
+	forumMessageService := service.NewForumMessageService(forumMessageRepo, notificationService)
 	problemRepo := postgres.NewProblemRepository(dbConn)
 	projectRepo := postgres.NewProjectRepository(dbConn)
 	projectService := service.NewProjectService(projectRepo)
@@ -101,7 +103,6 @@ func Bootstrap() (*App, error) {
 	statusService := service.NewStatusService(statusRepo)
 	subscriptionRepo := postgres.NewSubscriptionRepository(dbConn)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo)
-	notificationService := service.NewNotificationService(postgres.NewNotificationRepository(dbConn))
 	taskRepo := postgres.NewTaskRepository(dbConn)
 	taskService := service.NewTaskService(taskRepo, notificationService)
 	conveyorRepo := postgres.NewConveyorRepository(dbConn)

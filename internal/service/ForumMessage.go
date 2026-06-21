@@ -21,12 +21,14 @@ type ForumMessageService interface {
 }
 
 type forumMessageService struct {
-	repo ports.ForumMessageRepository
+	repo     ports.ForumMessageRepository
+	notifier ports.Notifier
 }
 
-func NewForumMessageService(repo ports.ForumMessageRepository) ForumMessageService {
+func NewForumMessageService(repo ports.ForumMessageRepository, notifier ports.Notifier) ForumMessageService {
 	return &forumMessageService{
-		repo: repo,
+		repo:     repo,
+		notifier: notifier,
 	}
 }
 
@@ -93,6 +95,15 @@ func (s *forumMessageService) CreateForumMessage(req request.CreateForumMessageR
 	}
 
 	publishGlobal(StreamEvent{Type: "forum.message.created", WorkItemID: problemId.String()})
+
+	// Уведомляем автора родительского сообщения об ответе (если это reply и не сам себе).
+	if replyToID != nil && s.notifier != nil {
+		if parent, err := s.repo.GetForumMessageById(*replyToID); err == nil && parent != nil && parent.CreatorID != nil {
+			if creatorId == nil || *parent.CreatorID != *creatorId {
+				s.notifier.Notify(*parent.CreatorID, "forum.reply", "Новый ответ на ваше сообщение", "", "problem", &problemId)
+			}
+		}
+	}
 	return fm.ID, nil
 }
 
