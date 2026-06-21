@@ -243,6 +243,8 @@ func RegisterConveyorRoutes(e Router, svc service.ConveyorService, pmImport serv
 	approvals.POST("/:id/deny", c.DenyApproval, employeeMw)
 
 	conveyor := e.Group("/api/conveyor")
+	conveyor.GET("/inbox", c.ListAgentInbox, employeeMw)
+	conveyor.POST("/inbox/:item_id/ack", c.AckAgentInboxItem, employeeMw)
 	conveyor.POST("/pm-import", c.ImportPMCanon, employeeMw)
 	conveyor.GET("/pending-approvals", c.ListPendingApprovals, managerMw)
 }
