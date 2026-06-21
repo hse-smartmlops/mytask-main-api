@@ -6,17 +6,17 @@ import (
 
 	"emplacc-api/internal/service"
 
-	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
 type conveyorInboxService interface {
 	ListAgentInbox(ctx context.Context, actor service.ConveyorActor) ([]service.AgentInboxItemResponse, error)
-	AckAgentInboxItem(ctx context.Context, actor service.ConveyorActor, itemID uuid.UUID, state string) (*service.AgentInboxItemResponse, error)
+	AckAgentInboxItem(ctx context.Context, actor service.ConveyorActor, req service.AckAgentInboxItemRequest) (*service.AgentInboxItemResponse, error)
 }
 
 type conveyorInboxAckRequest struct {
-	State string `json:"state"`
+	State          string `json:"state"`
+	IdempotencyKey string `json:"idempotency_key" example:"inbox-ack-1"`
 }
 
 // ListAgentInbox godoc
@@ -71,7 +71,7 @@ func (c *ConveyorController) AckAgentInboxItem(ctx echo.Context) error {
 	if !ok {
 		return conveyorError(ctx, service.ErrValidation)
 	}
-	item, err := svc.AckAgentInboxItem(ctx.Request().Context(), actor, itemID, req.State)
+	item, err := svc.AckAgentInboxItem(ctx.Request().Context(), actor, service.AckAgentInboxItemRequest{ItemID: itemID, State: req.State, IdempotencyKey: idempotencyKey(ctx, req.IdempotencyKey)})
 	if err != nil {
 		return conveyorError(ctx, err)
 	}

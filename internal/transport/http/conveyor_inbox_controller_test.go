@@ -38,20 +38,23 @@ func TestConveyorControllerAcksAgentInboxItemForCurrentActor(t *testing.T) {
 	e := echo.New()
 	actorID := uuid.New()
 	itemID := uuid.New()
-	body := strings.NewReader(`{"state":"read"}`)
+	body := strings.NewReader(`{"state":"read","idempotency_key":"body-key"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/conveyor/inbox/"+itemID.String()+"/ack", body)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Idempotency-Key", "header-key")
 	rec := httptest.NewRecorder()
 	ctx := e.NewContext(req, rec)
 	ctx.Set("user_id", actorID.String())
 	ctx.SetParamNames("item_id")
 	ctx.SetParamValues(itemID.String())
-	controller := &ConveyorController{svc: fakeConveyorService{inboxItem: &service.AgentInboxItemResponse{ID: itemID, Kind: "question", Source: "forum", Title: "Question", AckState: models.AgentInboxAckStateRead}}}
+	var ackReq service.AckAgentInboxItemRequest
+	controller := &ConveyorController{svc: fakeConveyorService{inboxItem: &service.AgentInboxItemResponse{ID: itemID, Kind: "question", Source: "forum", Title: "Question", AckState: models.AgentInboxAckStateRead}, ackInboxReq: &ackReq}}
 
 	err := controller.AckAgentInboxItem(ctx)
 
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "header-key", ackReq.IdempotencyKey)
 	require.JSONEq(t, `{"id":"`+itemID.String()+`","kind":"question","source":"forum","title":"Question","summary":"","priority":0,"action_required":false,"ack_state":"read","created_at":"0001-01-01T00:00:00Z","updated_at":"0001-01-01T00:00:00Z"}`, strings.TrimSpace(rec.Body.String()))
 }
 
