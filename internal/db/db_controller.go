@@ -87,6 +87,7 @@ func GetDBConnection() *gorm.DB {
 		&models.TaskLink{},
 		&models.WorkOrder{},
 		&models.AgentRun{},
+		&models.AgentInboxItem{},
 		&models.IdempotencyRecord{},
 		&models.GeneratedReport{},
 		&models.ForumDigest{},

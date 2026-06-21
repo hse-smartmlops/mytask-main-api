@@ -49,6 +49,10 @@ type ConveyorRepository interface {
 	ListAgentRuns(ctx context.Context, workItemID uuid.UUID) ([]models.AgentRun, error)
 	ListStaleAgentRuns(ctx context.Context, cutoff time.Time) ([]models.AgentRun, error)
 	UpdateAgentRun(ctx context.Context, run *models.AgentRun) error
+	CreateAgentInboxItem(ctx context.Context, item *models.AgentInboxItem) error
+	ListAgentInboxItems(ctx context.Context, recipientID uuid.UUID) ([]models.AgentInboxItem, error)
+	GetAgentInboxItem(ctx context.Context, id uuid.UUID) (*models.AgentInboxItem, error)
+	UpdateAgentInboxItemAck(ctx context.Context, itemID uuid.UUID, recipientID uuid.UUID, state string, at time.Time) error
 	ListProjectReportSources(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]ProjectReportSource, error)
 	CreateGeneratedReport(ctx context.Context, report *models.GeneratedReport) error
 	GetGeneratedReport(ctx context.Context, id uuid.UUID) (*models.GeneratedReport, error)
