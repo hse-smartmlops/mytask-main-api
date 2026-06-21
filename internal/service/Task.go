@@ -199,6 +199,14 @@ func (s *taskService) UpdateTask(taskID uuid.UUID, req request.TaskUpdateRequest
 		return errors.New("no fields to update")
 	}
 
+	// Запоминаем прежнего исполнителя ДО апдейта — чтобы уведомить только при реальной смене.
+	var prevAssignee *uuid.UUID
+	if req.AssignedTo != nil && *req.AssignedTo != "" {
+		if cur, err := s.repo.GetTaskByID(taskID); err == nil && cur != nil {
+			prevAssignee = cur.AssignedTo
+		}
+	}
+
 	updates["updated_at"] = time.Now()
 
 	updated, err := s.repo.UpdateTask(taskID, updates)
@@ -213,7 +221,9 @@ func (s *taskService) UpdateTask(taskID uuid.UUID, req request.TaskUpdateRequest
 	publishGlobal(StreamEvent{Type: "task.updated", WorkItemID: taskID.String()})
 	if req.AssignedTo != nil && *req.AssignedTo != "" {
 		if assignedUUID, err := uuid.Parse(*req.AssignedTo); err == nil {
-			s.notify(assignedUUID, "task.assigned", "Вам назначена задача", "", taskID)
+			if prevAssignee == nil || *prevAssignee != assignedUUID {
+				s.notify(assignedUUID, "task.assigned", "Вам назначена задача", "", taskID)
+			}
 		}
 	}
 	return nil

@@ -21,11 +21,17 @@ type NotificationService interface {
 type notificationService struct {
 	repo     ports.NotificationRepository
 	userRepo ports.UserRepository
-	mailer   ports.Mailer // optional (nil → email disabled)
+	mailer   ports.Mailer  // optional (nil → email disabled)
+	emailSem chan struct{} // ограничивает число одновременных email-горутин
 }
 
 func NewNotificationService(repo ports.NotificationRepository, userRepo ports.UserRepository, mailer ports.Mailer) NotificationService {
-	return &notificationService{repo: repo, userRepo: userRepo, mailer: mailer}
+	return &notificationService{
+		repo:     repo,
+		userRepo: userRepo,
+		mailer:   mailer,
+		emailSem: make(chan struct{}, 8),
+	}
 }
 
 // Notify создаёт уведомление и шлёт realtime-сигнал. Best-effort: ошибка БД не
@@ -53,8 +59,18 @@ func (s *notificationService) Notify(userID uuid.UUID, typ, title, body, entityT
 	publishGlobal(StreamEvent{Type: "notification", WorkItemID: userID.String()})
 
 	// Email — best-effort, в фоне, чтобы не блокировать бизнес-операцию на SMTP.
+	// Семафор ограничивает число одновременных отправок; при перегрузе письмо
+	// тихо пропускаем (in-app/SSE уже доставлены).
 	if s.mailer != nil && s.userRepo != nil {
-		go s.sendEmail(userID, title, body)
+		select {
+		case s.emailSem <- struct{}{}:
+			go func() {
+				defer func() { <-s.emailSem }()
+				s.sendEmail(userID, title, body)
+			}()
+		default:
+			log.Printf("notify email: queue full, skipping email for %s", userID)
+		}
 	}
 }
 

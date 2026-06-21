@@ -20,16 +20,20 @@ func RegisterStreamRoutes(e Router, hub *service.EventHub, sessionService servic
 		if token == "" {
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "missing token"})
 		}
+		var userID string // для адресной доставки notification-событий
 		switch {
 		case strings.HasPrefix(token, "sess_"):
 			v, err := sessionService.Validate(token)
 			if err != nil || v.Expired {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "session invalid"})
 			}
+			userID = v.UserID
 		case strings.HasPrefix(token, "emplacc_"):
-			if _, err := apiTokenService.ValidateToken(token); err != nil {
+			u, err := apiTokenService.ValidateToken(token)
+			if err != nil {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token"})
 			}
+			userID = u.ID.String()
 		default:
 			return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unknown token type"})
 		}
@@ -58,6 +62,11 @@ func RegisterStreamRoutes(e Router, hub *service.EventHub, sessionService servic
 			case ev, ok := <-ch:
 				if !ok {
 					return nil
+				}
+				// notification-события адресные: шлём только их получателю.
+				// Остальные (task/board/forum) — широковещательные сигналы инвалидации.
+				if ev.Type == "notification" && ev.WorkItemID != "" && ev.WorkItemID != userID {
+					continue
 				}
 				data, _ := json.Marshal(ev)
 				// Фиксированное имя события — чтобы фронт ловил всё одним обработчиком; тип внутри data.

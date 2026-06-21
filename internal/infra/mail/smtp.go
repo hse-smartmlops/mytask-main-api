@@ -3,12 +3,20 @@
 package mail
 
 import (
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"os"
 	"strings"
+	"time"
 
 	"emplacc-api/internal/ports"
+)
+
+const (
+	dialTimeout = 10 * time.Second
+	sendTimeout = 20 * time.Second
 )
 
 type smtpMailer struct {
@@ -43,13 +51,45 @@ func New() ports.Mailer {
 	}
 }
 
+// Send отправляет письмо с явными таймаутами на dial и весь обмен, чтобы зависший
+// SMTP не держал горутину бесконечно (вместо smtp.SendMail без дедлайнов).
 func (m *smtpMailer) Send(to, subject, body string) error {
 	if to == "" {
 		return fmt.Errorf("empty recipient")
 	}
-	var auth smtp.Auth
+
+	conn, err := net.DialTimeout("tcp", m.addr, dialTimeout)
+	if err != nil {
+		return fmt.Errorf("dial %s: %w", m.addr, err)
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(sendTimeout))
+
+	c, err := smtp.NewClient(conn, m.host)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(&tls.Config{ServerName: m.host}); err != nil {
+			return err
+		}
+	}
 	if m.username != "" {
-		auth = smtp.PlainAuth("", m.username, m.password, m.host)
+		if err := c.Auth(smtp.PlainAuth("", m.username, m.password, m.host)); err != nil {
+			return err
+		}
+	}
+	if err := c.Mail(m.from); err != nil {
+		return err
+	}
+	if err := c.Rcpt(to); err != nil {
+		return err
+	}
+	w, err := c.Data()
+	if err != nil {
+		return err
 	}
 	msg := strings.Join([]string{
 		"From: " + m.from,
@@ -60,5 +100,11 @@ func (m *smtpMailer) Send(to, subject, body string) error {
 		"",
 		body,
 	}, "\r\n")
-	return smtp.SendMail(m.addr, auth, m.from, []string{to}, []byte(msg))
+	if _, err := w.Write([]byte(msg)); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+	return c.Quit()
 }
