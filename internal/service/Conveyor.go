@@ -1932,6 +1932,8 @@ func (s *conveyorService) createEvent(ctx context.Context, repo ConveyorReposito
 	if err := repo.CreateEvent(ctx, event); err != nil {
 		return nil, err
 	}
+	// Realtime: лёгкий сигнал в SSE-шину (no-op если хаб не выставлен, напр. в тестах).
+	publishGlobal(StreamEvent{Type: eventType, WorkItemID: taskID.String()})
 	return event, nil
 }
 

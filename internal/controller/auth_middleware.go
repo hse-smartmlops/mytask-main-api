@@ -30,7 +30,8 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 			// чтобы префикс не открывал случайно похожие пути (напр. /authz, /eventlog).
 			if c.Request().Method == http.MethodOptions ||
 				p == "/swagger" || strings.HasPrefix(p, "/swagger/") ||
-				p == "/auth" || strings.HasPrefix(p, "/auth/") {
+				p == "/auth" || strings.HasPrefix(p, "/auth/") ||
+				p == "/v2/stream" {
 				return next(c)
 			}
 

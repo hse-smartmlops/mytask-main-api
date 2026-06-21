@@ -121,6 +121,10 @@ func main() {
 	sessionRepo := repository.NewSessionRepository(rdb)
 	sessionService := service.NewSessionService(sessionRepo)
 
+	// SSE realtime: in-memory шина событий; conveyor.createEvent публикует в неё через GlobalEventHub.
+	eventHub := service.NewEventHub()
+	service.GlobalEventHub = eventHub
+
 	systemUserId, err = userService.CreateSystemUser()
 	if err != nil {
 		log.Fatalf("service error (create user): %v", err)
@@ -173,6 +177,9 @@ func main() {
 	if storageService != nil {
 		controller.RegisterUploadRoutes(e, storageService, userService)
 	}
+
+	// SSE realtime stream (/v2/stream) — auth по query-токену, см. Stream.go
+	controller.RegisterStreamRoutes(e, eventHub, sessionService, apiTokenService)
 
 	// Swagger UI
 	// Редиректим с /swagger на /swagger/index.html, чтобы работало без явного указания файла
