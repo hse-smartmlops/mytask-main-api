@@ -4,7 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 	"emplacc-api/internal/utils"
 	"errors"
 	"time"
@@ -28,10 +28,10 @@ type UserService interface {
 }
 
 type userService struct {
-	repo repository.UserRepository
+	repo ports.UserRepository
 }
 
-func NewUserService(repo repository.UserRepository) UserService {
+func NewUserService(repo ports.UserRepository) UserService {
 	return &userService{
 		repo: repo,
 	}

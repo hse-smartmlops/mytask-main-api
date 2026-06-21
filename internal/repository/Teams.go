@@ -2,6 +2,7 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 	"errors"
 
 	"github.com/google/uuid"
@@ -9,32 +10,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type TeamRepository interface {
-	GetTeams() ([]models.Team, error)
-	GetProjectTeams(projectID uuid.UUID) ([]models.ProjectTeam, error)
-	GetTeamByID(teamUUID uuid.UUID) (*models.Team, error)
-	CreateTeam(team models.Team) error
-	TeamExists(teamUUID uuid.UUID) (bool, error)
-	UpdateTeam(teamUUID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteTeam(teamIDParam string) (bool, error)
-	GetUser(userID string) (*models.User, error)
-	GetTeam(teamID string) (*models.Team, error)
-	GetProject(projectID string) (*models.Project, error)
-	CreateTeamMember(teamMember models.TeamMember) error
-	UpsertTeamMembers(teamMember []models.TeamMember) error
-	DeleteTeamMember(userID uuid.UUID, teamID uuid.UUID) (bool, error)
-	UpsertProjectTeam(projectTeam models.ProjectTeam) error
-	DeleteProjectTeam(teamID uuid.UUID, projectID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	GetUsersFromArray(userIDs []string) ([]models.User, error)
-	GetTeamsByUserID(userID uuid.UUID) ([]models.Team, error)
-	UpdateTeamMemberSpecialization(teamID, userID uuid.UUID, specialization string) (bool, error)
-}
-
 type teamRepository struct {
 	db *gorm.DB
 }
 
-func NewTeamRepository(db *gorm.DB) TeamRepository {
+func NewTeamRepository(db *gorm.DB) ports.TeamRepository {
 	return &teamRepository{
 		db: db,
 	}
@@ -61,7 +41,7 @@ func (r *teamRepository) GetTeamsByUserID(userID uuid.UUID) ([]models.Team, erro
 
 	err := r.db.Session(&gorm.Session{NewDB: true}).
 		Joins("JOIN team_members ON teams.id = team_members.team_id").
-		Where("team_members.user_id = ? AND teams.deleted = ? AND team_members.deleted = ?", 
+		Where("team_members.user_id = ? AND teams.deleted = ? AND team_members.deleted = ?",
 			userID, false, false).
 		Preload("TeamMembers", "deleted = ?", false).
 		Preload("TeamMembers.User", "deleted = ?", false).
@@ -190,11 +170,11 @@ func (r *teamRepository) GetUser(userID string) (*models.User, error) {
 }
 
 func (r *teamRepository) GetUsersFromArray(userIds []string) ([]models.User, error) {
-	if len(userIds) < 1{
+	if len(userIds) < 1 {
 		return []models.User{}, nil
 	}
 	userIDs := []uuid.UUID{}
-	for _, id := range userIds{
+	for _, id := range userIds {
 		userUUID, err := uuid.Parse(id)
 		if err != nil {
 			return nil, err
@@ -210,7 +190,6 @@ func (r *teamRepository) GetUsersFromArray(userIds []string) ([]models.User, err
 	}
 	return users, nil
 }
-
 
 func (r *teamRepository) GetTeam(teamID string) (*models.Team, error) {
 	var team models.Team

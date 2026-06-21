@@ -2,6 +2,7 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 	"errors"
 	"time"
 
@@ -10,20 +11,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type RoleRepository interface {
-	GetAllRoles(limit, offset int) ([]models.Role, int64, error)
-	GetRoleById(roleID uuid.UUID) (*models.Role, error)
-	CreateRole(role models.Role) error
-	UpdateRole(roleID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteRole(roleID uuid.UUID) (bool, error)
-	GetRoleByUserId(userID uuid.UUID) (*models.Role, error)
-}
-
 type roleRepository struct {
 	db *gorm.DB
 }
 
-func NewRoleRepository(db *gorm.DB) RoleRepository {
+func NewRoleRepository(db *gorm.DB) ports.RoleRepository {
 	return &roleRepository{
 		db: db,
 	}
@@ -52,19 +44,19 @@ func (r *roleRepository) GetAllRoles(limit, offset int) ([]models.Role, int64, e
 
 func (r *roleRepository) GetRoleByUserId(userID uuid.UUID) (*models.Role, error) {
 	var role models.Role
-	
+
 	// JOIN между roles и user_roles через таблицу связей
 	err := r.db.Session(&gorm.Session{NewDB: true}).Table("roles").Joins("JOIN user_roles ur ON ur.role_id = roles.id").
 		Where("ur.user_id = ? AND ur.deleted = FALSE AND roles.deleted = FALSE", userID).
 		First(&role).Error
-	
+
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("role not found for user")
 		}
 		return nil, err
 	}
-	
+
 	return &role, nil
 }
 
@@ -100,8 +92,8 @@ func (r *roleRepository) UpdateRole(roleID uuid.UUID, updateData map[string]inte
 			Model(&models.Role{}).
 			Where("id = ? AND deleted = FALSE", roleID).
 			Updates(updateData)
-		if res.Error != nil { 
-			return res.Error 
+		if res.Error != nil {
+			return res.Error
 		}
 		affected = res.RowsAffected
 		return nil
@@ -126,8 +118,8 @@ func (r *roleRepository) DeleteRole(roleID uuid.UUID) (bool, error) {
 			Model(&models.Role{}).
 			Where("id = ? AND deleted = FALSE", roleID).
 			Updates(update)
-		if res.Error != nil { 
-			return res.Error 
+		if res.Error != nil {
+			return res.Error
 		}
 		affected = res.RowsAffected
 		if affected == 0 {

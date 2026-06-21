@@ -2,25 +2,18 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type AttendanceRepository interface {
-	GetAllAttendances(limit, offset int) ([]models.Attendance, int64, error)
-	GetAttendancesByUserId(userID uuid.UUID) ([]models.Attendance, error)
-	CreateAttendance(attendance models.Attendance) error
-	UpdateAttendance(attendanceID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteAttendance(attendanceID uuid.UUID) (bool, error)
-}
-
 type attendanceRepository struct {
 	db *gorm.DB
 }
 
-func NewAttendanceRepository(db *gorm.DB) AttendanceRepository {
+func NewAttendanceRepository(db *gorm.DB) ports.AttendanceRepository {
 	return &attendanceRepository{
 		db: db,
 	}

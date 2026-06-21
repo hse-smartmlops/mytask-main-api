@@ -2,6 +2,7 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 	"errors"
 	"time"
 
@@ -9,21 +10,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type StatusRepository interface {
-	GetAllStatuses(limit, offset int) ([]models.Status, int64, error)
-	GetStatusesByBoardId(boardID uuid.UUID) ([]models.Status, error)
-	GetStatusByID(statusID uuid.UUID) (*models.Status, error)
-	BoardExists(boardID uuid.UUID) (bool, error)
-	CreateStatus(row models.Status) error
-	UpdateStatus(statusID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteStatus(statusID uuid.UUID) (bool, error)
-}
-
 type statusRepository struct {
 	db *gorm.DB
 }
 
-func NewStatusRepository(db *gorm.DB) StatusRepository {
+func NewStatusRepository(db *gorm.DB) ports.StatusRepository {
 	return &statusRepository{
 		db: db,
 	}
@@ -110,7 +101,9 @@ func (r *statusRepository) UpdateStatus(statusID uuid.UUID, updateData map[strin
 			Model(&models.Status{}).
 			Where("id = ? AND deleted = FALSE", statusID).
 			Updates(updateData)
-		if res.Error != nil { return res.Error }
+		if res.Error != nil {
+			return res.Error
+		}
 		affected = res.RowsAffected
 		return nil
 	})

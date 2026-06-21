@@ -2,6 +2,7 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 	"errors"
 	"time"
 
@@ -9,21 +10,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type BoardRepository interface {
-	GetAllBoards(limit, offset int) ([]models.Board, int64, error)
-	GetBoardById(boardID uuid.UUID) (*models.Board, error)
-	GetBoardByProjectId(projectID uuid.UUID) ([]models.Board, error)
-	CreateBoardWithStatuses(board models.Board, statuses []models.Status) error
-	UpdateBoard(boardID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteBoard(boardID uuid.UUID) (bool, error)
-	GetBoardByProjectIdWithUsersAndProject(projectID uuid.UUID) ([]models.Board, error)
-}
-
 type boardRepository struct {
 	db *gorm.DB
 }
 
-func NewBoardRepository(db *gorm.DB) BoardRepository {
+func NewBoardRepository(db *gorm.DB) ports.BoardRepository {
 	return &boardRepository{
 		db: db,
 	}

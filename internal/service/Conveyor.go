@@ -15,6 +15,7 @@ import (
 
 	models "emplacc-api/internal/domain"
 	llmclient "emplacc-api/internal/grpc/client"
+	"emplacc-api/internal/ports"
 	"emplacc-api/internal/repository"
 
 	"github.com/google/uuid"
@@ -32,7 +33,7 @@ var (
 	secretValuePattern  = regexp.MustCompile(`(?i)(emplacc_[A-Za-z0-9._-]+|sess_[A-Za-z0-9._-]+|Bearer\s+[A-Za-z0-9._-]+|(?:sk|pk|rk|ghp|github_pat|xox[baprs])-[-a-z0-9_]{12,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
 )
 
-type ConveyorRepository = repository.ConveyorRepository
+type ConveyorRepository = ports.ConveyorRepository
 
 type ConveyorService interface {
 	AuthorizeWorkItemAccess(ctx context.Context, actor ConveyorActor, taskID uuid.UUID) error

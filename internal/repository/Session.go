@@ -6,6 +6,8 @@ import (
 	"errors"
 	"time"
 
+	"emplacc-api/internal/ports"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -22,24 +24,13 @@ type sessionValue struct {
 	ExpireReason      string    `json:"expire_reason"`
 }
 
-type SessionData struct {
-	UserID            string
-	ExpiresAt         time.Time
-	AbsoluteExpiresAt time.Time
-	ExpireReason      string
-}
-
-type SessionRepository interface {
-	Save(hash string, data SessionData) error
-	Find(hash string) (*SessionData, error)
-	Rotate(hash string, newExpiresAt time.Time) error
-	Expire(hash string, reason string) error
-	Delete(hash string) error
-}
+// SessionData is retained as an alias for backward compatibility;
+// the canonical definition now lives in the ports package.
+type SessionData = ports.SessionData
 
 type sessionRepository struct{ rdb *redis.Client }
 
-func NewSessionRepository(rdb *redis.Client) SessionRepository {
+func NewSessionRepository(rdb *redis.Client) ports.SessionRepository {
 	return &sessionRepository{rdb: rdb}
 }
 

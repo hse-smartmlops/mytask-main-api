@@ -9,7 +9,7 @@ import (
 	"time"
 
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 
 	"github.com/google/uuid"
 )
@@ -23,7 +23,7 @@ type PMImportService interface {
 }
 
 type pmImportService struct {
-	repo repository.ConveyorRepository
+	repo ports.ConveyorRepository
 }
 
 type PMImportRequest struct {
@@ -98,7 +98,7 @@ type pmPulseRow struct {
 	Message   string
 }
 
-func NewPMImportService(repo repository.ConveyorRepository) PMImportService {
+func NewPMImportService(repo ports.ConveyorRepository) PMImportService {
 	return &pmImportService{repo: repo}
 }
 
@@ -127,7 +127,7 @@ func (s *pmImportService) ImportPMCanon(ctx context.Context, actor ConveyorActor
 	if req.DryRun {
 		return summary, nil
 	}
-	err = s.repo.WithTransaction(ctx, func(repo repository.ConveyorRepository) error {
+	err = s.repo.WithTransaction(ctx, func(repo ports.ConveyorRepository) error {
 		for _, ticket := range snapshot.tickets {
 			created, err := importPMTicket(ctx, repo, actor, ticket, req.StatusByPMState[ticket.State], snapshot.statusText)
 			if err != nil {
@@ -382,7 +382,7 @@ func readTSVRows(path string, expectedHeader []string) ([]pmTSVRow, error) {
 	return rows, nil
 }
 
-func importPMTicket(ctx context.Context, repo repository.ConveyorRepository, actor ConveyorActor, row pmTicketRow, statusID uuid.UUID, statusText string) (bool, error) {
+func importPMTicket(ctx context.Context, repo ports.ConveyorRepository, actor ConveyorActor, row pmTicketRow, statusID uuid.UUID, statusText string) (bool, error) {
 	id := PMImportStableID("ticket", row.ID)
 	if _, err := repo.GetTask(ctx, id); err == nil {
 		return false, nil
@@ -401,7 +401,7 @@ func importPMTicket(ctx context.Context, repo repository.ConveyorRepository, act
 	return true, nil
 }
 
-func importPMCriterion(ctx context.Context, repo repository.ConveyorRepository, actor ConveyorActor, row pmCriterionRow) (bool, error) {
+func importPMCriterion(ctx context.Context, repo ports.ConveyorRepository, actor ConveyorActor, row pmCriterionRow) (bool, error) {
 	id := PMImportStableID("criterion", row.Ticket+":"+row.ACID)
 	if _, err := repo.GetAcceptanceCriterion(ctx, id); err == nil {
 		return false, nil
@@ -423,7 +423,7 @@ func importPMCriterion(ctx context.Context, repo repository.ConveyorRepository, 
 	return true, nil
 }
 
-func importPMEvidence(ctx context.Context, repo repository.ConveyorRepository, actor ConveyorActor, row pmEvidenceRow) (bool, error) {
+func importPMEvidence(ctx context.Context, repo ports.ConveyorRepository, actor ConveyorActor, row pmEvidenceRow) (bool, error) {
 	id := PMImportStableID("evidence", fmt.Sprintf("%s:%d", row.Ticket, row.Line-1))
 	if _, err := repo.GetEvidence(ctx, id); err == nil {
 		return false, nil
@@ -446,7 +446,7 @@ func importPMEvidence(ctx context.Context, repo repository.ConveyorRepository, a
 	return true, nil
 }
 
-func (s *pmImportService) importPMEvent(ctx context.Context, repo repository.ConveyorRepository, actor ConveyorActor, row pmPulseRow) (bool, error) {
+func (s *pmImportService) importPMEvent(ctx context.Context, repo ports.ConveyorRepository, actor ConveyorActor, row pmPulseRow) (bool, error) {
 	id := PMImportStableID("event", fmt.Sprintf("pulse:%d:%s:%s", row.Line, row.Ticket, row.Type))
 	eventRepo, ok := repo.(PMImportEventRepository)
 	if !ok {
@@ -468,7 +468,7 @@ func (s *pmImportService) importPMEvent(ctx context.Context, repo repository.Con
 	return true, nil
 }
 
-func importPMDependencyLink(ctx context.Context, repo repository.ConveyorRepository, actor ConveyorActor, sourceTicket string, targetTicket string) (bool, error) {
+func importPMDependencyLink(ctx context.Context, repo ports.ConveyorRepository, actor ConveyorActor, sourceTicket string, targetTicket string) (bool, error) {
 	sourceID := PMImportStableID("ticket", sourceTicket)
 	targetID := PMImportStableID("ticket", targetTicket)
 	exists, err := repo.TaskLinkExists(ctx, sourceID, targetID, models.TaskLinkTypeBlocks)

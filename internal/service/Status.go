@@ -4,7 +4,7 @@ import (
 	"crypto/sha256"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 	"encoding/hex"
 	"errors"
 	"time"
@@ -22,10 +22,10 @@ type StatusService interface {
 }
 
 type statusService struct {
-	repo repository.StatusRepository
+	repo ports.StatusRepository
 }
 
-func NewStatusService(repo repository.StatusRepository) StatusService {
+func NewStatusService(repo ports.StatusRepository) StatusService {
 	return &statusService{
 		repo: repo,
 	}
@@ -88,13 +88,27 @@ func (s *statusService) CreateStatus(req request.CreateStatusRequest) (uuid.UUID
 
 func (s *statusService) UpdateStatus(statusID uuid.UUID, req request.UpdateStatusRequest) error {
 	update := make(map[string]interface{})
-	if req.Name != nil      { update["name"] = *req.Name }
-	if req.Color != nil     { update["color"] = *req.Color }
-	if req.IsDefault != nil { update["is_default"] = *req.IsDefault }
-	if req.IsActive != nil  { update["is_active"]  = *req.IsActive }
-	if req.IsOpen != nil    { update["is_open"]    = *req.IsOpen }
-	if req.BoardId != nil   { update["board_id"]   = *req.BoardId}
-	if req.Order != nil     { update["order"]      = *req.Order}
+	if req.Name != nil {
+		update["name"] = *req.Name
+	}
+	if req.Color != nil {
+		update["color"] = *req.Color
+	}
+	if req.IsDefault != nil {
+		update["is_default"] = *req.IsDefault
+	}
+	if req.IsActive != nil {
+		update["is_active"] = *req.IsActive
+	}
+	if req.IsOpen != nil {
+		update["is_open"] = *req.IsOpen
+	}
+	if req.BoardId != nil {
+		update["board_id"] = *req.BoardId
+	}
+	if req.Order != nil {
+		update["order"] = *req.Order
+	}
 	if len(update) == 0 {
 		return errors.New("no fields to update")
 	}

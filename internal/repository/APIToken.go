@@ -5,22 +5,15 @@ import (
 	"time"
 
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type APITokenRepository interface {
-	Create(t models.APIToken) error
-	ListByUser(userID uuid.UUID) ([]models.APIToken, error)
-	FindByHash(hash string) (*models.APIToken, error)
-	Revoke(userID uuid.UUID, tokenID uuid.UUID) error
-	UpdateLastUsed(tokenID uuid.UUID, at time.Time) error
-}
-
 type apiTokenRepository struct{ db *gorm.DB }
 
-func NewAPITokenRepository(db *gorm.DB) APITokenRepository {
+func NewAPITokenRepository(db *gorm.DB) ports.APITokenRepository {
 	return &apiTokenRepository{db: db}
 }
 

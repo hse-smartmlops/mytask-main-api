@@ -3,7 +3,7 @@ package service
 import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 	"errors"
 	"time"
 
@@ -19,19 +19,19 @@ type ProblemService interface {
 	CreateProblem(req request.ProblemCreateRequest) (uuid.UUID, error)
 	UpdateProblem(problemId uuid.UUID, req request.ProblemUpdateRequest) error
 	DeleteProblem(problemId uuid.UUID) error
-	CreateForumMessage(problemId uuid.UUID, description []string) (error)
+	CreateForumMessage(problemId uuid.UUID, description []string) error
 }
 
 type problemService struct {
-	repo repository.ProblemRepository
-	forumRepo repository.ForumMessageRepository
+	repo         ports.ProblemRepository
+	forumRepo    ports.ForumMessageRepository
 	systemUserId uuid.UUID
 }
 
-func NewProblemService(repo repository.ProblemRepository, forumRepo repository.ForumMessageRepository, systemUserId uuid.UUID) ProblemService {
+func NewProblemService(repo ports.ProblemRepository, forumRepo ports.ForumMessageRepository, systemUserId uuid.UUID) ProblemService {
 	return &problemService{
-		repo: repo,
-		forumRepo: forumRepo,
+		repo:         repo,
+		forumRepo:    forumRepo,
 		systemUserId: systemUserId,
 	}
 }
@@ -55,7 +55,7 @@ func (s *problemService) SearchProblems(query string, page, pageSize int) ([]mod
 	return s.repo.SearchProblems(query, pageSize, offset)
 }
 
-func (s *problemService) CreateForumMessage(problemId uuid.UUID, description []string) (error) {
+func (s *problemService) CreateForumMessage(problemId uuid.UUID, description []string) error {
 	now := time.Now()
 	del := false
 

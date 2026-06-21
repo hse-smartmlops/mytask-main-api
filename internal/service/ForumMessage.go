@@ -3,7 +3,7 @@ package service
 import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 	"errors"
 	"time"
 
@@ -21,10 +21,10 @@ type ForumMessageService interface {
 }
 
 type forumMessageService struct {
-	repo repository.ForumMessageRepository
+	repo ports.ForumMessageRepository
 }
 
-func NewForumMessageService(repo repository.ForumMessageRepository) ForumMessageService {
+func NewForumMessageService(repo ports.ForumMessageRepository) ForumMessageService {
 	return &forumMessageService{
 		repo: repo,
 	}

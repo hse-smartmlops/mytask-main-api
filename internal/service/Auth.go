@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -33,7 +33,7 @@ type authService struct {
 	realm          string
 	clientID       string
 	clientSecret   string
-	userRepo       repository.UserRepository
+	userRepo       ports.UserRepository
 }
 
 type AuthResponse struct {
@@ -56,7 +56,7 @@ type TokenResponse struct {
 	Scope            string `json:"scope,omitempty"`
 }
 
-func NewAuthService(userRepo repository.UserRepository) AuthService {
+func NewAuthService(userRepo ports.UserRepository) AuthService {
 	return &authService{
 		keycloakClient: *gocloak.NewClient(os.Getenv("KEYCLOAK_URL")),
 		realm:          os.Getenv("KEYCLOAK_REALM"),
@@ -189,49 +189,49 @@ func (s *authService) ValidateToken(token string) error {
 }
 
 func (s *authService) ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, error) {
-    endpoint := strings.TrimRight(os.Getenv("KEYCLOAK_URL"), "/") +
-        "/realms/" + os.Getenv("KEYCLOAK_REALM") + "/protocol/openid-connect/token"
+	endpoint := strings.TrimRight(os.Getenv("KEYCLOAK_URL"), "/") +
+		"/realms/" + os.Getenv("KEYCLOAK_REALM") + "/protocol/openid-connect/token"
 
-    data := url.Values{}
-    data.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
-    data.Set("subject_token", subjectToken)
-    data.Set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
-    data.Set("client_id", s.clientID)
-    data.Set("client_secret", s.clientSecret)
-    data.Set("scope", "openid") // Основной scope для OpenID Connect
+	data := url.Values{}
+	data.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+	data.Set("subject_token", subjectToken)
+	data.Set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
+	data.Set("client_id", s.clientID)
+	data.Set("client_secret", s.clientSecret)
+	data.Set("scope", "openid") // Основной scope для OpenID Connect
 
-    log.Printf("Exchanging token with scope: openid")
+	log.Printf("Exchanging token with scope: openid")
 
-    req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
-    if err != nil {
-        log.Printf("Error creating request: %v", err)
-        return nil, err
-    }
-    req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
+	if err != nil {
+		log.Printf("Error creating request: %v", err)
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-    resp, err := http.DefaultClient.Do(req)
-    if err != nil {
-        log.Printf("Error making request: %v", err)
-        return nil, err
-    }
-    defer resp.Body.Close()
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Printf("Error making request: %v", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
 
-    body, err := io.ReadAll(resp.Body)
-    if err != nil {
-        return nil, fmt.Errorf("error reading response: %v", err)
-    }
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
 
-    if resp.StatusCode != http.StatusOK {
-        log.Printf("Token exchange failed with status %d: %s", resp.StatusCode, body)
-        return nil, fmt.Errorf("token exchange failed: %s", body)
-    }
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Token exchange failed with status %d: %s", resp.StatusCode, body)
+		return nil, fmt.Errorf("token exchange failed: %s", body)
+	}
 
-    var tokenResp TokenResponse
-    if err := json.Unmarshal(body, &tokenResp); err != nil {
-        return nil, fmt.Errorf("error parsing token response: %v", err)
-    }
+	var tokenResp TokenResponse
+	if err := json.Unmarshal(body, &tokenResp); err != nil {
+		return nil, fmt.Errorf("error parsing token response: %v", err)
+	}
 
-    return &tokenResp, nil
+	return &tokenResp, nil
 }
 
 func (s *authService) ValidateTokenForMiddleware(token string) error {

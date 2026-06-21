@@ -4,7 +4,7 @@ import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 	"emplacc-api/internal/utils"
 	"errors"
 	"sort"
@@ -33,10 +33,10 @@ type TaskService interface {
 }
 
 type taskService struct {
-	repo repository.TaskRepository
+	repo ports.TaskRepository
 }
 
-func NewTaskService(repo repository.TaskRepository) TaskService {
+func NewTaskService(repo ports.TaskRepository) TaskService {
 	return &taskService{
 		repo: repo,
 	}

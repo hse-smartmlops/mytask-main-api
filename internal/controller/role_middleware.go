@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
@@ -34,7 +34,7 @@ func extractSubFromJWT(token string) (uuid.UUID, error) {
 
 // RequireRoles — читает user_id из контекста (установлен AppAuthMiddleware).
 // Работает с сессионными токенами (sess_*) и MCP токенами (emplacc_*).
-func RequireRoles(roleRepo repository.RoleRepository, roles ...string) echo.MiddlewareFunc {
+func RequireRoles(roleRepo ports.RoleRepository, roles ...string) echo.MiddlewareFunc {
 	allowed := make(map[string]bool, len(roles))
 	for _, r := range roles {
 		allowed[strings.ToLower(r)] = true

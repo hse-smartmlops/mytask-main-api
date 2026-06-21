@@ -2,6 +2,7 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 	"errors"
 	"strings"
 	"time"
@@ -11,23 +12,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type ProjectRepository interface {
-	GetAllProjects(limit, offset int) ([]models.Project, int64, error)
-	GetProjectByID(projectID uuid.UUID) (*models.Project, error)
-	GetProjectsByUser(userID uuid.UUID) ([]models.Project, error)
-	GetTeamProjects(teamID uuid.UUID) ([]models.ProjectTeam, error)
-	GetProjectsByIDs(projectIDs []uuid.UUID) ([]models.Project, error)
-	CreateProjectWithBoardAndStatuses(project models.Project, board models.Board, statuses []models.Status) error
-	UpdateProject(projectID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteProject(projectID uuid.UUID) (bool, error)
-	SearchProjects(query, userID string, limit, offset int) ([]models.Project, int64, error)
-}
-
 type projectRepository struct {
 	db *gorm.DB
 }
 
-func NewProjectRepository(db *gorm.DB) ProjectRepository {
+func NewProjectRepository(db *gorm.DB) ports.ProjectRepository {
 	return &projectRepository{
 		db: db,
 	}
@@ -55,23 +44,23 @@ func (r *projectRepository) GetAllProjects(limit, offset int) ([]models.Project,
 }
 
 func (r *projectRepository) SearchProjects(query, userID string, limit, offset int) ([]models.Project, int64, error) {
-    if query == "" {
-        return []models.Project{}, 0, nil
-    }
+	if query == "" {
+		return []models.Project{}, 0, nil
+	}
 
-    var totalCount int64
-    var projects []models.Project
+	var totalCount int64
+	var projects []models.Project
 
-    // Подготавливаем поисковые запросы
-    searchQueries := prepareSearchQueries(query)
-    if len(searchQueries) == 0 {
-        return []models.Project{}, 0, nil
-    }
+	// Подготавливаем поисковые запросы
+	searchQueries := prepareSearchQueries(query)
+	if len(searchQueries) == 0 {
+		return []models.Project{}, 0, nil
+	}
 
-    // Приоритетная сортировка: сначала проекты команд пользователя, затем созданные им.
-    // userID связывается как параметр (а не конкатенацией) — иначе это SQL-инъекция в ORDER BY.
-    orderClause := clause.Expr{
-        SQL: `
+	// Приоритетная сортировка: сначала проекты команд пользователя, затем созданные им.
+	// userID связывается как параметр (а не конкатенацией) — иначе это SQL-инъекция в ORDER BY.
+	orderClause := clause.Expr{
+		SQL: `
         CASE
             WHEN EXISTS (
                 SELECT 1 FROM project_teams pt
@@ -84,68 +73,68 @@ func (r *projectRepository) SearchProjects(query, userID string, limit, offset i
         END ASC,
         projects.name ASC
     `,
-        Vars: []interface{}{userID, userID},
-    }
+		Vars: []interface{}{userID, userID},
+	}
 
-    // Базовый запрос
-    baseQuery := r.db.Session(&gorm.Session{NewDB: true}).Model(&models.Project{}).
-        Where("projects.deleted = ?", false)
+	// Базовый запрос
+	baseQuery := r.db.Session(&gorm.Session{NewDB: true}).Model(&models.Project{}).
+		Where("projects.deleted = ?", false)
 
-    // Добавляем условия Full-Text Search
-    baseQuery = addProjectFullTextConditions(baseQuery, searchQueries)
+	// Добавляем условия Full-Text Search
+	baseQuery = addProjectFullTextConditions(baseQuery, searchQueries)
 
-    // Считаем общее количество
-    if err := baseQuery.Count(&totalCount).Error; err != nil {
-        return nil, 0, err
-    }
+	// Считаем общее количество
+	if err := baseQuery.Count(&totalCount).Error; err != nil {
+		return nil, 0, err
+	}
 
-    if totalCount == 0 {
-        return []models.Project{}, 0, nil
-    }
+	if totalCount == 0 {
+		return []models.Project{}, 0, nil
+	}
 
-    // Получаем проекты с приоритетной сортировкой
-    err := baseQuery.
-        Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email").Where("deleted = ?", false)
-        }).
-        // Убираем лишние прелоады для оптимизации
-        Preload("ProjectTeams.Team.TeamMembers", func(db *gorm.DB) *gorm.DB {
-            return db.Session(&gorm.Session{}).Where("team_members.user_id = ?", userID).Limit(1) // Только нужного пользователя
-        }).
-        Limit(limit).
-        Offset(offset).
-        Order(orderClause).
-        Find(&projects).Error
+	// Получаем проекты с приоритетной сортировкой
+	err := baseQuery.
+		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Select("id, first_name, last_name, email").Where("deleted = ?", false)
+		}).
+		// Убираем лишние прелоады для оптимизации
+		Preload("ProjectTeams.Team.TeamMembers", func(db *gorm.DB) *gorm.DB {
+			return db.Session(&gorm.Session{}).Where("team_members.user_id = ?", userID).Limit(1) // Только нужного пользователя
+		}).
+		Limit(limit).
+		Offset(offset).
+		Order(orderClause).
+		Find(&projects).Error
 
-    return projects, totalCount, err
+	return projects, totalCount, err
 }
 
 func addProjectFullTextConditions(db *gorm.DB, searchQueries []string) *gorm.DB {
-    if len(searchQueries) == 0 {
-        return db
-    }
+	if len(searchQueries) == 0 {
+		return db
+	}
 
-    var conditions []string
-    var args []interface{}
+	var conditions []string
+	var args []interface{}
 
-    for _, tsQuery := range searchQueries {
-        condition := `(
+	for _, tsQuery := range searchQueries {
+		condition := `(
             to_tsvector('russian', projects.name) @@ to_tsquery(?) OR 
             to_tsvector('russian', projects.description) @@ to_tsquery(?) OR 
             to_tsvector('russian', projects.gitlab_url) @@ to_tsquery(?)
         )`
-        
-        conditions = append(conditions, condition)
-        for i := 0; i < 3; i++ {
-            args = append(args, tsQuery)
-        }
-    }
 
-    if len(conditions) > 0 {
-        return db.Where(strings.Join(conditions, " OR "), args...)
-    }
+		conditions = append(conditions, condition)
+		for i := 0; i < 3; i++ {
+			args = append(args, tsQuery)
+		}
+	}
 
-    return db
+	if len(conditions) > 0 {
+		return db.Where(strings.Join(conditions, " OR "), args...)
+	}
+
+	return db
 }
 
 func (r *projectRepository) GetProjectByID(projectID uuid.UUID) (*models.Project, error) {
@@ -243,8 +232,8 @@ func (r *projectRepository) UpdateProject(projectID uuid.UUID, updateData map[st
 			Model(&models.Project{}).
 			Where("id = ? AND deleted = FALSE", projectID).
 			Updates(updateData)
-		if res.Error != nil { 
-			return res.Error 
+		if res.Error != nil {
+			return res.Error
 		}
 		affected = res.RowsAffected
 		return nil

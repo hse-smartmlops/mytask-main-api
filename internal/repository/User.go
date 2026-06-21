@@ -3,6 +3,7 @@ package repository
 import (
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
+	"emplacc-api/internal/ports"
 	"emplacc-api/internal/utils"
 	"errors"
 	"log"
@@ -13,28 +14,11 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type UserRepository interface {
-	GetAllUsers(limit, offset int) ([]models.User, int64, error)
-	SearchUsers(query string, limit, offset int) ([]models.User, int64, error)
-	GetUserById(userId uuid.UUID) (*models.User, error)
-	GetUserByEmail(email string) (*models.User, error)
-	CreateUser(user models.User) error
-	UpdateUser(userId uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteUser(userId uuid.UUID) (bool, error)
-	BanUser(userId uuid.UUID) (bool, error)
-	RestoreUser(req request.RestoreUserRequest) (uuid.UUID, error)
-	GetUser(userID string) (*models.User, error)
-	GetRole(roleID string) (*models.Role, error)
-	CreateUserRole(userRole models.UserRole) error
-	RemoveUserRole(userID uuid.UUID, roleID uuid.UUID) (bool, error)
-	CreateUserWithID(req request.UserCreateRequest, userID uuid.UUID) error
-}
-
 type userRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) UserRepository {
+func NewUserRepository(db *gorm.DB) ports.UserRepository {
 	return &userRepository{
 		db: db,
 	}
@@ -109,7 +93,7 @@ func (r *userRepository) GetUserById(userId uuid.UUID) (*models.User, error) {
 func (r *userRepository) CreateUser(user models.User) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		log.Printf("CreateUser: db transaction started for id=%s", user.ID)
-		
+
 		if err := tx.Omit("UserRoles").Create(&user).Error; err != nil {
 			return err
 		}

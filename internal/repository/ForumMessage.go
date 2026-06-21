@@ -2,6 +2,7 @@ package repository
 
 import (
 	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 	"errors"
 	"time"
 
@@ -9,20 +10,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type ForumMessageRepository interface {
-	GetAllForumMessages(limit, offset int) ([]models.ForumMessage, int64, error)
-	GetForumMessagesByProblemId(problemID uuid.UUID, limit, offset int) ([]models.ForumMessage, int64, error)
-	GetForumMessageById(messageID uuid.UUID) (*models.ForumMessage, error)
-	CreateForumMessage(fm models.ForumMessage) error
-	UpdateForumMessage(messageID uuid.UUID, updateData map[string]interface{}) (bool, error)
-	DeleteForumMessage(messageID uuid.UUID) (bool, error)
-}
-
 type forumMessageRepository struct {
 	db *gorm.DB
 }
 
-func NewForumMessageRepository(db *gorm.DB) ForumMessageRepository {
+func NewForumMessageRepository(db *gorm.DB) ports.ForumMessageRepository {
 	return &forumMessageRepository{
 		db: db,
 	}

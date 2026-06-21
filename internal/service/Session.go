@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"emplacc-api/internal/ports"
 	"emplacc-api/internal/repository"
 )
 
@@ -37,10 +38,10 @@ type SessionService interface {
 }
 
 type sessionService struct {
-	repo repository.SessionRepository
+	repo ports.SessionRepository
 }
 
-func NewSessionService(repo repository.SessionRepository) SessionService {
+func NewSessionService(repo ports.SessionRepository) SessionService {
 	return &sessionService{repo: repo}
 }
 

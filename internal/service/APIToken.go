@@ -9,7 +9,7 @@ import (
 	"time"
 
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 
 	"github.com/google/uuid"
 )
@@ -37,11 +37,11 @@ type APITokenService interface {
 }
 
 type apiTokenService struct {
-	repo     repository.APITokenRepository
-	userRepo repository.UserRepository
+	repo     ports.APITokenRepository
+	userRepo ports.UserRepository
 }
 
-func NewAPITokenService(repo repository.APITokenRepository, userRepo repository.UserRepository) APITokenService {
+func NewAPITokenService(repo ports.APITokenRepository, userRepo ports.UserRepository) APITokenService {
 	return &apiTokenService{repo: repo, userRepo: userRepo}
 }
 

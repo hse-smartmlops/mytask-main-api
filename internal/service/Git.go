@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 	"errors"
 	"regexp"
 	"strings"
@@ -58,12 +58,12 @@ type GitService interface {
 }
 
 type gitService struct {
-	repo      repository.GitRepository
-	userRepo  repository.UserRepository
+	repo      ports.GitRepository
+	userRepo  ports.UserRepository
 	providers map[string]CommitProvider
 }
 
-func NewGitService(repo repository.GitRepository, userRepo repository.UserRepository, providers ...CommitProvider) GitService {
+func NewGitService(repo ports.GitRepository, userRepo ports.UserRepository, providers ...CommitProvider) GitService {
 	reg := make(map[string]CommitProvider, len(providers))
 	for _, p := range providers {
 		if p != nil {
