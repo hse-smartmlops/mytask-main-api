@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -25,10 +27,20 @@ type AgentInboxItemResponse struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+type AckAgentInboxItemRequest struct {
+	ItemID         uuid.UUID `json:"item_id"`
+	State          string    `json:"state"`
+	IdempotencyKey string    `json:"idempotency_key"`
+}
+
+const inboxAckOperation = "inbox.ack"
+
 type conveyorInboxRepository interface {
 	ListAgentInboxItems(ctx context.Context, recipientID uuid.UUID) ([]models.AgentInboxItem, error)
 	GetAgentInboxItem(ctx context.Context, id uuid.UUID) (*models.AgentInboxItem, error)
 	UpdateAgentInboxItemAck(ctx context.Context, itemID uuid.UUID, recipientID uuid.UUID, state string, at time.Time) error
+	GetIdempotencyRecord(ctx context.Context, actorID uuid.UUID, operation string, key string) (*models.IdempotencyRecord, error)
+	CreateIdempotencyRecord(ctx context.Context, record *models.IdempotencyRecord) error
 }
 
 func (s *conveyorService) ListAgentInbox(ctx context.Context, actor ConveyorActor) ([]AgentInboxItemResponse, error) {
@@ -65,41 +77,102 @@ func (s *conveyorService) ListAgentInbox(ctx context.Context, actor ConveyorActo
 	return visible, nil
 }
 
-func (s *conveyorService) AckAgentInboxItem(ctx context.Context, actor ConveyorActor, itemID uuid.UUID, state string) (*AgentInboxItemResponse, error) {
+func (s *conveyorService) AckAgentInboxItem(ctx context.Context, actor ConveyorActor, req AckAgentInboxItemRequest) (*AgentInboxItemResponse, error) {
 	if actor.ActorID == uuid.Nil {
 		return nil, ErrPermissionDenied
 	}
-	if itemID == uuid.Nil || !validAgentInboxAckState(state) {
+	if req.ItemID == uuid.Nil || !validAgentInboxAckState(req.State) {
 		return nil, fmt.Errorf("%w: invalid inbox ack", ErrValidation)
 	}
+	hash, err := requestHash(req)
+	if err != nil {
+		return nil, err
+	}
+	var response *AgentInboxItemResponse
+	err = s.repo.WithTransaction(ctx, func(tx ConveyorRepository) error {
+		repo, ok := tx.(conveyorInboxRepository)
+		if !ok {
+			return fmt.Errorf("%w: inbox repository is not configured", ErrValidation)
+		}
+		if req.IdempotencyKey != "" {
+			record, err := repo.GetIdempotencyRecord(ctx, actor.ActorID, inboxAckOperation, req.IdempotencyKey)
+			if err == nil {
+				if record.RequestHash != hash {
+					return ErrConflict
+				}
+				var previous AgentInboxItemResponse
+				if err := json.Unmarshal(record.Result, &previous); err != nil {
+					return fmt.Errorf("decode inbox ack idempotency result: %w", err)
+				}
+				response = &previous
+				return nil
+			}
+			if !errors.Is(err, ErrNotFound) {
+				return err
+			}
+		}
+		item, err := repo.GetAgentInboxItem(ctx, req.ItemID)
+		if err != nil {
+			return err
+		}
+		if item.RecipientID != actor.ActorID {
+			return ErrPermissionDenied
+		}
+		if item.WorkItemID != nil {
+			allowed, err := tx.ActorCanAccessTask(ctx, actor.ActorID, *item.WorkItemID)
+			if err != nil {
+				return err
+			}
+			if !allowed {
+				return ErrPermissionDenied
+			}
+		}
+		now := time.Now()
+		if err := repo.UpdateAgentInboxItemAck(ctx, item.ID, actor.ActorID, req.State, now); err != nil {
+			return err
+		}
+		item.AckState = req.State
+		item.UpdatedAt = now
+		itemResponse := agentInboxItemResponse(*item)
+		if req.IdempotencyKey != "" {
+			encoded, err := json.Marshal(itemResponse)
+			if err != nil {
+				return err
+			}
+			record := &models.IdempotencyRecord{ID: uuid.New(), ActorID: actor.ActorID, Operation: inboxAckOperation, IdempotencyKey: req.IdempotencyKey, RequestHash: hash, Result: encoded, CreatedAt: now}
+			if err := repo.CreateIdempotencyRecord(ctx, record); err != nil {
+				return err
+			}
+		}
+		response = &itemResponse
+		return nil
+	})
+	if err != nil {
+		if req.IdempotencyKey != "" && isUniqueConstraintError(err) {
+			return s.replayInboxAckIdempotency(ctx, actor, req.IdempotencyKey, hash)
+		}
+		return nil, err
+	}
+	return response, nil
+}
+
+func (s *conveyorService) replayInboxAckIdempotency(ctx context.Context, actor ConveyorActor, key string, hash string) (*AgentInboxItemResponse, error) {
 	repo, err := s.inboxRepository()
 	if err != nil {
 		return nil, err
 	}
-	item, err := repo.GetAgentInboxItem(ctx, itemID)
+	record, err := repo.GetIdempotencyRecord(ctx, actor.ActorID, inboxAckOperation, key)
 	if err != nil {
 		return nil, err
 	}
-	if item.RecipientID != actor.ActorID {
-		return nil, ErrPermissionDenied
+	if record.RequestHash != hash {
+		return nil, ErrConflict
 	}
-	if item.WorkItemID != nil {
-		allowed, err := s.repo.ActorCanAccessTask(ctx, actor.ActorID, *item.WorkItemID)
-		if err != nil {
-			return nil, err
-		}
-		if !allowed {
-			return nil, ErrPermissionDenied
-		}
+	var previous AgentInboxItemResponse
+	if err := json.Unmarshal(record.Result, &previous); err != nil {
+		return nil, fmt.Errorf("decode inbox ack idempotency result: %w", err)
 	}
-	now := time.Now()
-	if err := repo.UpdateAgentInboxItemAck(ctx, item.ID, actor.ActorID, state, now); err != nil {
-		return nil, err
-	}
-	item.AckState = state
-	item.UpdatedAt = now
-	response := agentInboxItemResponse(*item)
-	return &response, nil
+	return &previous, nil
 }
 
 func (s *conveyorService) inboxRepository() (conveyorInboxRepository, error) {

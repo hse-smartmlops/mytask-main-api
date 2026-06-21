@@ -53,6 +53,8 @@ type ConveyorRepository interface {
 	ListAgentInboxItems(ctx context.Context, recipientID uuid.UUID) ([]models.AgentInboxItem, error)
 	GetAgentInboxItem(ctx context.Context, id uuid.UUID) (*models.AgentInboxItem, error)
 	UpdateAgentInboxItemAck(ctx context.Context, itemID uuid.UUID, recipientID uuid.UUID, state string, at time.Time) error
+	GetIdempotencyRecord(ctx context.Context, actorID uuid.UUID, operation string, key string) (*models.IdempotencyRecord, error)
+	CreateIdempotencyRecord(ctx context.Context, record *models.IdempotencyRecord) error
 	ListProjectReportSources(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]ProjectReportSource, error)
 	CreateGeneratedReport(ctx context.Context, report *models.GeneratedReport) error
 	GetGeneratedReport(ctx context.Context, id uuid.UUID) (*models.GeneratedReport, error)
@@ -64,8 +66,6 @@ type ConveyorRepository interface {
 	GetForumActionCandidate(ctx context.Context, id uuid.UUID) (*models.ForumActionCandidate, error)
 	ListForumActionCandidates(ctx context.Context, digestID uuid.UUID) ([]models.ForumActionCandidate, error)
 	UpdateForumActionCandidate(ctx context.Context, candidate *models.ForumActionCandidate) error
-	GetIdempotencyRecord(ctx context.Context, actorID uuid.UUID, operation string, key string) (*models.IdempotencyRecord, error)
-	CreateIdempotencyRecord(ctx context.Context, record *models.IdempotencyRecord) error
 	CreateWaiver(ctx context.Context, waiver *models.Waiver) error
 	GetWaiver(ctx context.Context, id uuid.UUID) (*models.Waiver, error)
 	CreateApprovalRequest(ctx context.Context, request *models.ApprovalRequest) error

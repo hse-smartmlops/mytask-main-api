@@ -56,7 +56,7 @@ type ConveyorService interface {
 	GetAgentRun(ctx context.Context, workItemID uuid.UUID, agentRunID uuid.UUID) (*models.AgentRun, error)
 	ListAgentRuns(ctx context.Context, workItemID uuid.UUID) ([]models.AgentRun, error)
 	ListAgentInbox(ctx context.Context, actor ConveyorActor) ([]AgentInboxItemResponse, error)
-	AckAgentInboxItem(ctx context.Context, actor ConveyorActor, itemID uuid.UUID, state string) (*AgentInboxItemResponse, error)
+	AckAgentInboxItem(ctx context.Context, actor ConveyorActor, req AckAgentInboxItemRequest) (*AgentInboxItemResponse, error)
 	GenerateProjectReport(ctx context.Context, actor ConveyorActor, req GenerateProjectReportRequest) (*GeneratedReportResponse, error)
 	GetGeneratedReport(ctx context.Context, reportID uuid.UUID) (*GeneratedReportResponse, error)
 	ExportGeneratedReportMarkdown(ctx context.Context, reportID uuid.UUID) (string, error)

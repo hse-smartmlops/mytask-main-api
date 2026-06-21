@@ -64,22 +64,29 @@ func TestConveyorServiceAckAgentInboxItemValidatesStateAndOwnership(t *testing.T
 	repo.inboxItems[itemID] = &models.AgentInboxItem{ID: itemID, RecipientID: actor.ActorID, WorkItemID: &workItemID, Kind: "question", Source: "forum", Title: "Question", AckState: models.AgentInboxAckStateDelivered, CreatedAt: now, UpdatedAt: now}
 	svc := NewConveyorService(repo)
 
-	_, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, uuid.Nil, models.AgentInboxAckStateRead)
+	_, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: uuid.Nil, State: models.AgentInboxAckStateRead})
 	require.ErrorIs(t, err, ErrValidation)
-	_, err = svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, itemID, "ignored")
+	_, err = svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: "ignored"})
 	require.ErrorIs(t, err, ErrValidation)
-	_, err = svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, itemID, " read ")
+	_, err = svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: " read "})
 	require.ErrorIs(t, err, ErrValidation)
 
-	readItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, itemID, models.AgentInboxAckStateRead)
+	readItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: models.AgentInboxAckStateRead})
 	require.NoError(t, err)
 	require.Equal(t, models.AgentInboxAckStateRead, readItem.AckState)
-	handledItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, itemID, models.AgentInboxAckStateHandled)
+	handledItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: models.AgentInboxAckStateHandled})
 	require.NoError(t, err)
 	require.Equal(t, models.AgentInboxAckStateHandled, handledItem.AckState)
-	retryItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, itemID, models.AgentInboxAckStateHandled)
+	retryItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: models.AgentInboxAckStateHandled})
 	require.NoError(t, err)
 	require.Equal(t, models.AgentInboxAckStateHandled, retryItem.AckState)
+	idempotentItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: models.AgentInboxAckStateRead, IdempotencyKey: "inbox-ack-1"})
+	require.NoError(t, err)
+	replayedItem, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: models.AgentInboxAckStateRead, IdempotencyKey: "inbox-ack-1"})
+	require.NoError(t, err)
+	require.True(t, idempotentItem.UpdatedAt.Equal(replayedItem.UpdatedAt))
+	_, err = svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: itemID, State: models.AgentInboxAckStateHandled, IdempotencyKey: "inbox-ack-1"})
+	require.ErrorIs(t, err, ErrConflict)
 }
 
 func TestConveyorServiceAckAgentInboxItemRejectsUnauthorizedRecipientAndWorkItem(t *testing.T) {
@@ -97,8 +104,8 @@ func TestConveyorServiceAckAgentInboxItemRejectsUnauthorizedRecipientAndWorkItem
 	repo.inboxItems[inaccessibleItemID] = &models.AgentInboxItem{ID: inaccessibleItemID, RecipientID: actor.ActorID, WorkItemID: &inaccessibleWorkItemID, Kind: "hidden", Source: "test", Title: "Hidden", AckState: models.AgentInboxAckStateDelivered, CreatedAt: now, UpdatedAt: now}
 	svc := NewConveyorService(repo)
 
-	_, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, otherRecipientItemID, models.AgentInboxAckStateRead)
+	_, err := svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: otherRecipientItemID, State: models.AgentInboxAckStateRead})
 	require.ErrorIs(t, err, ErrPermissionDenied)
-	_, err = svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, inaccessibleItemID, models.AgentInboxAckStateRead)
+	_, err = svc.(*conveyorService).AckAgentInboxItem(context.Background(), actor, AckAgentInboxItemRequest{ItemID: inaccessibleItemID, State: models.AgentInboxAckStateRead})
 	require.ErrorIs(t, err, ErrPermissionDenied)
 }
