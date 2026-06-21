@@ -678,6 +678,8 @@ func (s *conveyorService) CreateForumDigest(ctx context.Context, actor ConveyorA
 	if err != nil {
 		return nil, err
 	}
+	// Realtime: панель дайджеста у других клиентов перезагрузится по SSE.
+	publishGlobal(StreamEvent{Type: "forum.digest.created", WorkItemID: strings.TrimSpace(req.SourceID)})
 	return response, nil
 }
 
