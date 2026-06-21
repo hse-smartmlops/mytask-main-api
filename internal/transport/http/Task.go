@@ -568,6 +568,13 @@ func (tc *TaskController) GetTasksByUserId(c echo.Context) error {
 	// === МАППИНГ В TaskFull ===
 	tasksResp := make([]response.TaskFull, len(tasks))
 	for i, task := range tasks {
+		var projectInfo response.TaskProjectInfo
+		if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+			projectInfo = response.TaskProjectInfo{
+				ID:   task.Status.Board.Project.ID.String(),
+				Name: utils.GetString(task.Status.Board.Project.Name),
+			}
+		}
 		tasksResp[i] = response.TaskFull{
 			ID:            task.ID.String(),
 			Name:          utils.GetString(task.Name),
@@ -593,6 +600,7 @@ func (tc *TaskController) GetTasksByUserId(c echo.Context) error {
 					ProjectID: task.Status.Board.ProjectID.String(),
 				},
 			},
+			Project: projectInfo,
 			CreatedByUser: response.UserFull{
 				ID:        task.CreatedByUser.ID.String(),
 				FirstName: task.CreatedByUser.FirstName,
@@ -659,6 +667,13 @@ func (tc *TaskController) GetActiveTasksByUserId(c echo.Context) error {
 
 	tasksResp := make([]response.TaskFull, len(tasks))
 	for i, task := range tasks {
+		var projectInfo response.TaskProjectInfo
+		if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+			projectInfo = response.TaskProjectInfo{
+				ID:   task.Status.Board.Project.ID.String(),
+				Name: utils.GetString(task.Status.Board.Project.Name),
+			}
+		}
 		tasksResp[i] = response.TaskFull{
 			ID:            task.ID.String(),
 			Name:          utils.GetString(task.Name),
@@ -684,6 +699,7 @@ func (tc *TaskController) GetActiveTasksByUserId(c echo.Context) error {
 					ProjectID: task.Status.Board.ProjectID.String(),
 				},
 			},
+			Project: projectInfo,
 			CreatedByUser: response.UserFull{
 				ID:        task.CreatedByUser.ID.String(),
 				FirstName: task.CreatedByUser.FirstName,
@@ -872,6 +888,13 @@ func (tc *TaskController) GetUserProjectTasks(c echo.Context) error {
 
 	tasksResp := make([]response.TaskFull, len(tasks))
 	for i, task := range tasks {
+		var projectInfo response.TaskProjectInfo
+		if task.Status != nil && task.Status.Board != nil && task.Status.Board.Project != nil {
+			projectInfo = response.TaskProjectInfo{
+				ID:   task.Status.Board.Project.ID.String(),
+				Name: utils.GetString(task.Status.Board.Project.Name),
+			}
+		}
 		tasksResp[i] = response.TaskFull{
 			ID:            task.ID.String(),
 			Name:          utils.GetString(task.Name),
@@ -897,6 +920,7 @@ func (tc *TaskController) GetUserProjectTasks(c echo.Context) error {
 					ProjectID: task.Status.Board.ProjectID.String(),
 				},
 			},
+			Project: projectInfo,
 			CreatedByUser: response.UserFull{
 				ID:        task.CreatedByUser.ID.String(),
 				FirstName: task.CreatedByUser.FirstName,

@@ -447,6 +447,7 @@ func (r *taskRepository) GetActiveTasksByUserId(userID uuid.UUID, limit, offset 
 		Offset(offset).
 		Preload("Status").
 		Preload("Status.Board").
+		Preload("Status.Board.Project"). // нужен для projectName на странице «Мои задачи»
 		Preload("CreatedByUser", func(db *gorm.DB) *gorm.DB {
 			return db.Session(&gorm.Session{}).
 				Select("id, first_name, last_name, email").

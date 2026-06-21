@@ -81,21 +81,22 @@ type ProjectShort struct {
 }
 
 type TaskFull struct {
-	ID             string     `json:"id"`
-	Name           string     `json:"name"`
-	Description    string     `json:"description"`
-	Priority       int16      `json:"priority"`
-	Deadline       time.Time  `json:"deadline,omitempty"`
-	StartDate      time.Time  `json:"start_date"`
-	TimeSpent      string     `json:"time_spent"`
-	GitlabIssueID  int        `json:"gitlab_issue_id,omitempty"`
-	Category       int8       `json:"category"`
-	Deleted        bool       `json:"deleted"`
-	CreatedAt      time.Time  `json:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-	Status         StatusFull `json:"status"`
-	CreatedByUser  UserFull   `json:"created_by_user"`
-	AssignedToUser UserFull   `json:"assigned_to_user"`
+	ID             string          `json:"id"`
+	Name           string          `json:"name"`
+	Description    string          `json:"description"`
+	Priority       int16           `json:"priority"`
+	Deadline       time.Time       `json:"deadline,omitempty"`
+	StartDate      time.Time       `json:"start_date"`
+	TimeSpent      string          `json:"time_spent"`
+	GitlabIssueID  int             `json:"gitlab_issue_id,omitempty"`
+	Category       int8            `json:"category"`
+	Deleted        bool            `json:"deleted"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	Status         StatusFull      `json:"status"`
+	Project        TaskProjectInfo `json:"project,omitempty"`
+	CreatedByUser  UserFull        `json:"created_by_user"`
+	AssignedToUser UserFull        `json:"assigned_to_user"`
 }
 
 type UserTasksResponse struct {
