@@ -83,6 +83,7 @@ func (s *statusService) CreateStatus(req request.CreateStatusRequest) (uuid.UUID
 		return uuid.Nil, err
 	}
 
+	publishGlobal(StreamEvent{Type: "status.created", WorkItemID: boardId.String()})
 	return id, nil
 }
 
@@ -124,6 +125,7 @@ func (s *statusService) UpdateStatus(statusID uuid.UUID, req request.UpdateStatu
 		return errors.New("status not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "status.updated"})
 	return nil
 }
 
@@ -137,5 +139,6 @@ func (s *statusService) DeleteStatus(statusID uuid.UUID) error {
 		return errors.New("status not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "status.deleted"})
 	return nil
 }

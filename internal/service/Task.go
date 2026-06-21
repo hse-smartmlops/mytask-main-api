@@ -139,6 +139,7 @@ func (s *taskService) CreateTask(req request.TaskCreateRequest) (uuid.UUID, erro
 		return uuid.Nil, err
 	}
 
+	publishGlobal(StreamEvent{Type: "task.created", WorkItemID: task.ID.String()})
 	return task.ID, nil
 }
 
@@ -193,6 +194,7 @@ func (s *taskService) UpdateTask(taskID uuid.UUID, req request.TaskUpdateRequest
 		return errors.New("task not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "task.updated", WorkItemID: taskID.String()})
 	return nil
 }
 
@@ -206,6 +208,7 @@ func (s *taskService) DeleteTask(taskID uuid.UUID) error {
 		return errors.New("task not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "task.deleted", WorkItemID: taskID.String()})
 	return nil
 }
 
@@ -356,6 +359,7 @@ func (s *taskService) TaskMoveFunc(taskID, toStatusID uuid.UUID) ([]models.Statu
 		return nil, err
 	}
 
+	publishGlobal(StreamEvent{Type: "task.moved", WorkItemID: taskID.String()})
 	return statuses, nil
 }
 

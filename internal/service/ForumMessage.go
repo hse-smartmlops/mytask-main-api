@@ -92,6 +92,7 @@ func (s *forumMessageService) CreateForumMessage(req request.CreateForumMessageR
 		return uuid.Nil, err
 	}
 
+	publishGlobal(StreamEvent{Type: "forum.message.created", WorkItemID: problemId.String()})
 	return fm.ID, nil
 }
 
@@ -131,6 +132,7 @@ func (s *forumMessageService) UpdateForumMessage(messageID uuid.UUID, req reques
 		return errors.New("forum message not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "forum.message.updated"})
 	return nil
 }
 
@@ -144,5 +146,6 @@ func (s *forumMessageService) DeleteForumMessage(messageID uuid.UUID) error {
 		return errors.New("forum message not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "forum.message.deleted"})
 	return nil
 }

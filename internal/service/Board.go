@@ -215,6 +215,7 @@ func (s *boardService) CreateBoard(req request.BoardCreateRequest) (uuid.UUID, e
 		return uuid.Nil, err
 	}
 
+	publishGlobal(StreamEvent{Type: "board.created", WorkItemID: projectID.String()})
 	return boardID, nil
 }
 
@@ -242,6 +243,7 @@ func (s *boardService) UpdateBoard(boardID uuid.UUID, req request.BoardUpdateReq
 		return errors.New("board not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "board.updated"})
 	return nil
 }
 
@@ -255,5 +257,6 @@ func (s *boardService) DeleteBoard(boardID uuid.UUID) error {
 		return errors.New("board not found")
 	}
 
+	publishGlobal(StreamEvent{Type: "board.deleted"})
 	return nil
 }
