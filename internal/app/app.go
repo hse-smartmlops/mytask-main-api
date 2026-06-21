@@ -178,6 +178,7 @@ func Bootstrap() (*App, error) {
 	// mountAPI регистрирует весь JSON-API на переданном роутере. Вызывается дважды:
 	// на корне (v1, сырые ответы) и на группе /v2 (обёрнутые в {data,error,meta}).
 	mountAPI := func(r httpapi.Router) {
+		httpapi.RegisterVersionRoutes(r)
 		httpapi.RegisterAuthRoutes(r, authService, sessionService, userService)
 		httpapi.RegisterUserRoutes(r, userService, freshAvatarURL, adminMw)
 		httpapi.RegisterRoleRoutes(r, roleService, adminMw)

@@ -31,6 +31,7 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 			if c.Request().Method == http.MethodOptions ||
 				p == "/swagger" || strings.HasPrefix(p, "/swagger/") ||
 				p == "/auth" || strings.HasPrefix(p, "/auth/") ||
+				p == "/version" || p == "/v2/version" ||
 				p == "/v2/stream" {
 				return next(c)
 			}
