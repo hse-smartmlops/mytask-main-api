@@ -23,7 +23,7 @@ func NewRoleController(roleService service.RoleService) *RoleController {
 	}
 }
 
-func RegisterRoleRoutes(e *echo.Echo, roleService service.RoleService, adminMw echo.MiddlewareFunc) {
+func RegisterRoleRoutes(e Router, roleService service.RoleService, adminMw echo.MiddlewareFunc) {
 	controller := NewRoleController(roleService)
 	group := e.Group("/role")
 

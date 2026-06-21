@@ -14,7 +14,7 @@ import (
 
 // RegisterStreamRoutes — SSE realtime под /v2. Эндпоинт исключён из AppAuthMiddleware
 // (EventSource не умеет слать заголовки), поэтому авторизация по query-параметру token.
-func RegisterStreamRoutes(e *echo.Echo, hub *service.EventHub, sessionService service.SessionService, apiTokenService service.APITokenService) {
+func RegisterStreamRoutes(e Router, hub *service.EventHub, sessionService service.SessionService, apiTokenService service.APITokenService) {
 	e.GET("/v2/stream", func(c echo.Context) error {
 		token := strings.TrimSpace(c.QueryParam("token"))
 		if token == "" {

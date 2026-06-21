@@ -25,7 +25,7 @@ func NewBoardController(boardService service.BoardService) *BoardController {
 	}
 }
 
-func RegisterBoardRoutes(e *echo.Echo, boardService service.BoardService, managerMw echo.MiddlewareFunc) {
+func RegisterBoardRoutes(e Router, boardService service.BoardService, managerMw echo.MiddlewareFunc) {
 	controller := NewBoardController(boardService)
 	g := e.Group("/boards")
 	g.GET("/all/:page/:pagesize", controller.GetAllBoards)

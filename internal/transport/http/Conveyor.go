@@ -189,7 +189,7 @@ type conveyorPMImportRequest struct {
 	IdempotencyKey  string            `json:"idempotency_key" example:"pm-import-1"`
 }
 
-func RegisterConveyorRoutes(e *echo.Echo, svc service.ConveyorService, pmImport service.PMImportService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func RegisterConveyorRoutes(e Router, svc service.ConveyorService, pmImport service.PMImportService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	c := &ConveyorController{svc: svc, pmImport: pmImport}
 	g := e.Group("/api/work-items")
 	g.GET("/:id/criteria", c.ListCriteria)

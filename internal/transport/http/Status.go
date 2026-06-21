@@ -23,7 +23,7 @@ func NewStatusController(statusService service.StatusService) *StatusController 
 	}
 }
 
-func RegisterStatusRoutes(e *echo.Echo, statusService service.StatusService, managerMw echo.MiddlewareFunc) {
+func RegisterStatusRoutes(e Router, statusService service.StatusService, managerMw echo.MiddlewareFunc) {
 	controller := NewStatusController(statusService)
 	g := e.Group("/status")
 	g.GET("/all/:page/:pagesize", controller.GetAllStatuses)

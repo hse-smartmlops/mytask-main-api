@@ -53,7 +53,7 @@ func NewTaskControllerWithConveyor(taskService service.TaskService, userService 
 	return controller
 }
 
-func RegisterTaskRoutes(e *echo.Echo, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, llmSettings service.LLMSettingsService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func RegisterTaskRoutes(e Router, taskService service.TaskService, userService service.UserService, projectService service.ProjectService, llmClient *client.LLMClient, conveyorService service.ConveyorService, llmSettings service.LLMSettingsService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewTaskControllerWithConveyor(taskService, userService, projectService, llmClient, conveyorService, llmSettings, freshAvatarURL)
 	g := e.Group("/task")
 	// Чтение — все авторизованные

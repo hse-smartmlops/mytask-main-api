@@ -25,7 +25,7 @@ func NewTeamController(teamService service.TeamService, freshAvatarURL func(stri
 	}
 }
 
-func RegisterTeamRoutes(e *echo.Echo, teamService service.TeamService, freshAvatarURL func(string) string, managerMw echo.MiddlewareFunc) {
+func RegisterTeamRoutes(e Router, teamService service.TeamService, freshAvatarURL func(string) string, managerMw echo.MiddlewareFunc) {
 	controller := NewTeamController(teamService, freshAvatarURL)
 	g := e.Group("/team")
 	g.GET("/all", controller.GetTeams)

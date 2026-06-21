@@ -28,7 +28,7 @@ func NewAuthController(authService service.AuthService, sessionService service.S
 	}
 }
 
-func RegisterAuthRoutes(e *echo.Echo, authService service.AuthService, sessionService service.SessionService, userService service.UserService) {
+func RegisterAuthRoutes(e Router, authService service.AuthService, sessionService service.SessionService, userService service.UserService) {
 	controller := NewAuthController(authService, sessionService, userService)
 	authGroup := e.Group("/auth")
 

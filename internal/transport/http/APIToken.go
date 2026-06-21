@@ -19,7 +19,7 @@ func NewAPITokenController(svc service.APITokenService) *APITokenController {
 	return &APITokenController{svc: svc}
 }
 
-func RegisterAPITokenRoutes(e *echo.Echo, svc service.APITokenService) {
+func RegisterAPITokenRoutes(e Router, svc service.APITokenService) {
 	c := NewAPITokenController(svc)
 	g := e.Group("/token")
 	g.POST("", c.Create)

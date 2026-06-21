@@ -23,7 +23,7 @@ func NewSubscriptionController(subscriptionService service.SubscriptionService) 
 	}
 }
 
-func RegisterSubscriptionRoutes(e *echo.Echo, subscriptionService service.SubscriptionService) {
+func RegisterSubscriptionRoutes(e Router, subscriptionService service.SubscriptionService) {
 	controller := NewSubscriptionController(subscriptionService)
 	subscriptionGroup := e.Group("/subscription")
 	{

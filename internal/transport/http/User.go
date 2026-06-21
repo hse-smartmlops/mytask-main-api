@@ -25,7 +25,7 @@ func NewUserController(userService service.UserService, freshAvatarURL func(stri
 	}
 }
 
-func RegisterUserRoutes(e *echo.Echo, userService service.UserService, freshAvatarURL func(string) string, adminMw echo.MiddlewareFunc) {
+func RegisterUserRoutes(e Router, userService service.UserService, freshAvatarURL func(string) string, adminMw echo.MiddlewareFunc) {
 	controller := NewUserController(userService, freshAvatarURL)
 	userGroup := e.Group("/user")
 

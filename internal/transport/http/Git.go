@@ -20,7 +20,7 @@ func NewGitController(gitService service.GitService) *GitController {
 
 // RegisterGitRoutes — модуль трекера коммитов. Чтение — любой авторизованный;
 // привязка репозиториев/синк — менеджер/админ.
-func RegisterGitRoutes(e *echo.Echo, gitService service.GitService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func RegisterGitRoutes(e Router, gitService service.GitService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	c := NewGitController(gitService)
 
 	e.GET("/git/providers", c.Providers)

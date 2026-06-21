@@ -23,7 +23,7 @@ func NewAttendanceController(attendanceService service.AttendanceService) *Atten
 	}
 }
 
-func RegisterAttendanceRoutes(e *echo.Echo, attendanceService service.AttendanceService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func RegisterAttendanceRoutes(e Router, attendanceService service.AttendanceService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewAttendanceController(attendanceService)
 	g := e.Group("/attendance")
 	g.GET("/all/:page/:pagesize", controller.GetAllAttendances)

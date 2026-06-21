@@ -29,7 +29,7 @@ func NewReportController(reportService service.ReportService, freshAvatarURL fun
 	}
 }
 
-func RegisterReportRoutes(e *echo.Echo, reportService service.ReportService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func RegisterReportRoutes(e Router, reportService service.ReportService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewReportController(reportService, freshAvatarURL)
 	g := e.Group("/report")
 	// Чтение — все авторизованные

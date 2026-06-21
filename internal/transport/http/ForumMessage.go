@@ -27,7 +27,7 @@ func NewForumMessageController(forumMessageService service.ForumMessageService, 
 	}
 }
 
-func RegisterForumMessagesRoutes(e *echo.Echo, forumMessageService service.ForumMessageService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func RegisterForumMessagesRoutes(e Router, forumMessageService service.ForumMessageService, freshAvatarURL func(string) string, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewForumMessageController(forumMessageService, freshAvatarURL)
 	g := e.Group("/forum-messages")
 	g.GET("/all/:page/:pagesize", controller.GetAllForumMessages)

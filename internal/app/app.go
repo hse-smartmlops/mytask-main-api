@@ -173,28 +173,38 @@ func Bootstrap() (*App, error) {
 		freshAvatarURL = storageService.FreshAvatarURL
 	}
 
-	// Регистрируем маршруты (ПОСЛЕ глобального middleware)
-	httpapi.RegisterAuthRoutes(e, authService, sessionService, userService)
-	httpapi.RegisterUserRoutes(e, userService, freshAvatarURL, adminMw)
-	httpapi.RegisterRoleRoutes(e, roleService, adminMw)
-	httpapi.RegisterTeamRoutes(e, teamService, freshAvatarURL, managerMw)
-	httpapi.RegisterProjectRoutes(e, projectService, managerMw)
-	httpapi.RegisterBoardRoutes(e, boardService, managerMw)
-	httpapi.RegisterStatusRoutes(e, statusService, managerMw)
-	httpapi.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, conveyorService, llmSettingsService, freshAvatarURL, employeeMw, managerMw)
-	httpapi.RegisterConveyorRoutes(e, conveyorService, pmImportService, employeeMw, managerMw)
-	httpapi.RegisterLLMSettingsRoutes(e, llmSettingsService, adminMw)
-	httpapi.RegisterReportRoutes(e, reportService, freshAvatarURL, employeeMw, managerMw)
-	httpapi.RegisterForumMessagesRoutes(e, forumMessageService, freshAvatarURL, employeeMw, managerMw)
-	httpapi.RegisterProblemRoutes(e, problemService, employeeMw, managerMw)
-	httpapi.RegisterAttendanceRoutes(e, attendanceService, employeeMw, managerMw)
-	httpapi.RegisterSubscriptionRoutes(e, subscriptionService)
-	httpapi.RegisterAPITokenRoutes(e, apiTokenService)
-	if storageService != nil {
-		httpapi.RegisterUploadRoutes(e, storageService, userService)
+	// mountAPI регистрирует весь JSON-API на переданном роутере. Вызывается дважды:
+	// на корне (v1, сырые ответы) и на группе /v2 (обёрнутые в {data,error,meta}).
+	mountAPI := func(r httpapi.Router) {
+		httpapi.RegisterAuthRoutes(r, authService, sessionService, userService)
+		httpapi.RegisterUserRoutes(r, userService, freshAvatarURL, adminMw)
+		httpapi.RegisterRoleRoutes(r, roleService, adminMw)
+		httpapi.RegisterTeamRoutes(r, teamService, freshAvatarURL, managerMw)
+		httpapi.RegisterProjectRoutes(r, projectService, managerMw)
+		httpapi.RegisterBoardRoutes(r, boardService, managerMw)
+		httpapi.RegisterStatusRoutes(r, statusService, managerMw)
+		httpapi.RegisterTaskRoutes(r, taskService, userService, projectService, llmClient, conveyorService, llmSettingsService, freshAvatarURL, employeeMw, managerMw)
+		httpapi.RegisterConveyorRoutes(r, conveyorService, pmImportService, employeeMw, managerMw)
+		httpapi.RegisterLLMSettingsRoutes(r, llmSettingsService, adminMw)
+		httpapi.RegisterReportRoutes(r, reportService, freshAvatarURL, employeeMw, managerMw)
+		httpapi.RegisterForumMessagesRoutes(r, forumMessageService, freshAvatarURL, employeeMw, managerMw)
+		httpapi.RegisterProblemRoutes(r, problemService, employeeMw, managerMw)
+		httpapi.RegisterAttendanceRoutes(r, attendanceService, employeeMw, managerMw)
+		httpapi.RegisterSubscriptionRoutes(r, subscriptionService)
+		httpapi.RegisterAPITokenRoutes(r, apiTokenService)
+		httpapi.RegisterGitRoutes(r, gitService, employeeMw, managerMw)
+		if storageService != nil {
+			httpapi.RegisterUploadRoutes(r, storageService, userService)
+		}
 	}
 
-	// SSE realtime stream (/v2/stream) — auth по query-токену, см. Stream.go
+	// v1 — сырые ответы (обратная совместимость с текущим фронтом)
+	mountAPI(e)
+	// v2 — те же ручки под /v2, ответы нормализованы в {data,error,meta}
+	mountAPI(e.Group("/v2", httpapi.EnvelopeMiddleware))
+
+	// SSE realtime stream (/v2/stream) — auth по query-токену, см. Stream.go.
+	// Регистрируется на корне (НЕ под enveloped-группой — это поток, не JSON).
 	httpapi.RegisterStreamRoutes(e, eventHub, sessionService, apiTokenService)
 
 	// Git commit-tracker (репозитории/коммиты/привязка к задачам)

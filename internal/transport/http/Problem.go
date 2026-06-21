@@ -24,7 +24,7 @@ func NewProblemController(problemService service.ProblemService) *ProblemControl
 	}
 }
 
-func RegisterProblemRoutes(e *echo.Echo, problemService service.ProblemService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
+func RegisterProblemRoutes(e Router, problemService service.ProblemService, employeeMw echo.MiddlewareFunc, managerMw echo.MiddlewareFunc) {
 	controller := NewProblemController(problemService)
 	g := e.Group("/problem")
 	g.GET("/all/:page/:pagesize", controller.GetAllProblems)

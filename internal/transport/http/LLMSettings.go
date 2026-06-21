@@ -16,7 +16,7 @@ func NewLLMSettingsController(svc service.LLMSettingsService) *LLMSettingsContro
 	return &LLMSettingsController{svc: svc}
 }
 
-func RegisterLLMSettingsRoutes(e *echo.Echo, svc service.LLMSettingsService, adminMw echo.MiddlewareFunc) {
+func RegisterLLMSettingsRoutes(e Router, svc service.LLMSettingsService, adminMw echo.MiddlewareFunc) {
 	c := NewLLMSettingsController(svc)
 	g := e.Group("/admin/llm-settings")
 	g.GET("", c.Get, adminMw)

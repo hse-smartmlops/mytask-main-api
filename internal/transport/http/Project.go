@@ -24,7 +24,7 @@ func NewProjectController(projectService service.ProjectService) *ProjectControl
 	}
 }
 
-func RegisterProjectRoutes(e *echo.Echo, projectService service.ProjectService, managerMw echo.MiddlewareFunc) {
+func RegisterProjectRoutes(e Router, projectService service.ProjectService, managerMw echo.MiddlewareFunc) {
 	controller := NewProjectController(projectService)
 	g := e.Group("/project")
 	g.GET("/all/:page/:pagesize", controller.GetAllProjects)

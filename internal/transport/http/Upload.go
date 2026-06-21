@@ -29,7 +29,7 @@ func NewUploadController(storageService ports.StoragePort, userService service.U
 	return &UploadController{storageService: storageService, userService: userService}
 }
 
-func RegisterUploadRoutes(e *echo.Echo, storageService ports.StoragePort, userService service.UserService) {
+func RegisterUploadRoutes(e Router, storageService ports.StoragePort, userService service.UserService) {
 	ctrl := NewUploadController(storageService, userService)
 	g := e.Group("/upload")
 	g.POST("/image", ctrl.UploadImage)
