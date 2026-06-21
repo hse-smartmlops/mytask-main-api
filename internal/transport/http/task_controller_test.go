@@ -210,7 +210,7 @@ func (s *recordingConveyorService) ListAgentRuns(ctx context.Context, workItemID
 func (s *recordingConveyorService) ListAgentInbox(ctx context.Context, actor service.ConveyorActor) ([]service.AgentInboxItemResponse, error) {
 	return nil, errors.New("not implemented")
 }
-func (s *recordingConveyorService) AckAgentInboxItem(ctx context.Context, actor service.ConveyorActor, itemID uuid.UUID, state string) (*service.AgentInboxItemResponse, error) {
+func (s *recordingConveyorService) AckAgentInboxItem(ctx context.Context, actor service.ConveyorActor, req service.AckAgentInboxItemRequest) (*service.AgentInboxItemResponse, error) {
 	return nil, errors.New("not implemented")
 }
 func (s *recordingConveyorService) GenerateProjectReport(ctx context.Context, actor service.ConveyorActor, req service.GenerateProjectReportRequest) (*service.GeneratedReportResponse, error) {

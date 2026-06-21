@@ -723,6 +723,7 @@ type fakeConveyorService struct {
 	inboxItems            []service.AgentInboxItemResponse
 	inboxItem             *service.AgentInboxItemResponse
 	ackInboxErr           error
+	ackInboxReq           *service.AckAgentInboxItemRequest
 }
 
 func (s fakeConveyorService) AuthorizeWorkItemAccess(ctx context.Context, actor service.ConveyorActor, taskID uuid.UUID) error {
@@ -855,7 +856,10 @@ func (s fakeConveyorService) ListAgentRuns(ctx context.Context, workItemID uuid.
 func (s fakeConveyorService) ListAgentInbox(ctx context.Context, actor service.ConveyorActor) ([]service.AgentInboxItemResponse, error) {
 	return s.inboxItems, nil
 }
-func (s fakeConveyorService) AckAgentInboxItem(ctx context.Context, actor service.ConveyorActor, itemID uuid.UUID, state string) (*service.AgentInboxItemResponse, error) {
+func (s fakeConveyorService) AckAgentInboxItem(ctx context.Context, actor service.ConveyorActor, req service.AckAgentInboxItemRequest) (*service.AgentInboxItemResponse, error) {
+	if s.ackInboxReq != nil {
+		*s.ackInboxReq = req
+	}
 	if s.ackInboxErr != nil {
 		return nil, s.ackInboxErr
 	}
