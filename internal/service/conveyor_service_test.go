@@ -9,7 +9,7 @@ import (
 	"time"
 
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -1359,8 +1359,8 @@ func (r *fakeConveyorRepository) CreateIdempotencyRecord(ctx context.Context, re
 	r.idempotency[k] = *record
 	return nil
 }
-func (r *fakeConveyorRepository) ListProjectReportSources(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]repository.ProjectReportSource, error) {
-	var out []repository.ProjectReportSource
+func (r *fakeConveyorRepository) ListProjectReportSources(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]ports.ProjectReportSource, error) {
+	var out []ports.ProjectReportSource
 	for _, task := range r.tasks {
 		boardID, ok := r.statusBoard[task.StatusID]
 		if !ok || r.boardProject[boardID] != projectID {
@@ -1378,7 +1378,7 @@ func (r *fakeConveyorRepository) ListProjectReportSources(ctx context.Context, p
 				taskEvidence = append(taskEvidence, *evidence)
 			}
 		}
-		out = append(out, repository.ProjectReportSource{Task: *task, Events: taskEvents, Evidence: taskEvidence})
+		out = append(out, ports.ProjectReportSource{Task: *task, Events: taskEvents, Evidence: taskEvidence})
 	}
 	return out, nil
 }

@@ -14,11 +14,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/postgres"
 	"emplacc-api/internal/service"
+	httpapi "emplacc-api/internal/transport/http"
 )
 
 func TestProblem_FullCRUD(t *testing.T) {
@@ -28,10 +28,10 @@ func TestProblem_FullCRUD(t *testing.T) {
 	userID := createTestUser(t, testDB, "user@example.com")
 
 	// Create dependencies for the current architecture.
-	problemRepo := repository.NewProblemRepository(testDB)
-	forumMessageRepo := repository.NewForumMessageRepository(testDB)
+	problemRepo := postgres.NewProblemRepository(testDB)
+	forumMessageRepo := postgres.NewForumMessageRepository(testDB)
 	problemService := service.NewProblemService(problemRepo, forumMessageRepo, userID)
-	problemController := controller.NewProblemController(problemService)
+	problemController := httpapi.NewProblemController(problemService)
 
 	e := echo.New()
 

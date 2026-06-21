@@ -50,7 +50,7 @@ type TeamUniversalProjectResponse struct {
 }
 
 type UsersAddResponse struct {
-	TeamID  string `json:"team_id"`
-	UsersID  []string `json:"users_id"`
-	Message string `json:"message"`
+	TeamID  string   `json:"team_id"`
+	UsersID []string `json:"users_id"`
+	Message string   `json:"message"`
 }

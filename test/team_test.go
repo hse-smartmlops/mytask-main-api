@@ -14,20 +14,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/postgres"
 	"emplacc-api/internal/service"
+	httpapi "emplacc-api/internal/transport/http"
 )
 
 func TestTeam_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
 	// Создаем зависимости для новой архитектуры
-	teamRepo := repository.NewTeamRepository(testDB)
+	teamRepo := postgres.NewTeamRepository(testDB)
 	teamService := service.NewTeamService(teamRepo)
-	teamController := controller.NewTeamController(teamService, testFreshAvatarURL)
+	teamController := httpapi.NewTeamController(teamService, testFreshAvatarURL)
 
 	e := echo.New()
 

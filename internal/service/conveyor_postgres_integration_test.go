@@ -10,7 +10,7 @@ import (
 	"time"
 
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	pgrepo "emplacc-api/internal/repository/postgres"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -72,7 +72,7 @@ func TestConveyorPostgresConcurrentIdempotencyReplay(t *testing.T) {
 	require.NoError(t, db.Create(&models.Task{ID: taskID, Name: &name, Priority: &priority, StatusID: statusID, CreatedBy: &actorID, AssignedTo: &actorID, Deleted: &deleted, CreatedAt: &now, UpdatedAt: &now}).Error)
 
 	barrier := newTwoPartyBarrier(2, 5*time.Second)
-	repo := &barrierConveyorRepository{ConveyorRepository: repository.NewConveyorRepository(db), barrier: barrier}
+	repo := &barrierConveyorRepository{ConveyorRepository: pgrepo.NewConveyorRepository(db), barrier: barrier}
 	svc := NewConveyorService(repo)
 	actor := ConveyorActor{ActorType: "user", ActorID: actorID, Source: "test"}
 	req := CreateAcceptanceCriterionRequest{TaskID: taskID, Title: "Concurrent criterion", Required: true, IdempotencyKey: "same-key"}
@@ -172,7 +172,7 @@ func TestPMImportPostgresRollsBackLateTaskLinkConflict(t *testing.T) {
 	preExistingConflict := models.TaskLink{ID: conflictLinkID, SourceTaskID: uuid.New(), TargetTaskID: uuid.New(), LinkType: models.TaskLinkTypeRelatesTo, CreatedBy: actorID, CreatedAt: now}
 	require.NoError(t, db.Create(&preExistingConflict).Error)
 
-	repo := repository.NewConveyorRepository(db)
+	repo := pgrepo.NewConveyorRepository(db)
 	svc := NewPMImportService(repo)
 	actor := ConveyorActor{ActorType: "user", ActorID: actorID, Source: "pm-import-test"}
 	req := PMImportRequest{RootPath: root, StatusByPMState: map[string]uuid.UUID{"TODO": statusID}}

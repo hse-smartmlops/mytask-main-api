@@ -13,7 +13,7 @@ import (
 	"time"
 
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	pgrepo "emplacc-api/internal/repository/postgres"
 	"emplacc-api/internal/service"
 
 	"github.com/google/uuid"
@@ -32,8 +32,8 @@ var ns = uuid.NewSHA1(uuid.NameSpaceURL, []byte("conveyor:demo"))
 
 func did(s string) uuid.UUID { return uuid.NewSHA1(ns, []byte(s)) }
 
-func bptr(b bool) *bool          { return &b }
-func sptr(s string) *string      { return &s }
+func bptr(b bool) *bool           { return &b }
+func sptr(s string) *string       { return &s }
 func tptr(t time.Time) *time.Time { return &t }
 
 func main() {
@@ -92,7 +92,7 @@ func main() {
 	upsert(db, &models.ConveyorEvent{ID: ev1, WorkItemID: taskID, Type: "criterion.passed", Timestamp: now, ActorType: "user", ActorID: userID, Payload: json.RawMessage(`{"criterion":"AC-1"}`), SchemaVersion: 1, Source: "devseed"}, "id = ?", ev1)
 	upsert(db, &models.ConveyorEvent{ID: ev2, WorkItemID: taskID, Type: "evidence.attached", Timestamp: now, ActorType: "user", ActorID: userID, Payload: json.RawMessage(`{"evidence":"PR #42"}`), SchemaVersion: 1, Source: "devseed"}, "id = ?", ev2)
 
-	tokenSvc := service.NewAPITokenService(repository.NewAPITokenRepository(db), repository.NewUserRepository(db))
+	tokenSvc := service.NewAPITokenService(pgrepo.NewAPITokenRepository(db), pgrepo.NewUserRepository(db))
 	tok, err := tokenSvc.Create(userID, "demo", nil)
 	if err != nil {
 		log.Fatalf("devseed: api token: %v", err)

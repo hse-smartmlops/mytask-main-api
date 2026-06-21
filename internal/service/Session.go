@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"emplacc-api/internal/ports"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/redis"
 )
 
 const (
@@ -68,7 +68,7 @@ func (s *sessionService) Create(userID string) (*SessionCreateResult, error) {
 	}
 
 	now := time.Now()
-	data := repository.SessionData{
+	data := ports.SessionData{
 		UserID:            userID,
 		ExpiresAt:         now.Add(SessionTokenTTL),
 		AbsoluteExpiresAt: now.Add(SessionAbsoluteTTL),
@@ -106,11 +106,11 @@ func (s *sessionService) Validate(plainToken string) (*SessionValidation, error)
 
 	// Абсолютный срок (не должен быть достигнут пока Redis TTL не истёк, но на всякий случай)
 	if now.After(data.AbsoluteExpiresAt) {
-		_ = s.repo.Expire(tokenHash(plainToken), repository.ReasonLongAbsence)
+		_ = s.repo.Expire(tokenHash(plainToken), redis.ReasonLongAbsence)
 		return &SessionValidation{
 			UserID:  data.UserID,
 			Expired: true,
-			Reason:  repository.ReasonLongAbsence,
+			Reason:  redis.ReasonLongAbsence,
 		}, nil
 	}
 
@@ -136,7 +136,7 @@ func (s *sessionService) Rotate(plainToken string) (*SessionCreateResult, error)
 		return nil, fmt.Errorf("session expired: %s", data.ExpireReason)
 	}
 	if time.Now().After(data.AbsoluteExpiresAt) {
-		_ = s.repo.Expire(hash, repository.ReasonLongAbsence)
+		_ = s.repo.Expire(hash, redis.ReasonLongAbsence)
 		return nil, fmt.Errorf("session absolute expired")
 	}
 

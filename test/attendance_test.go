@@ -16,11 +16,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 
-	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/postgres"
 	"emplacc-api/internal/service"
+	httpapi "emplacc-api/internal/transport/http"
 )
 
 // Создаём тестового пользователя
@@ -47,10 +47,10 @@ func TestAttendance_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
 	// Создаем зависимости для новой архитектуры
-	attendanceRepo := repository.NewAttendanceRepository(testDB)
+	attendanceRepo := postgres.NewAttendanceRepository(testDB)
 	attendanceService := service.NewAttendanceService(attendanceRepo)
-	attendanceController := controller.NewAttendanceController(attendanceService)
-	
+	attendanceController := httpapi.NewAttendanceController(attendanceService)
+
 	e := echo.New()
 
 	// Создаём пользователя
@@ -109,7 +109,7 @@ func TestAttendance_FullCRUD(t *testing.T) {
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		
+
 		// Адаптируем проверку под ваш формат ответа
 		if userIDResp, exists := resp["user_id"]; exists {
 			assert.Equal(t, userID.String(), userIDResp)
@@ -135,7 +135,7 @@ func TestAttendance_FullCRUD(t *testing.T) {
 
 		var resp map[string]interface{}
 		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
-		
+
 		// Проверяем структуру ответа
 		if page, exists := resp["page"]; exists {
 			assert.Equal(t, float64(1), page)

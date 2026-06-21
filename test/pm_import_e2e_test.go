@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/postgres"
 	"emplacc-api/internal/service"
 
 	"github.com/google/uuid"
@@ -53,7 +53,7 @@ func TestPMImportE2EFromProjectCanon(t *testing.T) {
 		filepath.Join(scopeDir, "criteria.tsv"): "criteria.tsv",
 		filepath.Join(scopeDir, "evidence.tsv"): "evidence.tsv",
 		filepath.Join(scopeDir, "pulse.log"):    "pulse.log",
-		statusMD:                                 "status.md",
+		statusMD:                                "status.md",
 	} {
 		data, err := os.ReadFile(src)
 		require.NoErrorf(t, err, "read %s", src)
@@ -78,7 +78,7 @@ func TestPMImportE2EFromProjectCanon(t *testing.T) {
 		statusByState[name] = status.ID
 	}
 
-	repo := repository.NewConveyorRepository(db)
+	repo := postgres.NewConveyorRepository(db)
 	svc := service.NewPMImportService(repo)
 	actor := service.ConveyorActor{ActorID: userID, ActorType: "user", Source: "importer"}
 	req := service.PMImportRequest{RootPath: root, StatusByPMState: statusByState}

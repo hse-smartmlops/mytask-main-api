@@ -122,12 +122,12 @@ func report(t *testing.T, rule string, violations []string) {
 }
 
 // ── R1: transport layer stays clean ─────────────────────────────────────────
-// internal/controller must not import repository or raw infrastructure drivers
+// internal/transport/http must not import repository or raw infrastructure drivers
 // (net/http is allowed — Echo handlers use its status constants).
 func TestR1_TransportDoesNotImportRepositoryOrDrivers(t *testing.T) {
 	root := moduleRoot(t)
 	var violations []string
-	for _, file := range goFiles(t, root, "internal/controller") {
+	for _, file := range goFiles(t, root, "internal/transport/http") {
 		for _, imp := range importsOf(t, root, file) {
 			bad := strings.HasPrefix(imp, "emplacc-api/internal/repository") || isRawDriver(imp)
 			if !bad {

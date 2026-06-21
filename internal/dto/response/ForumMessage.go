@@ -11,21 +11,21 @@ type ForumMessageAuthor struct {
 }
 
 type ForumMessageReplyPreview struct {
-	ID        string `json:"id"`
-	Text      string `json:"text"`
+	ID         string `json:"id"`
+	Text       string `json:"text"`
 	AuthorName string `json:"author_name"`
 }
 
 type ForumMessageResponse struct {
-	ID          string     `json:"id"`
-	ProblemID   string     `json:"problem_id"`
-	Description []string   `json:"description"`
-	CreatorID   string     `json:"creator_id"`
-	ReplyToID   *string    `json:"reply_to_id,omitempty"`
-	Author      *ForumMessageAuthor      `json:"author,omitempty"`
+	ID          string                    `json:"id"`
+	ProblemID   string                    `json:"problem_id"`
+	Description []string                  `json:"description"`
+	CreatorID   string                    `json:"creator_id"`
+	ReplyToID   *string                   `json:"reply_to_id,omitempty"`
+	Author      *ForumMessageAuthor       `json:"author,omitempty"`
 	ReplyTo     *ForumMessageReplyPreview `json:"reply_to,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	CreatedAt   time.Time                 `json:"created_at"`
+	UpdatedAt   time.Time                 `json:"updated_at"`
 }
 
 type ForumMessageListResponse struct {

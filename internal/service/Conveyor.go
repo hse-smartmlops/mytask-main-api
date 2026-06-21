@@ -16,7 +16,6 @@ import (
 	models "emplacc-api/internal/domain"
 	llmclient "emplacc-api/internal/grpc/client"
 	"emplacc-api/internal/ports"
-	"emplacc-api/internal/repository"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -800,7 +799,7 @@ func (s *conveyorService) RejectForumActionCandidate(ctx context.Context, actor 
 	return result, nil
 }
 
-func (s *conveyorService) buildGeneratedReport(actor ConveyorActor, req GenerateProjectReportRequest, sources []repository.ProjectReportSource) *models.GeneratedReport {
+func (s *conveyorService) buildGeneratedReport(actor ConveyorActor, req GenerateProjectReportRequest, sources []ports.ProjectReportSource) *models.GeneratedReport {
 	facts := []GeneratedReportItem{}
 	risks := []GeneratedReportItem{}
 	allEventIDs := []uuid.UUID{}
@@ -2215,7 +2214,7 @@ func completedWorkText(task models.Task) string {
 	return "Completed work: " + task.ID.String()
 }
 
-func firstReportAnchor(sources []repository.ProjectReportSource) uuid.UUID {
+func firstReportAnchor(sources []ports.ProjectReportSource) uuid.UUID {
 	for _, source := range sources {
 		if source.Task.ID != uuid.Nil {
 			return source.Task.ID

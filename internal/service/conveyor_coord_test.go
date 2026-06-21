@@ -11,7 +11,7 @@ import (
 	"time"
 
 	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/ports"
 
 	"github.com/google/uuid"
 )
@@ -341,7 +341,7 @@ func TestWorkOrderModelHasNoRemoteExecutionFieldsCoord(t *testing.T) {
 		}
 	}
 	assertNoRemoteExecutionCalls(t, "Conveyor.go", []string{"CreateWorkOrder", "AcceptWorkOrder", "RejectWorkOrder", "CompleteWorkOrder", "CancelWorkOrder", "FailWorkOrder", "emitDependencySignals", "shouldAutoReady", "transitionWorkOrder"})
-	assertNoRemoteExecutionCalls(t, "../controller/Conveyor.go", []string{"CreateWorkOrder", "GetWorkOrder", "AcceptWorkOrder", "RejectWorkOrder", "CompleteWorkOrder", "CancelWorkOrder", "FailWorkOrder"})
+	assertNoRemoteExecutionCalls(t, "../transport/http/Conveyor.go", []string{"CreateWorkOrder", "GetWorkOrder", "AcceptWorkOrder", "RejectWorkOrder", "CompleteWorkOrder", "CancelWorkOrder", "FailWorkOrder"})
 }
 
 func assertNoRemoteExecutionCalls(t *testing.T, path string, functionNames []string) {
@@ -704,7 +704,7 @@ func (r *coordRepo) ListStaleAgentRuns(ctx context.Context, cutoff time.Time) ([
 	return nil, nil
 }
 func (r *coordRepo) UpdateAgentRun(ctx context.Context, run *models.AgentRun) error { return nil }
-func (r *coordRepo) ListProjectReportSources(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]repository.ProjectReportSource, error) {
+func (r *coordRepo) ListProjectReportSources(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]ports.ProjectReportSource, error) {
 	return nil, nil
 }
 func (r *coordRepo) CreateGeneratedReport(ctx context.Context, report *models.GeneratedReport) error {

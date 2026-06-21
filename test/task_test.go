@@ -17,32 +17,32 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
 	"emplacc-api/internal/dto/response"
 	"emplacc-api/internal/grpc/client"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/postgres"
 	"emplacc-api/internal/service"
+	httpapi "emplacc-api/internal/transport/http"
 )
 
 func TestTask_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
 	// Создаем зависимости для новой архитектуры
-	taskRepo := repository.NewTaskRepository(testDB)
+	taskRepo := postgres.NewTaskRepository(testDB)
 	taskService := service.NewTaskService(taskRepo)
-	userRepo := repository.NewUserRepository(testDB)
+	userRepo := postgres.NewUserRepository(testDB)
 	userService := service.NewUserService(userRepo)
-	projectRepo := repository.NewProjectRepository(testDB)
+	projectRepo := postgres.NewProjectRepository(testDB)
 	projectService := service.NewProjectService(projectRepo)
 	llmClient, err := client.NewLLMClient("grpc-service:50051", os.Getenv("LLM_GRPC_AUTH_TOKEN")) // используем docker service name
 	if err != nil {
 		log.Fatalf("Failed to create gRPC client: %v", err)
 	}
 	defer llmClient.Close()
-	llmSettingsService := service.NewLLMSettingsService(repository.NewLLMSettingsRepository(testDB))
-	taskController := controller.NewTaskController(taskService, userService, projectService, llmClient, llmSettingsService, testFreshAvatarURL)
+	llmSettingsService := service.NewLLMSettingsService(postgres.NewLLMSettingsRepository(testDB))
+	taskController := httpapi.NewTaskController(taskService, userService, projectService, llmClient, llmSettingsService, testFreshAvatarURL)
 
 	e := echo.New()
 

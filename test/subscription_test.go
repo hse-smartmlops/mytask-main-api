@@ -14,20 +14,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"emplacc-api/internal/controller"
 	models "emplacc-api/internal/domain"
 	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/postgres"
 	"emplacc-api/internal/service"
+	httpapi "emplacc-api/internal/transport/http"
 )
 
 func TestSubscription_FullCRUD(t *testing.T) {
 	testDB := setupTestDB(t)
 
 	// Создаем зависимости для новой архитектуры
-	subscriptionRepo := repository.NewSubscriptionRepository(testDB)
+	subscriptionRepo := postgres.NewSubscriptionRepository(testDB)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo)
-	subscriptionController := controller.NewSubscriptionController(subscriptionService)
+	subscriptionController := httpapi.NewSubscriptionController(subscriptionService)
 
 	e := echo.New()
 

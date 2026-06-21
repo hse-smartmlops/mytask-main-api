@@ -14,14 +14,15 @@ import (
 	"os"
 
 	docs "emplacc-api/docs"
-	"emplacc-api/internal/controller"
 	"emplacc-api/internal/db"
 	"emplacc-api/internal/grpc/client"
 	infragit "emplacc-api/internal/infra/git"
 	"emplacc-api/internal/infra/keycloak"
 	"emplacc-api/internal/infra/storage"
-	"emplacc-api/internal/repository"
+	"emplacc-api/internal/repository/postgres"
+	redisrepo "emplacc-api/internal/repository/redis"
 	"emplacc-api/internal/service"
+	httpapi "emplacc-api/internal/transport/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -81,39 +82,39 @@ func Bootstrap() (*App, error) {
 	app.cleanup = append(app.cleanup, func() { llmClient.Close() })
 
 	// ── Repositories + services ──
-	userRepo := repository.NewUserRepository(dbConn)
+	userRepo := postgres.NewUserRepository(dbConn)
 	authService := service.NewAuthService(userRepo, keycloak.New())
-	boardRepo := repository.NewBoardRepository(dbConn)
+	boardRepo := postgres.NewBoardRepository(dbConn)
 	boardService := service.NewBoardService(boardRepo)
-	reportRepo := repository.NewReportRepository(dbConn)
+	reportRepo := postgres.NewReportRepository(dbConn)
 	reportService := service.NewReportService(reportRepo)
-	forumMessageRepo := repository.NewForumMessageRepository(dbConn)
+	forumMessageRepo := postgres.NewForumMessageRepository(dbConn)
 	forumMessageService := service.NewForumMessageService(forumMessageRepo)
-	problemRepo := repository.NewProblemRepository(dbConn)
-	projectRepo := repository.NewProjectRepository(dbConn)
+	problemRepo := postgres.NewProblemRepository(dbConn)
+	projectRepo := postgres.NewProjectRepository(dbConn)
 	projectService := service.NewProjectService(projectRepo)
-	attendanceRepo := repository.NewAttendanceRepository(dbConn)
+	attendanceRepo := postgres.NewAttendanceRepository(dbConn)
 	attendanceService := service.NewAttendanceService(attendanceRepo)
-	roleRepo := repository.NewRoleRepository(dbConn)
+	roleRepo := postgres.NewRoleRepository(dbConn)
 	roleService := service.NewRoleService(roleRepo)
-	statusRepo := repository.NewStatusRepository(dbConn)
+	statusRepo := postgres.NewStatusRepository(dbConn)
 	statusService := service.NewStatusService(statusRepo)
-	subscriptionRepo := repository.NewSubscriptionRepository(dbConn)
+	subscriptionRepo := postgres.NewSubscriptionRepository(dbConn)
 	subscriptionService := service.NewSubscriptionService(subscriptionRepo)
-	taskRepo := repository.NewTaskRepository(dbConn)
+	taskRepo := postgres.NewTaskRepository(dbConn)
 	taskService := service.NewTaskService(taskRepo)
-	conveyorRepo := repository.NewConveyorRepository(dbConn)
+	conveyorRepo := postgres.NewConveyorRepository(dbConn)
 	conveyorService := service.NewConveyorServiceWithReportLLM(conveyorRepo, service.NewBackendGeneratedReportLLMClient(llmClient))
 	pmImportService := service.NewPMImportService(conveyorRepo)
-	teamRepo := repository.NewTeamRepository(dbConn)
+	teamRepo := postgres.NewTeamRepository(dbConn)
 	teamService := service.NewTeamService(teamRepo)
 	userService := service.NewUserService(userRepo)
-	apiTokenRepo := repository.NewAPITokenRepository(dbConn)
+	apiTokenRepo := postgres.NewAPITokenRepository(dbConn)
 	apiTokenService := service.NewAPITokenService(apiTokenRepo, userRepo)
-	llmSettingsService := service.NewLLMSettingsService(repository.NewLLMSettingsRepository(dbConn))
+	llmSettingsService := service.NewLLMSettingsService(postgres.NewLLMSettingsRepository(dbConn))
 
 	// Git commit-tracker: host-agnostic (порт CommitProvider) + адаптеры GitHub/GitFlic.
-	gitRepo := repository.NewGitRepository(dbConn)
+	gitRepo := postgres.NewGitRepository(dbConn)
 	gitService := service.NewGitService(gitRepo, userRepo,
 		infragit.NewGitHubProvider(os.Getenv("GITHUB_TOKEN")),
 		infragit.NewGitFlicProvider(os.Getenv("GITFLIC_TOKEN"), os.Getenv("GITFLIC_API_URL")),
@@ -135,7 +136,7 @@ func Bootstrap() (*App, error) {
 	log.Printf("Redis connected: %s", redisAddr)
 	app.cleanup = append(app.cleanup, func() { _ = rdb.Close() })
 
-	sessionRepo := repository.NewSessionRepository(rdb)
+	sessionRepo := redisrepo.NewSessionRepository(rdb)
 	sessionService := service.NewSessionService(sessionRepo)
 
 	// SSE realtime: in-memory шина событий; conveyor.createEvent публикует в неё через GlobalEventHub.
@@ -159,12 +160,12 @@ func Bootstrap() (*App, error) {
 	docs.SwaggerInfo.Host = ""
 
 	// ── Главный middleware ПЕРЕД маршрутами — критический порядок ──
-	e.Use(controller.AppAuthMiddleware(authService, sessionService, apiTokenService))
+	e.Use(httpapi.AppAuthMiddleware(authService, sessionService, apiTokenService))
 
 	// Role-based middleware — три уровня доступа
-	adminMw := controller.RequireRoles(roleRepo, "admin")
-	managerMw := controller.RequireRoles(roleRepo, "admin", "manager")
-	employeeMw := controller.RequireRoles(roleRepo, "admin", "manager", "employee")
+	adminMw := httpapi.RequireRoles(roleRepo, "admin")
+	managerMw := httpapi.RequireRoles(roleRepo, "admin", "manager")
+	employeeMw := httpapi.RequireRoles(roleRepo, "admin", "manager", "employee")
 
 	// freshAvatarURL — генерация свежих presigned URL; деградирует gracefully без storage
 	freshAvatarURL := func(s string) string { return s }
@@ -173,31 +174,31 @@ func Bootstrap() (*App, error) {
 	}
 
 	// Регистрируем маршруты (ПОСЛЕ глобального middleware)
-	controller.RegisterAuthRoutes(e, authService, sessionService, userService)
-	controller.RegisterUserRoutes(e, userService, freshAvatarURL, adminMw)
-	controller.RegisterRoleRoutes(e, roleService, adminMw)
-	controller.RegisterTeamRoutes(e, teamService, freshAvatarURL, managerMw)
-	controller.RegisterProjectRoutes(e, projectService, managerMw)
-	controller.RegisterBoardRoutes(e, boardService, managerMw)
-	controller.RegisterStatusRoutes(e, statusService, managerMw)
-	controller.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, conveyorService, llmSettingsService, freshAvatarURL, employeeMw, managerMw)
-	controller.RegisterConveyorRoutes(e, conveyorService, pmImportService, employeeMw, managerMw)
-	controller.RegisterLLMSettingsRoutes(e, llmSettingsService, adminMw)
-	controller.RegisterReportRoutes(e, reportService, freshAvatarURL, employeeMw, managerMw)
-	controller.RegisterForumMessagesRoutes(e, forumMessageService, freshAvatarURL, employeeMw, managerMw)
-	controller.RegisterProblemRoutes(e, problemService, employeeMw, managerMw)
-	controller.RegisterAttendanceRoutes(e, attendanceService, employeeMw, managerMw)
-	controller.RegisterSubscriptionRoutes(e, subscriptionService)
-	controller.RegisterAPITokenRoutes(e, apiTokenService)
+	httpapi.RegisterAuthRoutes(e, authService, sessionService, userService)
+	httpapi.RegisterUserRoutes(e, userService, freshAvatarURL, adminMw)
+	httpapi.RegisterRoleRoutes(e, roleService, adminMw)
+	httpapi.RegisterTeamRoutes(e, teamService, freshAvatarURL, managerMw)
+	httpapi.RegisterProjectRoutes(e, projectService, managerMw)
+	httpapi.RegisterBoardRoutes(e, boardService, managerMw)
+	httpapi.RegisterStatusRoutes(e, statusService, managerMw)
+	httpapi.RegisterTaskRoutes(e, taskService, userService, projectService, llmClient, conveyorService, llmSettingsService, freshAvatarURL, employeeMw, managerMw)
+	httpapi.RegisterConveyorRoutes(e, conveyorService, pmImportService, employeeMw, managerMw)
+	httpapi.RegisterLLMSettingsRoutes(e, llmSettingsService, adminMw)
+	httpapi.RegisterReportRoutes(e, reportService, freshAvatarURL, employeeMw, managerMw)
+	httpapi.RegisterForumMessagesRoutes(e, forumMessageService, freshAvatarURL, employeeMw, managerMw)
+	httpapi.RegisterProblemRoutes(e, problemService, employeeMw, managerMw)
+	httpapi.RegisterAttendanceRoutes(e, attendanceService, employeeMw, managerMw)
+	httpapi.RegisterSubscriptionRoutes(e, subscriptionService)
+	httpapi.RegisterAPITokenRoutes(e, apiTokenService)
 	if storageService != nil {
-		controller.RegisterUploadRoutes(e, storageService, userService)
+		httpapi.RegisterUploadRoutes(e, storageService, userService)
 	}
 
 	// SSE realtime stream (/v2/stream) — auth по query-токену, см. Stream.go
-	controller.RegisterStreamRoutes(e, eventHub, sessionService, apiTokenService)
+	httpapi.RegisterStreamRoutes(e, eventHub, sessionService, apiTokenService)
 
 	// Git commit-tracker (репозитории/коммиты/привязка к задачам)
-	controller.RegisterGitRoutes(e, gitService, employeeMw, managerMw)
+	httpapi.RegisterGitRoutes(e, gitService, employeeMw, managerMw)
 
 	// Swagger UI
 	e.GET("/swagger", func(c echo.Context) error {
