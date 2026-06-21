@@ -1,8 +1,7 @@
-package service
+package git
 
 import (
 	"context"
-	models "emplacc-api/internal/domain"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,11 +9,14 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 )
 
 // GitFlicProvider — адаптер российского хостинга GitFlic (docs.gitflic.ru/latest/api).
-// Реализует тот же порт CommitProvider, что и GitHub — это и есть заявленная в дипломе
-// независимость от конкретного хранилища кода.
+// Реализует тот же порт ports.CommitProvider, что и GitHub — независимость от
+// конкретного хранилища кода.
 //
 // API: база https://api.gitflic.ru, авторизация `Authorization: token <access token>`,
 // ответы — Spring-HATEOAS (`_embedded.commitList` + объект `page`), пагинация page(с 0)/size.
@@ -96,16 +98,13 @@ type gfResponse struct {
 
 const gfMaxPages = 10 // до 1000 коммитов за синк (размер 100) — защита от безлимитного обхода
 
-func (p *GitFlicProvider) FetchCommits(ctx context.Context, repo models.CodeRepository, since *time.Time) ([]ProviderCommit, error) {
-	out := make([]ProviderCommit, 0, 100)
+func (p *GitFlicProvider) FetchCommits(ctx context.Context, repo models.CodeRepository, since *time.Time) ([]ports.ProviderCommit, error) {
+	out := make([]ports.ProviderCommit, 0, 100)
 	for page := 0; page < gfMaxPages; page++ {
-		q := url.Values{}
-		q.Set("page", fmt.Sprintf("%d", page))
-		q.Set("size", "100")
+		endpoint := fmt.Sprintf("%s/project/%s/%s/commits?page=%d&size=100", p.baseURL, repo.Owner, repo.Name, page)
 		if repo.Branch != "" {
-			q.Set("branch", repo.Branch)
+			endpoint += "&branch=" + url.QueryEscape(repo.Branch)
 		}
-		endpoint := fmt.Sprintf("%s/project/%s/%s/commits?%s", p.baseURL, repo.Owner, repo.Name, q.Encode())
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 		if err != nil {
@@ -143,7 +142,7 @@ func (p *GitFlicProvider) FetchCommits(ctx context.Context, repo models.CodeRepo
 			if since != nil && !committed.After(*since) {
 				continue
 			}
-			out = append(out, ProviderCommit{
+			out = append(out, ports.ProviderCommit{
 				SHA:         c.Hash,
 				Message:     c.message(),
 				AuthorName:  c.AuthorIdent.Name,
@@ -153,7 +152,6 @@ func (p *GitFlicProvider) FetchCommits(ctx context.Context, repo models.CodeRepo
 				CommittedAt: committed,
 			})
 		}
-		// Условия остановки: последняя страница по метаданным page или неполная страница.
 		if parsed.Page.TotalPages > 0 && page+1 >= parsed.Page.TotalPages {
 			break
 		}

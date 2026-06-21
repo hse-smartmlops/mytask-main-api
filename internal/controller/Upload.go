@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"emplacc-api/internal/ports"
 	"emplacc-api/internal/service"
 	"log"
 	"net/http"
@@ -20,15 +21,15 @@ const (
 var allowedRefreshPrefixes = []string{"images/", "files/", "avatars/"}
 
 type UploadController struct {
-	storageService service.StorageService
+	storageService ports.StoragePort
 	userService    service.UserService
 }
 
-func NewUploadController(storageService service.StorageService, userService service.UserService) *UploadController {
+func NewUploadController(storageService ports.StoragePort, userService service.UserService) *UploadController {
 	return &UploadController{storageService: storageService, userService: userService}
 }
 
-func RegisterUploadRoutes(e *echo.Echo, storageService service.StorageService, userService service.UserService) {
+func RegisterUploadRoutes(e *echo.Echo, storageService ports.StoragePort, userService service.UserService) {
 	ctrl := NewUploadController(storageService, userService)
 	g := e.Group("/upload")
 	g.POST("/image", ctrl.UploadImage)

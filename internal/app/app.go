@@ -17,6 +17,8 @@ import (
 	"emplacc-api/internal/controller"
 	"emplacc-api/internal/db"
 	"emplacc-api/internal/grpc/client"
+	infragit "emplacc-api/internal/infra/git"
+	"emplacc-api/internal/infra/storage"
 	"emplacc-api/internal/repository"
 	"emplacc-api/internal/service"
 
@@ -111,8 +113,8 @@ func Bootstrap() (*App, error) {
 	// Git commit-tracker: host-agnostic (порт CommitProvider) + адаптеры GitHub/GitFlic.
 	gitRepo := repository.NewGitRepository(dbConn)
 	gitService := service.NewGitService(gitRepo, userRepo,
-		service.NewGitHubProvider(os.Getenv("GITHUB_TOKEN")),
-		service.NewGitFlicProvider(os.Getenv("GITFLIC_TOKEN"), os.Getenv("GITFLIC_API_URL")),
+		infragit.NewGitHubProvider(os.Getenv("GITHUB_TOKEN")),
+		infragit.NewGitFlicProvider(os.Getenv("GITFLIC_TOKEN"), os.Getenv("GITFLIC_API_URL")),
 	)
 
 	// Redis — сессии без персистентности на диск
@@ -146,7 +148,7 @@ func Bootstrap() (*App, error) {
 	problemService := service.NewProblemService(problemRepo, forumMessageRepo, systemUserId)
 
 	// S3/RustFS storage (опционально — не падаем если не настроен)
-	storageService, storageErr := service.NewStorageService()
+	storageService, storageErr := storage.New()
 	if storageErr != nil {
 		log.Printf("Warning: S3 storage not configured: %v", storageErr)
 	}

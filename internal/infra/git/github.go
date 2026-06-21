@@ -1,8 +1,10 @@
-package service
+// Package git holds outbound adapters for code-hosting providers (GitHub, GitFlic).
+// Each implements ports.CommitProvider; the net/http driver stays at this adapter
+// layer and never leaks into the service layer.
+package git
 
 import (
 	"context"
-	models "emplacc-api/internal/domain"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,10 +12,13 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	models "emplacc-api/internal/domain"
+	"emplacc-api/internal/ports"
 )
 
-// GitHubProvider — адаптер GitHub REST API. Токен опционален (без него — публичные репо,
-// с лимитом). Реализует порт CommitProvider.
+// GitHubProvider — адаптер GitHub REST API. Токен опционален (без него — публичные
+// репо с лимитом). Реализует порт ports.CommitProvider.
 type GitHubProvider struct {
 	token   string
 	baseURL string
@@ -48,8 +53,8 @@ type ghCommit struct {
 
 const ghMaxPages = 10 // до 1000 коммитов за синк — защита от безлимитного обхода
 
-func (p *GitHubProvider) FetchCommits(ctx context.Context, repo models.CodeRepository, since *time.Time) ([]ProviderCommit, error) {
-	out := make([]ProviderCommit, 0, 100)
+func (p *GitHubProvider) FetchCommits(ctx context.Context, repo models.CodeRepository, since *time.Time) ([]ports.ProviderCommit, error) {
+	out := make([]ports.ProviderCommit, 0, 100)
 	for page := 1; page <= ghMaxPages; page++ {
 		q := url.Values{}
 		q.Set("per_page", "100")
@@ -87,7 +92,7 @@ func (p *GitHubProvider) FetchCommits(ctx context.Context, repo models.CodeRepos
 			return nil, err
 		}
 		for _, c := range batch {
-			pc := ProviderCommit{
+			pc := ports.ProviderCommit{
 				SHA:         c.SHA,
 				Message:     c.Commit.Message,
 				AuthorName:  c.Commit.Author.Name,

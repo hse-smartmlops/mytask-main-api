@@ -1,4 +1,7 @@
-package service
+// Package storage is the outbound adapter for S3-compatible object storage
+// (MinIO / rustfs). It implements ports.StoragePort; nothing above the adapter
+// layer imports the minio driver.
+package storage
 
 import (
 	"context"
@@ -10,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"emplacc-api/internal/ports"
+
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -19,30 +24,21 @@ import (
 // Для долгосрочного хранения используй /media/refresh endpoint.
 const presignedURLExpiry = 7 * 24 * time.Hour
 
-type StorageService interface {
-	UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error)
-	RefreshURL(objectPath string) (string, error)
-	// FreshAvatarURL returns a fresh presigned URL for the stored value.
-	// Accepts either an object path ("avatars/uuid.jpg") or a legacy
-	// presigned URL containing X-Amz-Signature (auto-extracts the path).
-	// Returns "" on error or empty input.
-	FreshAvatarURL(storedValue string) string
-}
-
-type storageService struct {
+type minioStorage struct {
 	client        *minio.Client // внутренний endpoint для загрузки объектов
 	presignClient *minio.Client // публичный endpoint для генерации presigned URL
 	bucket        string
 	useSSL        bool
 }
 
-func NewStorageService() (StorageService, error) {
-	endpoint  := os.Getenv("S3_ENDPOINT")
+// New constructs the MinIO-backed storage adapter from S3_* env vars.
+func New() (ports.StoragePort, error) {
+	endpoint := os.Getenv("S3_ENDPOINT")
 	accessKey := os.Getenv("S3_ACCESS_KEY")
 	secretKey := os.Getenv("S3_SECRET_KEY")
-	bucket    := os.Getenv("S3_BUCKET")
+	bucket := os.Getenv("S3_BUCKET")
 	publicURL := os.Getenv("S3_PUBLIC_URL")
-	useSSL    := os.Getenv("S3_USE_SSL") == "true"
+	useSSL := os.Getenv("S3_USE_SSL") == "true"
 
 	if endpoint == "" || accessKey == "" || secretKey == "" || bucket == "" {
 		return nil, fmt.Errorf("S3_ENDPOINT, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET must be set")
@@ -86,7 +82,6 @@ func NewStorageService() (StorageService, error) {
 	var presignClient *minio.Client
 	if publicURL != "" {
 		pubEndpoint := strings.TrimRight(publicURL, "/")
-		// Извлекаем host из publicURL (убираем scheme и путь)
 		pubEndpoint = strings.TrimPrefix(pubEndpoint, "https://")
 		pubEndpoint = strings.TrimPrefix(pubEndpoint, "http://")
 		if idx := strings.Index(pubEndpoint, "/"); idx >= 0 {
@@ -102,12 +97,11 @@ func NewStorageService() (StorageService, error) {
 		presignClient = client
 	}
 
-	return &storageService{client: client, presignClient: presignClient, bucket: bucket, useSSL: useSSL}, nil
+	return &minioStorage{client: client, presignClient: presignClient, bucket: bucket, useSSL: useSSL}, nil
 }
 
-func (s *storageService) RefreshURL(objectPath string) (string, error) {
-	// Используем presignClient — он настроен на публичный endpoint,
-	// поэтому подпись будет валидна для публичного URL
+func (s *minioStorage) RefreshURL(objectPath string) (string, error) {
+	// presignClient настроен на публичный endpoint — подпись валидна для публичного URL
 	presigned, err := s.presignClient.PresignedGetObject(
 		context.Background(),
 		s.bucket,
@@ -121,7 +115,7 @@ func (s *storageService) RefreshURL(objectPath string) (string, error) {
 	return presigned.String(), nil
 }
 
-func (s *storageService) FreshAvatarURL(storedValue string) string {
+func (s *minioStorage) FreshAvatarURL(storedValue string) string {
 	if storedValue == "" {
 		return ""
 	}
@@ -132,7 +126,6 @@ func (s *storageService) FreshAvatarURL(storedValue string) string {
 		if err != nil {
 			return ""
 		}
-		// u.Path выглядит как /bucket/folder/file.ext — убираем bucket (первый сегмент)
 		parts := strings.SplitN(strings.TrimPrefix(u.Path, "/"), "/", 2)
 		if len(parts) < 2 {
 			return ""
@@ -146,7 +139,7 @@ func (s *storageService) FreshAvatarURL(storedValue string) string {
 	return fresh
 }
 
-func (s *storageService) UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error) {
+func (s *minioStorage) UploadFile(file multipart.File, header *multipart.FileHeader, folder string) (string, string, error) {
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	if ext == "" {
 		ext = ".bin"

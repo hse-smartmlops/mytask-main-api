@@ -1,12 +1,32 @@
 package ports
 
 import (
+	"context"
 	"time"
 
 	models "emplacc-api/internal/domain"
 
 	"github.com/google/uuid"
 )
+
+// ProviderCommit — сырой коммит от провайдера кода (до маппинга в доменную модель).
+type ProviderCommit struct {
+	SHA         string
+	Message     string
+	AuthorName  string
+	AuthorEmail string
+	AuthorLogin string
+	URL         string
+	CommittedAt time.Time
+}
+
+// CommitProvider — порт интеграции с хранилищем кода (граница гексагона).
+// Реализации в internal/infra/git: GitHub, GitFlic, … — система остаётся
+// независимой от конкретного хостинга.
+type CommitProvider interface {
+	Name() string
+	FetchCommits(ctx context.Context, repo models.CodeRepository, since *time.Time) ([]ProviderCommit, error)
+}
 
 type GitRepository interface {
 	CreateRepository(repo *models.CodeRepository) error
