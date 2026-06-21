@@ -8,12 +8,27 @@ import (
 	"emplacc-api/internal/utils"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
+
+// forumMentionRe — mention-маркап @[Имя](type:id) для очистки превью цитаты.
+var forumMentionRe = regexp.MustCompile(`[@#]\[([^\]]+)\]\((?:user|task|project|team):[^)]+\)`)
+
+// forumReplyPreview строит превью цитируемого сообщения: убирает mention-маркап и
+// обрезает по РУНАМ (не байтам), иначе кириллица рвётся на � при срезе.
+func forumReplyPreview(desc []string) string {
+	text := forumMentionRe.ReplaceAllString(strings.Join(desc, " "), "@$1")
+	r := []rune(strings.TrimSpace(text))
+	if len(r) > 100 {
+		return string(r[:100]) + "…"
+	}
+	return string(r)
+}
 
 type ForumMessageController struct {
 	forumMessageService service.ForumMessageService
@@ -64,10 +79,7 @@ func buildForumMessageResponse(m models.ForumMessage, freshAvatarURL func(string
 	}
 
 	if m.ReplyTo != nil && (m.ReplyTo.Deleted == nil || !*m.ReplyTo.Deleted) {
-		text := strings.Join([]string(m.ReplyTo.Description), " ")
-		if len(text) > 100 {
-			text = text[:100] + "…"
-		}
+		text := forumReplyPreview([]string(m.ReplyTo.Description))
 		authorName := ""
 		if m.ReplyTo.User != nil {
 			authorName = strings.TrimSpace(m.ReplyTo.User.FirstName + " " + m.ReplyTo.User.LastName)
