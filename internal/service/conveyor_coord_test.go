@@ -704,6 +704,18 @@ func (r *coordRepo) ListStaleAgentRuns(ctx context.Context, cutoff time.Time) ([
 	return nil, nil
 }
 func (r *coordRepo) UpdateAgentRun(ctx context.Context, run *models.AgentRun) error { return nil }
+func (r *coordRepo) CreateAgentInboxItem(ctx context.Context, item *models.AgentInboxItem) error {
+	return nil
+}
+func (r *coordRepo) ListAgentInboxItems(ctx context.Context, recipientID uuid.UUID) ([]models.AgentInboxItem, error) {
+	return nil, nil
+}
+func (r *coordRepo) GetAgentInboxItem(ctx context.Context, id uuid.UUID) (*models.AgentInboxItem, error) {
+	return nil, models.ErrConveyorNotFound
+}
+func (r *coordRepo) UpdateAgentInboxItemAck(ctx context.Context, itemID uuid.UUID, recipientID uuid.UUID, state string, at time.Time) error {
+	return models.ErrConveyorNotFound
+}
 func (r *coordRepo) ListProjectReportSources(ctx context.Context, projectID uuid.UUID, start time.Time, end time.Time) ([]ports.ProjectReportSource, error) {
 	return nil, nil
 }
