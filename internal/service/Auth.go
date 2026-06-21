@@ -7,33 +7,25 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"net/url"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/Nerzal/gocloak/v13"
 	"github.com/google/uuid"
 )
 
 type AuthService interface {
 	Login(email, password string) (*AuthResponse, error)
 	Logout(token string) error
-	GetUserInfo(token string) (*gocloak.UserInfo, error)
+	GetUserInfo(token string) (*ports.UserInfo, error)
 	RefreshToken(refreshToken string) (*TokenResponse, error)
 	ValidateToken(token string) error
 	ValidateTokenForMiddleware(token string) error // Новый метод для middleware
 }
 
 type authService struct {
-	keycloakClient gocloak.GoCloak
-	realm          string
-	clientID       string
-	clientSecret   string
-	userRepo       ports.UserRepository
+	idp      ports.IdentityProvider
+	userRepo ports.UserRepository
 }
 
 type AuthResponse struct {
@@ -56,25 +48,18 @@ type TokenResponse struct {
 	Scope            string `json:"scope,omitempty"`
 }
 
-func NewAuthService(userRepo ports.UserRepository) AuthService {
-	return &authService{
-		keycloakClient: *gocloak.NewClient(os.Getenv("KEYCLOAK_URL")),
-		realm:          os.Getenv("KEYCLOAK_REALM"),
-		clientID:       os.Getenv("KEYCLOAK_CLIENT_ID"),
-		clientSecret:   os.Getenv("KEYCLOAK_CLIENT_SECRET"),
-		userRepo:       userRepo,
-	}
+func NewAuthService(userRepo ports.UserRepository, idp ports.IdentityProvider) AuthService {
+	return &authService{idp: idp, userRepo: userRepo}
 }
 
 func (s *authService) Login(email, password string) (*AuthResponse, error) {
 	ctx := context.Background()
-	token, err := s.keycloakClient.Login(ctx, s.clientID, s.clientSecret, s.realm, email, password)
+	token, err := s.idp.Login(ctx, email, password)
 	if err != nil {
 		return nil, err
 	}
 
-	// получаем userInfo
-	userInfo, err := s.keycloakClient.GetUserInfo(ctx, token.AccessToken, s.realm)
+	userInfo, err := s.idp.GetUserInfo(ctx, token.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -94,49 +79,18 @@ func (s *authService) Login(email, password string) (*AuthResponse, error) {
 }
 
 func (s *authService) Logout(token string) error {
-	ctx := context.Background()
-	err := s.keycloakClient.Logout(ctx, s.clientID, s.clientSecret, s.realm, token)
-	return err
+	return s.idp.Logout(context.Background(), token)
 }
 
-func (s *authService) GetUserInfo(token string) (*gocloak.UserInfo, error) {
-	ctx := context.Background()
-	var userInfo *gocloak.UserInfo
-	var err error
-
-	// Try to fetch user info directly
-	userInfo, err = s.keycloakClient.GetUserInfo(ctx, token, s.realm)
-	if err != nil {
-		// Attempt token exchange for Flutter token
-		exchanged, exErr := s.ExchangeToken(ctx, token)
-		if exErr != nil {
-			log.Printf("Me token exchange failed: %v / original err: %v", exErr, err)
-			return nil, exErr
-		}
-		token = exchanged.AccessToken
-		userInfo, err = s.keycloakClient.GetUserInfo(ctx, token, s.realm)
-		if err != nil {
-			log.Printf("Me failed after exchange: %v", err)
-			return nil, err
-		}
-	}
-
-	return userInfo, nil
+func (s *authService) GetUserInfo(token string) (*ports.UserInfo, error) {
+	return s.idp.GetUserInfo(context.Background(), token)
 }
 
 func (s *authService) RefreshToken(refreshToken string) (*TokenResponse, error) {
-	ctx := context.Background()
-	token, err := s.keycloakClient.RefreshToken(
-		ctx,
-		refreshToken,
-		s.clientID,
-		s.clientSecret,
-		s.realm,
-	)
+	token, err := s.idp.RefreshToken(context.Background(), refreshToken)
 	if err != nil {
 		return nil, err
 	}
-
 	return &TokenResponse{
 		AccessToken:      token.AccessToken,
 		RefreshToken:     token.RefreshToken,
@@ -147,7 +101,7 @@ func (s *authService) RefreshToken(refreshToken string) (*TokenResponse, error) 
 }
 
 // parseJWTClaims разбирает payload JWT для извлечения полей.
-// ВАЖНО: не проверяет подпись — вызывающий код обязан сначала вызвать verifyJWTSignature
+// ВАЖНО: не проверяет подпись — вызывающий код обязан сначала вызвать VerifyToken
 // (как это делает ensureUserFromJWT).
 func parseJWTClaims(token string) (sub, email, firstName, lastName string, exp int64, emailVerified bool, err error) {
 	parts := strings.Split(token, ".")
@@ -188,70 +142,8 @@ func (s *authService) ValidateToken(token string) error {
 	return s.ensureUserFromJWT(token)
 }
 
-func (s *authService) ExchangeToken(ctx context.Context, subjectToken string) (*TokenResponse, error) {
-	endpoint := strings.TrimRight(os.Getenv("KEYCLOAK_URL"), "/") +
-		"/realms/" + os.Getenv("KEYCLOAK_REALM") + "/protocol/openid-connect/token"
-
-	data := url.Values{}
-	data.Set("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
-	data.Set("subject_token", subjectToken)
-	data.Set("subject_token_type", "urn:ietf:params:oauth:token-type:access_token")
-	data.Set("client_id", s.clientID)
-	data.Set("client_secret", s.clientSecret)
-	data.Set("scope", "openid") // Основной scope для OpenID Connect
-
-	log.Printf("Exchanging token with scope: openid")
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(data.Encode()))
-	if err != nil {
-		log.Printf("Error creating request: %v", err)
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Printf("Error making request: %v", err)
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response: %v", err)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.Printf("Token exchange failed with status %d: %s", resp.StatusCode, body)
-		return nil, fmt.Errorf("token exchange failed: %s", body)
-	}
-
-	var tokenResp TokenResponse
-	if err := json.Unmarshal(body, &tokenResp); err != nil {
-		return nil, fmt.Errorf("error parsing token response: %v", err)
-	}
-
-	return &tokenResp, nil
-}
-
 func (s *authService) ValidateTokenForMiddleware(token string) error {
 	return s.ensureUserFromJWT(token)
-}
-
-// verifyJWTSignature проверяет подпись токена по JWKS нашего Keycloak realm.
-// gocloak кэширует сертификаты, так что в горячем пути это не сетевой вызов на каждый запрос.
-// Без этой проверки любой может подделать payload (sub/email) и выдать себя за другого
-// пользователя, включая админа — поэтому подпись обязательна.
-func (s *authService) verifyJWTSignature(token string) error {
-	ctx := context.Background()
-	decoded, _, err := s.keycloakClient.DecodeAccessToken(ctx, token, s.realm)
-	if err != nil {
-		return fmt.Errorf("token signature invalid: %w", err)
-	}
-	if decoded == nil || !decoded.Valid {
-		return fmt.Errorf("token invalid")
-	}
-	return nil
 }
 
 // ensureUserFromJWT проверяет подпись JWT по Keycloak realm, затем разбирает payload
@@ -259,7 +151,7 @@ func (s *authService) verifyJWTSignature(token string) error {
 // Если JWT валидный — всегда возвращает nil по DB-ошибкам (не блокируем запрос из-за БД),
 // но невалидная подпись/claims всегда отклоняются.
 func (s *authService) ensureUserFromJWT(token string) error {
-	if err := s.verifyJWTSignature(token); err != nil {
+	if err := s.idp.VerifyToken(context.Background(), token); err != nil {
 		log.Printf("JWT signature verification failed: %v", err)
 		return fmt.Errorf("token invalid")
 	}

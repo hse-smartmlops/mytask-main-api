@@ -18,6 +18,7 @@ import (
 	"emplacc-api/internal/db"
 	"emplacc-api/internal/grpc/client"
 	infragit "emplacc-api/internal/infra/git"
+	"emplacc-api/internal/infra/keycloak"
 	"emplacc-api/internal/infra/storage"
 	"emplacc-api/internal/repository"
 	"emplacc-api/internal/service"
@@ -81,7 +82,7 @@ func Bootstrap() (*App, error) {
 
 	// ── Repositories + services ──
 	userRepo := repository.NewUserRepository(dbConn)
-	authService := service.NewAuthService(userRepo)
+	authService := service.NewAuthService(userRepo, keycloak.New())
 	boardRepo := repository.NewBoardRepository(dbConn)
 	boardService := service.NewBoardService(boardRepo)
 	reportRepo := repository.NewReportRepository(dbConn)

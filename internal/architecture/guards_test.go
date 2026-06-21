@@ -106,20 +106,11 @@ func isRawDriver(imp string) bool {
 	return false
 }
 
-// allowlist of CURRENT legacy violations (key = "relPath|import"). Each entry is
-// debt that a later Phase-3 sub-step removes; the goal is an empty allowlist.
-//
-//   - controller→repository / controller→gorm : paid down in 3.5 (transport/http)
-//   - service→net/http+gocloak / service→minio : paid down in 3.4 (infra adapters
-//     behind ports: KeycloakPort, StoragePort, CommitProvider HTTP client)
-var allowedLayerViolations = map[string]bool{
-	// R2 — Auth still uses net/http + gocloak directly. Keycloak behind a port is
-	// DEFERRED: AuthService.GetUserInfo returns *gocloak.UserInfo straight to the
-	// controller, so a clean port changes the /me response contract (FE-visible) —
-	// scheduled as a focused follow-up after the diploma defense.
-	"internal/service/Auth.go|net/http":                      true,
-	"internal/service/Auth.go|github.com/Nerzal/gocloak/v13": true,
-}
+// allowlist of accepted legacy layer violations (key = "relPath|import").
+// Phase 3 paid down ALL of them — the map is intentionally EMPTY: the hexagon is
+// fully enforced, and any new transport→repo/driver or service→driver import fails
+// the build. Add an entry here only as a consciously-documented temporary exception.
+var allowedLayerViolations = map[string]bool{}
 
 func report(t *testing.T, rule string, violations []string) {
 	t.Helper()
