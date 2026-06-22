@@ -226,7 +226,7 @@ func (uc *UserController) GetUserById(c echo.Context) error {
 		FirstName:     user.FirstName,
 		LastName:      user.LastName,
 		LastLogin:     user.LastLogin,
-		AvatarURL:     user.AvatarURL,
+		AvatarURL:     uc.freshAvatarURL(user.AvatarURL),
 	}
 	return c.JSON(http.StatusOK, getUserResponse)
 }
@@ -269,7 +269,7 @@ func (uc *UserController) GetCurrentUser(c echo.Context) error {
 		FirstName:     user.FirstName,
 		LastName:      user.LastName,
 		LastLogin:     user.LastLogin,
-		AvatarURL:     user.AvatarURL,
+		AvatarURL:     uc.freshAvatarURL(user.AvatarURL),
 	})
 }
 
