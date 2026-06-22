@@ -20,6 +20,8 @@ type NotificationService interface {
 	UnreadCount(userID uuid.UUID) (int64, error)
 	MarkRead(id, userID uuid.UUID) error
 	MarkAllRead(userID uuid.UUID) error
+	GetEmailPref(userID uuid.UUID) (bool, error)
+	SetEmailPref(userID uuid.UUID, enabled bool) error
 }
 
 type notificationService struct {
@@ -94,6 +96,10 @@ func (s *notificationService) sendEmail(userID uuid.UUID, title, body, entityTyp
 	if err != nil || user == nil || user.Email == "" {
 		return
 	}
+	// Преференция пользователя: nil = включено (старые записи).
+	if user.EmailNotifications != nil && !*user.EmailNotifications {
+		return
+	}
 	link, cta := s.notificationLink(entityType, entityID)
 	htmlBody := notificationEmailHTML(s.webBase, title, body, link, cta)
 	if err := s.mailer.Send(user.Email, title, htmlBody); err != nil {
@@ -150,6 +156,20 @@ func notificationEmailHTML(base, title, body, link, cta string) string {
 </td></tr>
 </table>
 </body></html>`, logo, safeTitle, safeBody, link, html.EscapeString(cta), base)
+}
+
+// GetEmailPref — включены ли email-уведомления у пользователя (nil = да).
+func (s *notificationService) GetEmailPref(userID uuid.UUID) (bool, error) {
+	user, err := s.userRepo.GetUserById(userID)
+	if err != nil || user == nil {
+		return true, err
+	}
+	return user.EmailNotifications == nil || *user.EmailNotifications, nil
+}
+
+func (s *notificationService) SetEmailPref(userID uuid.UUID, enabled bool) error {
+	_, err := s.userRepo.UpdateUser(userID, map[string]interface{}{"email_notifications": enabled})
+	return err
 }
 
 func (s *notificationService) List(userID uuid.UUID, page, pageSize int, onlyUnread bool) ([]models.Notification, int64, error) {

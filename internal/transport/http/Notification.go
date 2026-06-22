@@ -24,6 +24,37 @@ func RegisterNotificationRoutes(e Router, svc service.NotificationService, emplo
 	g.GET("/unread-count", c.UnreadCount)
 	g.POST("/:id/read", c.MarkRead)
 	g.POST("/read-all", c.MarkAllRead)
+	g.GET("/preferences", c.GetPreferences)
+	g.PUT("/preferences", c.SetPreferences)
+}
+
+func (nc *NotificationController) GetPreferences(c echo.Context) error {
+	userID, ok := nc.caller(c)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+	enabled, err := nc.svc.GetEmailPref(userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка"})
+	}
+	return c.JSON(http.StatusOK, map[string]any{"email_notifications": enabled})
+}
+
+func (nc *NotificationController) SetPreferences(c echo.Context) error {
+	userID, ok := nc.caller(c)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+	}
+	var req struct {
+		EmailNotifications *bool `json:"email_notifications"`
+	}
+	if err := c.Bind(&req); err != nil || req.EmailNotifications == nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "email_notifications обязателен"})
+	}
+	if err := nc.svc.SetEmailPref(userID, *req.EmailNotifications); err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Ошибка сохранения"})
+	}
+	return c.JSON(http.StatusOK, map[string]any{"email_notifications": *req.EmailNotifications})
 }
 
 func (nc *NotificationController) caller(c echo.Context) (uuid.UUID, bool) {

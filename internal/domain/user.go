@@ -26,6 +26,9 @@ type User struct {
 	Deleted       bool      `gorm:"type:boolean"`
 	UpdatedAt     time.Time `gorm:"type:timestamp"`
 
+	// Преференция email-уведомлений. nil (старые записи) трактуется как «включено».
+	EmailNotifications *bool `gorm:"default:true"`
+
 	// вместо many2many — явная джойн-модель
 	UserRoles []UserRole `gorm:"foreignKey:UserID;references:ID"`
 }
