@@ -243,6 +243,12 @@ func (r *conveyorRepository) GetWorkOrder(ctx context.Context, id uuid.UUID) (*m
 	return &workOrder, nil
 }
 
+func (r *conveyorRepository) ListWorkOrdersByTask(ctx context.Context, taskID uuid.UUID) ([]models.WorkOrder, error) {
+	var out []models.WorkOrder
+	err := r.db.WithContext(ctx).Where("source_task_id = ?", taskID).Order("created_at DESC").Find(&out).Error
+	return out, err
+}
+
 func (r *conveyorRepository) UpdateWorkOrder(ctx context.Context, workOrder *models.WorkOrder) error {
 	res := r.db.WithContext(ctx).Model(&models.WorkOrder{}).Where("id = ?", workOrder.ID).Updates(workOrder)
 	if res.Error != nil {

@@ -198,6 +198,7 @@ func RegisterConveyorRoutes(e Router, svc service.ConveyorService, pmImport serv
 	g.GET("/:id/links", c.ListLinks)
 	g.GET("/:id/agent-runs", c.ListAgentRuns)
 	g.GET("/:id/agent-runs/:agent_run_id", c.GetAgentRun)
+	g.GET("/:id/work-orders", c.ListWorkOrders)
 	g.POST("/:id/criteria", c.CreateCriterion, employeeMw)
 	g.PATCH("/:id/criteria/:criterion_id", c.UpdateCriterionState, employeeMw)
 	g.POST("/:id/evidence", c.AttachEvidence, employeeMw)
@@ -312,6 +313,26 @@ func (c *ConveyorController) ListCriteria(ctx echo.Context) error {
 		return conveyorError(ctx, err)
 	}
 	items, err := c.svc.ListAcceptanceCriteria(ctx.Request().Context(), taskID)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	return ctx.JSON(http.StatusOK, items)
+}
+
+// ListWorkOrders — наряды, созданные из задачи (source_task_id).
+func (c *ConveyorController) ListWorkOrders(ctx echo.Context) error {
+	taskID, err := parseUUIDParam(ctx, "id")
+	if err != nil {
+		return conveyorError(ctx, service.ErrValidation)
+	}
+	actor, err := actorFromContext(ctx)
+	if err != nil {
+		return conveyorError(ctx, err)
+	}
+	if err := c.svc.AuthorizeWorkItemAccess(ctx.Request().Context(), actor, taskID); err != nil {
+		return conveyorError(ctx, err)
+	}
+	items, err := c.svc.ListWorkOrders(ctx.Request().Context(), taskID)
 	if err != nil {
 		return conveyorError(ctx, err)
 	}

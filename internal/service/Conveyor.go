@@ -44,6 +44,7 @@ type ConveyorService interface {
 	CloseTask(ctx context.Context, actor ConveyorActor, taskID uuid.UUID, req CloseTaskRequest) (*ConveyorMutationResult, error)
 	CreateWorkOrder(ctx context.Context, actor ConveyorActor, req CreateWorkOrderRequest) (*ConveyorMutationResult, error)
 	GetWorkOrder(ctx context.Context, workOrderID uuid.UUID) (*models.WorkOrder, error)
+	ListWorkOrders(ctx context.Context, taskID uuid.UUID) ([]models.WorkOrder, error)
 	AcceptWorkOrder(ctx context.Context, actor ConveyorActor, workOrderID uuid.UUID, req AcceptWorkOrderRequest) (*ConveyorMutationResult, error)
 	RejectWorkOrder(ctx context.Context, actor ConveyorActor, workOrderID uuid.UUID, req RejectWorkOrderRequest) (*ConveyorMutationResult, error)
 	CompleteWorkOrder(ctx context.Context, actor ConveyorActor, workOrderID uuid.UUID, req CompleteWorkOrderRequest) (*ConveyorMutationResult, error)
@@ -1125,6 +1126,15 @@ func (s *conveyorService) GetWorkOrder(ctx context.Context, workOrderID uuid.UUI
 		return nil, fmt.Errorf("%w: work_order_id is required", ErrValidation)
 	}
 	return s.repo.GetWorkOrder(ctx, workOrderID)
+}
+
+// ListWorkOrders — наряды, созданные из задачи (source_task_id). Доступ проверяет
+// контроллер через AuthorizeWorkItemAccess, как и для прочих list-эндпоинтов.
+func (s *conveyorService) ListWorkOrders(ctx context.Context, taskID uuid.UUID) ([]models.WorkOrder, error) {
+	if taskID == uuid.Nil {
+		return nil, fmt.Errorf("%w: task_id is required", ErrValidation)
+	}
+	return s.repo.ListWorkOrdersByTask(ctx, taskID)
 }
 
 func (s *conveyorService) AcceptWorkOrder(ctx context.Context, actor ConveyorActor, workOrderID uuid.UUID, req AcceptWorkOrderRequest) (*ConveyorMutationResult, error) {

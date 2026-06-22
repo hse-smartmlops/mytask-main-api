@@ -43,6 +43,7 @@ type ConveyorRepository interface {
 	ListUpstreamDependencies(ctx context.Context, downstreamID uuid.UUID) ([]models.TaskLink, error)
 	CreateWorkOrder(ctx context.Context, workOrder *models.WorkOrder) error
 	GetWorkOrder(ctx context.Context, id uuid.UUID) (*models.WorkOrder, error)
+	ListWorkOrdersByTask(ctx context.Context, taskID uuid.UUID) ([]models.WorkOrder, error)
 	UpdateWorkOrder(ctx context.Context, workOrder *models.WorkOrder) error
 	CreateAgentRun(ctx context.Context, run *models.AgentRun) error
 	GetAgentRun(ctx context.Context, id uuid.UUID) (*models.AgentRun, error)
