@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	docs "emplacc-api/docs"
 	"emplacc-api/internal/db"
@@ -55,13 +56,22 @@ func Bootstrap() (*App, error) {
 	e.Use(middleware.RemoveTrailingSlash())
 	e.Use(middleware.Logger())
 
+	// Разрешённые origin'ы: дефолтные + из env CORS_ALLOW_ORIGINS (через запятую) —
+	// для white-label деплоев (напр. mytask.trusted-ai.ru) без пересборки логики.
+	allowOrigins := []string{
+		"https://emplacc.g-309.ru",
+		"http://localhost:3000",
+		"http://localhost:3001",
+		"http://localhost:3002",
+	}
+	for _, o := range strings.Split(os.Getenv("CORS_ALLOW_ORIGINS"), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			allowOrigins = append(allowOrigins, o)
+		}
+	}
+
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{
-			"https://emplacc.g-309.ru",
-			"http://localhost:3000",
-			"http://localhost:3001",
-			"http://localhost:3002",
-		},
+		AllowOrigins: allowOrigins,
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS, echo.PATCH},
 		AllowHeaders: []string{
 			echo.HeaderOrigin,
