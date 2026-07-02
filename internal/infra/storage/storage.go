@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"emplacc-api/internal/ports"
@@ -24,11 +25,22 @@ import (
 // Для долгосрочного хранения используй /media/refresh endpoint.
 const presignedURLExpiry = 7 * 24 * time.Hour
 
+// presignCacheTTL — как долго переиспользуем один и тот же presigned URL для объекта.
+// В пределах окна ссылка стабильна → браузер кэширует картинку (не перекачивает на
+// каждый запрос), а подпись не пересчитывается зря. Сама ссылка валидна 7 дней.
+const presignCacheTTL = time.Hour
+
+type presignEntry struct {
+	url string
+	exp time.Time
+}
+
 type minioStorage struct {
 	client        *minio.Client // внутренний endpoint для загрузки объектов
 	presignClient *minio.Client // публичный endpoint для генерации presigned URL
 	bucket        string
 	useSSL        bool
+	presignCache  sync.Map // objectPath -> presignEntry
 }
 
 // New constructs the MinIO-backed storage adapter from S3_* env vars.
@@ -101,6 +113,13 @@ func New() (ports.StoragePort, error) {
 }
 
 func (s *minioStorage) RefreshURL(objectPath string) (string, error) {
+	// Кэш на presignCacheTTL: в пределах окна возвращаем ту же ссылку (браузер кэширует
+	// картинку, подпись не считается заново на каждый запрос).
+	if v, ok := s.presignCache.Load(objectPath); ok {
+		if e, ok := v.(presignEntry); ok && time.Now().Before(e.exp) {
+			return e.url, nil
+		}
+	}
 	// presignClient настроен на публичный endpoint — подпись валидна для публичного URL
 	presigned, err := s.presignClient.PresignedGetObject(
 		context.Background(),
@@ -112,7 +131,9 @@ func (s *minioStorage) RefreshURL(objectPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("presign: %w", err)
 	}
-	return presigned.String(), nil
+	u := presigned.String()
+	s.presignCache.Store(objectPath, presignEntry{url: u, exp: time.Now().Add(presignCacheTTL)})
+	return u, nil
 }
 
 func (s *minioStorage) FreshAvatarURL(storedValue string) string {
