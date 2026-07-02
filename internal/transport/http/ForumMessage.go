@@ -19,6 +19,28 @@ import (
 // forumMentionRe — mention-маркап @[Имя](type:id) для очистки превью цитаты.
 var forumMentionRe = regexp.MustCompile(`[@#]\[([^\]]+)\]\((?:user|task|project|team):[^)]+\)`)
 
+// presignedURLRe — presigned S3-ссылка (с X-Amz-Signature) внутри текста сообщения.
+var presignedURLRe = regexp.MustCompile(`https?://[^\s)"'<>]*X-Amz-Signature=[^\s)"'<>]+`)
+
+// freshenContentURLs переподписывает presigned-ссылки на вложения (картинки/файлы) прямо в
+// тексте сообщения — клиенту приходят уже свежие ссылки (как freshAvatarURL для аватаров),
+// поэтому истёкшие вложения не «залипают» битыми и клиенту ничего рефрешить не нужно.
+func freshenContentURLs(lines []string, fresh func(string) string) []string {
+	if fresh == nil {
+		return lines
+	}
+	out := make([]string, len(lines))
+	for i, line := range lines {
+		out[i] = presignedURLRe.ReplaceAllStringFunc(line, func(u string) string {
+			if nu := fresh(u); nu != "" {
+				return nu
+			}
+			return u
+		})
+	}
+	return out
+}
+
 // forumReplyPreview строит превью цитируемого сообщения: убирает mention-маркап и
 // обрезает по РУНАМ (не байтам), иначе кириллица рвётся на � при срезе.
 func forumReplyPreview(desc []string) string {
@@ -57,7 +79,7 @@ func buildForumMessageResponse(m models.ForumMessage, freshAvatarURL func(string
 	r := response.ForumMessageResponse{
 		ID:          m.ID.String(),
 		ProblemID:   m.ProblemID.String(),
-		Description: []string(m.Description),
+		Description: freshenContentURLs([]string(m.Description), freshAvatarURL),
 		CreatorID:   utils.GetUUIDString(m.CreatorID),
 		CreatedAt:   utils.GetTime(m.CreatedAt),
 		UpdatedAt:   utils.GetTime(m.UpdatedAt),
