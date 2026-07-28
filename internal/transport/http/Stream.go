@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"emplacc-api/internal/service"
+	"mytask-api/internal/service"
 
 	"github.com/labstack/echo/v4"
 )
@@ -28,7 +28,7 @@ func RegisterStreamRoutes(e Router, hub *service.EventHub, sessionService servic
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "session invalid"})
 			}
 			userID = v.UserID
-		case strings.HasPrefix(token, "emplacc_"):
+		case strings.HasPrefix(token, "mytask_"):
 			u, err := apiTokenService.ValidateToken(token)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid token"})
@@ -70,7 +70,7 @@ func RegisterStreamRoutes(e Router, hub *service.EventHub, sessionService servic
 				}
 				data, _ := json.Marshal(ev)
 				// Фиксированное имя события — чтобы фронт ловил всё одним обработчиком; тип внутри data.
-				fmt.Fprintf(res.Writer, "event: emplacc\ndata: %s\n\n", data)
+				fmt.Fprintf(res.Writer, "event: mytask\ndata: %s\n\n", data)
 				res.Flush()
 			case <-ticker.C:
 				fmt.Fprint(res.Writer, ": ping\n\n")

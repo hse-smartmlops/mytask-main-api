@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/ports"
+	"mytask-api/internal/dto/request"
+	"mytask-api/internal/ports"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"

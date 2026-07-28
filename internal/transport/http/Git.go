@@ -1,7 +1,7 @@
 package httpapi
 
 import (
-	"emplacc-api/internal/service"
+	"mytask-api/internal/service"
 	"log"
 	"net/http"
 	"strconv"

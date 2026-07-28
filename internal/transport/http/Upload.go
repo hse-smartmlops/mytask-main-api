@@ -1,8 +1,8 @@
 package httpapi
 
 import (
-	"emplacc-api/internal/ports"
-	"emplacc-api/internal/service"
+	"mytask-api/internal/ports"
+	"mytask-api/internal/service"
 	"log"
 	"net/http"
 	"strings"
@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	maxImageSize = 10 << 20 // 10 MiB для картинок/аватаров
+	maxImageSize = 20 << 20 // 20 MiB для картинок/аватаров
 	maxFileSize  = 25 << 20 // 25 MiB для произвольных файлов
 )
 
@@ -44,7 +44,7 @@ func (u *UploadController) UploadImage(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
 	}
 	if fileHeader.Size > maxImageSize {
-		return c.JSON(http.StatusRequestEntityTooLarge, map[string]string{"error": "файл слишком большой (макс. 10MB)"})
+		return c.JSON(http.StatusRequestEntityTooLarge, map[string]string{"error": "файл слишком большой (макс. 20MB)"})
 	}
 	file, err := fileHeader.Open()
 	if err != nil {
@@ -102,7 +102,7 @@ func (u *UploadController) UploadAvatar(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "файл не найден в запросе"})
 	}
 	if fileHeader.Size > maxImageSize {
-		return c.JSON(http.StatusRequestEntityTooLarge, map[string]string{"error": "файл слишком большой (макс. 10MB)"})
+		return c.JSON(http.StatusRequestEntityTooLarge, map[string]string{"error": "файл слишком большой (макс. 20MB)"})
 	}
 	file, err := fileHeader.Open()
 	if err != nil {

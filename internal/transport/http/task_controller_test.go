@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/dto/response"
-	"emplacc-api/internal/grpc/client"
-	"emplacc-api/internal/service"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/dto/request"
+	"mytask-api/internal/dto/response"
+	"mytask-api/internal/grpc/client"
+	"mytask-api/internal/service"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"

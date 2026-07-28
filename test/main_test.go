@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	models "emplacc-api/internal/domain"
+	models "mytask-api/internal/domain"
 
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/postgres"

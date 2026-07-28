@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 )
 
 // GitHubProvider — адаптер GitHub REST API. Токен опционален (без него — публичные

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	pgrepo "emplacc-api/internal/repository/postgres"
+	models "mytask-api/internal/domain"
+	pgrepo "mytask-api/internal/repository/postgres"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

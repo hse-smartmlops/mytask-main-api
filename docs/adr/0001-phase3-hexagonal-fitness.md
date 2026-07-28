@@ -4,7 +4,7 @@ Status: Proposed (Phase 3, выполнять ПОСЛЕ Phase 2: полный v
 Inspiration: архитектура коллеги — «Fitness Functions in Software Architecture: measuring things to ensure prosperity». Гексагон, чьи границы закреплены как код (guard-тесты в `make lint`, валящие сборку при нарушении слоёв).
 
 ## Зачем
-Сейчас emplacc-main-api — «прото-гексагон»: слои controller→service→repository, у сервисов и репозиториев есть интерфейсы, DI в `cmd/server/main.go`, ctx-гигиена уже чистая. Но границы НЕ закреплены (ничто не мешает им деградировать), интерфейсы лежат рядом с реализациями, нет композиционного корня как слоя, есть god-файл `domain/models.go`, и часть драйверов протекает в слой сервисов.
+Сейчас mytask-main-api — «прото-гексагон»: слои controller→service→repository, у сервисов и репозиториев есть интерфейсы, DI в `cmd/server/main.go`, ctx-гигиена уже чистая. Но границы НЕ закреплены (ничто не мешает им деградировать), интерфейсы лежат рядом с реализациями, нет композиционного корня как слоя, есть god-файл `domain/models.go`, и часть драйверов протекает в слой сервисов.
 
 ## Целевая структура (адаптировано под стек: Go 1.26, Echo, GORM/Postgres, Redis, MinIO/rustfs, gRPC→reports_llm_ms, Keycloak)
 ```
@@ -55,5 +55,5 @@ internal/
 
 ## Замечания
 - Делать ПОСЛЕ Phase 2 (иначе v2/уведомления пришлось бы переносить дважды).
-- Фронт emplacc-web уже генерит типы из swagger; codegen TS-типов (как `dto-tsgen` у коллеги) — опционально позже.
+- Фронт mytask-web уже генерит типы из swagger; codegen TS-типов (как `dto-tsgen` у коллеги) — опционально позже.
 - SSE `EventHub`/`Stream` (Phase 1) встанут как порт `EventBusPort` + adapter (in-memory → Redis pub/sub).

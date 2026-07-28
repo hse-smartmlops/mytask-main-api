@@ -129,7 +129,7 @@ func TestR1_TransportDoesNotImportRepositoryOrDrivers(t *testing.T) {
 	var violations []string
 	for _, file := range goFiles(t, root, "internal/transport/http") {
 		for _, imp := range importsOf(t, root, file) {
-			bad := strings.HasPrefix(imp, "emplacc-api/internal/repository") || isRawDriver(imp)
+			bad := strings.HasPrefix(imp, "mytask-api/internal/repository") || isRawDriver(imp)
 			if !bad {
 				continue
 			}
@@ -149,7 +149,7 @@ func TestR2_ServicesDoNotImportTransportOrDrivers(t *testing.T) {
 	var violations []string
 	for _, file := range goFiles(t, root, "internal/service") {
 		for _, imp := range importsOf(t, root, file) {
-			bad := strings.HasPrefix(imp, "emplacc-api/internal/controller") || isRawDriver(imp) || imp == "net/http"
+			bad := strings.HasPrefix(imp, "mytask-api/internal/controller") || isRawDriver(imp) || imp == "net/http"
 			if !bad {
 				continue
 			}

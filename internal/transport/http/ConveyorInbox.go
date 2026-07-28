@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"emplacc-api/internal/service"
+	"mytask-api/internal/service"
 
 	"github.com/labstack/echo/v4"
 )

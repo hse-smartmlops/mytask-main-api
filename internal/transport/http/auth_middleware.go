@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"emplacc-api/internal/service"
+	"mytask-api/internal/service"
 
 	"github.com/labstack/echo/v4"
 )
@@ -18,7 +18,7 @@ type SessionExpiredError struct {
 
 // AppAuthMiddleware — новая стратегия авторизации:
 //   - sess_*     → сессионный токен (браузер)
-//   - emplacc_*  → MCP/интеграционный токен
+//   - mytask_*  → MCP/интеграционный токен
 //   - eyJ...     → Keycloak JWT для совместимости с текущим фронтом
 //
 // Keycloak JWT разбирается локально в authService, без обращения к Keycloak на каждый запрос.
@@ -70,7 +70,7 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 				c.Set("session_token", token)
 
 			// ── MCP/интеграционный токен ───────────────────────────
-			case strings.HasPrefix(token, "emplacc_"):
+			case strings.HasPrefix(token, "mytask_"):
 				user, err := apiTokenService.ValidateToken(token)
 				if err != nil {
 					log.Printf("Auth middleware: API token validation failed: %v", err)
@@ -96,7 +96,7 @@ func AppAuthMiddleware(authService service.AuthService, sessionService service.S
 			default:
 				log.Printf("Auth middleware: unknown token type for %s %s", c.Request().Method, p)
 				return c.JSON(http.StatusUnauthorized, map[string]string{
-					"error": "unknown token type, use sess_*, emplacc_* or Keycloak JWT",
+					"error": "unknown token type, use sess_*, mytask_* or Keycloak JWT",
 				})
 			}
 

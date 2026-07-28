@@ -1,9 +1,9 @@
 package postgres
 
 import (
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/dto/request"
+	"mytask-api/internal/ports"
 	"errors"
 	"time"
 

@@ -1,8 +1,8 @@
 package service
 
 import (
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 	"time"
 )
 

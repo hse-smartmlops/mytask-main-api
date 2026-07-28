@@ -1,4 +1,4 @@
-// devseed creates a demo user + admin role + emplacc_* API token and a sample
+// devseed creates a demo user + admin role + mytask_* API token and a sample
 // project/board/task with Conveyor criteria, evidence and events, then prints a
 // ready-to-use access blob (token + a browser console snippet that signs the web
 // UI in past AuthGate without Keycloak). Idempotent: deterministic UUIDs mean
@@ -12,9 +12,9 @@ import (
 	"os"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	pgrepo "emplacc-api/internal/repository/postgres"
-	"emplacc-api/internal/service"
+	models "mytask-api/internal/domain"
+	pgrepo "mytask-api/internal/repository/postgres"
+	"mytask-api/internal/service"
 
 	"github.com/google/uuid"
 	"gorm.io/driver/postgres"
@@ -39,7 +39,7 @@ func tptr(t time.Time) *time.Time { return &t }
 func main() {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s TimeZone=%s",
 		env("DB_HOST", "db"), env("DB_USER", "postgres"), env("DB_PASS", "admin"),
-		env("DB_NAME", "emplacc"), env("DB_PORT", "5432"), env("DB_SSLMODE", "disable"), env("DB_TIMEZONE", "UTC"))
+		env("DB_NAME", "mytask"), env("DB_PORT", "5432"), env("DB_SSLMODE", "disable"), env("DB_TIMEZONE", "UTC"))
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("devseed: db connect: %v", err)

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/repository/postgres"
-	"emplacc-api/internal/service"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/repository/postgres"
+	"mytask-api/internal/service"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -24,7 +24,7 @@ func TestPMImportE2EFromProjectCanon(t *testing.T) {
 	db := setupTestDB(t)
 	ctx := context.Background()
 
-	// Locate the project's PM canon. The test working dir is emplacc-main-api/test,
+	// Locate the project's PM canon. The test working dir is mytask-main-api/test,
 	// so the monorepo root is two levels up.
 	scopeDir := filepath.Join("..", "..", ".pm", "scopes", "default")
 	statusMD := filepath.Join("..", "..", "status.md")

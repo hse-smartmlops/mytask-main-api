@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -94,9 +94,9 @@ func TestConveyorServiceRejectsSecretLikeEvidenceBeforeStorage(t *testing.T) {
 		TaskID:   taskID,
 		Type:     models.EvidenceTypeLink,
 		Verdict:  models.EvidenceVerdictSupports,
-		URI:      "https://example.test/evidence?token=emplacc_fake_secret_token",
-		Title:    "Bearer emplacc_fake_title_token",
-		Metadata: json.RawMessage(`{"api_token":"emplacc_fake_metadata_token"}`),
+		URI:      "https://example.test/evidence?token=mytask_fake_secret_token",
+		Title:    "Bearer mytask_fake_title_token",
+		Metadata: json.RawMessage(`{"api_token":"mytask_fake_metadata_token"}`),
 	})
 
 	require.ErrorIs(t, err, ErrValidation)

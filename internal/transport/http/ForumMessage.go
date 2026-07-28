@@ -1,11 +1,11 @@
 package httpapi
 
 import (
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/dto/response"
-	"emplacc-api/internal/service"
-	"emplacc-api/internal/utils"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/dto/request"
+	"mytask-api/internal/dto/response"
+	"mytask-api/internal/service"
+	"mytask-api/internal/utils"
 	"log"
 	"net/http"
 	"regexp"

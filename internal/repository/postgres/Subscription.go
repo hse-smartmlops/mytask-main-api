@@ -1,8 +1,8 @@
 package postgres
 
 import (
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 	"errors"
 
 	"github.com/google/uuid"

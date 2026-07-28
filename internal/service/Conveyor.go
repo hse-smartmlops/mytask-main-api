@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	llmclient "emplacc-api/internal/grpc/client"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	llmclient "mytask-api/internal/grpc/client"
+	"mytask-api/internal/ports"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -29,7 +29,7 @@ var (
 	ErrPermissionDenied = models.ErrConveyorPermissionDenied
 	forumMarkupPattern  = regexp.MustCompile(`<[^>]*>`)
 	secretKeyPattern    = regexp.MustCompile(`(?i)(secret|token|password|passwd|api[_-]?key|authorization|credential|private[_-]?key)`)
-	secretValuePattern  = regexp.MustCompile(`(?i)(emplacc_[A-Za-z0-9._-]+|sess_[A-Za-z0-9._-]+|Bearer\s+[A-Za-z0-9._-]+|(?:sk|pk|rk|ghp|github_pat|xox[baprs])-[-a-z0-9_]{12,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
+	secretValuePattern  = regexp.MustCompile(`(?i)(mytask_[A-Za-z0-9._-]+|sess_[A-Za-z0-9._-]+|Bearer\s+[A-Za-z0-9._-]+|(?:sk|pk|rk|ghp|github_pat|xox[baprs])-[-a-z0-9_]{12,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
 )
 
 type ConveyorRepository = ports.ConveyorRepository
@@ -88,7 +88,7 @@ type conveyorService struct {
 	llmMode   ConveyorLLMModeClient
 }
 
-// ConveyorLLMModeClient runs a mode-scoped LLM prompt through emplacc-main-api ->
+// ConveyorLLMModeClient runs a mode-scoped LLM prompt through mytask-main-api ->
 // reports_llm_ms (RUN-08). mode is the reports_llm_ms meta["mode"] value
 // (forum_digest | evidence_summary | criteria_suggestion).
 type ConveyorLLMModeClient interface {

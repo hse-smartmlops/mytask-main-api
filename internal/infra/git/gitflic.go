@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 )
 
 // GitFlicProvider — адаптер российского хостинга GitFlic (docs.gitflic.ru/latest/api).

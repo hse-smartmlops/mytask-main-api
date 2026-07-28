@@ -1,9 +1,9 @@
 package httpapi
 
 import (
-	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/dto/response"
-	"emplacc-api/internal/service"
+	"mytask-api/internal/dto/request"
+	"mytask-api/internal/dto/response"
+	"mytask-api/internal/service"
 	"log"
 	"net/http"
 	"strconv"
@@ -233,7 +233,7 @@ func (uc *UserController) GetUserById(c echo.Context) error {
 
 // GetCurrentUser godoc
 // @Summary Текущий пользователь
-// @Description Возвращает данные пользователя из токена (sess_*, emplacc_*, JWT)
+// @Description Возвращает данные пользователя из токена (sess_*, mytask_*, JWT)
 // @Tags Users
 // @Produce json
 // @Security BearerAuth

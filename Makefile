@@ -22,7 +22,7 @@ test-db-up:
 test-db-down:
 	docker compose -f docker-compose.test.yml down -v
 
-# Full suite, including the integration package (emplacc-api/test).
+# Full suite, including the integration package (mytask-api/test).
 test: test-db-up
 	$(TEST_DB_ENV) go test ./...
 

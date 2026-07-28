@@ -14,17 +14,17 @@ import (
 	"os"
 	"strings"
 
-	docs "emplacc-api/docs"
-	"emplacc-api/internal/db"
-	"emplacc-api/internal/grpc/client"
-	infragit "emplacc-api/internal/infra/git"
-	"emplacc-api/internal/infra/keycloak"
-	"emplacc-api/internal/infra/mail"
-	"emplacc-api/internal/infra/storage"
-	"emplacc-api/internal/repository/postgres"
-	redisrepo "emplacc-api/internal/repository/redis"
-	"emplacc-api/internal/service"
-	httpapi "emplacc-api/internal/transport/http"
+	docs "mytask-api/docs"
+	"mytask-api/internal/db"
+	"mytask-api/internal/grpc/client"
+	infragit "mytask-api/internal/infra/git"
+	"mytask-api/internal/infra/keycloak"
+	"mytask-api/internal/infra/mail"
+	"mytask-api/internal/infra/storage"
+	"mytask-api/internal/repository/postgres"
+	redisrepo "mytask-api/internal/repository/redis"
+	"mytask-api/internal/service"
+	httpapi "mytask-api/internal/transport/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -59,7 +59,7 @@ func Bootstrap() (*App, error) {
 	// Разрешённые origin'ы: дефолтные + из env CORS_ALLOW_ORIGINS (через запятую) —
 	// для white-label деплоев (напр. mytask.trusted-ai.ru) без пересборки логики.
 	allowOrigins := []string{
-		"https://emplacc.g-309.ru",
+		"https://mytask.trusted-ai.ru",
 		"http://localhost:3000",
 		"http://localhost:3001",
 		"http://localhost:3002",

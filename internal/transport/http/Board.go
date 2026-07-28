@@ -1,10 +1,10 @@
 package httpapi
 
 import (
-	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/dto/response"
-	"emplacc-api/internal/service"
-	"emplacc-api/internal/utils"
+	"mytask-api/internal/dto/request"
+	"mytask-api/internal/dto/response"
+	"mytask-api/internal/service"
+	"mytask-api/internal/utils"
 	"fmt"
 	"log"
 	"net/http"

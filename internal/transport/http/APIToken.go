@@ -1,7 +1,7 @@
 package httpapi
 
 import (
-	"emplacc-api/internal/service"
+	"mytask-api/internal/service"
 	"log"
 	"net/http"
 	"strings"
@@ -28,7 +28,7 @@ func RegisterAPITokenRoutes(e Router, svc service.APITokenService) {
 }
 
 // getUserIDFromContext читает user_id из контекста (ставится AppAuthMiddleware).
-// Работает с сессионными (sess_*) и MCP токенами (emplacc_*).
+// Работает с сессионными (sess_*) и MCP токенами (mytask_*).
 func getUserIDFromContext(ctx echo.Context) (uuid.UUID, error) {
 	// MCP токен — user_id как uuid.UUID
 	if id, ok := ctx.Get("api_token_user_id").(uuid.UUID); ok && id != uuid.Nil {

@@ -1,8 +1,8 @@
 package service
 
 import (
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 	"errors"
 	"fmt"
 	"html"
@@ -35,7 +35,7 @@ type notificationService struct {
 func NewNotificationService(repo ports.NotificationRepository, userRepo ports.UserRepository, mailer ports.Mailer) NotificationService {
 	base := strings.TrimRight(os.Getenv("WEB_BASE_URL"), "/")
 	if base == "" {
-		base = "https://emplacc.g-309.ru"
+		base = "https://mytask.trusted-ai.ru"
 	}
 	return &notificationService{
 		repo:     repo,
@@ -121,7 +121,7 @@ func (s *notificationService) notificationLink(entityType string, entityID *uuid
 	case entityType == "project" && id != "":
 		return s.webBase + "/projects/" + id, "Открыть проект"
 	default:
-		return s.webBase, "Открыть Emplacc"
+		return s.webBase, "Открыть MyTask"
 	}
 }
 
@@ -141,8 +141,8 @@ func notificationEmailHTML(base, title, body, link, cta string) string {
 <tr><td align="center">
 <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%%;background:#ffffff;border:1px solid #dfe5e2;border-radius:12px;overflow:hidden;">
 <tr><td style="background:#0f1d16;padding:16px 24px;">
-<img src="%s" width="26" height="26" alt="Emplacc" style="vertical-align:middle;border:0;border-radius:6px;">
-<span style="color:#4ade80;font-size:18px;font-weight:bold;vertical-align:middle;margin-left:8px;">Emplacc</span>
+<img src="%s" width="26" height="26" alt="MyTask" style="vertical-align:middle;border:0;border-radius:6px;">
+<span style="color:#4ade80;font-size:18px;font-weight:bold;vertical-align:middle;margin-left:8px;">MyTask</span>
 </td></tr>
 <tr><td style="padding:28px 24px 6px;"><h1 style="margin:0;font-size:20px;line-height:1.3;color:#10231a;">%s</h1></td></tr>
 <tr><td style="padding:4px 24px 22px;color:#42514a;font-size:15px;line-height:1.6;">%s</td></tr>
@@ -150,7 +150,7 @@ func notificationEmailHTML(base, title, body, link, cta string) string {
 <a href="%s" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;font-size:15px;font-weight:bold;padding:12px 24px;border-radius:8px;">%s &rarr;</a>
 </td></tr>
 <tr><td style="padding:16px 24px;background:#f5f7f6;border-top:1px solid #dfe5e2;color:#8a958f;font-size:12px;line-height:1.5;">
-Автоматическое уведомление Emplacc. Управлять — в <a href="%s/settings" style="color:#16a34a;text-decoration:none;">настройках</a>.
+Автоматическое уведомление MyTask. Управлять — в <a href="%s/settings" style="color:#16a34a;text-decoration:none;">настройках</a>.
 </td></tr>
 </table>
 </td></tr>

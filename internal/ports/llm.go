@@ -1,6 +1,6 @@
 package ports
 
-import models "emplacc-api/internal/domain"
+import models "mytask-api/internal/domain"
 
 // LLMSettingsRepository — driven-порт для единственной строки настроек LLM.
 type LLMSettingsRepository interface {

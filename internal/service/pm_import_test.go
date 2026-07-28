@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	models "emplacc-api/internal/domain"
+	models "mytask-api/internal/domain"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

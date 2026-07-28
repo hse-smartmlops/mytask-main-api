@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 
 	"github.com/google/uuid"
 )
@@ -50,7 +50,7 @@ func generateToken() (plain, hash string, err error) {
 	if _, err = rand.Read(raw); err != nil {
 		return
 	}
-	plain = "emplacc_" + hex.EncodeToString(raw)
+	plain = "mytask_" + hex.EncodeToString(raw)
 	sum := sha256.Sum256([]byte(plain))
 	hash = hex.EncodeToString(sum[:])
 	return

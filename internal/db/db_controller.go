@@ -1,7 +1,7 @@
 package db
 
 import (
-	models "emplacc-api/internal/domain"
+	models "mytask-api/internal/domain"
 	"fmt"
 	"log"
 	"os"

@@ -495,12 +495,12 @@ var File_api_proto_v1_mcp_proto protoreflect.FileDescriptor
 const file_api_proto_v1_mcp_proto_rawDesc = "" +
 	"\n" +
 	"\x16api/proto/v1/mcp.proto\x12\n" +
-	"emplacc.v1\"\x9c\x02\n" +
+	"mytask.v1\"\x9c\x02\n" +
 	"\x12ProcessTaskRequest\x12 \n" +
 	"\vdescription\x18\x01 \x01(\tR\vdescription\x12\x12\n" +
 	"\x04text\x18\x02 \x01(\tR\x04text\x12\x17\n" +
 	"\atask_id\x18\x03 \x01(\tR\x06taskId\x12<\n" +
-	"\x04meta\x18\x04 \x03(\v2(.emplacc.v1.ProcessTaskRequest.MetaEntryR\x04meta\x12\x1d\n" +
+	"\x04meta\x18\x04 \x03(\v2(.mytask.v1.ProcessTaskRequest.MetaEntryR\x04meta\x12\x1d\n" +
 	"\n" +
 	"timeout_ms\x18\x05 \x01(\x03R\ttimeoutMs\x12!\n" +
 	"\fcontent_type\x18\x06 \x01(\tR\vcontentType\x1a7\n" +
@@ -511,10 +511,10 @@ const file_api_proto_v1_mcp_proto_rawDesc = "" +
 	"\x06result\x18\x01 \x01(\tR\x06result\x12!\n" +
 	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\"\xca\x01\n" +
 	"\x10ProcessTaskEvent\x12,\n" +
-	"\x06status\x18\x01 \x01(\v2\x12.emplacc.v1.StatusH\x00R\x06status\x12)\n" +
-	"\x05chunk\x18\x02 \x01(\v2\x11.emplacc.v1.ChunkH\x00R\x05chunk\x12)\n" +
-	"\x05final\x18\x03 \x01(\v2\x11.emplacc.v1.FinalH\x00R\x05final\x12)\n" +
-	"\x05error\x18\x04 \x01(\v2\x11.emplacc.v1.ErrorH\x00R\x05errorB\a\n" +
+	"\x06status\x18\x01 \x01(\v2\x12.mytask.v1.StatusH\x00R\x06status\x12)\n" +
+	"\x05chunk\x18\x02 \x01(\v2\x11.mytask.v1.ChunkH\x00R\x05chunk\x12)\n" +
+	"\x05final\x18\x03 \x01(\v2\x11.mytask.v1.FinalH\x00R\x05final\x12)\n" +
+	"\x05error\x18\x04 \x01(\v2\x11.mytask.v1.ErrorH\x00R\x05errorB\a\n" +
 	"\x05event\"T\n" +
 	"\x06Status\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x18\n" +
@@ -531,8 +531,8 @@ const file_api_proto_v1_mcp_proto_rawDesc = "" +
 	"\amessage\x18\x02 \x01(\tR\amessage2\xb5\x01\n" +
 	"\n" +
 	"MCPService\x12P\n" +
-	"\vProcessTask\x12\x1e.emplacc.v1.ProcessTaskRequest\x1a\x1f.emplacc.v1.ProcessTaskResponse\"\x00\x12U\n" +
-	"\x11StreamProcessTask\x12\x1e.emplacc.v1.ProcessTaskRequest\x1a\x1c.emplacc.v1.ProcessTaskEvent\"\x000\x01B\x1fZ\x1demplacc-main-api/pkg/pb/v1;v1b\x06proto3"
+	"\vProcessTask\x12\x1e.mytask.v1.ProcessTaskRequest\x1a\x1f.mytask.v1.ProcessTaskResponse\"\x00\x12U\n" +
+	"\x11StreamProcessTask\x12\x1e.mytask.v1.ProcessTaskRequest\x1a\x1c.mytask.v1.ProcessTaskEvent\"\x000\x01B\x1fZ\x1dmytask-main-api/pkg/pb/v1;v1b\x06proto3"
 
 var (
 	file_api_proto_v1_mcp_proto_rawDescOnce sync.Once
@@ -548,25 +548,25 @@ func file_api_proto_v1_mcp_proto_rawDescGZIP() []byte {
 
 var file_api_proto_v1_mcp_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_api_proto_v1_mcp_proto_goTypes = []any{
-	(*ProcessTaskRequest)(nil),  // 0: emplacc.v1.ProcessTaskRequest
-	(*ProcessTaskResponse)(nil), // 1: emplacc.v1.ProcessTaskResponse
-	(*ProcessTaskEvent)(nil),    // 2: emplacc.v1.ProcessTaskEvent
-	(*Status)(nil),              // 3: emplacc.v1.Status
-	(*Chunk)(nil),               // 4: emplacc.v1.Chunk
-	(*Final)(nil),               // 5: emplacc.v1.Final
-	(*Error)(nil),               // 6: emplacc.v1.Error
-	nil,                         // 7: emplacc.v1.ProcessTaskRequest.MetaEntry
+	(*ProcessTaskRequest)(nil),  // 0: mytask.v1.ProcessTaskRequest
+	(*ProcessTaskResponse)(nil), // 1: mytask.v1.ProcessTaskResponse
+	(*ProcessTaskEvent)(nil),    // 2: mytask.v1.ProcessTaskEvent
+	(*Status)(nil),              // 3: mytask.v1.Status
+	(*Chunk)(nil),               // 4: mytask.v1.Chunk
+	(*Final)(nil),               // 5: mytask.v1.Final
+	(*Error)(nil),               // 6: mytask.v1.Error
+	nil,                         // 7: mytask.v1.ProcessTaskRequest.MetaEntry
 }
 var file_api_proto_v1_mcp_proto_depIdxs = []int32{
-	7, // 0: emplacc.v1.ProcessTaskRequest.meta:type_name -> emplacc.v1.ProcessTaskRequest.MetaEntry
-	3, // 1: emplacc.v1.ProcessTaskEvent.status:type_name -> emplacc.v1.Status
-	4, // 2: emplacc.v1.ProcessTaskEvent.chunk:type_name -> emplacc.v1.Chunk
-	5, // 3: emplacc.v1.ProcessTaskEvent.final:type_name -> emplacc.v1.Final
-	6, // 4: emplacc.v1.ProcessTaskEvent.error:type_name -> emplacc.v1.Error
-	0, // 5: emplacc.v1.MCPService.ProcessTask:input_type -> emplacc.v1.ProcessTaskRequest
-	0, // 6: emplacc.v1.MCPService.StreamProcessTask:input_type -> emplacc.v1.ProcessTaskRequest
-	1, // 7: emplacc.v1.MCPService.ProcessTask:output_type -> emplacc.v1.ProcessTaskResponse
-	2, // 8: emplacc.v1.MCPService.StreamProcessTask:output_type -> emplacc.v1.ProcessTaskEvent
+	7, // 0: mytask.v1.ProcessTaskRequest.meta:type_name -> mytask.v1.ProcessTaskRequest.MetaEntry
+	3, // 1: mytask.v1.ProcessTaskEvent.status:type_name -> mytask.v1.Status
+	4, // 2: mytask.v1.ProcessTaskEvent.chunk:type_name -> mytask.v1.Chunk
+	5, // 3: mytask.v1.ProcessTaskEvent.final:type_name -> mytask.v1.Final
+	6, // 4: mytask.v1.ProcessTaskEvent.error:type_name -> mytask.v1.Error
+	0, // 5: mytask.v1.MCPService.ProcessTask:input_type -> mytask.v1.ProcessTaskRequest
+	0, // 6: mytask.v1.MCPService.StreamProcessTask:input_type -> mytask.v1.ProcessTaskRequest
+	1, // 7: mytask.v1.MCPService.ProcessTask:output_type -> mytask.v1.ProcessTaskResponse
+	2, // 8: mytask.v1.MCPService.StreamProcessTask:output_type -> mytask.v1.ProcessTaskEvent
 	7, // [7:9] is the sub-list for method output_type
 	5, // [5:7] is the sub-list for method input_type
 	5, // [5:5] is the sub-list for extension type_name

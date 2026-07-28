@@ -1,8 +1,8 @@
 package ports
 
 import (
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/dto/request"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/dto/request"
 
 	"github.com/google/uuid"
 )

@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"emplacc-api/internal/service"
+	"mytask-api/internal/service"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"

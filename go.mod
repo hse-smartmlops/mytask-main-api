@@ -1,4 +1,4 @@
-module emplacc-api
+module mytask-api
 
 go 1.26
 

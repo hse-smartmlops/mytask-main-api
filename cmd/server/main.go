@@ -1,6 +1,6 @@
-// @title Emplacc API
+// @title MyTask API
 // @version 1.0
-// @description API для Emplacc.
+// @description API для MyTask.
 // (host не задаём умышленно, чтобы Swagger использовал текущий origin)
 // @BasePath /
 // @securityDefinitions.apikey BearerAuth
@@ -13,7 +13,7 @@ import (
 	"log"
 	"time"
 
-	"emplacc-api/internal/app"
+	"mytask-api/internal/app"
 )
 
 func main() {

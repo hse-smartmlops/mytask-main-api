@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	v1 "emplacc-api/internal/grpc/gen/v1"
+	v1 "mytask-api/internal/grpc/gen/v1"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

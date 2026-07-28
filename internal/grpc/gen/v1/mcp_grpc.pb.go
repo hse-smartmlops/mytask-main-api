@@ -19,8 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MCPService_ProcessTask_FullMethodName       = "/emplacc.v1.MCPService/ProcessTask"
-	MCPService_StreamProcessTask_FullMethodName = "/emplacc.v1.MCPService/StreamProcessTask"
+	MCPService_ProcessTask_FullMethodName       = "/mytask.v1.MCPService/ProcessTask"
+	MCPService_StreamProcessTask_FullMethodName = "/mytask.v1.MCPService/StreamProcessTask"
 )
 
 // MCPServiceClient is the client API for MCPService service.
@@ -152,7 +152,7 @@ type MCPService_StreamProcessTaskServer = grpc.ServerStreamingServer[ProcessTask
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var MCPService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "emplacc.v1.MCPService",
+	ServiceName: "mytask.v1.MCPService",
 	HandlerType: (*MCPServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{

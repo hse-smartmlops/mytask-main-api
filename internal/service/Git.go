@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/ports"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/ports"
 	"errors"
 	"regexp"
 	"strings"
@@ -174,7 +174,7 @@ func (s *gitService) syncOne(ctx context.Context, repo models.CodeRepository, su
 			CreatedAt:    now,
 			TaskID:       parseTaskRef(pc.Message),
 		}
-		// Резолвим автора в пользователя emplacc по email (best-effort).
+		// Резолвим автора в пользователя mytask по email (best-effort).
 		if pc.AuthorEmail != "" {
 			if u, e := s.userRepo.GetUserByEmail(pc.AuthorEmail); e == nil && u != nil {
 				c.AuthorUserID = &u.ID

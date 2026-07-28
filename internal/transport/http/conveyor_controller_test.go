@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/service"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/service"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"

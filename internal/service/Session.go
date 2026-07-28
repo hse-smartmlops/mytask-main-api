@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"emplacc-api/internal/ports"
-	"emplacc-api/internal/repository/redis"
+	"mytask-api/internal/ports"
+	"mytask-api/internal/repository/redis"
 )
 
 const (

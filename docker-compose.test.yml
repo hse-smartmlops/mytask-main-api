@@ -1,4 +1,4 @@
-# Throwaway PostgreSQL for the Go integration test package (emplacc-api/test).
+# Throwaway PostgreSQL for the Go integration test package (mytask-api/test).
 # The test harness (test/main_test.go) reads TEST_DB_* env vars and creates its
 # own scratch database from the admin connection, so this only needs a running
 # server with matching credentials on a non-default port (55432, to avoid

@@ -2,12 +2,12 @@ package httpapi
 
 import (
 	"context"
-	models "emplacc-api/internal/domain"
-	"emplacc-api/internal/dto/request"
-	"emplacc-api/internal/dto/response"
-	"emplacc-api/internal/grpc/client"
-	"emplacc-api/internal/service"
-	utils "emplacc-api/internal/utils"
+	models "mytask-api/internal/domain"
+	"mytask-api/internal/dto/request"
+	"mytask-api/internal/dto/response"
+	"mytask-api/internal/grpc/client"
+	"mytask-api/internal/service"
+	utils "mytask-api/internal/utils"
 	"encoding/json"
 	"errors"
 	"fmt"

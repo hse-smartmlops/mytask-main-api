@@ -1,4 +1,4 @@
-# Demo-only image: seeds a demo user, admin role, emplacc_* token and sample
+# Demo-only image: seeds a demo user, admin role, mytask_* token and sample
 # Conveyor data, then exits. Built from the same module as the API.
 FROM golang:1.26-alpine AS builder
 ENV CGO_ENABLED=0 GOOS=linux
