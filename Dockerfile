@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════
 # Stage 1 – Build
 # ═══════════════════════════════════════════════════════════════
-FROM golang:1.26-alpine AS builder
+FROM golang:1.26.5-alpine AS builder
 
 ENV CGO_ENABLED=0 \
     GOOS=linux \
